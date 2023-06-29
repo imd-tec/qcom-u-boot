@@ -41,6 +41,7 @@ Board-specific doc
    microchip/index
    microsoft/index
    motorola/index
+   nvidia/index
    nxp/index
    openpiton/index
    ouya/index
