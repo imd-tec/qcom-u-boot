@@ -40,6 +40,7 @@ Board-specific doc
    mediatek/index
    microchip/index
    microsoft/index
+   motorola/index
    nxp/index
    openpiton/index
    ouya/index
