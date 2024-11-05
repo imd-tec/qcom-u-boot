@@ -78,19 +78,11 @@
 	bootph-some-ram;
 };
 
-&sdmmc_pwr {
-	bootph-pre-ram;
-};
-
 &uart2 {
 	bootph-all;
 };
 
 &uart2_xfer {
 	bootph-pre-sram;
-	bootph-pre-ram;
-};
-
-&vcc_sd {
 	bootph-pre-ram;
 };
