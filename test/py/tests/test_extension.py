@@ -26,7 +26,9 @@ def test_extension(ubman):
     load_dtb(ubman)
 
     output = ubman.run_command('extension list')
-    assert('No extension' in output)
+    # extension_bootdev_hunt may have already run.
+    # Without reboot we cannot make any assumption here.
+    # assert('No extension' in output)
 
     output = ubman.run_command('extension scan')
     assert output == 'Found 2 extension board(s).'
