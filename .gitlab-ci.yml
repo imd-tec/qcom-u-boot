@@ -48,6 +48,7 @@ stages:
   # The GitLab runner must be configured with:
   #   - privileged = true in /etc/gitlab-runner/config.toml
   #   OR passwordless sudo for: modprobe, cryptsetup, dd
+  needs: [ "Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig, patman and pickman suites" ]
   rules:
     # Skip if MR description contains [skip-pytest]
     - if: $CI_MERGE_REQUEST_DESCRIPTION =~ /\[skip-pytest\]/
