@@ -33,34 +33,19 @@ void unmap_physmem(const void *vaddr, unsigned long flags);
 /* Map from a pointer to our RAM buffer */
 phys_addr_t map_to_sysmem(const void *ptr);
 
-/**
- * sandbox_read() - Perform a memory read
- *
- * @addr: Pointer to read from
- * @size: Access size of read
- * Return: Value obtained
- */
 unsigned long sandbox_read(const void *addr, enum sandboxio_size_t size);
-
-/**
- * sandbox_write() - Perform a memory write
- *
- * @addr: Pointer to write to
- * @val: Value to write
- * @size: Access size of write
- */
 void sandbox_write(void *addr, unsigned int val, enum sandboxio_size_t size);
 
 #define readb(addr) sandbox_read((const void *)addr, SB_SIZE_8)
 #define readw(addr) sandbox_read((const void *)addr, SB_SIZE_16)
 #define readl(addr) sandbox_read((const void *)addr, SB_SIZE_32)
-#ifdef CONFIG_HOST_64BIT
+#ifdef CONFIG_64BIT
 #define readq(addr) sandbox_read((const void *)addr, SB_SIZE_64)
 #endif
 #define writeb(v, addr) sandbox_write((void *)addr, v, SB_SIZE_8)
 #define writew(v, addr) sandbox_write((void *)addr, v, SB_SIZE_16)
 #define writel(v, addr) sandbox_write((void *)addr, v, SB_SIZE_32)
-#ifdef CONFIG_HOST_64BIT
+#ifdef CONFIG_64BIT
 #define writeq(v, addr) sandbox_write((void *)addr, v, SB_SIZE_64)
 #endif
 
