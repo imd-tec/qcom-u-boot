@@ -100,11 +100,10 @@ static inline phys_addr_t lmb_alloc(phys_size_t size, ulong align)
 	return 0;
 }
 #endif
-phys_addr_t lmb_alloc_base(phys_size_t size, ulong align, phys_addr_t max_addr);
 phys_size_t lmb_get_free_size(phys_addr_t addr);
 
 /**
- * lmb_alloc_base_flags() - Allocate specified memory region with specified
+ * lmb_alloc_base() - Allocate specified memory region with specified
  *			    attributes
  * @size: Size of the region requested
  * @align: Alignment of the memory region requested
@@ -117,8 +116,8 @@ phys_size_t lmb_get_free_size(phys_addr_t addr);
  *
  * Return: Base address on success, 0 on error.
  */
-phys_addr_t lmb_alloc_base_flags(phys_size_t size, ulong align,
-				 phys_addr_t max_addr, uint flags);
+phys_addr_t lmb_alloc_base(phys_size_t size, ulong align, phys_addr_t max_addr,
+			   uint flags);
 
 /**
  * lmb_alloc_addr() - Allocate specified memory address with specified attributes
