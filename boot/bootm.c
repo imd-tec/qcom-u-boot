@@ -329,7 +329,7 @@ static int bootm_pre_load(const char *addr_str)
 static int resolve_os_comp_buf(struct bootm_info *bmi)
 {
 	if (bmi->kern_comp_addr) {
-		if (lmb_reserve(bmi->kern_comp_addr, bmi->kern_comp_size) < 0)
+		if (lmb_reserve(bmi->kern_comp_addr, bmi->kern_comp_size, 0) < 0)
 			return -EXDEV;
 	} else {
 		phys_addr_t addr;
@@ -860,7 +860,8 @@ static int bootm_load_os(struct bootm_info *bmi, int boot_progress)
 	}
 
 	if (CONFIG_IS_ENABLED(LMB))
-		lmb_reserve(images->os.load, (load_end - images->os.load));
+		lmb_reserve(images->os.load, (load_end - images->os.load),
+			    LMB_NONE);
 
 	return 0;
 }
@@ -1337,7 +1338,7 @@ int bootz_run(struct bootm_info *bmi)
 	if (ret)
 		return ret;
 
-	lmb_reserve(images->ep, zi_end - zi_start);
+	lmb_reserve(images->ep, zi_end - zi_start, 0);
 
 	/*
 	 * Handle the BOOTM_STATE_FINDOTHER state ourselves as we do not
