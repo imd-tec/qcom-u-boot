@@ -471,7 +471,7 @@ static efi_status_t efi_allocate_pages_(enum efi_allocate_type type,
 		if (*memory & EFI_PAGE_MASK)
 			return EFI_NOT_FOUND;
 
-		addr = (u64)lmb_alloc_addr_flags(*memory, len, flags);
+		addr = (u64)lmb_alloc_addr(*memory, len, flags);
 		if (!addr)
 			return EFI_NOT_FOUND;
 		break;

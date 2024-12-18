@@ -101,7 +101,6 @@ static inline phys_addr_t lmb_alloc(phys_size_t size, ulong align)
 }
 #endif
 phys_addr_t lmb_alloc_base(phys_size_t size, ulong align, phys_addr_t max_addr);
-phys_addr_t lmb_alloc_addr(phys_addr_t base, phys_size_t size);
 phys_size_t lmb_get_free_size(phys_addr_t addr);
 
 /**
@@ -122,8 +121,8 @@ phys_addr_t lmb_alloc_base_flags(phys_size_t size, ulong align,
 				 phys_addr_t max_addr, uint flags);
 
 /**
- * lmb_alloc_addr_flags() - Allocate specified memory address with specified
- *			    attributes
+ * lmb_alloc_addr() - Allocate specified memory address with specified attributes
+ *
  * @base: Base Address requested
  * @size: Size of the region requested
  * @flags: Memory region attributes to be set
@@ -134,8 +133,7 @@ phys_addr_t lmb_alloc_base_flags(phys_size_t size, ulong align,
  *
  * Return: Base address on success, 0 on error.
  */
-phys_addr_t lmb_alloc_addr_flags(phys_addr_t base, phys_size_t size,
-				 uint flags);
+phys_addr_t lmb_alloc_addr(phys_addr_t base, phys_size_t size, uint flags);
 
 /**
  * lmb_is_reserved_flags() - Test if address is in reserved region with flag
@@ -173,7 +171,7 @@ void lmb_pop(struct lmb *store);
 
 static inline int lmb_read_check(phys_addr_t addr, phys_size_t len)
 {
-	return lmb_alloc_addr(addr, len) == addr ? 0 : -1;
+	return lmb_alloc_addr(addr, len, LMB_NONE) == addr ? 0 : -1;
 }
 
 /**
