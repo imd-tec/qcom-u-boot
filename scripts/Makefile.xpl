@@ -508,6 +508,7 @@ quiet_cmd_u-boot-spl ?= LTO     $@
       cmd_u-boot-spl ?= \
 	(									\
 		cd $(obj) &&							\
+		touch $(patsubst $(obj)/%,%,$(u-boot-spl-main)) &&		\
 		$(CC) -nostdlib -nostartfiles $(LTO_FINAL_LDFLAGS) $(c_flags)	\
 		$(KBUILD_LDFLAGS:%=-Wl,%) $(LDFLAGS_$(@F):%=-Wl,%)		\
 		$(patsubst $(obj)/%,%,$(u-boot-spl-init))			\
@@ -524,6 +525,7 @@ quiet_cmd_u-boot-spl ?= LD      $@
       cmd_u-boot-spl ?= \
 	(								\
 		cd $(obj) &&						\
+		touch $(patsubst $(obj)/%,%,$(u-boot-spl-main)) &&	\
 		$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_$(@F))		\
 		$(patsubst $(obj)/%,%,$(u-boot-spl-init))		\
 		--whole-archive						\
