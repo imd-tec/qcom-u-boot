@@ -29,6 +29,7 @@ SECTIONS
 		*(.dynamic);
 		. = ALIGN(512);
 	}
+	. = ALIGN(4096);
 	_etext = .;
 	_text_size = . - _text;
 	. = ALIGN(65536);
