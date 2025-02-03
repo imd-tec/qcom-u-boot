@@ -15,6 +15,7 @@
 #include <log.h>
 #include <asm/encoding.h>
 #include <asm/system.h>
+
 #include <asm/cache.h>
 #include <dm/uclass-internal.h>
 #include <linux/bitops.h>
