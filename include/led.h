@@ -86,6 +86,8 @@ struct led_sw_blink {
  *
  * @label:	LED label
  * @default_state:	LED default state
+ * @name:	LED name, derived from function, color or function-enumerator
+ *		property.
  * @sw_blink:	LED software blink struct
  */
 struct led_uc_plat {
