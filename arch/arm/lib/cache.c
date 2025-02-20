@@ -12,6 +12,7 @@
 #include <asm/cache.h>
 #include <asm/global_data.h>
 #include <asm/system.h>
+#include <linux/errno.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -173,4 +174,9 @@ __weak int arm_reserve_mmu(void)
 #endif
 
 	return 0;
+}
+
+int __weak pgprot_set_attrs(phys_addr_t addr, size_t size, enum pgprot_attrs perm)
+{
+	return -ENOSYS;
 }
