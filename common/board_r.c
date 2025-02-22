@@ -734,9 +734,6 @@ static void initcall_run_r(void)
 #if CONFIG_IS_ENABLED(BOARD_LATE_INIT)
 	INITCALL(board_late_init);
 #endif
-#ifdef CONFIG_BITBANGMII
-	INITCALL(bb_miiphy_init);
-#endif
 #ifdef CONFIG_PCI_ENDPOINT
 	INITCALL(pci_ep_init);
 #endif
