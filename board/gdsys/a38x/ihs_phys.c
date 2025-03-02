@@ -228,15 +228,6 @@ int register_miiphy_bus(uint k, struct mii_dev **bus)
 	mdiodev->read = bb_miiphy_read;
 	mdiodev->write = bb_miiphy_write;
 
-	/* Copy the bus accessors and private data */
-	bb_miiphy->mdio_active = mii_mdio_active;
-	bb_miiphy->mdio_tristate = mii_mdio_tristate;
-	bb_miiphy->set_mdio = mii_set_mdio;
-	bb_miiphy->get_mdio = mii_get_mdio;
-	bb_miiphy->set_mdc = mii_set_mdc;
-	bb_miiphy->delay = mii_delay;
-	bb_miiphy->priv = &gpio_mii_set[k];
-
 	retval = mdio_register(mdiodev);
 	if (retval < 0)
 		return retval;

@@ -582,15 +582,6 @@ static int ravb_probe(struct udevice *dev)
 	mdiodev->priv = eth;
 	snprintf(mdiodev->name, sizeof(mdiodev->name), dev->name);
 
-	/* Copy the bus accessors and private data */
-	bb_miiphy->mdio_active = ravb_bb_mdio_active;
-	bb_miiphy->mdio_tristate = ravb_bb_mdio_tristate;
-	bb_miiphy->set_mdio = ravb_bb_set_mdio;
-	bb_miiphy->get_mdio = ravb_bb_get_mdio;
-	bb_miiphy->set_mdc = ravb_bb_set_mdc;
-	bb_miiphy->delay = ravb_bb_delay;
-	bb_miiphy->priv = eth;
-
 	ret = mdio_register(mdiodev);
 	if (ret < 0)
 		goto err_mdio_register;

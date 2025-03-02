@@ -737,15 +737,6 @@ static int sh_ether_probe(struct udevice *udev)
 	mdiodev->priv = eth;
 	snprintf(mdiodev->name, sizeof(mdiodev->name), udev->name);
 
-	/* Copy the bus accessors and private data */
-	bb_miiphy->mdio_active = sh_eth_bb_mdio_active;
-	bb_miiphy->mdio_tristate = sh_eth_bb_mdio_tristate;
-	bb_miiphy->set_mdio = sh_eth_bb_set_mdio;
-	bb_miiphy->get_mdio = sh_eth_bb_get_mdio;
-	bb_miiphy->set_mdc = sh_eth_bb_set_mdc;
-	bb_miiphy->delay = sh_eth_bb_delay;
-	bb_miiphy->priv = eth;
-
 	ret = mdio_register(mdiodev);
 	if (ret < 0)
 		goto err_mdio_register;
