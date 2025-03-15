@@ -1105,7 +1105,7 @@ cmd_objcopy = $(OBJCOPY) --gap-fill=0xff $(OBJCOPYFLAGS) \
 quiet_cmd_embeddtb = OBJCOPY $@
 cmd_embeddtb = $(OBJCOPY) --update-section .embedded_dtb=dts/dt.dtb --set-section-flags .embedded_dtb=contents,alloc,load,data $<
 
-# Provide a version which does not do this, for use by EFI
+# Provide a version which does not do this, for use by EFI and hex/srec
 quiet_cmd_zobjcopy = OBJCOPY $@
 cmd_zobjcopy = $(OBJCOPY) $(OBJCOPYFLAGS) $(OBJCOPYFLAGS_$(@F)) $< $@
 
@@ -1324,17 +1324,17 @@ OBJCOPYFLAGS_u-boot.hex := -O ihex
 OBJCOPYFLAGS_u-boot.srec := -O srec
 
 u-boot.hex u-boot.srec: u-boot FORCE
-	$(call if_changed,objcopy)
+	$(call if_changed,zobjcopy)
 
 OBJCOPYFLAGS_u-boot-elf.srec := $(OBJCOPYFLAGS_u-boot.srec)
 
 u-boot-elf.srec: u-boot.elf FORCE
-	$(call if_changed,objcopy)
+	$(call if_changed,zobjcopy)
 
 OBJCOPYFLAGS_u-boot-spl.srec = $(OBJCOPYFLAGS_u-boot.srec)
 
 spl/u-boot-spl.srec: spl/u-boot-spl FORCE
-	$(call if_changed,objcopy)
+	$(call if_changed,zobjcopy)
 
 %.scif: %.srec
 	$(Q)$(MAKE) $(build)=arch/arm/mach-renesas $@
@@ -1470,7 +1470,7 @@ OBJCOPYFLAGS_u-boot.ldr.hex := -I binary -O ihex
 OBJCOPYFLAGS_u-boot.ldr.srec := -I binary -O srec
 
 u-boot.ldr.hex u-boot.ldr.srec: u-boot.ldr FORCE
-	$(call if_changed,objcopy)
+	$(call if_changed,zobjcopy)
 
 ifdef CONFIG_SPL_LOAD_FIT
 MKIMAGEFLAGS_u-boot.img = -f auto -A $(ARCH) -T firmware -C none -O u-boot \
