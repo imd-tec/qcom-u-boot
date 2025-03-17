@@ -187,7 +187,7 @@ static void blkmap_mem_destroy(struct blkmap *bm, struct blkmap_slice *bms)
 }
 
 int __blkmap_map_mem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
-		     void *addr, bool remapped)
+		     void *addr, bool remapped, bool preserve)
 {
 	struct blkmap *bm = dev_get_plat(dev);
 	struct blkmap_mem *bmm;
@@ -212,6 +212,9 @@ int __blkmap_map_mem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		.remapped = remapped,
 	};
 
+	if (preserve)
+		bmm->slice.attr |= BLKMAP_SLICE_PRESERVE;
+
 	err = blkmap_slice_add(bm, &bmm->slice);
 	if (err)
 		free(bmm);
@@ -222,11 +225,11 @@ int __blkmap_map_mem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 int blkmap_map_mem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		   void *addr)
 {
-	return __blkmap_map_mem(dev, blknr, blkcnt, addr, false);
+	return __blkmap_map_mem(dev, blknr, blkcnt, addr, false, false);
 }
 
 int blkmap_map_pmem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
-		    phys_addr_t paddr)
+		    phys_addr_t paddr, bool preserve)
 {
 	struct blkmap *bm = dev_get_plat(dev);
 	struct blk_desc *bd = dev_get_uclass_plat(bm->blk);
@@ -237,7 +240,7 @@ int blkmap_map_pmem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 	if (!addr)
 		return -ENOMEM;
 
-	err = __blkmap_map_mem(dev, blknr, blkcnt, addr, true);
+	err = __blkmap_map_mem(dev, blknr, blkcnt, addr, true, preserve);
 	if (err)
 		unmap_sysmem(addr);
 

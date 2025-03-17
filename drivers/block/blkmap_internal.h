@@ -30,6 +30,14 @@ struct blkmap;
 #define BLKMAP_SLICE_MEM	BIT(1)
 
 /**
+ * define BLKMAP_SLICE_PRESERVE - Preserved blkmap slice
+ *
+ * This blkmap slice is intended to be preserved, and it's
+ * information passed on to a later stage, like OS.
+ */
+#define BLKMAP_SLICE_PRESERVE	BIT(2)
+
+/**
  * struct blkmap_slice - Region mapped to a blkmap
  *
  * Common data for a region mapped to a blkmap, specialized by each
