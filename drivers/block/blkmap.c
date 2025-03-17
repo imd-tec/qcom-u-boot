@@ -121,6 +121,7 @@ int blkmap_map_linear(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		.slice = {
 			.blknr = blknr,
 			.blkcnt = blkcnt,
+			.attr = BLKMAP_SLICE_LINEAR,
 
 			.read = blkmap_linear_read,
 			.write = blkmap_linear_write,
@@ -200,6 +201,7 @@ int __blkmap_map_mem(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		.slice = {
 			.blknr = blknr,
 			.blkcnt = blkcnt,
+			.attr = BLKMAP_SLICE_MEM,
 
 			.read = blkmap_mem_read,
 			.write = blkmap_mem_write,
