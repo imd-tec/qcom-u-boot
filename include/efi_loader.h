@@ -921,7 +921,7 @@ efi_status_t efi_get_memory_map(efi_uintn_t *memory_map_size,
 efi_status_t efi_add_memory_map(u64 start, u64 size, int memory_type);
 
 /**
- * efi_add_memory_map_pg() - add pages to the memory map
+ * efi_update_memory_map() - update the memory map by adding/removing pages
  *
  * @start: start address, must be a multiple of EFI_PAGE_SIZE. Note that this
  *	is an address, not a pointer. Use map_to_sysmem(ptr) if you need to pass
@@ -930,11 +930,11 @@ efi_status_t efi_add_memory_map(u64 start, u64 size, int memory_type);
  * @memory_type:		EFI type of memory added
  * @overlap_conventional:	region may only overlap free(conventional)
  *				memory
+ * @remove:			remove memory map
  * Return:			status code
  */
-efi_status_t efi_add_memory_map_pg(u64 start, u64 pages,
-				   int memory_type,
-				   bool overlap_conventional);
+efi_status_t efi_update_memory_map(u64 start, u64 pages, int memory_type,
+				   bool overlap_conventional, bool remove);
 
 /* Called by board init to initialize the EFI drivers */
 efi_status_t efi_driver_init(void);

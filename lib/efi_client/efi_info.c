@@ -202,7 +202,9 @@ void efi_add_known_memory_from_efi(void)
 	for (desc = map->desc; desc < end; desc = efi_get_next_mem_desc(desc, map->desc_size)) {
 		switch (desc->type) {
 		case EFI_RESERVED_MEMORY_TYPE:
-			efi_add_memory_map_pg(desc->physical_start, desc->num_pages, desc->type, false);
+			efi_update_memory_map(desc->physical_start,
+					      desc->num_pages, desc->type,
+					      false, false);
 			break;
 		default:
 			continue;
