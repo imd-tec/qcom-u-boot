@@ -1942,6 +1942,7 @@ S:	Maintained
 T:	git https://source.denx.de/u-boot/custodians/u-boot-x86.git
 F:	arch/x86/
 F:	cmd/x86/
+F:	configs/coreboot64-no-spl_defconfig
 
 XEN
 M:	Anastasiia Lukianenko <vicooodin@gmail.com>
