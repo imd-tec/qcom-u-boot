@@ -309,6 +309,7 @@ int video_fill(struct udevice *dev, u32 colour)
 				*ppix++ = colour;
 			break;
 		}
+		fallthrough;
 	case VIDEO_BPP32:
 		if (CONFIG_IS_ENABLED(VIDEO_BPP32)) {
 			u32 *ppix = priv->fb;
@@ -318,6 +319,7 @@ int video_fill(struct udevice *dev, u32 colour)
 				*ppix++ = colour;
 			break;
 		}
+		fallthrough;
 	default:
 		memset(priv->fb, colour, priv->fb_size);
 		break;
