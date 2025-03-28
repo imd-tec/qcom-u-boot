@@ -2566,8 +2566,6 @@ static void fsg_common_release(struct fsg_common *common)
 		/* In error recovery common->nluns may be zero. */
 		for (; i; --i, ++lun)
 			fsg_lun_close(lun);
-
-		kfree(common->luns);
 	}
 
 	{
