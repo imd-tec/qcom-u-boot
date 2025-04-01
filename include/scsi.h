@@ -10,6 +10,7 @@
 #include <bouncebuf.h>
 #include <linux/bitops.h>
 #include <linux/dma-direction.h>
+#include <part.h>
 
 struct udevice;
 
@@ -185,6 +186,7 @@ struct scsi_cmd {
 #define SCSI_WRT_VERIFY	0x2E		/* Write and Verify (O) */
 #define SCSI_WRITE_LONG	0x3F		/* Write Long (O) */
 #define SCSI_WRITE_SAME	0x41		/* Write Same (O) */
+#define SCSI_UNMAP	0x42		/* Write 10-Byte (MANDATORY) */
 #define SCSI_REPORT_LUNS	0xa0	/* Report LUNs */
 
 /**
