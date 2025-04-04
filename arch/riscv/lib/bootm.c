@@ -57,6 +57,10 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 	bootm_final(fake ? BOOTM_FINAL_FAKE : 0);
 
 	if (!fake) {
+		if (images->os.arch != IH_ARCH_DEFAULT) {
+			printf("Image arch not compatible with host arch.\n");
+			hang();
+		}
 		if (CONFIG_IS_ENABLED(OF_LIBFDT) && images->ft_len) {
 #ifdef CONFIG_SMP
 			ret = smp_call_function(images->ep,
