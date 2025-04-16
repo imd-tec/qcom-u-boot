@@ -189,6 +189,7 @@
 			args = "-T sfspl";
 
 			u-boot-spl {
+				no-write-symbols;
 			};
 		};
 	};
