@@ -9,6 +9,7 @@
 #include <fs_legacy.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <linux/errno.h>
 
 static int do_cat(struct cmd_tbl *cmdtp, int flag, int argc,
 		  char *const argv[])
