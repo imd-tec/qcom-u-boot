@@ -302,5 +302,5 @@ These modules are again located in a separate directory for each host, so that
 the repository may be shared across hosts.
 
 For complete details re: the required content of these Python modules, please
-see :doc:`py_testing` and also the comments in some individual test files in
+see :doc:`pytest/usage` and also the comments in some individual test files in
 `test/py/tests/test_*.py`.

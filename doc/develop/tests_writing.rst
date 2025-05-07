@@ -545,5 +545,5 @@ data. This avoids the need to allocate memory or use global variables::
 Writing Python tests
 --------------------
 
-See :doc:`py_testing` for brief notes how to write Python tests. You
+See :doc:`pytest/usage` for brief notes how to write Python tests. You
 should be able to use the existing tests in test/py/tests as examples.
