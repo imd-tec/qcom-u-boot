@@ -7,6 +7,7 @@ import re
 import pytest
 
 def in_tree(response, name, uclass, drv, depth, last_child):
+    """A helper function to confirm contents of the device tree """
     lines = [x.strip() for x in response.splitlines()]
     leaf = ''
     if depth != 0:
@@ -29,7 +30,12 @@ def in_tree(response, name, uclass, drv, depth, last_child):
 @pytest.mark.buildconfigspec('cmd_bind')
 @pytest.mark.slow
 def test_bind_unbind_with_node(ubman):
+    """Test the bind and unbind commands of a node
 
+    Verify that the dm tree output contains some expected nodes, and then bind
+    and unbind a USB via node device while verifying that the dm tree output
+    matches the expected values at each step.
+    """
     tree = ubman.run_command('dm tree')
     assert in_tree(tree, 'bind-test', 'simple_bus', 'simple_bus', 0, True)
     assert in_tree(tree, 'bind-test-child1', 'phy', 'phy_sandbox', 1, False)
@@ -107,6 +113,7 @@ def test_bind_unbind_with_node(ubman):
     assert response == ''
 
 def get_next_line(tree, name):
+    """A helper function to strip content out of dm tree output"""
     treelines = [x.strip() for x in tree.splitlines() if x.strip()]
     child_line = ''
     for idx, line in enumerate(treelines):
@@ -122,6 +129,11 @@ def get_next_line(tree, name):
 @pytest.mark.buildconfigspec('cmd_bind')
 @pytest.mark.singlethread
 def test_bind_unbind_with_uclass(ubman):
+    """Test the bind and unbind commands of a class
+
+    Bind and unbind the simple_bus class while verifying that the dm tree
+    output matches the expected values at each step.
+    """
     # Ensure /bind-test is unbound, since it may be bound from DT or the
     # previous tests
     ubman.run_command('unbind /bind-test')
