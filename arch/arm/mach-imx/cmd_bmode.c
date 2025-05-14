@@ -3,6 +3,7 @@
  * Copyright (C) 2012 Boundary Devices Inc.
  */
 #include <linux/errno.h>
+#include <linux/string.h>
 #include <asm/io.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <malloc.h>

@@ -5,6 +5,7 @@
 
 #include <config.h>
 #include <command.h>
+#include <linux/string.h>
 #include <vsprintf.h>
 #include <asm/cache.h>
 #include <asm/io.h>
