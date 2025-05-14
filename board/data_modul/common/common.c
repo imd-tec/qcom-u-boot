@@ -5,6 +5,7 @@
 
 #include <asm-generic/gpio.h>
 #include <asm-generic/sections.h>
+#include <env.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/ddr.h>
 #include <asm/arch/sys_proto.h>

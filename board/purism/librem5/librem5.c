@@ -4,6 +4,7 @@
  * Copyright 2021 Purism
  */
 
+#include <env.h>
 #include <malloc.h>
 #include <errno.h>
 #include <asm/io.h>

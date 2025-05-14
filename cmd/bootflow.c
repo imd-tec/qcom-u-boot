@@ -14,6 +14,7 @@
 #include <console.h>
 #include <dm.h>
 #include <efi_device_path.h>
+#include <env.h>
 #include <expo.h>
 #include <log.h>
 #include <mapmem.h>

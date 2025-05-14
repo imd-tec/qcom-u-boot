@@ -9,6 +9,7 @@
 
 #include <bootm.h>
 #include <command.h>
+#include <env.h>
 #include <mapmem.h>
 #include <vsprintf.h>
 #include <asm/zimage.h>

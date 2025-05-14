@@ -4,6 +4,7 @@
 #include <command.h>
 #include <console.h>
 #include <display_options.h>
+#include <env.h>
 #include <dm/device.h>
 #include <efi_loader.h>
 #include <image.h>
