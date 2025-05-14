@@ -5,6 +5,7 @@
  */
 
 #include <command.h>
+#include <env.h>
 #include <dm.h>
 #include <expo.h>
 #include <expo_test.h>

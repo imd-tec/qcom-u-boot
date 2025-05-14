@@ -17,6 +17,7 @@
 
 #define LOG_CATEGORY LOGC_EFI
 
+#include <env.h>
 #include <efi_device_path.h>
 #include <efi_loader.h>
 #include <dm.h>

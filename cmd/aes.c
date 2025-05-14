@@ -6,6 +6,7 @@
  */
 
 #include <command.h>
+#include <linux/string.h>
 #include <uboot_aes.h>
 #include <malloc.h>
 #include <asm/byteorder.h>

@@ -6,6 +6,7 @@
  * Written by Simon Glass <sjg@chromium.org>
  */
 
+#include <env.h>
 #include <dm/device-internal.h>
 #include <dm/lists.h>
 #include <dm/ofnode.h>
