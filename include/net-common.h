@@ -4,6 +4,7 @@
 #define __NET_COMMON_H__
 
 #include <asm/cache.h>
+#include <command.h>
 #include <hexdump.h>
 #include <linux/if_ether.h>
 #include <linux/sizes.h>
