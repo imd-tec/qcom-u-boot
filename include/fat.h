@@ -11,7 +11,6 @@
 
 #include <fs_legacy.h>
 #include <asm/byteorder.h>
-#include <asm/cache.h>
 
 struct disk_partition;
 
