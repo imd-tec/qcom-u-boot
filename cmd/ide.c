@@ -19,7 +19,6 @@
 #include <dm/device-internal.h>
 #include <dm/uclass-internal.h>
 
-#include <ide.h>
 #include <ata.h>
 
 /* Current I/O Device	*/

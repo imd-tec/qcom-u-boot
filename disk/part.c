@@ -10,7 +10,6 @@
 #include <command.h>
 #include <env.h>
 #include <errno.h>
-#include <ide.h>
 #include <log.h>
 #include <malloc.h>
 #include <part.h>
