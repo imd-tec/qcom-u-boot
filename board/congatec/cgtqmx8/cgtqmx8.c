@@ -4,6 +4,7 @@
  * Copyright (C) 2019 Oliver Graute <oliver.graute@kococonnector.com>
  */
 
+
 #include <env.h>
 #include <errno.h>
 #include <linux/libfdt.h>
