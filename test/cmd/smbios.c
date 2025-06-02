@@ -66,7 +66,7 @@ static int cmd_smbios_test(struct unit_test_state *uts)
 	ut_assert_nextline("\tNumber of Contained Object Handles: 0x00");
 	ut_assert_nextline_empty();
 	ut_assert_nextlinen("Handle 0x0003, DMI type 3, 22 bytes at");
-	ut_assert_nextline("Baseboard Information");
+	ut_assert_nextline("Chassis Information");
 	ut_assert_nextline("\tManufacturer: Sandbox Chassis Inc");
 	ut_assert_nextline("\tType: 0x02");
 	ut_assert_nextline("\tVersion: ");
