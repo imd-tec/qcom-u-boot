@@ -148,7 +148,7 @@ static inline gd_t *get_gd(void)
 #endif
 #endif
 
-static inline void set_gd(volatile gd_t *gd_ptr)
+static inline void set_gd(gd_t *gd_ptr)
 {
 #ifdef CONFIG_EFI_APP
 	extern struct global_data *global_data_ptr;
