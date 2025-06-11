@@ -435,9 +435,10 @@ KBUILD_CPPFLAGS := -D__KERNEL__ -D__UBOOT__
 
 KBUILD_CFLAGS   := -Wall -Werror=strict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
-		   -fno-builtin -ffreestanding $(CSTD_FLAG)
+		   -fno-builtin -ffreestanding $(CSTD_FLAG) \
+		   -fno-PIE
 KBUILD_CFLAGS	+= -fshort-wchar -fno-strict-aliasing
-KBUILD_AFLAGS   := -D__ASSEMBLY__
+KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
 KBUILD_LDFLAGS  :=
 
 ifeq ($(cc-name),clang)
@@ -459,9 +460,6 @@ endif
 
 ifdef CONFIG_EFI_APP
 KBUILD_CFLAGS += -shared
-else
-KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
-KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 endif
 
 # Read UBOOTRELEASE from include/config/uboot.release (if it exists)
