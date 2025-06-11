@@ -233,6 +233,9 @@ ifeq ($(KBUILD_EXTMOD),)
 _all: all
 else
 _all: modules
+PHONY += prepare
+prepare:
+	$(cmd_crmodverdir)
 endif
 
 ifeq ($(KBUILD_SRC),)
@@ -2655,15 +2658,12 @@ endif
 
 # Modules
 /: prepare FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1) \
 	$(build)=$(build-dir)
 %/: prepare FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1) \
 	$(build)=$(build-dir)
 %.ko: prepare FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1)   \
 	$(build)=$(build-dir) $(@:.ko=.o)
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modpost
