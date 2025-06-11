@@ -189,6 +189,10 @@ sub-make: FORCE
 else # sub-make-done
 # We process the rest of the Makefile if this is the final invocation of make
 
+# Do not propagate sub_make_done to non-submake children (e.g. test scripts
+# that invoke make separately with O= need to process the KBUILD_OUTPUT block)
+unexport sub_make_done
+
 # Do not print "Entering directory ...",
 # but we want to display it when entering to the output directory
 # so that IDEs/editors are able to understand relative filenames.
