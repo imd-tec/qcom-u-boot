@@ -2277,6 +2277,10 @@
 			};
 		};
 	};
+
+	aes-engine {
+		compatible = "software-aes-engine";
+	};
 };
 
 #include "sandbox_pmic.dtsi"
