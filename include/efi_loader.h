@@ -870,6 +870,17 @@ efi_status_t efi_next_variable_name(efi_uintn_t *size, u16 **buf,
 void *efi_alloc(size_t len);
 
 /**
+ * efi_realloc() - reallocate boot services data pool memory
+ *
+ * Reallocate memory from pool for a new size and copy the data from old one.
+ *
+ * @ptr:	pointer to the buffer
+ * @size:	number of bytes to allocate
+ * Return:	EFI status to indicate success or not
+ */
+efi_status_t efi_realloc(void **ptr, size_t size);
+
+/**
  * efi_alloc_aligned_pages() - allocate aligned memory pages
  *
  * @len:		len in bytes
