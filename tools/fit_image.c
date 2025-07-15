@@ -736,6 +736,8 @@ static int fit_import_data(struct imgtool *itl, const char *fname)
 	}
 
 	confs = fdt_path_offset(fdt, FIT_CONFS_PATH);
+	const char *default_conf =
+		(char *)fdt_getprop(fdt, confs, FIT_DEFAULT_PROP, NULL);
 	static const char * const props[] = { FIT_KERNEL_PROP,
 					      FIT_RAMDISK_PROP,
 					      FIT_FDT_PROP,
@@ -743,6 +745,14 @@ static int fit_import_data(struct imgtool *itl, const char *fname)
 					      FIT_FPGA_PROP,
 					      FIT_FIRMWARE_PROP,
 					      FIT_SCRIPT_PROP};
+
+	if (default_conf && fdt_subnode_offset(fdt, confs, default_conf) < 0) {
+		fprintf(stderr,
+			"Error: Default configuration '%s' not found under /configurations\n",
+			default_conf);
+		ret = FDT_ERR_NOTFOUND;
+		goto err_munmap;
+	}
 
 	fdt_for_each_subnode(node, fdt, confs) {
 		const char *conf_name = fdt_get_name(fdt, node, NULL);
