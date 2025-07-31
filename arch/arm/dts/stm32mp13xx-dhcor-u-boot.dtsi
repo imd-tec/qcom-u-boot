@@ -87,7 +87,7 @@
 &pinctrl {
 	bootph-all;
 	i2c3_pins_a: i2c3-0 {
-	        bootph-all;
+		bootph-all;
 		pins {
 			bootph-all;
 			pinmux = <STM32_PINMUX('B', 8, AF5)>, /* I2C3_SCL */
