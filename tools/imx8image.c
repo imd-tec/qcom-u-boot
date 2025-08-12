@@ -23,7 +23,7 @@ static uint8_t cntr_version;
 static uint32_t custom_partition;
 static uint32_t scfw_flags;
 
-int imx8image_check_params(struct imgtool *itl)
+static int imx8image_check_params(struct imgtool *itl)
 {
 	return 0;
 }
