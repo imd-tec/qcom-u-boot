@@ -345,7 +345,6 @@ $(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
 else
 $(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
 	$(obj)/bmp_logo --gen-data $(LOGO_BMP) > $@
-#endif
 endif
 
 # Let clean descend into subdirs
