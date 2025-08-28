@@ -789,6 +789,34 @@ xilinx_mbv64_smode test.py:
     TEST_PY_ID: "--id qemu"
   <<: *buildman_and_testpy_dfn
 
+xilinx_mbv32 test.py:
+  variables:
+    TEST_PY_BD: "xilinx_mbv32"
+    TEST_PY_TEST_SPEC: "not sleep"
+    TEST_PY_ID: "--id qemu"
+  <<: *buildman_and_testpy_dfn
+
+xilinx_mbv32_smode test.py:
+  variables:
+    TEST_PY_BD: "xilinx_mbv32_smode"
+    TEST_PY_TEST_SPEC: "not sleep"
+    TEST_PY_ID: "--id qemu"
+  <<: *buildman_and_testpy_dfn
+
+xilinx_mbv64 test.py:
+  variables:
+    TEST_PY_BD: "xilinx_mbv64"
+    TEST_PY_TEST_SPEC: "not sleep"
+    TEST_PY_ID: "--id qemu"
+  <<: *buildman_and_testpy_dfn
+
+xilinx_mbv64_smode test.py:
+  variables:
+    TEST_PY_BD: "xilinx_mbv64_smode"
+    TEST_PY_TEST_SPEC: "not sleep"
+    TEST_PY_ID: "--id qemu"
+  <<: *buildman_and_testpy_dfn
+
 xilinx_zynq_virt test.py:
   variables:
     TEST_PY_BD: "xilinx_zynq_virt"
