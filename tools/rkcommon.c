@@ -279,7 +279,7 @@ bool rkcommon_need_rc4_spl(struct imgtool *itl)
 	return info->spl_rc4;
 }
 
-bool rkcommon_is_header_v2(struct imgtool *itl)
+static bool rkcommon_is_header_v2(struct imgtool *itl)
 {
 	struct spl_info *info = rkcommon_get_spl_info(itl->imagename);
 
