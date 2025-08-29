@@ -49,7 +49,7 @@ static uint32_t get_cfg_value(char *token, char *name,  int linenr)
 	return value;
 }
 
-int imx8mimage_check_params(struct imgtool *itl)
+static int imx8mimage_check_params(struct imgtool *itl)
 {
 	return 0;
 }
