@@ -230,7 +230,8 @@ int request_firmware_into_buf(struct udevice *dev,
 }
 
 int request_firmware_into_buf_via_script(void **buf, size_t max_size,
-					 const char *script_name)
+					 const char *script_name,
+					 size_t *retsize)
 {
 	ulong addr, size;
 	int ret;
@@ -269,6 +270,9 @@ int request_firmware_into_buf_via_script(void **buf, size_t max_size,
 			size, max_size);
 		return -E2BIG;
 	}
+
+	if (retsize)
+		*retsize = size;
 
 	memcpy(*buf, (void *)addr, size);
 
