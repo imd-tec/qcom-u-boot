@@ -168,3 +168,11 @@ Booting OS
 
    os/plan9
    os/vxworks
+
+File Systems
+------------
+
+.. toctree::
+   :maxdepth: 1
+
+   filesystems/ext4
