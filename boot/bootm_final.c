@@ -33,6 +33,7 @@ void bootm_final(enum bootm_final_t flags)
 
 	if (IS_ENABLED(CONFIG_BOOTSTAGE_FDT) && IS_ENABLED(CONFIG_CMD_FDT))
 		bootstage_fdt_add_report();
+	bootstage_stash_default();
 	if (IS_ENABLED(CONFIG_BOOTSTAGE_REPORT))
 		bootstage_report();
 
