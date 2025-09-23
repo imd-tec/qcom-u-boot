@@ -590,13 +590,25 @@ static int fit_extract_data(struct imgtool *itl, const char *fname)
 		}
 		if (itl->external_offset > 0) {
 			/* An external offset positions the data absolutely. */
-			fdt_setprop_u32(fdt, node, FIT_DATA_POSITION_PROP,
-					itl->external_offset + buf_ptr);
+			ret = fdt_setprop_u32(fdt, node, FIT_DATA_POSITION_PROP,
+					      itl->external_offset + buf_ptr);
 		} else {
-			fdt_setprop_u32(fdt, node, FIT_DATA_OFFSET_PROP,
-					buf_ptr);
+			ret = fdt_setprop_u32(fdt, node, FIT_DATA_OFFSET_PROP,
+					      buf_ptr);
 		}
-		fdt_setprop_u32(fdt, node, FIT_DATA_SIZE_PROP, len);
+
+		if (ret) {
+			ret = -EINVAL;
+			goto err_munmap;
+		}
+
+		ret = fdt_setprop_u32(fdt, node, FIT_DATA_SIZE_PROP, len);
+
+		if (ret) {
+			ret = -EINVAL;
+			goto err_munmap;
+		}
+
 		buf_ptr += ALIGN(len, align_size);
 	}
 
