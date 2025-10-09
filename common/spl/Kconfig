@@ -799,6 +799,7 @@ config SPL_FS_LOAD_PAYLOAD_NAME
 config SPL_FS_LOAD_KERNEL_NAME
 	string "File to load for the OS kernel from the filesystem"
 	depends on (SPL_FS_EXT4 || SPL_FS_FAT || SPL_FS_SQUASHFS) && SPL_OS_BOOT
+	default "fitImage" if SPL_OS_BOOT_SECURE
 	default "uImage"
 	help
 	  Filename to read to load for the OS kernel when reading from the
