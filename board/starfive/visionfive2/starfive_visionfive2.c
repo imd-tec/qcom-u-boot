@@ -21,6 +21,10 @@ DECLARE_GLOBAL_DATA_PTR;
 	"starfive/jh7110-deepcomputing-fml13v01.dtb"
 #define FDTFILE_MILK_V_MARS \
 	"starfive/jh7110-milkv-mars.dtb"
+#define FDTFILE_MILK_V_MARSCM_EMMC \
+	"starfive/jh7110-milkv-marscm-emmc.dtb"
+#define FDTFILE_MILK_V_MARSCM_LITE \
+	"starfive/jh7110-milkv-marscm-lite.dtb"
 #define FDTFILE_VISIONFIVE2_1_2A \
 	"starfive/jh7110-starfive-visionfive-2-v1.2a.dtb"
 #define FDTFILE_VISIONFIVE2_1_3B \
@@ -69,6 +73,11 @@ static void set_fdtfile(void)
 		fdtfile = FDTFILE_FML13V01;
 	} else if (!strncmp(product_id, "MARS", 4)) {
 		fdtfile = FDTFILE_MILK_V_MARS;
+	} else if (!strncmp(product_id, "MARC", 4)) {
+		if (get_mmc_size_from_eeprom())
+			fdtfile = FDTFILE_MILK_V_MARSCM_EMMC;
+		else
+			fdtfile = FDTFILE_MILK_V_MARSCM_LITE;
 	} else if (!strncmp(product_id, "VF7110", 6)) {
 		version = get_pcb_revision_from_eeprom();
 
