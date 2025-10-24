@@ -26,6 +26,9 @@ Use U-Boot
 Shell commands
 --------------
 
+For all commands in U-Boot there are some :ref:`usage/cmdline:General rules`
+that apply.
+
 .. toctree::
    :maxdepth: 1
    :glob:
