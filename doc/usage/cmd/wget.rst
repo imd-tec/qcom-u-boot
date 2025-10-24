@@ -191,8 +191,3 @@ Acknowledgments are enabled by default with lwIP.
     A place to store the root CA certificates is needed, and then MBed TLS would
     need to walk the entire chain. Therefore, man-in-the middle attacks are
     possible and HTTPS should not be relied upon for payload authentication.
-
-Return value
-------------
-
-The return value $? is 0 (true) on success and 1 (false) otherwise.

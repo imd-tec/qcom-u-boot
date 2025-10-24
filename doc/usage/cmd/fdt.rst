@@ -94,8 +94,3 @@ Print all reserved memory regions::
     0    secmon@1f000000      0x000000001f000000 0x0000000001000000
     1    atf@40000000         0x0000000040000000 0x0000000000200000
     2    linux,cma            0x0000000050000000 0x0000000008000000
-
-Return value
-------------
-
-The return value $? indicates whether the command succeeded.
