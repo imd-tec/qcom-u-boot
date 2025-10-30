@@ -513,8 +513,8 @@ static int bootdev_test_hunt_scan(struct unit_test_state *uts)
 	ut_assertok(bootflow_scan_first(NULL, NULL, &iter,
 					BOOTFLOWIF_SHOW | BOOTFLOWIF_HUNT |
 					BOOTFLOWIF_SKIP_GLOBAL, &bflow));
-	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_SIMPLE_BUS) |
-		    BIT(HUNTER_VIRTIO), std->hunters_used);
+	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_VIRTIO),
+		    std->hunters_used);
 
 	return 0;
 }
