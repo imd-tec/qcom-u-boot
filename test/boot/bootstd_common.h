@@ -23,13 +23,16 @@
 /* IDs for hunters, which is dependent on their binding order */
 enum {
 	HUNTER_ETH	= 0,
-	HUNTER_SIMPLE_BUS,
-	HUNTER_FS	= 3,
+	HUNTER_FS,
+	HUNTER_IDE,
 	HUNTER_MMC,		/* ID of MMC hunter */
-	HUNTER_SCSI	= 7,	/* ID of SCSI hunter */
-	HUNTER_USB	= 9,	/* ID of USB hunter */
+	HUNTER_NVME,
+	HUNTER_QFW,
+	HUNTER_SCSI,		/* ID of SCSI hunter */
+	HUNTER_SF,
+	HUNTER_USB,		/* ID of USB hunter */
 	HUNTER_VIRTIO,
-	HUNTER_COUNT	= 11,
+	HUNTER_COUNT	= 10,
 	HUNTER_MAX	= HUNTER_COUNT - 1,
 };
 
