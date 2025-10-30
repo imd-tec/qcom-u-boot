@@ -575,6 +575,7 @@ config CMD_FDT
 	help
 	  Do FDT related setup before booting into the Operating System.
 
+
 config CMD_FDT_RESERVED
 	bool "fdt subcommand to show reserved memory"
 	depends on CMD_FDT
@@ -584,9 +585,6 @@ config CMD_FDT_RESERVED
 	  reserved-memory regions in the devicetree, before booting into the
 	  Operating System. Note that this is differen from 'fdt rsvmem'
 	  which shows the reserve entries after the FDT header.
-
-config SUPPORT_EXTENSION_SCAN
-	bool
 
 config CMD_EXTENSION
 	bool "Extension board management command"
