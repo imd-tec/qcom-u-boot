@@ -9,6 +9,8 @@
  * Marius Groeger <mgroeger@sysgo.de>
  */
 
+#define LOG_CATEGORY	LOGC_CORE
+
 #include <config.h>
 #include <bloblist.h>
 #include <bootstage.h>

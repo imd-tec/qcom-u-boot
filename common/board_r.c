@@ -9,6 +9,8 @@
  * Marius Groeger <mgroeger@sysgo.de>
  */
 
+#define LOG_CATEGORY	LOGC_CORE
+
 #include <config.h>
 #include <legacy_api.h>
 #include <bootstage.h>
