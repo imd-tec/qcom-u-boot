@@ -533,6 +533,9 @@ static int reserve_malloc(void)
 /* (permanently) allocate a Board Info struct */
 static int reserve_board(void)
 {
+	struct event_reserve_board reserve;
+	int ret;
+
 	if (!gd->bd) {
 		gd->start_addr_sp = reserve_stack_aligned(sizeof(struct bd_info));
 		gd->bd = (struct bd_info *)map_sysmem(gd->start_addr_sp,
@@ -541,6 +544,14 @@ static int reserve_board(void)
 		debug("Reserving %zu Bytes for Board Info at: %08lx\n",
 		      sizeof(struct bd_info), gd->start_addr_sp);
 	}
+
+	/* Allow board/app code to reserve additional memory */
+	reserve.start_addr_sp = gd->start_addr_sp;
+	ret = event_notify_resp(EVT_RESERVE_BOARD, &reserve, sizeof(reserve));
+	if (ret)
+		return log_msg_ret("res", ret);
+	gd->start_addr_sp = reserve.start_addr_sp;
+
 	return 0;
 }
 

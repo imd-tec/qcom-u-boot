@@ -106,6 +106,16 @@ enum event_t {
 	EVT_FSP_INIT_F,
 
 	/**
+	 * @EVT_RESERVE_BOARD:
+	 * This event is triggered immediately after reserve_board() completes
+	 * during pre-relocation init. It allows board or application code to
+	 * reserve additional memory before other reservations.
+	 * A non-zero return code from the event spy causes the boot process
+	 * to fail.
+	 */
+	EVT_RESERVE_BOARD,
+
+	/**
 	 * @EVT_SETTINGS_R:
 	 * This event is triggered post-relocation and before console init.
 	 * This gives an option to perform any platform-dependent setup, which
@@ -292,6 +302,18 @@ union event_data {
 		char *bootcmd;
 		int size;
 	} bootcmd;
+
+	/**
+	 * struct event_reserve_board - memory reservation event
+	 *
+	 * This is used for EVT_RESERVE_BOARD
+	 *
+	 * @start_addr_sp: On entry, current stack pointer for reservations;
+	 * on exit, updated stack pointer after any additional reservations
+	 */
+	struct event_reserve_board {
+		ulong start_addr_sp;
+	} reserve_board;
 };
 
 /**
