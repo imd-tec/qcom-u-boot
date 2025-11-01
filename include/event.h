@@ -447,7 +447,20 @@ const char *event_type_name(enum event_t type);
  * @size: Size of data in bytes
  * @return 0 if OK, -ve on error
  */
-int event_notify(enum event_t type, void *data, int size);
+int event_notify(enum event_t type, const void *data, int size);
+
+/**
+ * event_notify_resp() - notify spies about an event and get response
+ *
+ * This is like event_notify() but copies the potentially modified event data
+ * back to the caller after all event handlers have run.
+ *
+ * @type: Event type
+ * @data: Event data to be sent (e.g. union_event_data); modified data copied back
+ * @size: Size of data in bytes
+ * @return 0 if OK, -ve on error
+ */
+int event_notify_resp(enum event_t type, void *data, int size);
 
 /**
  * event_notify_null() - notify spies about an event
@@ -464,10 +477,16 @@ static inline int event_notify_null(enum event_t type)
 	return 0;
 }
 
-static inline int event_notify(enum event_t type, void *data, int size)
+static inline int event_notify(enum event_t type, const void *data, int size)
 {
 	return 0;
 }
+
+static inline int event_notify_resp(enum event_t type, void *data, int size)
+{
+	return 0;
+}
+
 #endif
 
 #if CONFIG_IS_ENABLED(EVENT_DYNAMIC)
