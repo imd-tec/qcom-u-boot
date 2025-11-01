@@ -33,6 +33,7 @@
 #include <dm/lists.h>
 #include <dm/root.h>
 #include <mapmem.h>
+#include <event.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -388,6 +389,39 @@ U_BOOT_DRIVER(efi_sysreset) = {
 	.of_match = efi_sysreset_ids,
 	.ops = &efi_sysreset_ops,
 };
+
+/**
+ * efi_reserve_priv() - Event handler to reserve memory for struct efi_priv
+ *
+ * This handler is called during EVT_RESERVE_BOARD event to reserve memory
+ * for the efi_priv structure before other reservations.
+ *
+ * @ctx: Event context (unused)
+ * @event: Event information containing reserve_board data
+ * Return: 0 on success
+ */
+static int efi_reserve_priv(void *ctx, struct event *event)
+{
+	struct event_reserve_board *reserve = &event->data.reserve_board;
+	struct efi_priv *priv;
+	ulong addr;
+
+	/* Reserve memory for efi_priv using the provided stack pointer */
+	addr = ALIGN_DOWN(reserve->start_addr_sp - sizeof(struct efi_priv), 16);
+	priv = map_sysmem(addr, sizeof(struct efi_priv));
+
+	/* Update stack pointer for next reservation */
+	reserve->start_addr_sp = addr;
+
+	/* Move existing priv data (from stack) to reserved location */
+	efi_move_priv(priv);
+
+	log_debug("Reserving %zu bytes for EFI priv at: %08lx\n",
+		  sizeof(struct efi_priv), addr);
+
+	return 0;
+}
+EVENT_SPY_FULL(EVT_RESERVE_BOARD, efi_reserve_priv);
 
 efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 {

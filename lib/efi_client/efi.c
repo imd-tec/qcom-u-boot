@@ -57,6 +57,12 @@ void efi_set_priv(struct efi_priv *priv)
 	global_priv = priv;
 }
 
+void efi_move_priv(struct efi_priv *new_priv)
+{
+	*new_priv = *global_priv;
+	global_priv = new_priv;
+}
+
 struct efi_system_table *efi_get_sys_table(void)
 {
 	return global_priv->sys_table;

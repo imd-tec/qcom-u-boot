@@ -622,6 +622,16 @@ struct efi_priv *efi_get_priv(void);
 void efi_set_priv(struct efi_priv *priv);
 
 /**
+ * efi_move_priv() - Move EFI-private information to a new location
+ *
+ * Copies the existing EFI-private data to a new location and updates the
+ * global pointer. If there is no existing data, just sets the pointer.
+ *
+ * @new_priv: New location for private data
+ */
+void efi_move_priv(struct efi_priv *new_priv);
+
+/**
  * efi_get_sys_table() - Get access to the main EFI system table
  *
  * Returns: pointer to EFI system table
