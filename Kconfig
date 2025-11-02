@@ -106,6 +106,16 @@ config ULIB
 
 	  The library is called libu-boot.so
 
+config ULIB_SHARED_LIB
+	bool "Build shared library (libu-boot.so)"
+	depends on ULIB && SANDBOX
+	default y
+	help
+	  Enable this to build the shared library version (libu-boot.so) in
+	  addition to the static library (libu-boot.a). Disable this if you
+	  only need the static library, which can speed up builds and avoid
+	  linking issues with some configurations.
+
 config OPTIMIZE_INLINING
 	bool "Allow compiler to uninline functions marked 'inline' in full U-Boot"
 	help
