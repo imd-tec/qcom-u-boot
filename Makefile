@@ -1871,7 +1871,8 @@ quiet_cmd_ulib-objs = OBJS    $@
 	rm -f $@.tmp $@.objlist $@; \
 	$(AR) rcT $@.tmp $(u-boot-init) $(u-boot-main) \
 		$(u-boot-keep-syms-lto); \
-	$(AR) t $@.tmp | grep -v "arch/sandbox/cpu/main\.o$$" > $@.objlist; \
+	$(AR) t $@.tmp | grep -v "arch/sandbox/cpu/main\.o$$" | \
+		grep -v "lib/efi_client/efi_main\.o$$" > $@.objlist; \
 	mkdir -p $@.objdir; \
 	$(PYTHON3) $(srctree)/scripts/build_api.py \
 		$(srctree)/lib/ulib/rename.syms \
