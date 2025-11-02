@@ -389,21 +389,13 @@ U_BOOT_DRIVER(efi_sysreset) = {
 	.ops = &efi_sysreset_ops,
 };
 
-/**
- * efi_main() - Start an EFI image
- *
- * This function is called by our EFI start-up code. It handles running
- * U-Boot. If it returns, EFI will continue. Another way to get back to EFI
- * is via reset_cpu().
- */
-efi_status_t EFIAPI efi_main(efi_handle_t image,
-			     struct efi_system_table *sys_table)
+efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 {
 	struct efi_priv local_priv, *priv = &local_priv;
 	efi_status_t ret;
 
 	/* Set up access to EFI data structures */
-	ret = efi_init(priv, "App", image, sys_table);
+	ret = efi_init(priv, "App", image, systab);
 	if (ret) {
 		printf("Failed to set up U-Boot: err=%lx\n", ret);
 		return ret;
@@ -441,8 +433,17 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 		     (detect_emulator() ? GD_FLG_EMUL : 0));
 	gd = gd->new_gd;
 	board_init_r(NULL, 0);
-	free_memory(priv);
-	efi_exit();
 
-	return EFI_SUCCESS;
+	return 0;
+}
+
+void efi_shutdown(void)
+{
+	struct efi_priv *priv;
+
+	/* TODO: this causes a crash as efi_exit() makes use of priv */
+	priv = efi_get_priv();
+	if (0)
+		free_memory(priv);
+	efi_exit();
 }

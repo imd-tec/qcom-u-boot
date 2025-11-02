@@ -945,4 +945,22 @@ int efi_decode_key(struct efi_input_key *key);
  */
 int efi_decode_key_ex(struct efi_key_data *key_data);
 
+/**
+ * efi_startup() - Start up the app
+ *
+ * This is called from efi_main() to start up an image
+ *
+ * @image: Image handle for the app
+ * @systab: EFI system table to use with the app
+ * Return: Error code
+ */
+efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab);
+
+/**
+ * efi_shutdown() - Shut down the app
+ *
+ * Call this to shut down the app - freeing memory and exiting back to EFI
+ */
+void efi_shutdown(void);
+
 #endif /* _LINUX_EFI_H */

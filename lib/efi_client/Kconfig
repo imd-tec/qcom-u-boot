@@ -92,6 +92,15 @@ config EFI_APP_DEBUG
 	  possible to set the symbol offset. Since the app is relocated to an
 	  unknown address, breakpoints will only work if this is done.
 
+config EFI_APP_ENTRY
+	bool "Provide efi_main() entry point"
+	default y
+	help
+	  Enable this to have libu-boot provide the efi_main() entry point
+	  function. This is the standard entry point called by EFI when loading
+	  the application. Disable this if you want to provide your own
+	  efi_main() implementation.
+
 endif  # EFI_APP
 
 endmenu
