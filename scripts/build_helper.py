@@ -295,6 +295,8 @@ def add_common_args(parser):
     parser.add_argument('-B', '--no-build', action='store_true',
                         help="Don't build; assume a build exists")
     parser.add_argument('--build-dir', help='Directory to use for the build')
+    parser.add_argument('-c', '--custom',
+                        help='Use a custom BIOS/app instead of U-Boot')
     parser.add_argument('-C', '--enable-console', action='store_true',
                         help="Enable linux console (x86 only)")
     parser.add_argument('-d', '--disk', nargs='*',
