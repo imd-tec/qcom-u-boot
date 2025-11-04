@@ -62,6 +62,8 @@ def parse_args():
                         help='Enable networking (with SSH forwarding on port 2222)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Show executed commands')
+    parser.add_argument('--include-dir',
+                        help='Directory containing additional files to include in the image')
 
     args = parser.parse_args()
 
@@ -176,6 +178,22 @@ class BuildEfi:
         fname = f'u-boot-{build_type}.efi'
         tools.write_file(f'{dst}/startup.nsh', f'fs0:{fname}', binary=False)
         shutil.copy(f'{self.build_dir}/{fname}', dst)
+
+        # Copy additional files from include directory if specified
+        if self.args.include_dir:
+            include_path = Path(self.args.include_dir)
+            if include_path.exists() and include_path.is_dir():
+                print(f'Including files from {include_path}')
+                for item in include_path.iterdir():
+                    if item.is_file():
+                        print(f'  Copying {item.name}')
+                        shutil.copy(str(item), dst)
+                    elif item.is_dir():
+                        dest_dir = Path(dst) / item.name
+                        print(f'  Copying directory {item.name}')
+                        shutil.copytree(str(item), str(dest_dir))
+            else:
+                print(f'Warning: Include directory {include_path} does not exist or is not a directory')
 
         # Write U-Boot environment file if bootcmd is specified
         if self.args.bootcmd:
