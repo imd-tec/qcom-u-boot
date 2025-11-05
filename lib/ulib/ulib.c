@@ -9,8 +9,9 @@
 #include <string.h>
 #include <version.h>
 #include <asm/global_data.h>
-#include <version_string.h>
+#include <init.h>
 #include <u-boot-lib.h>
+#include <version_string.h>
 
 /* Static storage for global data when using simplified API */
 static struct global_data static_gd;
