@@ -159,6 +159,10 @@ static int print_cpuinfo(void)
 	char desc[512];
 	int ret;
 
+	/* Skip CPU info when running as a library */
+	if (gd_ulib())
+		return 0;
+
 	dev = cpu_get_current_dev();
 	if (!dev) {
 		debug("%s: Could not get CPU device\n",
