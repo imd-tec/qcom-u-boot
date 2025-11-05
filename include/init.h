@@ -392,6 +392,13 @@ int do_bdinfo(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]);
  */
 int ulib_init_with_data(char *progname, struct global_data *data);
 
+/**
+ * main() - main program called from ulib
+ *
+ * When ulib has to start up the machine, it calls main() when it is finished.
+ */
+int main(void);
+
 #endif	/* __ASSEMBLY__ */
 /* Put only stuff here that the assembler can digest */
 

@@ -129,7 +129,7 @@ void __noreturn board_init_f_r_trampoline(ulong sp);
  * This is used to jump from pre-relocation to post-relocation U-Boot. It
  * enables the cache and jump to the new location.
  */
-void __noreturn board_init_f_r(void);
+void board_init_f_r(void);
 
 /*
  * board_init_f_r_trampoline64() - jump to relocated address with new stack
