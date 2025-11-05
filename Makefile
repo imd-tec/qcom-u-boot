@@ -1057,6 +1057,12 @@ endif
 
 LDFLAGS_u-boot += $(LDFLAGS_FINAL)
 
+# When building as a library, allow undefined symbols (e.g., main)
+# which will be resolved when linking the final static binary
+ifdef CONFIG_ULIB
+LDFLAGS_u-boot += --unresolved-symbols=ignore-all
+endif
+
 # Avoid 'Not enough room for program headers' error on binutils 2.28 onwards.
 LDFLAGS_u-boot += $(call ld-option, --no-dynamic-linker)
 
