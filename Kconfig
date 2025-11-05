@@ -116,6 +116,15 @@ config ULIB_SHARED_LIB
 	  only need the static library, which can speed up builds and avoid
 	  linking issues with some configurations.
 
+config ULIB_JUMP_TO_MAIN
+	bool "Set GD_FLG_ULIB flag in early boot"
+	depends on ULIB
+	help
+	  Enable this to set the GD_FLG_ULIB flag in the global data structure
+	  during early boot (in start.S before calling board_init_f). This allows
+	  U-Boot code to detect that it's running as a library from the very
+	  beginning of initialization.
+
 config OPTIMIZE_INLINING
 	bool "Allow compiler to uninline functions marked 'inline' in full U-Boot"
 	help

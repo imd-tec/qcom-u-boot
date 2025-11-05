@@ -1012,6 +1012,9 @@ void board_init_f(ulong boot_flags)
 
 	gd->flags = boot_flags;
 	gd->flags &= ~GD_FLG_HAVE_CONSOLE;
+	if (IS_ENABLED(CONFIG_ULIB_JUMP_TO_MAIN))
+		gd->flags |= GD_FLG_ULIB;
+
 	gd->boardf = &boardf;
 
 	initcall_run_f();
