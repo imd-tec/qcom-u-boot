@@ -173,6 +173,10 @@ int print_cpuinfo(void)
 {
 	post_code(POST_CPU_INFO);
 
+	/* Skip CPU info when running as a library */
+	if (gd_ulib())
+		return 0;
+
 	printf("CPU: %s, vendor %s, device %xh\n",
 	       cpu_has_64bit() ? "x86_64" : "x86",
 	       cpu_vendor_name(gd->arch.x86_vendor), gd->arch.x86_device);
