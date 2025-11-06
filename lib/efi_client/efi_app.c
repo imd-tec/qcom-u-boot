@@ -90,7 +90,7 @@ int efi_get_mmap(struct efi_mem_desc **descp, int *sizep, uint *keyp,
 	return 0;
 }
 
-static efi_status_t setup_memory(struct efi_priv *priv)
+static efi_status_t setup_memory(struct efi_priv *priv, bool verbose)
 {
 	struct efi_boot_services *boot = priv->boot;
 	struct global_data *ptr;
@@ -119,19 +119,23 @@ static efi_status_t setup_memory(struct efi_priv *priv)
 	ret = boot->allocate_pages(EFI_ALLOCATE_MAX_ADDRESS,
 				   priv->image_data_type, pages, &addr);
 	if (ret) {
-		log_info("(any address) ");
+		if (verbose)
+			log_info("(any address) ");
 		ret = boot->allocate_pages(EFI_ALLOCATE_ANY_PAGES,
 					   priv->image_data_type, pages, &addr);
 	}
 	if (ret) {
-		log_info("(using pool %lx) ", ret);
+		if (verbose)
+			log_info("(using pool %lx) ", ret);
 		priv->ram_base = (ulong)efi_malloc(priv, CONFIG_EFI_RAM_SIZE,
 						   &ret);
 		if (!priv->ram_base)
 			return ret;
 		priv->use_pool_for_malloc = true;
 	} else {
-		log_info("(using allocated RAM address %lx) ", (ulong)addr);
+		if (verbose)
+			log_info("(using allocated RAM address %lx) ",
+				 (ulong)addr);
 		priv->ram_base = addr;
 	}
 	gd->ram_base = addr;
@@ -443,7 +447,7 @@ efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 	 */
 	debug_uart_init();
 
-	ret = setup_memory(priv);
+	ret = setup_memory(priv, true);
 	if (ret) {
 		printf("Failed to set up memory: ret=%lx\n", ret);
 		return ret;
