@@ -427,15 +427,17 @@ static int efi_reserve_priv(void *ctx, struct event *event)
 }
 EVENT_SPY_FULL(EVT_RESERVE_BOARD, efi_reserve_priv);
 
-efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
+efi_status_t EFIAPI efi_startup(efi_handle_t image,
+				struct efi_system_table *systab, bool is_ulib)
 {
 	struct efi_priv local_priv, *priv = &local_priv;
 	efi_status_t ret;
+	bool verbose = !is_ulib;
 
 	/* Set up access to EFI data structures */
-	ret = efi_init(priv, "App", image, systab, true);
+	ret = efi_init(priv, "App", image, systab, verbose);
 	if (ret) {
-		printf("Failed to set up U-Boot: err=%lx\n", ret);
+		printf("Failed to set up ulib: err=%lx\n", ret);
 		return ret;
 	}
 	efi_set_priv(priv);
@@ -447,7 +449,8 @@ efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 	 */
 	debug_uart_init();
 
-	ret = setup_memory(priv, true);
+	/* allocate some memory and set gd */
+	ret = setup_memory(priv, verbose);
 	if (ret) {
 		printf("Failed to set up memory: ret=%lx\n", ret);
 		return ret;
@@ -465,9 +468,11 @@ efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 	 *	return ret;
 	 */
 
-	printf("starting\n");
+	if (!is_ulib)
+		printf("starting\n");
 
 	board_init_f(GD_FLG_SKIP_RELOC |
+		     (is_ulib ? GD_FLG_ULIB : 0) |
 		     (detect_emulator() ? GD_FLG_EMUL : 0));
 	gd = gd->new_gd;
 	board_init_r(NULL, 0);

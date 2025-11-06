@@ -14,7 +14,7 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 {
 	efi_status_t ret;
 
-	ret = efi_startup(image, sys_table);
+	ret = efi_startup(image, sys_table, false);
 	if (ret)
 		return ret;
 

@@ -963,9 +963,11 @@ int efi_decode_key_ex(struct efi_key_data *key_data);
  *
  * @image: Image handle for the app
  * @systab: EFI system table to use with the app
+ * @is_ulib: True if using U-Boot library
  * Return: Error code
  */
-efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab);
+efi_status_t EFIAPI efi_startup(efi_handle_t image, struct efi_system_table *systab,
+				bool is_ulib);
 
 /**
  * efi_shutdown() - Shut down the app
