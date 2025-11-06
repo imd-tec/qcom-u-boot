@@ -433,7 +433,7 @@ efi_status_t efi_startup(efi_handle_t image, struct efi_system_table *systab)
 	efi_status_t ret;
 
 	/* Set up access to EFI data structures */
-	ret = efi_init(priv, "App", image, systab);
+	ret = efi_init(priv, "App", image, systab, true);
 	if (ret) {
 		printf("Failed to set up U-Boot: err=%lx\n", ret);
 		return ret;

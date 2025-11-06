@@ -675,10 +675,11 @@ unsigned long efi_get_ram_base(void);
  * @banner:	Banner to display when starting
  * @image:	The image handle passed to efi_main()
  * @sys_table:	The EFI system table pointer passed to efi_main()
+ * @verbose:    true to show messages on startup
  * Return: 0 on succcess, EFI error code on failure
  */
 int efi_init(struct efi_priv *priv, const char *banner, efi_handle_t image,
-	     struct efi_system_table *sys_table);
+	     struct efi_system_table *sys_table, bool verbose);
 
 /**
  * efi_malloc() - Allocate some memory from EFI
