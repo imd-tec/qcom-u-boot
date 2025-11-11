@@ -114,7 +114,9 @@ config ULIB_SHARED_LIB
 	  Enable this to build the shared library version (libu-boot.so) in
 	  addition to the static library (libu-boot.a). Disable this if you
 	  only need the static library, which can speed up builds and avoid
-	  linking issues with some configurations.
+	  linking issues with some configurations. This option is only
+	  available for SANDBOX builds since shared libraries are not
+	  meaningful for bare-metal targets.
 
 config ULIB_JUMP_TO_MAIN
 	bool "Set GD_FLG_ULIB flag in early boot"
