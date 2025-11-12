@@ -538,6 +538,7 @@ int expo_poll(struct expo *exp, struct expo_action *act)
 {
 	int key, ret = -EAGAIN;
 
+	schedule();
 	expo_test_mark(exp);
 
 	/* update mouse position if mouse is enabled */
