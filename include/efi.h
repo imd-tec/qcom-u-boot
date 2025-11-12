@@ -622,6 +622,16 @@ struct efi_priv *efi_get_priv(void);
 void efi_set_priv(struct efi_priv *priv);
 
 /**
+ * efi_move_priv() - Move EFI-private information to a new location
+ *
+ * Copies the existing EFI-private data to a new location and updates the
+ * global pointer. If there is no existing data, just sets the pointer.
+ *
+ * @new_priv: New location for private data
+ */
+void efi_move_priv(struct efi_priv *new_priv);
+
+/**
  * efi_get_sys_table() - Get access to the main EFI system table
  *
  * Returns: pointer to EFI system table
@@ -665,10 +675,11 @@ unsigned long efi_get_ram_base(void);
  * @banner:	Banner to display when starting
  * @image:	The image handle passed to efi_main()
  * @sys_table:	The EFI system table pointer passed to efi_main()
+ * @verbose:    true to show messages on startup
  * Return: 0 on succcess, EFI error code on failure
  */
 int efi_init(struct efi_priv *priv, const char *banner, efi_handle_t image,
-	     struct efi_system_table *sys_table);
+	     struct efi_system_table *sys_table, bool verbose);
 
 /**
  * efi_malloc() - Allocate some memory from EFI
@@ -944,5 +955,25 @@ int efi_decode_key(struct efi_input_key *key);
  * Return: Character code (0-255), or 0 if no valid character
  */
 int efi_decode_key_ex(struct efi_key_data *key_data);
+
+/**
+ * efi_startup() - Start up the app
+ *
+ * This is called from efi_main() to start up an image
+ *
+ * @image: Image handle for the app
+ * @systab: EFI system table to use with the app
+ * @is_ulib: True if using U-Boot library
+ * Return: Error code
+ */
+efi_status_t EFIAPI efi_startup(efi_handle_t image, struct efi_system_table *systab,
+				bool is_ulib);
+
+/**
+ * efi_shutdown() - Shut down the app
+ *
+ * Call this to shut down the app - freeing memory and exiting back to EFI
+ */
+void efi_shutdown(void);
 
 #endif /* _LINUX_EFI_H */

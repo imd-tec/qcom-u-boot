@@ -383,6 +383,22 @@ struct cmd_tbl;
 
 int do_bdinfo(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]);
 
+/**
+ * ulib_init_with_data() - set up the U-Boot library
+ *
+ * @progname: Program name to use, typically argv[0]
+ * @data: Global data (must remain valid until the program exits)
+ * Return: 0 if OK, -ve error code on error
+ */
+int ulib_init_with_data(char *progname, struct global_data *data);
+
+/**
+ * main() - main program called from ulib
+ *
+ * When ulib has to start up the machine, it calls main() when it is finished.
+ */
+int main(void);
+
 #endif	/* __ASSEMBLY__ */
 /* Put only stuff here that the assembler can digest */
 

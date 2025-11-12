@@ -106,6 +106,16 @@ enum event_t {
 	EVT_FSP_INIT_F,
 
 	/**
+	 * @EVT_RESERVE_BOARD:
+	 * This event is triggered immediately after reserve_board() completes
+	 * during pre-relocation init. It allows board or application code to
+	 * reserve additional memory before other reservations.
+	 * A non-zero return code from the event spy causes the boot process
+	 * to fail.
+	 */
+	EVT_RESERVE_BOARD,
+
+	/**
 	 * @EVT_SETTINGS_R:
 	 * This event is triggered post-relocation and before console init.
 	 * This gives an option to perform any platform-dependent setup, which
@@ -292,6 +302,18 @@ union event_data {
 		char *bootcmd;
 		int size;
 	} bootcmd;
+
+	/**
+	 * struct event_reserve_board - memory reservation event
+	 *
+	 * This is used for EVT_RESERVE_BOARD
+	 *
+	 * @start_addr_sp: On entry, current stack pointer for reservations;
+	 * on exit, updated stack pointer after any additional reservations
+	 */
+	struct event_reserve_board {
+		ulong start_addr_sp;
+	} reserve_board;
 };
 
 /**
@@ -447,7 +469,20 @@ const char *event_type_name(enum event_t type);
  * @size: Size of data in bytes
  * @return 0 if OK, -ve on error
  */
-int event_notify(enum event_t type, void *data, int size);
+int event_notify(enum event_t type, const void *data, int size);
+
+/**
+ * event_notify_resp() - notify spies about an event and get response
+ *
+ * This is like event_notify() but copies the potentially modified event data
+ * back to the caller after all event handlers have run.
+ *
+ * @type: Event type
+ * @data: Event data to be sent (e.g. union_event_data); modified data copied back
+ * @size: Size of data in bytes
+ * @return 0 if OK, -ve on error
+ */
+int event_notify_resp(enum event_t type, void *data, int size);
 
 /**
  * event_notify_null() - notify spies about an event
@@ -464,10 +499,16 @@ static inline int event_notify_null(enum event_t type)
 	return 0;
 }
 
-static inline int event_notify(enum event_t type, void *data, int size)
+static inline int event_notify(enum event_t type, const void *data, int size)
 {
 	return 0;
 }
+
+static inline int event_notify_resp(enum event_t type, void *data, int size)
+{
+	return 0;
+}
+
 #endif
 
 #if CONFIG_IS_ENABLED(EVENT_DYNAMIC)

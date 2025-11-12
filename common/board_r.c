@@ -9,6 +9,8 @@
  * Marius Groeger <mgroeger@sysgo.de>
  */
 
+#define LOG_CATEGORY	LOGC_CORE
+
 #include <config.h>
 #include <legacy_api.h>
 #include <bootstage.h>
@@ -771,10 +773,13 @@ void board_init_r(gd_t *new_gd, ulong dest_addr)
 
 	initcall_run_r();
 
-#ifdef CONFIG_ULIB
-	if (gd_ulib())
-		return;
+	if (gd_ulib()) {
+#ifdef CONFIG_ULIB	/* handle __noreturn attribute */
+		if (!IS_ENABLED(CONFIG_ULIB_JUMP_TO_MAIN))
+			return;
 #endif
+		main();
+	}
 
 	/* NOTREACHED - run_main_loop() does not return */
 	hang();

@@ -414,7 +414,6 @@ ifeq ($(CONFIG_EFI_CAPSULE_CRT_FILE),"")
 	$(error "CONFIG_EFI_CAPSULE_CRT_FILE is empty, EFI capsule authentication \
 	public key must be specified when CONFIG_EFI_CAPSULE_AUTHENTICATE is enabled")
 else
-	$(Q)echo "Building capsule_esl_file: $@ from $<"
 	$(call cmd,capsule_esl_gen)
 endif
 

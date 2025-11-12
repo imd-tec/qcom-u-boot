@@ -1046,8 +1046,8 @@ INPUTS-$(CONFIG_X86) += u-boot-x86-start16.bin u-boot-x86-reset16.bin \
 ifdef CONFIG_CMDLINE
 ifneq ($(cc-name),clang)
 ifeq ($(NO_LIBS),)
-INPUTS-$(CONFIG_ULIB) += libu-boot.so test/ulib/ulib_test
-INPUTS-$(CONFIG_ULIB) += libu-boot.a test/ulib/ulib_test_static
+INPUTS-$(CONFIG_ULIB_SHARED_LIB) += libu-boot.so test/ulib/ulib_test
+INPUTS-$(CONFIG_ULIB) += libu-boot.a
 ifdef CONFIG_EXAMPLES
 INPUTS-$(CONFIG_ULIB) += examples_ulib examples_rust
 endif
@@ -1056,6 +1056,12 @@ endif
 endif
 
 LDFLAGS_u-boot += $(LDFLAGS_FINAL)
+
+# When building as a library, allow undefined symbols (e.g., main)
+# which will be resolved when linking the final static binary
+ifdef CONFIG_ULIB
+LDFLAGS_u-boot += --unresolved-symbols=ignore-all
+endif
 
 # Avoid 'Not enough room for program headers' error on binutils 2.28 onwards.
 LDFLAGS_u-boot += $(call ld-option, --no-dynamic-linker)
@@ -1865,7 +1871,8 @@ quiet_cmd_ulib-objs = OBJS    $@
 	rm -f $@.tmp $@.objlist $@; \
 	$(AR) rcT $@.tmp $(u-boot-init) $(u-boot-main) \
 		$(u-boot-keep-syms-lto); \
-	$(AR) t $@.tmp | grep -v "arch/sandbox/cpu/main\.o$$" > $@.objlist; \
+	$(AR) t $@.tmp | grep -v "arch/sandbox/cpu/main\.o$$" | \
+		grep -v "lib/efi_client/efi_main\.o$$" > $@.objlist; \
 	mkdir -p $@.objdir; \
 	$(PYTHON3) $(srctree)/scripts/build_api.py \
 		$(srctree)/lib/ulib/rename.syms \

@@ -74,7 +74,9 @@ SECTIONS
 	}
 
 	.embedded_dtb : {
+		__dtb_dt_begin = .;
 		*(.embedded_dtb)
+		__dtb_dt_end = .;
 	}
 
 	.comment 0 : { *(.comment) }

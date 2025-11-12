@@ -106,6 +106,27 @@ config ULIB
 
 	  The library is called libu-boot.so
 
+config ULIB_SHARED_LIB
+	bool "Build shared library (libu-boot.so)"
+	depends on ULIB && SANDBOX
+	default y
+	help
+	  Enable this to build the shared library version (libu-boot.so) in
+	  addition to the static library (libu-boot.a). Disable this if you
+	  only need the static library, which can speed up builds and avoid
+	  linking issues with some configurations. This option is only
+	  available for SANDBOX builds since shared libraries are not
+	  meaningful for bare-metal targets.
+
+config ULIB_JUMP_TO_MAIN
+	bool "Set GD_FLG_ULIB flag in early boot"
+	depends on ULIB
+	help
+	  Enable this to set the GD_FLG_ULIB flag in the global data structure
+	  during early boot (in start.S before calling board_init_f). This allows
+	  U-Boot code to detect that it's running as a library from the very
+	  beginning of initialization.
+
 config OPTIMIZE_INLINING
 	bool "Allow compiler to uninline functions marked 'inline' in full U-Boot"
 	help

@@ -207,7 +207,7 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 	/* initially we can use the EFI UART */
 	use_hw_uart = false;
 
-	ret = efi_init(priv, "Payload", image, sys_table);
+	ret = efi_init(priv, "Payload", image, sys_table, true);
 	if (ret) {
 		printhex2(ret);
 		puts(" efi_init() failed\n");

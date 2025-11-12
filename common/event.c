@@ -37,6 +37,7 @@ const char *const type_name[] = {
 	/* init hooks */
 	"misc_init_f",
 	"fsp_init_r",
+	"reserve_board",
 	"settings_r",
 	"last_stage_init",
 
@@ -134,27 +135,50 @@ static int notify_dynamic(struct event *ev)
 	return 0;
 }
 
-int event_notify(enum event_t type, void *data, int size)
+static int event_notify_internal(struct event *event, const void *data, int size)
 {
-	struct event event;
 	int ret;
 
-	event.type = type;
-	if (size > sizeof(event.data))
+	if (size > sizeof(event->data))
 		return log_msg_ret("size", -E2BIG);
-	memcpy(&event.data, data, size);
+	if (data && size)
+		memcpy(&event->data, data, size);
 
-	ret = notify_static(&event);
+	ret = notify_static(event);
 	if (ret)
 		return log_msg_ret("sta", ret);
 
 	if (CONFIG_IS_ENABLED(EVENT_DYNAMIC)) {
-		ret = notify_dynamic(&event);
+		ret = notify_dynamic(event);
 		if (ret)
 			return log_msg_ret("dyn", ret);
 	}
 
 	return 0;
+}
+
+int event_notify(enum event_t type, const void *data, int size)
+{
+	struct event event;
+
+	event.type = type;
+
+	return event_notify_internal(&event, data, size);
+}
+
+int event_notify_resp(enum event_t type, void *data, int size)
+{
+	struct event event;
+	int ret;
+
+	event.type = type;
+	ret = event_notify_internal(&event, data, size);
+
+	/* Copy potentially modified event data back to caller */
+	if (data && size)
+		memcpy(data, &event.data, size);
+
+	return ret;
 }
 
 int event_notify_null(enum event_t type)

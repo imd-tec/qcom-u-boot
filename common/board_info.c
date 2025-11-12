@@ -59,6 +59,9 @@ static int try_sysinfo(void)
 
 int show_board_info(void)
 {
+	if (gd_ulib())
+		return 0;
+
 	if (IS_ENABLED(CONFIG_OF_CONTROL)) {
 		int ret = -ENOSYS;
 

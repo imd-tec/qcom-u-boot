@@ -204,7 +204,9 @@ static int setup_block(void)
 		log_debug("%2d: %-12s %ls\n", i,
 			  dev ? dev->name : "<partition>", name);
 	}
-	log_info("EFI:   disks %d, partitions %d\n", num_disks, num_parts);
+	if (!gd_ulib())
+		log_info("EFI:   disks %d, partitions %d\n", num_disks,
+			 num_parts);
 	boot->free_pool(handle);
 
 	return 0;

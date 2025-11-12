@@ -33,6 +33,7 @@
 #include <dm/lists.h>
 #include <dm/root.h>
 #include <mapmem.h>
+#include <event.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -89,7 +90,7 @@ int efi_get_mmap(struct efi_mem_desc **descp, int *sizep, uint *keyp,
 	return 0;
 }
 
-static efi_status_t setup_memory(struct efi_priv *priv)
+static efi_status_t setup_memory(struct efi_priv *priv, bool verbose)
 {
 	struct efi_boot_services *boot = priv->boot;
 	struct global_data *ptr;
@@ -118,19 +119,23 @@ static efi_status_t setup_memory(struct efi_priv *priv)
 	ret = boot->allocate_pages(EFI_ALLOCATE_MAX_ADDRESS,
 				   priv->image_data_type, pages, &addr);
 	if (ret) {
-		log_info("(any address) ");
+		if (verbose)
+			log_info("(any address) ");
 		ret = boot->allocate_pages(EFI_ALLOCATE_ANY_PAGES,
 					   priv->image_data_type, pages, &addr);
 	}
 	if (ret) {
-		log_info("(using pool %lx) ", ret);
+		if (verbose)
+			log_info("(using pool %lx) ", ret);
 		priv->ram_base = (ulong)efi_malloc(priv, CONFIG_EFI_RAM_SIZE,
 						   &ret);
 		if (!priv->ram_base)
 			return ret;
 		priv->use_pool_for_malloc = true;
 	} else {
-		log_info("(using allocated RAM address %lx) ", (ulong)addr);
+		if (verbose)
+			log_info("(using allocated RAM address %lx) ",
+				 (ulong)addr);
 		priv->ram_base = addr;
 	}
 	gd->ram_base = addr;
@@ -390,22 +395,49 @@ U_BOOT_DRIVER(efi_sysreset) = {
 };
 
 /**
- * efi_main() - Start an EFI image
+ * efi_reserve_priv() - Event handler to reserve memory for struct efi_priv
  *
- * This function is called by our EFI start-up code. It handles running
- * U-Boot. If it returns, EFI will continue. Another way to get back to EFI
- * is via reset_cpu().
+ * This handler is called during EVT_RESERVE_BOARD event to reserve memory
+ * for the efi_priv structure before other reservations.
+ *
+ * @ctx: Event context (unused)
+ * @event: Event information containing reserve_board data
+ * Return: 0 on success
  */
-efi_status_t EFIAPI efi_main(efi_handle_t image,
-			     struct efi_system_table *sys_table)
+static int efi_reserve_priv(void *ctx, struct event *event)
+{
+	struct event_reserve_board *reserve = &event->data.reserve_board;
+	struct efi_priv *priv;
+	ulong addr;
+
+	/* Reserve memory for efi_priv using the provided stack pointer */
+	addr = ALIGN_DOWN(reserve->start_addr_sp - sizeof(struct efi_priv), 16);
+	priv = map_sysmem(addr, sizeof(struct efi_priv));
+
+	/* Update stack pointer for next reservation */
+	reserve->start_addr_sp = addr;
+
+	/* Move existing priv data (from stack) to reserved location */
+	efi_move_priv(priv);
+
+	log_debug("Reserving %zu bytes for EFI priv at: %08lx\n",
+		  sizeof(struct efi_priv), addr);
+
+	return 0;
+}
+EVENT_SPY_FULL(EVT_RESERVE_BOARD, efi_reserve_priv);
+
+efi_status_t EFIAPI efi_startup(efi_handle_t image,
+				struct efi_system_table *systab, bool is_ulib)
 {
 	struct efi_priv local_priv, *priv = &local_priv;
 	efi_status_t ret;
+	bool verbose = !is_ulib;
 
 	/* Set up access to EFI data structures */
-	ret = efi_init(priv, "App", image, sys_table);
+	ret = efi_init(priv, "App", image, systab, verbose);
 	if (ret) {
-		printf("Failed to set up U-Boot: err=%lx\n", ret);
+		printf("Failed to set up ulib: err=%lx\n", ret);
 		return ret;
 	}
 	efi_set_priv(priv);
@@ -417,7 +449,8 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 	 */
 	debug_uart_init();
 
-	ret = setup_memory(priv);
+	/* allocate some memory and set gd */
+	ret = setup_memory(priv, verbose);
 	if (ret) {
 		printf("Failed to set up memory: ret=%lx\n", ret);
 		return ret;
@@ -435,14 +468,25 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 	 *	return ret;
 	 */
 
-	printf("starting\n");
+	if (!is_ulib)
+		printf("starting\n");
 
 	board_init_f(GD_FLG_SKIP_RELOC |
+		     (is_ulib ? GD_FLG_ULIB : 0) |
 		     (detect_emulator() ? GD_FLG_EMUL : 0));
 	gd = gd->new_gd;
 	board_init_r(NULL, 0);
-	free_memory(priv);
-	efi_exit();
 
-	return EFI_SUCCESS;
+	return 0;
+}
+
+void efi_shutdown(void)
+{
+	struct efi_priv *priv;
+
+	/* TODO: this causes a crash as efi_exit() makes use of priv */
+	priv = efi_get_priv();
+	if (0)
+		free_memory(priv);
+	efi_exit();
 }

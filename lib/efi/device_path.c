@@ -62,8 +62,12 @@ const struct efi_device_path EFI_DP_END = {
  */
 static bool is_sd(struct blk_desc *desc)
 {
-	struct mmc *mmc = find_mmc_device(desc->devnum);
+	struct mmc *mmc;
 
+	if (!IS_ENABLED(CONFIG_MMC))
+		return false;
+
+	mmc = find_mmc_device(desc->devnum);
 	if (!mmc)
 		return false;
 
@@ -949,7 +953,7 @@ struct efi_device_path *efi_dp_from_http(const char *server, struct udevice *dev
 		strlcat(tmp, server, sizeof(tmp));
 #if !IS_ENABLED(CONFIG_NET_LWIP)
 	}
-	else {
+	else if (IS_ENABLED(CONFIG_NET)) {
 		ip_to_string(net_server_ip, tmp + strlen("http://"));
 #endif
 	}

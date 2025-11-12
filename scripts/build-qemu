@@ -111,7 +111,13 @@ class BuildQemu:
             self.kvm_params = ['-enable-kvm', '-cpu', 'host']
 
         bios_override = None
-        if args.use_tianocore:
+        if args.custom:
+            bios_override = Path(args.custom)
+            if not bios_override.exists():
+                tout.fatal(
+                    'Error: Custom BIOS specified (-c) but not found at '
+                    f'{bios_override}')
+        elif args.use_tianocore:
             if args.arch == 'arm':
                 bios_override = Path(self.tiano, 'OVMF-pure-efi.aarch64.fd.64m')
             else:

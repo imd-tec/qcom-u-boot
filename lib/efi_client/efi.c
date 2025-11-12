@@ -57,6 +57,12 @@ void efi_set_priv(struct efi_priv *priv)
 	global_priv = priv;
 }
 
+void efi_move_priv(struct efi_priv *new_priv)
+{
+	*new_priv = *global_priv;
+	global_priv = new_priv;
+}
+
 struct efi_system_table *efi_get_sys_table(void)
 {
 	return global_priv->sys_table;
@@ -126,7 +132,7 @@ void efi_puts(struct efi_priv *priv, const char *str)
 }
 
 int efi_init(struct efi_priv *priv, const char *banner, efi_handle_t image,
-	     struct efi_system_table *sys_table)
+	     struct efi_system_table *sys_table, bool verbose)
 {
 	efi_guid_t loaded_image_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 	struct efi_boot_services *boot = sys_table->boottime;
@@ -139,9 +145,11 @@ int efi_init(struct efi_priv *priv, const char *banner, efi_handle_t image,
 	priv->parent_image = image;
 	priv->run = sys_table->runtime;
 
-	efi_puts(priv, "U-Boot EFI ");
-	efi_puts(priv, banner);
-	efi_putc(priv, ' ');
+	if (verbose) {
+		efi_puts(priv, "Laceboot EFI ");
+		efi_puts(priv, banner);
+		efi_putc(priv, ' ');
+	}
 
 	ret = boot->open_protocol(priv->parent_image, &loaded_image_guid,
 				  (void **)&loaded_image, priv->parent_image,
