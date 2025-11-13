@@ -1145,6 +1145,15 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 			if (ret)
 				return log_msg_ret("key", ret);
 			break;
+		} else if (!(obj->flags & SCENEOF_OPEN) &&
+			   obj->type == SCENEOBJT_TEXTLINE) {
+			struct scene_obj_textline *tline;
+
+			tline = (struct scene_obj_textline *)obj;
+			ret = scene_textline_send_key(scn, tline, key, event);
+			if (ret)
+				return log_msg_ret("key", ret);
+			break;
 		}
 	}
 
