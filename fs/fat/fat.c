@@ -43,7 +43,7 @@ void downcase(char *str, size_t len)
 struct blk_desc *cur_dev;
 struct disk_partition cur_part_info;
 
-int disk_read(__u32 block, __u32 nr_blocks, void *buf)
+int disk_read(u32 block, u32 nr_blocks, void *buf)
 {
 	ulong ret;
 
@@ -157,11 +157,11 @@ int flush_dirty_fat_buffer(struct fsdata *mydata)
  * Get the entry at index 'entry' in a FAT (12/16/32) table.
  * On failure 0x00 is returned.
  */
-__u32 get_fatent(struct fsdata *mydata, __u32 entry)
+u32 get_fatent(struct fsdata *mydata, u32 entry)
 {
-	__u32 bufnum;
-	__u32 offset, off8;
-	__u32 ret = 0x00;
+	u32 bufnum;
+	u32 offset, off8;
+	u32 ret = 0x00;
 
 	if (CHECK_CLUST(entry, mydata->fatsize)) {
 		log_err("Invalid FAT entry: %#08x\n", entry);
@@ -192,10 +192,10 @@ __u32 get_fatent(struct fsdata *mydata, __u32 entry)
 
 	/* Read a new block of FAT entries into the cache. */
 	if (bufnum != mydata->fatbufnum) {
-		__u32 getsize = FATBUFBLOCKS;
-		__u8 *bufptr = mydata->fatbuf;
-		__u32 fatlength = mydata->fatlength;
-		__u32 startblock = bufnum * FATBUFBLOCKS;
+		u32 getsize = FATBUFBLOCKS;
+		u8 *bufptr = mydata->fatbuf;
+		u32 fatlength = mydata->fatlength;
+		u32 startblock = bufnum * FATBUFBLOCKS;
 
 		/* Cap length if fatlength is not a multiple of FATBUFBLOCKS */
 		if (startblock + getsize > fatlength)
@@ -217,10 +217,10 @@ __u32 get_fatent(struct fsdata *mydata, __u32 entry)
 	/* Get the actual entry from the table */
 	switch (mydata->fatsize) {
 	case 32:
-		ret = FAT2CPU32(((__u32 *) mydata->fatbuf)[offset]);
+		ret = FAT2CPU32(((u32 *) mydata->fatbuf)[offset]);
 		break;
 	case 16:
-		ret = FAT2CPU16(((__u16 *) mydata->fatbuf)[offset]);
+		ret = FAT2CPU16(((u16 *)mydata->fatbuf)[offset]);
 		break;
 	case 12:
 		off8 = (offset * 3) / 2;
@@ -242,9 +242,9 @@ __u32 get_fatent(struct fsdata *mydata, __u32 entry)
  * Return 0 on success, -1 otherwise.
  */
 static int
-get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
+get_cluster(struct fsdata *mydata, u32 clustnum, u8 *buffer, unsigned long size)
 {
-	__u32 startsect;
+	u32 startsect;
 	int ret;
 
 	if (clustnum > 0) {
@@ -256,7 +256,7 @@ get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long s
 	debug("gc - clustnum: %d, startsect: %d\n", clustnum, startsect);
 
 	if ((unsigned long)buffer & (ARCH_DMA_MINALIGN - 1)) {
-		ALLOC_CACHE_ALIGN_BUFFER(__u8, tmpbuf, mydata->sect_size);
+		ALLOC_CACHE_ALIGN_BUFFER(u8, tmpbuf, mydata->sect_size);
 
 		debug("FAT: Misaligned buffer address (%p)\n", buffer);
 
@@ -272,8 +272,8 @@ get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long s
 			size -= mydata->sect_size;
 		}
 	} else if (size >= mydata->sect_size) {
-		__u32 bytes_read;
-		__u32 sect_count = size / mydata->sect_size;
+		u32 bytes_read;
+		u32 sect_count = size / mydata->sect_size;
 
 		ret = disk_read(startsect, sect_count, buffer);
 		if (ret != sect_count) {
@@ -286,7 +286,7 @@ get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long s
 		size -= bytes_read;
 	}
 	if (size) {
-		ALLOC_CACHE_ALIGN_BUFFER(__u8, tmpbuf, mydata->sect_size);
+		ALLOC_CACHE_ALIGN_BUFFER(u8, tmpbuf, mydata->sect_size);
 
 		ret = disk_read(startsect, 1, tmpbuf);
 		if (ret != 1) {
@@ -316,12 +316,12 @@ get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long s
  * Return:	-1 on error, otherwise 0
  */
 static int get_contents(struct fsdata *mydata, struct dir_entry *dentptr, loff_t pos,
-			__u8 *buffer, loff_t maxsize, loff_t *gotsize)
+			u8 *buffer, loff_t maxsize, loff_t *gotsize)
 {
 	loff_t filesize = FAT2CPU32(dentptr->size);
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
-	__u32 curclust = START(dentptr);
-	__u32 endclust, newclust;
+	u32 curclust = START(dentptr);
+	u32 endclust, newclust;
 	loff_t actsize;
 
 	*gotsize = 0;
@@ -357,7 +357,7 @@ static int get_contents(struct fsdata *mydata, struct dir_entry *dentptr, loff_t
 
 	/* align to beginning of next cluster if any */
 	if (pos) {
-		__u8 *tmp_buffer;
+		u8 *tmp_buffer;
 
 		actsize = min(filesize, (loff_t)bytesperclust);
 		tmp_buffer = malloc_cache_aligned(actsize);
@@ -466,12 +466,12 @@ static int slot2str(struct dir_slot *slotptr, char *l_name, int *idx)
 }
 
 /* Calculate short name checksum */
-__u8 mkcksum(struct nameext *nameext)
+u8 mkcksum(struct nameext *nameext)
 {
 	int i;
 	u8 *pos = (void *)nameext;
 
-	__u8 ret = 0;
+	u8 ret = 0;
 
 	for (i = 0; i < 11; i++)
 		ret = (((ret & 1) << 7) | ((ret & 0xfe) >> 1)) + pos[i];
@@ -552,7 +552,7 @@ static int is_bootsector_valid(const struct boot_sector *bs)
 static int
 read_bootsectandvi(struct boot_sector *bs, struct volume_info *volinfo, int *fatsize)
 {
-	__u8 *block;
+	u8 *block;
 	struct volume_info *vistart;
 	int ret = 0;
 

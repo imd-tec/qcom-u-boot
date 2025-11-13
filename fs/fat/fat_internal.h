@@ -104,7 +104,7 @@ struct dir_entry *next_dent(struct fat_itr *itr);
  * @buf: buffer to read data into
  * Return: number of blocks read, -1 on error
  */
-int disk_read(__u32 block, __u32 nr_blocks, void *buf);
+int disk_read(u32 block, u32 nr_blocks, void *buf);
 
 /**
  * flush_dirty_fat_buffer() - write fat buffer to disk if dirty
@@ -121,14 +121,14 @@ int flush_dirty_fat_buffer(struct fsdata *mydata);
  * @entry: FAT entry index
  * Return: FAT entry value, 0x00 on failure
  */
-__u32 get_fatent(struct fsdata *mydata, __u32 entry);
+u32 get_fatent(struct fsdata *mydata, u32 entry);
 
 /**
  * mkcksum() - calculate short name checksum
  * @nameext: name and extension structure
  * Return: checksum value
  */
-__u8 mkcksum(struct nameext *nameext);
+u8 mkcksum(struct nameext *nameext);
 
 /**
  * fat_itr_root() - initialize an iterator to start at the root directory

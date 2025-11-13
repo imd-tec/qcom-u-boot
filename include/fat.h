@@ -109,29 +109,29 @@ struct disk_partition;
  * @reserved2: unused (FAT32 only)
  */
 struct boot_sector {
-	__u8	ignored[3];
+	u8	ignored[3];
 	char	system_id[8];
-	__u8	sector_size[2];
-	__u8	cluster_size;
-	__u16	reserved;
-	__u8	fats;
-	__u8	dir_entries[2];
-	__u8	sectors[2];
-	__u8	media;
-	__u16	fat_length;
-	__u16	secs_track;
-	__u16	heads;
-	__u32	hidden;
-	__u32	total_sect;
+	u8	sector_size[2];
+	u8	cluster_size;
+	u16	reserved;
+	u8	fats;
+	u8	dir_entries[2];
+	u8	sectors[2];
+	u8	media;
+	u16	fat_length;
+	u16	secs_track;
+	u16	heads;
+	u32	hidden;
+	u32	total_sect;
 
 	/* FAT32 only */
-	__u32	fat32_length;
-	__u16	flags;
-	__u8	version[2];
-	__u32	root_cluster;
-	__u16	info_sector;
-	__u16	backup_boot;
-	__u16	reserved2[6];
+	u32	fat32_length;
+	u16	flags;
+	u8	version[2];
+	u32	root_cluster;
+	u16	info_sector;
+	u16	backup_boot;
+	u16	reserved2[6];
 };
 
 /**
@@ -147,10 +147,10 @@ struct boot_sector {
  * Boot code follows this structure, with boot signature at the end of sector.
  */
 struct volume_info {
-	__u8 drive_number;
-	__u8 reserved;
-	__u8 ext_boot_sign;
-	__u8 volume_id[4];
+	u8 drive_number;
+	u8 reserved;
+	u8 ext_boot_sign;
+	u8 volume_id[4];
 	char volume_label[11];
 	char fs_type[8];
 };
@@ -186,17 +186,17 @@ struct nameext {
  */
 struct dir_entry {
 	struct nameext nameext;
-	__u8	attr;
-	__u8	lcase;
-	__u8	ctime_ms;
-	__u16	ctime;
-	__u16	cdate;
-	__u16	adate;
-	__u16	starthi;
-	__u16	time;
-	__u16	date;
-	__u16	start;
-	__u32	size;
+	u8	attr;
+	u8	lcase;
+	u8	ctime_ms;
+	u16	ctime;
+	u16	cdate;
+	u16	adate;
+	u16	starthi;
+	u16	time;
+	u16	date;
+	u16	start;
+	u32	size;
 };
 
 /**
@@ -214,14 +214,14 @@ struct dir_entry {
  * Multiple entries may be used to store names longer than 13 characters.
  */
 struct dir_slot {
-	__u8	id;
-	__u8	name0_4[10];
-	__u8	attr;
-	__u8	reserved;
-	__u8	alias_checksum;
-	__u8	name5_10[12];
-	__u16	start;
-	__u8	name11_12[4];
+	u8	id;
+	u8	name0_4[10];
+	u8	attr;
+	u8	reserved;
+	u8	alias_checksum;
+	u8	name5_10[12];
+	u16	start;
+	u8	name11_12[4];
 };
 
 /**
@@ -245,18 +245,18 @@ struct dir_slot {
  * The fatbuf must be 32-bit aligned due to FAT32 sector access requirements.
  */
 struct fsdata {
-	__u8	*fatbuf;
+	u8	*fatbuf;
 	int	fatsize;
-	__u32	fatlength;
-	__u16	fat_sect;
-	__u8	fat_dirty;
-	__u32	rootdir_sect;
-	__u16	sect_size;
-	__u16	clust_size;
+	u32	fatlength;
+	u16	fat_sect;
+	u8	fat_dirty;
+	u32	rootdir_sect;
+	u16	sect_size;
+	u16	clust_size;
 	int	data_begin;
 	int	fatbufnum;
 	int	rootdir_size;
-	__u32	root_cluster;
+	u32	root_cluster;
 	u32	total_sect;
 	int	fats;
 };
