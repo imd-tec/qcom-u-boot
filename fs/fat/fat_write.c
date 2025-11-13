@@ -13,6 +13,7 @@
 #include <fat.h>
 #include <log.h>
 #include <malloc.h>
+#include <memalign.h>
 #include <part.h>
 #include <rand.h>
 #include <asm/byteorder.h>
@@ -21,7 +22,6 @@
 #include <linux/ctype.h>
 #include <linux/math64.h>
 #include "fat_internal.h"
-#include "fat.c"
 
 static dir_entry *find_directory_entry(fat_itr *itr, char *filename);
 static int new_dir_table(fat_itr *itr);
@@ -216,7 +216,7 @@ static int disk_write(__u32 block, __u32 nr_blocks, void *buf)
 /*
  * Write fat buffer into block device
  */
-static int flush_dirty_fat_buffer(fsdata *mydata)
+int flush_dirty_fat_buffer(fsdata *mydata)
 {
 	int getsize = FATBUFBLOCKS;
 	__u32 fatlength = mydata->fatlength;

@@ -32,7 +32,7 @@
  * 'len' may be larger than the length of 'str' if 'str' is NULL
  * terminated.
  */
-static void downcase(char *str, size_t len)
+void downcase(char *str, size_t len)
 {
 	while (*str != '\0' && len--) {
 		*str = tolower(*str);
@@ -40,10 +40,10 @@ static void downcase(char *str, size_t len)
 	}
 }
 
-static struct blk_desc *cur_dev;
-static struct disk_partition cur_part_info;
+struct blk_desc *cur_dev;
+struct disk_partition cur_part_info;
 
-static int disk_read(__u32 block, __u32 nr_blocks, void *buf)
+int disk_read(__u32 block, __u32 nr_blocks, void *buf)
 {
 	ulong ret;
 
@@ -144,8 +144,6 @@ static void get_name(dir_entry *dirent, char *s_name)
 		*s_name = DELETED_FLAG;
 }
 
-static int flush_dirty_fat_buffer(fsdata *mydata);
-
 #if !CONFIG_IS_ENABLED(FAT_WRITE)
 /* Stub for read only operation */
 int flush_dirty_fat_buffer(fsdata *mydata)
@@ -159,7 +157,7 @@ int flush_dirty_fat_buffer(fsdata *mydata)
  * Get the entry at index 'entry' in a FAT (12/16/32) table.
  * On failure 0x00 is returned.
  */
-static __u32 get_fatent(fsdata *mydata, __u32 entry)
+__u32 get_fatent(fsdata *mydata, __u32 entry)
 {
 	__u32 bufnum;
 	__u32 offset, off8;
@@ -468,7 +466,7 @@ static int slot2str(dir_slot *slotptr, char *l_name, int *idx)
 }
 
 /* Calculate short name checksum */
-static __u8 mkcksum(struct nameext *nameext)
+__u8 mkcksum(struct nameext *nameext)
 {
 	int i;
 	u8 *pos = (void *)nameext;
@@ -698,17 +696,7 @@ static int get_fs_info(fsdata *mydata)
 	return 0;
 }
 
-static int fat_itr_isdir(fat_itr *itr);
-
-/**
- * fat_itr_root() - initialize an iterator to start at the root
- * directory
- *
- * @itr: iterator to initialize
- * @fsdata: filesystem data for the partition
- * Return: 0 on success, else -errno
- */
-static int fat_itr_root(fat_itr *itr, fsdata *fsdata)
+int fat_itr_root(fat_itr *itr, fsdata *fsdata)
 {
 	if (get_fs_info(fsdata))
 		return -ENXIO;
@@ -725,24 +713,7 @@ static int fat_itr_root(fat_itr *itr, fsdata *fsdata)
 	return 0;
 }
 
-/**
- * fat_itr_child() - initialize an iterator to descend into a sub-
- * directory
- *
- * Initializes 'itr' to iterate the contents of the directory at
- * the current cursor position of 'parent'.  It is an error to
- * call this if the current cursor of 'parent' is pointing at a
- * regular file.
- *
- * Note that 'itr' and 'parent' can be the same pointer if you do
- * not need to preserve 'parent' after this call, which is useful
- * for traversing directory structure to resolve a file/directory.
- *
- * @itr: iterator to initialize
- * @parent: the iterator pointing at a directory entry in the
- *    parent directory of the directory to iterate
- */
-static void fat_itr_child(fat_itr *itr, fat_itr *parent)
+void fat_itr_child(fat_itr *itr, fat_itr *parent)
 {
 	fsdata *mydata = parent->fsdata;  /* for silly macros */
 	unsigned clustnum = START(parent->dent);
@@ -843,7 +814,7 @@ void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
 	return itr->block;
 }
 
-static dir_entry *next_dent(fat_itr *itr)
+dir_entry *next_dent(fat_itr *itr)
 {
 	if (itr->remaining == 0) {
 		unsigned nbytes;
@@ -919,16 +890,7 @@ static dir_entry *extract_vfat_name(fat_itr *itr)
 	return dent;
 }
 
-/**
- * fat_itr_next() - step to the next entry in a directory
- *
- * Must be called once on a new iterator before the cursor is valid.
- *
- * @itr: the iterator to iterate
- * Return: boolean, 1 if success or 0 if no more entries in the
- *    current directory
- */
-static int fat_itr_next(fat_itr *itr)
+int fat_itr_next(fat_itr *itr)
 {
 	dir_entry *dent;
 
@@ -991,41 +953,12 @@ static int fat_itr_next(fat_itr *itr)
 	return 1;
 }
 
-/**
- * fat_itr_isdir() - is current cursor position pointing to a directory
- *
- * @itr: the iterator
- * Return: true if cursor is at a directory
- */
-static int fat_itr_isdir(fat_itr *itr)
+int fat_itr_isdir(fat_itr *itr)
 {
 	return !!(itr->dent->attr & ATTR_DIR);
 }
 
-/*
- * Helpers:
- */
-
-#define TYPE_FILE 0x1
-#define TYPE_DIR  0x2
-#define TYPE_ANY  (TYPE_FILE | TYPE_DIR)
-
-/**
- * fat_itr_resolve() - traverse directory structure to resolve the
- * requested path.
- *
- * Traverse directory structure to the requested path.  If the specified
- * path is to a directory, this will descend into the directory and
- * leave it iterator at the start of the directory.  If the path is to a
- * file, it will leave the iterator in the parent directory with current
- * cursor at file's entry in the directory.
- *
- * @itr: iterator initialized to root
- * @path: the requested path
- * @type: bitmask of allowable file types
- * Return: 0 on success or -errno
- */
-static int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
+int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
 {
 	const char *next;
 
