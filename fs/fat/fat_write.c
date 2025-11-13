@@ -20,6 +20,7 @@
 #include <dm/uclass.h>
 #include <linux/ctype.h>
 #include <linux/math64.h>
+#include "fat_internal.h"
 #include "fat.c"
 
 static dir_entry *find_directory_entry(fat_itr *itr, char *filename);
