@@ -32,6 +32,21 @@ extern struct disk_partition cur_part_info;
 
 /**
  * struct fat_itr - directory iterator, to simplify filesystem traversal
+ * @fsdata: filesystem parameters
+ * @start_clust: first cluster
+ * @clust: current cluster
+ * @next_clust: next cluster if remaining == 0
+ * @last_cluster: set if last cluster of directory reached
+ * @is_root: is iterator at root directory
+ * @remaining: remaining directory entries in current cluster
+ * @dent: current directory entry
+ * @dent_rem: remaining entries after long name start
+ * @dent_clust: cluster of long name start
+ * @dent_start: first directory entry for long name
+ * @l_name: long name of current directory entry
+ * @s_name: short 8.3 name of current directory entry
+ * @name: l_name if there is one, else s_name
+ * @block: buffer for current cluster
  *
  * Implements an iterator pattern to traverse directory tables,
  * transparently handling directory tables split across multiple
@@ -51,65 +66,20 @@ extern struct disk_partition cur_part_info;
  * For a more complete example, see fat_itr_resolve().
  */
 struct fat_itr {
-	/**
-	 * @fsdata:		filesystem parameters
-	 */
 	fsdata *fsdata;
-	/**
-	 * @start_clust:	first cluster
-	 */
 	unsigned int start_clust;
-	/**
-	 * @clust:		current cluster
-	 */
 	unsigned int clust;
-	/**
-	 * @next_clust:		next cluster if remaining == 0
-	 */
 	unsigned int next_clust;
-	/**
-	 * @last_cluster:	set if last cluster of directory reached
-	 */
 	int last_cluster;
-	/**
-	 * @is_root:		is iterator at root directory
-	 */
 	int is_root;
-	/**
-	 * @remaining:		remaining directory entries in current cluster
-	 */
 	int remaining;
-	/**
-	 * @dent:		current directory entry
-	 */
 	dir_entry *dent;
-	/**
-	 * @dent_rem:		remaining entries after long name start
-	 */
 	int dent_rem;
-	/**
-	 * @dent_clust:		cluster of long name start
-	 */
 	unsigned int dent_clust;
-	/**
-	 * @dent_start:		first directory entry for long name
-	 */
 	dir_entry *dent_start;
-	/**
-	 * @l_name:		long name of current directory entry
-	 */
 	char l_name[VFAT_MAXLEN_BYTES];
-	/**
-	 * @s_name:		short 8.3 name of current directory entry
-	 */
 	char s_name[14];
-	/**
-	 * @name:		l_name if there is one, else s_name
-	 */
 	char *name;
-	/**
-	 * @block:		buffer for current cluster
-	 */
 	u8 block[MAX_CLUSTSIZE] __aligned(ARCH_DMA_MINALIGN);
 };
 
