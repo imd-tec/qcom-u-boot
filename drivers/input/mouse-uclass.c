@@ -107,6 +107,19 @@ int mouse_set_video(struct udevice *dev, struct udevice *video_dev)
 	return 0;
 }
 
+int mouse_queue_click_for_test(struct udevice *dev, int x, int y)
+{
+	struct mouse_uc_priv *uc_priv = dev_get_uclass_priv(dev);
+
+	uc_priv->click_pending = true;
+	uc_priv->click_pos.x = x;
+	uc_priv->click_pos.y = y;
+	uc_priv->last_pos.x = x;
+	uc_priv->last_pos.y = y;
+
+	return 0;
+}
+
 UCLASS_DRIVER(mouse) = {
 	.id		= UCLASS_MOUSE,
 	.name		= "mouse",
