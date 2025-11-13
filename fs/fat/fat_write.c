@@ -23,8 +23,8 @@
 #include <linux/math64.h>
 #include "fat_internal.h"
 
-static dir_entry *find_directory_entry(fat_itr *itr, char *filename);
-static int new_dir_table(fat_itr *itr);
+static struct dir_entry *find_directory_entry(struct fat_itr *itr, char *filename);
+static int new_dir_table(struct fat_itr *itr);
 
 /* Characters that may only be used in long file names */
 static const char LONG_ONLY_CHARS[] = "+,;=[]";
@@ -76,7 +76,7 @@ static int str2fat(char *dest, char *src, int length)
  * @cluster	cluster
  * Return:	0 for success, -EIO on error
  */
-static int fat_move_to_cluster(fat_itr *itr, unsigned int cluster)
+static int fat_move_to_cluster(struct fat_itr *itr, unsigned int cluster)
 {
 	unsigned int nbytes;
 
@@ -85,8 +85,8 @@ static int fat_move_to_cluster(fat_itr *itr, unsigned int cluster)
 	itr->last_cluster = 0;
 	if (!fat_next_cluster(itr, &nbytes))
 		return -EIO;
-	itr->dent = (dir_entry *)itr->block;
-	itr->remaining = nbytes / sizeof(dir_entry) - 1;
+	itr->dent = (struct dir_entry *)itr->block;
+	itr->remaining = nbytes / sizeof(struct dir_entry) - 1;
 	return 0;
 }
 
@@ -103,7 +103,7 @@ static int fat_move_to_cluster(fat_itr *itr, unsigned int cluster)
  * @shortname:	buffer of 11 bytes to receive chosen short name and extension
  * Return:	number of directory entries needed, negative on error
  */
-static int set_name(fat_itr *itr, const char *filename, char *shortname)
+static int set_name(struct fat_itr *itr, const char *filename, char *shortname)
 {
 	char *period;
 	char *pos;
@@ -216,7 +216,7 @@ static int disk_write(__u32 block, __u32 nr_blocks, void *buf)
 /*
  * Write fat buffer into block device
  */
-int flush_dirty_fat_buffer(fsdata *mydata)
+int flush_dirty_fat_buffer(struct fsdata *mydata)
 {
 	int getsize = FATBUFBLOCKS;
 	__u32 fatlength = mydata->fatlength;
@@ -261,10 +261,10 @@ int flush_dirty_fat_buffer(fsdata *mydata)
  * @count:	number of directory entries to find
  * Return:	0 on success or negative error number
  */
-static int fat_find_empty_dentries(fat_itr *itr, int count)
+static int fat_find_empty_dentries(struct fat_itr *itr, int count)
 {
 	unsigned int cluster;
-	dir_entry *dent;
+	struct dir_entry *dent;
 	int remaining;
 	unsigned int n = 0;
 	int ret;
@@ -317,7 +317,7 @@ out:
 /*
  * Set the file name information from 'name' into 'slotptr',
  */
-static int str2slot(dir_slot *slotptr, const char *name, int *idx)
+static int str2slot(struct dir_slot *slotptr, const char *name, int *idx)
 {
 	int j, end_idx = 0;
 
@@ -383,7 +383,7 @@ name11_12:
 	return 1;
 }
 
-static int flush_dir(fat_itr *itr);
+static int flush_dir(struct fat_itr *itr);
 
 /**
  * fill_dir_slot() - fill directory entries for long name
@@ -394,10 +394,10 @@ static int flush_dir(fat_itr *itr);
  * Return:	0 for success, -errno otherwise
  */
 static int
-fill_dir_slot(fat_itr *itr, const char *l_name, const char *shortname)
+fill_dir_slot(struct fat_itr *itr, const char *l_name, const char *shortname)
 {
-	__u8 temp_dir_slot_buffer[MAX_LFN_SLOT * sizeof(dir_slot)];
-	dir_slot *slotptr = (dir_slot *)temp_dir_slot_buffer;
+	__u8 temp_dir_slot_buffer[MAX_LFN_SLOT * sizeof(struct dir_slot)];
+	struct dir_slot *slotptr = (struct dir_slot *)temp_dir_slot_buffer;
 	__u8 counter = 0, checksum;
 	int idx = 0, ret;
 
@@ -405,7 +405,7 @@ fill_dir_slot(fat_itr *itr, const char *l_name, const char *shortname)
 	checksum = mkcksum((void *)shortname);
 
 	do {
-		memset(slotptr, 0x00, sizeof(dir_slot));
+		memset(slotptr, 0x00, sizeof(struct dir_slot));
 		ret = str2slot(slotptr, l_name, &idx);
 		slotptr->id = ++counter;
 		slotptr->attr = ATTR_VFAT;
@@ -417,7 +417,7 @@ fill_dir_slot(fat_itr *itr, const char *l_name, const char *shortname)
 	slotptr->id |= LAST_LONG_ENTRY_MASK;
 
 	while (counter >= 1) {
-		memcpy(itr->dent, slotptr, sizeof(dir_slot));
+		memcpy(itr->dent, slotptr, sizeof(struct dir_slot));
 		slotptr--;
 		counter--;
 
@@ -439,7 +439,7 @@ fill_dir_slot(fat_itr *itr, const char *l_name, const char *shortname)
 /*
  * Set the entry at index 'entry' in a FAT (12/16/32) table.
  */
-static int set_fatent_value(fsdata *mydata, __u32 entry, __u32 entry_value)
+static int set_fatent_value(struct fsdata *mydata, __u32 entry, __u32 entry_value)
 {
 	__u32 bufnum, offset, off16;
 	__u16 val1, val2;
@@ -546,7 +546,7 @@ static int set_fatent_value(fsdata *mydata, __u32 entry, __u32 entry_value)
  * Determine the next free cluster after 'entry' in a FAT (12/16/32) table
  * and link it to 'entry'. EOC marker is not set on returned entry.
  */
-static __u32 determine_fatent(fsdata *mydata, __u32 entry)
+static __u32 determine_fatent(struct fsdata *mydata, __u32 entry)
 {
 	__u32 next_fat, next_entry = entry + 1;
 
@@ -577,7 +577,7 @@ static __u32 determine_fatent(fsdata *mydata, __u32 entry)
  * Return:	0 on success, -1 otherwise
  */
 static int
-set_sectors(fsdata *mydata, u32 startsect, u8 *buffer, u32 size)
+set_sectors(struct fsdata *mydata, u32 startsect, u8 *buffer, u32 size)
 {
 	int ret;
 
@@ -641,7 +641,7 @@ set_sectors(fsdata *mydata, u32 startsect, u8 *buffer, u32 size)
  * Return:	0 on success, -1 otherwise
  */
 static int
-set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
+set_cluster(struct fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
 {
 	return set_sectors(mydata, clust_to_sect(mydata, clustnum),
 			   buffer, size);
@@ -653,9 +653,9 @@ set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
  * @itr:	directory iterator
  * Return:	0 for success, -EIO on error
  */
-static int flush_dir(fat_itr *itr)
+static int flush_dir(struct fat_itr *itr)
 {
-	fsdata *mydata = itr->fsdata;
+	struct fsdata *mydata = itr->fsdata;
 	u32 startsect, sect_offset, nsects;
 	int ret;
 
@@ -685,7 +685,7 @@ out:
  * Read and modify data on existing and consecutive cluster blocks
  */
 static int
-get_set_cluster(fsdata *mydata, __u32 clustnum, loff_t pos, __u8 *buffer,
+get_set_cluster(struct fsdata *mydata, __u32 clustnum, loff_t pos, __u8 *buffer,
 		loff_t size, loff_t *gotsize)
 {
 	static u8 *tmpbuf_cluster;
@@ -803,7 +803,7 @@ get_set_cluster(fsdata *mydata, __u32 clustnum, loff_t pos, __u8 *buffer,
 /*
  * Find the first empty cluster
  */
-static int find_empty_cluster(fsdata *mydata)
+static int find_empty_cluster(struct fsdata *mydata)
 {
 	__u32 fat_val, entry = 3;
 
@@ -823,9 +823,9 @@ static int find_empty_cluster(fsdata *mydata)
  * @itr:	directory iterator
  * Return:	0 on success, -EIO otherwise
  */
-static int new_dir_table(fat_itr *itr)
+static int new_dir_table(struct fat_itr *itr)
 {
-	fsdata *mydata = itr->fsdata;
+	struct fsdata *mydata = itr->fsdata;
 	int dir_newclust = 0;
 	int dir_oldclust = itr->clust;
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
@@ -853,9 +853,9 @@ static int new_dir_table(fat_itr *itr)
 	if (flush_dirty_fat_buffer(mydata) < 0)
 		return -EIO;
 
-	itr->dent = (dir_entry *)itr->block;
+	itr->dent = (struct dir_entry *)itr->block;
 	itr->last_cluster = 1;
-	itr->remaining = bytesperclust / sizeof(dir_entry) - 1;
+	itr->remaining = bytesperclust / sizeof(struct dir_entry) - 1;
 
 	return 0;
 }
@@ -863,7 +863,7 @@ static int new_dir_table(fat_itr *itr)
 /*
  * Set empty cluster from 'entry' to the end of a file
  */
-static int clear_fatent(fsdata *mydata, __u32 entry)
+static int clear_fatent(struct fsdata *mydata, __u32 entry)
 {
 	__u32 fat_val;
 
@@ -887,7 +887,7 @@ static int clear_fatent(fsdata *mydata, __u32 entry)
 /*
  * Set start cluster in directory entry
  */
-static void set_start_cluster(const fsdata *mydata, dir_entry *dentptr,
+static void set_start_cluster(const struct fsdata *mydata, struct dir_entry *dentptr,
 			      __u32 start_cluster)
 {
 	if (mydata->fatsize == 32)
@@ -901,7 +901,7 @@ static void set_start_cluster(const fsdata *mydata, dir_entry *dentptr,
  * exceed the size of the block device
  * Return -1 when overflow occurs, otherwise return 0
  */
-static int check_overflow(fsdata *mydata, __u32 clustnum, loff_t size)
+static int check_overflow(struct fsdata *mydata, __u32 clustnum, loff_t size)
 {
 	__u32 startsect, sect_num, offset;
 
@@ -927,7 +927,7 @@ static int check_overflow(fsdata *mydata, __u32 clustnum, loff_t size)
  * or return -1 on fatal errors.
  */
 static int
-set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
+set_contents(struct fsdata *mydata, struct dir_entry *dentptr, loff_t pos, __u8 *buffer,
 	     loff_t maxsize, loff_t *gotsize)
 {
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
@@ -1157,7 +1157,7 @@ getit:
  *
  * @dentptr:	directory entry
  */
-static void dentry_set_time(dir_entry *dentptr)
+static void dentry_set_time(struct dir_entry *dentptr)
 {
 	if (CONFIG_IS_ENABLED(DM_RTC)) {
 		struct udevice *dev;
@@ -1197,8 +1197,9 @@ err:
  * @size:		file size
  * @attr:		file attributes
  */
-static void fill_dentry(fsdata *mydata, dir_entry *dentptr,
-	const char *shortname, __u32 start_cluster, __u32 size, __u8 attr)
+static void fill_dentry(struct fsdata *mydata, struct dir_entry *dentptr,
+			const char *shortname, __u32 start_cluster, __u32 size,
+			__u8 attr)
 {
 	memset(dentptr, 0, sizeof(*dentptr));
 
@@ -1223,7 +1224,7 @@ static void fill_dentry(fsdata *mydata, dir_entry *dentptr,
  * @itr:	iterator positioned anywhere in a directory
  * @Return:	0 if the iterator is in the parent directory, -errno otherwise
  */
-static int fat_itr_parent(fat_itr *itr)
+static int fat_itr_parent(struct fat_itr *itr)
 {
 	int ret;
 
@@ -1245,19 +1246,19 @@ static int fat_itr_parent(fat_itr *itr)
  * should be updated
  * @Return:	0 for success, -errno otherwise
  */
-static int update_parent_dir_props(fat_itr *dir_itr)
+static int update_parent_dir_props(struct fat_itr *dir_itr)
 {
 	int ret = 0;
 
-	fat_itr itr;
-	fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
+	struct fat_itr itr;
+	struct fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
 	__u32 target_clust = dir_itr->start_clust;
 
 	/* Short circuit if no RTC because it only updates timestamps */
 	if (!CONFIG_IS_ENABLED(DM_RTC))
 		return ret;
 
-	/* duplicate fsdata */
+	/* duplicate struct fsdata */
 	itr = *dir_itr;
 	fsdata = *itr.fsdata;
 
@@ -1307,7 +1308,7 @@ exit:
  * @attr:	file attributes
  * Return:	0 for success
  */
-static int create_link(fat_itr *itr, char *basename, __u32 clust, __u32 size,
+static int create_link(struct fat_itr *itr, char *basename, __u32 clust, __u32 size,
 		       __u8 attr)
 {
 	char shortname[SHORT_NAME_SIZE];
@@ -1341,7 +1342,7 @@ static int create_link(fat_itr *itr, char *basename, __u32 clust, __u32 size,
  * @filename:	name of file to find
  * Return:	directory entry or NULL
  */
-static dir_entry *find_directory_entry(fat_itr *itr, char *filename)
+static struct dir_entry *find_directory_entry(struct fat_itr *itr, char *filename)
 {
 	int match = 0;
 
@@ -1472,10 +1473,10 @@ static int normalize_longname(char *l_filename, const char *filename)
 int file_fat_write_at(const char *filename, loff_t pos, void *buffer,
 		      loff_t size, loff_t *actwrite)
 {
-	dir_entry *retdent;
-	fsdata datablock = { .fatbuf = NULL, };
-	fsdata *mydata = &datablock;
-	fat_itr *itr = NULL;
+	struct dir_entry *retdent;
+	struct fsdata datablock = { .fatbuf = NULL, };
+	struct fsdata *mydata = &datablock;
+	struct fat_itr *itr = NULL;
 	int ret = -1;
 	char *filename_copy, *parent, *basename;
 	char l_filename[VFAT_MAXLEN_BYTES];
@@ -1498,7 +1499,7 @@ int file_fat_write_at(const char *filename, loff_t pos, void *buffer,
 		goto exit;
 	}
 
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr) {
 		ret = -ENOMEM;
 		goto exit;
@@ -1584,21 +1585,21 @@ int file_fat_write(const char *filename, void *buffer, loff_t offset,
 	return file_fat_write_at(filename, offset, buffer, maxsize, actwrite);
 }
 
-static int fat_dir_entries(fat_itr *itr)
+static int fat_dir_entries(struct fat_itr *itr)
 {
-	fat_itr *dirs;
-	fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
+	struct fat_itr *dirs;
+	struct fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
 						/* for FATBUFSIZE */
 	int count;
 
-	dirs = malloc_cache_aligned(sizeof(fat_itr));
+	dirs = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!dirs) {
 		debug("Error: allocating memory\n");
 		count = -ENOMEM;
 		goto exit;
 	}
 
-	/* duplicate fsdata */
+	/* duplicate struct fsdata */
 	fat_itr_child(dirs, itr);
 	fsdata = *dirs->fsdata;
 
@@ -1627,7 +1628,7 @@ exit:
  * @itr:	directory iterator
  * Return:	0 for success
  */
-static int delete_single_dentry(fat_itr *itr)
+static int delete_single_dentry(struct fat_itr *itr)
 {
 	struct dir_entry *dent = itr->dent;
 
@@ -1645,7 +1646,7 @@ static int delete_single_dentry(fat_itr *itr)
  * @itr:	directory iterator
  * Return:	0 for success
  */
-static int delete_long_name(fat_itr *itr)
+static int delete_long_name(struct fat_itr *itr)
 {
 	int seqn = itr->dent->nameext.name[0] & ~LAST_LONG_ENTRY_MASK;
 
@@ -1670,7 +1671,7 @@ static int delete_long_name(fat_itr *itr)
  * @itr:	the first directory entry (if a longname) to remove
  * Return:	0 for success
  */
-static int delete_dentry_link(fat_itr *itr)
+static int delete_dentry_link(struct fat_itr *itr)
 {
 	int ret;
 
@@ -1699,10 +1700,10 @@ static int delete_dentry_link(fat_itr *itr)
  * @itr:	directory iterator
  * Return:	0 for success
  */
-static int delete_dentry_long(fat_itr *itr)
+static int delete_dentry_long(struct fat_itr *itr)
 {
-	fsdata *mydata = itr->fsdata;
-	dir_entry *dent = itr->dent;
+	struct fsdata *mydata = itr->fsdata;
+	struct dir_entry *dent = itr->dent;
 
 	/* free cluster blocks */
 	clear_fatent(mydata, START(dent));
@@ -1723,13 +1724,13 @@ static int delete_dentry_long(fat_itr *itr)
 
 int fat_unlink(const char *filename)
 {
-	fsdata fsdata = { .fatbuf = NULL, };
-	fat_itr *itr = NULL;
+	struct fsdata fsdata = { .fatbuf = NULL, };
+	struct fat_itr *itr = NULL;
 	int n_entries, ret;
 	char *filename_copy, *dirname, *basename;
 
 	filename_copy = strdup(filename);
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr || !filename_copy) {
 		printf("Error: out of memory\n");
 		ret = -ENOMEM;
@@ -1788,16 +1789,16 @@ exit:
 
 int fat_mkdir(const char *dirname)
 {
-	dir_entry *retdent;
-	fsdata datablock = { .fatbuf = NULL, };
-	fsdata *mydata = &datablock;
-	fat_itr *itr = NULL;
+	struct dir_entry *retdent;
+	struct fsdata datablock = { .fatbuf = NULL, };
+	struct fsdata *mydata = &datablock;
+	struct fat_itr *itr = NULL;
 	char *dirname_copy, *parent, *basename;
 	char l_dirname[VFAT_MAXLEN_BYTES];
 	int ret = -1;
 	loff_t actwrite;
 	unsigned int bytesperclust;
-	dir_entry *dotdent = NULL;
+	struct dir_entry *dotdent = NULL;
 
 	dirname_copy = strdup(dirname);
 	if (!dirname_copy)
@@ -1815,7 +1816,7 @@ int fat_mkdir(const char *dirname)
 		goto exit;
 	}
 
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr) {
 		ret = -ENOMEM;
 		goto exit;
@@ -1925,13 +1926,13 @@ exit:
  * Return:	-errno on error, 0 if path_itr does not have the directory
  * at prefix_clust as an ancestor.
  */
-static int check_path_prefix(loff_t prefix_clust, fat_itr *path_itr)
+static int check_path_prefix(loff_t prefix_clust, struct fat_itr *path_itr)
 {
-	fat_itr itr;
-	fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
+	struct fat_itr itr;
+	struct fsdata fsdata = { .fatbuf = NULL, }, *mydata = &fsdata;
 	int ret;
 
-	/* duplicate fsdata */
+	/* duplicate struct fsdata */
 	itr = *path_itr;
 	fsdata = *itr.fsdata;
 
@@ -1986,24 +1987,24 @@ exit:
  */
 int fat_rename(const char *old_path, const char *new_path)
 {
-	fat_itr *old_itr = NULL, *new_itr = NULL;
-	fsdata old_datablock = { .fatbuf = NULL, };
-	fsdata new_datablock = { .fatbuf = NULL, };
+	struct fat_itr *old_itr = NULL, *new_itr = NULL;
+	struct fsdata old_datablock = { .fatbuf = NULL, };
+	struct fsdata new_datablock = { .fatbuf = NULL, };
 	/* used for START macro */
-	fsdata *mydata = &old_datablock;
+	struct fsdata *mydata = &old_datablock;
 	int ret = -EIO, is_old_dir;
 	char *old_path_copy, *old_dirname, *old_basename;
 	char *new_path_copy, *new_dirname, *new_basename;
 	char l_new_basename[VFAT_MAXLEN_BYTES];
 	__u32 old_clust;
-	dir_entry *found_existing;
+	struct dir_entry *found_existing;
 	/* only set if found_existing != NULL */
 	__u32 new_clust;
 
 	old_path_copy = strdup(old_path);
 	new_path_copy = strdup(new_path);
-	old_itr = malloc_cache_aligned(sizeof(fat_itr));
-	new_itr = malloc_cache_aligned(sizeof(fat_itr));
+	old_itr = malloc_cache_aligned(sizeof(struct fat_itr));
+	new_itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!old_path_copy || !new_path_copy || !old_itr || !new_itr) {
 		log_debug("Error: out of memory\n");
 		ret = -ENOMEM;
@@ -2143,7 +2144,7 @@ int fat_rename(const char *old_path, const char *new_path)
 	/* update moved directory so the parent is new_path */
 	if (is_old_dir) {
 		__u32 clust = new_itr->start_clust;
-		dir_entry *dent;
+		struct dir_entry *dent;
 
 		fat_itr_child(new_itr, new_itr);
 		dent = find_directory_entry(new_itr, "..");

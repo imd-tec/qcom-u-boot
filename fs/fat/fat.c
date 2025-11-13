@@ -117,7 +117,7 @@ int fat_register_device(struct blk_desc *dev_desc, int part_no)
 /*
  * Extract zero terminated short name from a directory entry.
  */
-static void get_name(dir_entry *dirent, char *s_name)
+static void get_name(struct dir_entry *dirent, char *s_name)
 {
 	char *ptr;
 
@@ -146,7 +146,7 @@ static void get_name(dir_entry *dirent, char *s_name)
 
 #if !CONFIG_IS_ENABLED(FAT_WRITE)
 /* Stub for read only operation */
-int flush_dirty_fat_buffer(fsdata *mydata)
+int flush_dirty_fat_buffer(struct fsdata *mydata)
 {
 	(void)(mydata);
 	return 0;
@@ -157,7 +157,7 @@ int flush_dirty_fat_buffer(fsdata *mydata)
  * Get the entry at index 'entry' in a FAT (12/16/32) table.
  * On failure 0x00 is returned.
  */
-__u32 get_fatent(fsdata *mydata, __u32 entry)
+__u32 get_fatent(struct fsdata *mydata, __u32 entry)
 {
 	__u32 bufnum;
 	__u32 offset, off8;
@@ -242,7 +242,7 @@ __u32 get_fatent(fsdata *mydata, __u32 entry)
  * Return 0 on success, -1 otherwise.
  */
 static int
-get_cluster(fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
+get_cluster(struct fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
 {
 	__u32 startsect;
 	int ret;
@@ -315,7 +315,7 @@ get_cluster(fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
  * @gotsize:	number of bytes actually read
  * Return:	-1 on error, otherwise 0
  */
-static int get_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos,
+static int get_contents(struct fsdata *mydata, struct dir_entry *dentptr, loff_t pos,
 			__u8 *buffer, loff_t maxsize, loff_t *gotsize)
 {
 	loff_t filesize = FAT2CPU32(dentptr->size);
@@ -439,7 +439,7 @@ getit:
  * starting at l_name[*idx].
  * Return 1 if terminator (zero byte) is found, 0 otherwise.
  */
-static int slot2str(dir_slot *slotptr, char *l_name, int *idx)
+static int slot2str(struct dir_slot *slotptr, char *l_name, int *idx)
 {
 	int j;
 
@@ -484,12 +484,12 @@ __u8 mkcksum(struct nameext *nameext)
  *
  * Based on fat_fill_super() from the Linux kernel's fs/fat/inode.c
  */
-static int determine_legacy_fat_bits(const boot_sector *bs)
+static int determine_legacy_fat_bits(const struct boot_sector *bs)
 {
 	u16 fat_start = bs->reserved;
 	u32 dir_start = fat_start + bs->fats * bs->fat_length;
 	u32 rootdir_sectors = get_unaligned_le16(bs->dir_entries) *
-			      sizeof(dir_entry) /
+			      sizeof(struct dir_entry) /
 			      get_unaligned_le16(bs->sector_size);
 	u32 data_start = dir_start + rootdir_sectors;
 	u16 sectors = get_unaligned_le16(bs->sectors);
@@ -515,10 +515,10 @@ static int fat_valid_media(u8 media)
  *
  * Based on fat_read_bpb() from the Linux kernel's fs/fat/inode.c
  */
-static int is_bootsector_valid(const boot_sector *bs)
+static int is_bootsector_valid(const struct boot_sector *bs)
 {
 	u16 sector_size = get_unaligned_le16(bs->sector_size);
-	u16 dir_per_block = sector_size / sizeof(dir_entry);
+	u16 dir_per_block = sector_size / sizeof(struct dir_entry);
 
 	if (!bs->reserved)
 		return 0;
@@ -550,10 +550,10 @@ static int is_bootsector_valid(const boot_sector *bs)
  * Read boot sector and volume info from a FAT filesystem
  */
 static int
-read_bootsectandvi(boot_sector *bs, volume_info *volinfo, int *fatsize)
+read_bootsectandvi(struct boot_sector *bs, struct volume_info *volinfo, int *fatsize)
 {
 	__u8 *block;
-	volume_info *vistart;
+	struct volume_info *vistart;
 	int ret = 0;
 
 	if (cur_dev == NULL) {
@@ -573,7 +573,7 @@ read_bootsectandvi(boot_sector *bs, volume_info *volinfo, int *fatsize)
 		goto out_free;
 	}
 
-	memcpy(bs, block, sizeof(boot_sector));
+	memcpy(bs, block, sizeof(struct boot_sector));
 	bs->reserved = FAT2CPU16(bs->reserved);
 	bs->fat_length = FAT2CPU16(bs->fat_length);
 	bs->secs_track = FAT2CPU16(bs->secs_track);
@@ -594,23 +594,23 @@ read_bootsectandvi(boot_sector *bs, volume_info *volinfo, int *fatsize)
 		bs->root_cluster = FAT2CPU32(bs->root_cluster);
 		bs->info_sector = FAT2CPU16(bs->info_sector);
 		bs->backup_boot = FAT2CPU16(bs->backup_boot);
-		vistart = (volume_info *)(block + sizeof(boot_sector));
+		vistart = (struct volume_info *)(block + sizeof(struct boot_sector));
 		*fatsize = 32;
 	} else {
-		vistart = (volume_info *)&(bs->fat32_length);
+		vistart = (struct volume_info *)&(bs->fat32_length);
 		*fatsize = determine_legacy_fat_bits(bs);
 	}
-	memcpy(volinfo, vistart, sizeof(volume_info));
+	memcpy(volinfo, vistart, sizeof(struct volume_info));
 
 out_free:
 	free(block);
 	return ret;
 }
 
-static int get_fs_info(fsdata *mydata)
+static int get_fs_info(struct fsdata *mydata)
 {
-	boot_sector bs;
-	volume_info volinfo;
+	struct boot_sector bs;
+	struct volume_info volinfo;
 	int ret;
 
 	ret = read_bootsectandvi(&bs, &volinfo, &mydata->fatsize);
@@ -661,7 +661,7 @@ static int get_fs_info(fsdata *mydata)
 		mydata->root_cluster = bs.root_cluster;
 	} else {
 		mydata->rootdir_size = (get_unaligned_le16(bs.dir_entries) *
-					 sizeof(dir_entry)) /
+					 sizeof(struct dir_entry)) /
 					 mydata->sect_size;
 		mydata->data_begin = mydata->rootdir_sect +
 					mydata->rootdir_size -
@@ -696,7 +696,7 @@ static int get_fs_info(fsdata *mydata)
 	return 0;
 }
 
-int fat_itr_root(fat_itr *itr, fsdata *fsdata)
+int fat_itr_root(struct fat_itr *itr, struct fsdata *fsdata)
 {
 	if (get_fs_info(fsdata))
 		return -ENXIO;
@@ -713,9 +713,9 @@ int fat_itr_root(fat_itr *itr, fsdata *fsdata)
 	return 0;
 }
 
-void fat_itr_child(fat_itr *itr, fat_itr *parent)
+void fat_itr_child(struct fat_itr *itr, struct fat_itr *parent)
 {
-	fsdata *mydata = parent->fsdata;  /* for silly macros */
+	struct fsdata *mydata = parent->fsdata;  /* for silly macros */
 	unsigned clustnum = START(parent->dent);
 
 	assert(fat_itr_isdir(parent));
@@ -747,7 +747,7 @@ void fat_itr_child(fat_itr *itr, fat_itr *parent)
  * @nbytes:	number of bytes read, 0 on error
  * Return:	first directory entry, NULL on error
  */
-void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
+void *fat_next_cluster(struct fat_itr *itr, unsigned int *nbytes)
 {
 	int ret;
 	u32 sect;
@@ -814,7 +814,7 @@ void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
 	return itr->block;
 }
 
-dir_entry *next_dent(fat_itr *itr)
+struct dir_entry *next_dent(struct fat_itr *itr)
 {
 	if (itr->remaining == 0) {
 		unsigned nbytes;
@@ -827,7 +827,7 @@ dir_entry *next_dent(fat_itr *itr)
 			return NULL;
 		}
 
-		itr->remaining = nbytes / sizeof(dir_entry) - 1;
+		itr->remaining = nbytes / sizeof(struct dir_entry) - 1;
 		itr->dent = dent;
 	} else {
 		itr->remaining--;
@@ -841,18 +841,18 @@ dir_entry *next_dent(fat_itr *itr)
 	return itr->dent;
 }
 
-static dir_entry *extract_vfat_name(fat_itr *itr)
+static struct dir_entry *extract_vfat_name(struct fat_itr *itr)
 {
 	struct dir_entry *dent = itr->dent;
 	int seqn = itr->dent->nameext.name[0] & ~LAST_LONG_ENTRY_MASK;
-	u8 chksum, alias_checksum = ((dir_slot *)dent)->alias_checksum;
+	u8 chksum, alias_checksum = ((struct dir_slot *)dent)->alias_checksum;
 	int n = 0;
 
 	while (seqn--) {
 		char buf[13];
 		int idx = 0;
 
-		slot2str((dir_slot *)dent, buf, &idx);
+		slot2str((struct dir_slot *)dent, buf, &idx);
 
 		if (n + idx >= sizeof(itr->l_name))
 			return NULL;
@@ -890,9 +890,9 @@ static dir_entry *extract_vfat_name(fat_itr *itr)
 	return dent;
 }
 
-int fat_itr_next(fat_itr *itr)
+int fat_itr_next(struct fat_itr *itr)
 {
-	dir_entry *dent;
+	struct dir_entry *dent;
 
 	itr->name = NULL;
 
@@ -953,12 +953,12 @@ int fat_itr_next(fat_itr *itr)
 	return 1;
 }
 
-int fat_itr_isdir(fat_itr *itr)
+int fat_itr_isdir(struct fat_itr *itr)
 {
 	return !!(itr->dent->attr & ATTR_DIR);
 }
 
-int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
+int fat_itr_resolve(struct fat_itr *itr, const char *path, uint type)
 {
 	const char *next;
 
@@ -1038,8 +1038,8 @@ int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
 
 int file_fat_detectfs(void)
 {
-	boot_sector bs;
-	volume_info volinfo;
+	struct boot_sector bs;
+	struct volume_info volinfo;
 	int fatsize;
 	char vol_label[12];
 
@@ -1069,11 +1069,11 @@ int file_fat_detectfs(void)
 
 int fat_exists(const char *filename)
 {
-	fsdata fsdata;
-	fat_itr *itr;
+	struct fsdata fsdata;
+	struct fat_itr *itr;
 	int ret;
 
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr)
 		return 0;
 	ret = fat_itr_root(itr, &fsdata);
@@ -1111,11 +1111,11 @@ static void __maybe_unused fat2rtc(u16 date, u16 time, struct rtc_time *tm)
 
 int fat_size(const char *filename, loff_t *size)
 {
-	fsdata fsdata;
-	fat_itr *itr;
+	struct fsdata fsdata;
+	struct fat_itr *itr;
 	int ret;
 
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr)
 		return -ENOMEM;
 	ret = fat_itr_root(itr, &fsdata);
@@ -1149,11 +1149,11 @@ out_free_itr:
 int fat_read_file(const char *filename, void *buf, loff_t offset, loff_t len,
 		  loff_t *actread)
 {
-	fsdata fsdata;
-	fat_itr *itr;
+	struct fsdata fsdata;
+	struct fat_itr *itr;
 	int ret;
 
-	itr = malloc_cache_aligned(sizeof(fat_itr));
+	itr = malloc_cache_aligned(sizeof(struct fat_itr));
 	if (!itr)
 		return -ENOMEM;
 	ret = fat_itr_root(itr, &fsdata);
@@ -1167,7 +1167,7 @@ int fat_read_file(const char *filename, void *buf, loff_t offset, loff_t len,
 	debug("reading %s at pos %llu\n", filename, offset);
 
 	/* For saving default max clustersize memory allocated to malloc pool */
-	dir_entry *dentptr = itr->dent;
+	struct dir_entry *dentptr = itr->dent;
 
 	ret = get_contents(&fsdata, dentptr, offset, buf, len, actread);
 
@@ -1190,16 +1190,16 @@ int file_fat_read(const char *filename, void *buffer, int maxsize)
 		return actread;
 }
 
-typedef struct {
+struct fat_dir {
 	struct fs_dir_stream parent;
 	struct fs_dirent dirent;
-	fsdata fsdata;
-	fat_itr itr;
-} fat_dir;
+	struct fsdata fsdata;
+	struct fat_itr itr;
+};
 
 int fat_opendir(const char *filename, struct fs_dir_stream **dirsp)
 {
-	fat_dir *dir;
+	struct fat_dir *dir;
 	int ret;
 
 	dir = malloc_cache_aligned(sizeof(*dir));
@@ -1227,7 +1227,7 @@ fail_free_dir:
 
 int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
 {
-	fat_dir *dir = (fat_dir *)dirs;
+	struct fat_dir *dir = (struct fat_dir *)dirs;
 	struct fs_dirent *dent = &dir->dirent;
 
 	if (!fat_itr_next(&dir->itr))
@@ -1258,7 +1258,7 @@ int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
 
 void fat_closedir(struct fs_dir_stream *dirs)
 {
-	fat_dir *dir = (fat_dir *)dirs;
+	struct fat_dir *dir = (struct fat_dir *)dirs;
 	free(dir->fsdata.fatbuf);
 	free(dir);
 }
@@ -1269,8 +1269,8 @@ void fat_close(void)
 
 int fat_uuid(char *uuid_str)
 {
-	boot_sector bs;
-	volume_info volinfo;
+	struct boot_sector bs;
+	struct volume_info volinfo;
 	int fatsize;
 	int ret;
 	u8 *id;

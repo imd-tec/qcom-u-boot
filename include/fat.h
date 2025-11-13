@@ -84,7 +84,7 @@ struct disk_partition;
 					((fatsize) != 16 ? 0xff0 : 0xfff0) : \
 					0xffffff0))
 
-typedef struct boot_sector {
+struct boot_sector {
 	__u8	ignored[3];	/* Bootstrap code */
 	char	system_id[8];	/* Name of fs */
 	__u8	sector_size[2];	/* Bytes/sector */
@@ -108,10 +108,9 @@ typedef struct boot_sector {
 	__u16	info_sector;	/* Filesystem info sector */
 	__u16	backup_boot;	/* Backup boot sector */
 	__u16	reserved2[6];	/* Unused */
-} boot_sector;
+};
 
-typedef struct volume_info
-{
+struct volume_info {
 	__u8 drive_number;	/* BIOS drive number */
 	__u8 reserved;		/* Unused */
 	__u8 ext_boot_sign;	/* 0x29 if fields below exist (DOS 3.3+) */
@@ -120,7 +119,7 @@ typedef struct volume_info
 	char fs_type[8];	/* Typically FAT12, FAT16, or FAT32 */
 	/* Boot code comes next, all but 2 bytes to fill up sector */
 	/* Boot sign comes last, 2 bytes */
-} volume_info;
+};
 
 /* see dir_entry::lcase: */
 #define CASE_LOWER_BASE	8	/* base (name) is lower case */
@@ -131,7 +130,7 @@ struct nameext {
 	char ext[3];
 };
 
-typedef struct dir_entry {
+struct dir_entry {
 	struct nameext nameext;	/* Name and extension */
 	__u8	attr;		/* Attribute bits */
 	__u8	lcase;		/* Case for name and ext (CASE_LOWER_x) */
@@ -142,9 +141,9 @@ typedef struct dir_entry {
 	__u16	starthi;	/* High 16 bits of cluster in FAT32 */
 	__u16	time,date,start;/* Time, date and first cluster */
 	__u32	size;		/* File size in bytes */
-} dir_entry;
+};
 
-typedef struct dir_slot {
+struct dir_slot {
 	__u8	id;		/* Sequence number for slot */
 	__u8	name0_4[10];	/* First 5 characters in name */
 	__u8	attr;		/* Attribute byte */
@@ -153,7 +152,7 @@ typedef struct dir_slot {
 	__u8	name5_10[12];	/* 6 more characters in name */
 	__u16	start;		/* Unused */
 	__u8	name11_12[4];	/* Last 2 characters in name */
-} dir_slot;
+};
 
 /*
  * Private filesystem parameters
@@ -161,7 +160,7 @@ typedef struct dir_slot {
  * Note: FAT buffer has to be 32 bit aligned
  * (see FAT32 accesses)
  */
-typedef struct {
+struct fsdata {
 	__u8	*fatbuf;	/* Current FAT buffer */
 	int	fatsize;	/* Size of FAT in bits */
 	__u32	fatlength;	/* Length of FAT in sectors */
@@ -176,17 +175,16 @@ typedef struct {
 	__u32	root_cluster;	/* First cluster of root dir for FAT32 */
 	u32	total_sect;	/* Number of sectors */
 	int	fats;		/* Number of FATs */
-} fsdata;
+};
 
 struct fat_itr;
-typedef struct fat_itr fat_itr;
 
-static inline u32 clust_to_sect(fsdata *fsdata, u32 clust)
+static inline u32 clust_to_sect(struct fsdata *fsdata, u32 clust)
 {
 	return fsdata->data_begin + clust * fsdata->clust_size;
 }
 
-static inline u32 sect_to_clust(fsdata *fsdata, int sect)
+static inline u32 sect_to_clust(struct fsdata *fsdata, int sect)
 {
 	return (sect - fsdata->data_begin) / fsdata->clust_size;
 }
@@ -209,7 +207,7 @@ int fat_unlink(const char *filename);
 int fat_rename(const char *old_path, const char *new_path);
 int fat_mkdir(const char *dirname);
 void fat_close(void);
-void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes);
+void *fat_next_cluster(struct fat_itr *itr, unsigned int *nbytes);
 
 /**
  * fat_uuid() - get FAT volume ID

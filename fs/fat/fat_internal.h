@@ -66,17 +66,17 @@ extern struct disk_partition cur_part_info;
  * For a more complete example, see fat_itr_resolve().
  */
 struct fat_itr {
-	fsdata *fsdata;
+	struct fsdata *fsdata;
 	unsigned int start_clust;
 	unsigned int clust;
 	unsigned int next_clust;
 	int last_cluster;
 	int is_root;
 	int remaining;
-	dir_entry *dent;
+	struct dir_entry *dent;
 	int dent_rem;
 	unsigned int dent_clust;
-	dir_entry *dent_start;
+	struct dir_entry *dent_start;
 	char l_name[VFAT_MAXLEN_BYTES];
 	char s_name[14];
 	char *name;
@@ -95,7 +95,7 @@ void downcase(char *str, size_t len);
  * @itr: directory iterator
  * Return: pointer to next directory entry, or NULL if at end
  */
-dir_entry *next_dent(fat_itr *itr);
+struct dir_entry *next_dent(struct fat_itr *itr);
 
 /**
  * disk_read() - read sectors from the current FAT device
@@ -111,7 +111,7 @@ int disk_read(__u32 block, __u32 nr_blocks, void *buf);
  * @mydata: filesystem data
  * Return: 0 on success, -1 on error
  */
-int flush_dirty_fat_buffer(fsdata *mydata);
+int flush_dirty_fat_buffer(struct fsdata *mydata);
 
 /* Internal function declarations */
 
@@ -121,7 +121,7 @@ int flush_dirty_fat_buffer(fsdata *mydata);
  * @entry: FAT entry index
  * Return: FAT entry value, 0x00 on failure
  */
-__u32 get_fatent(fsdata *mydata, __u32 entry);
+__u32 get_fatent(struct fsdata *mydata, __u32 entry);
 
 /**
  * mkcksum() - calculate short name checksum
@@ -136,28 +136,28 @@ __u8 mkcksum(struct nameext *nameext);
  * @fsdata: filesystem data for the partition
  * Return: 0 on success, else -errno
  */
-int fat_itr_root(fat_itr *itr, fsdata *fsdata);
+int fat_itr_root(struct fat_itr *itr, struct fsdata *fsdata);
 
 /**
  * fat_itr_child() - initialize an iterator to descend into a sub-directory
  * @itr: iterator to initialize
  * @parent: the iterator pointing at a directory entry in the parent directory
  */
-void fat_itr_child(fat_itr *itr, fat_itr *parent);
+void fat_itr_child(struct fat_itr *itr, struct fat_itr *parent);
 
 /**
  * fat_itr_next() - step to the next entry in a directory
  * @itr: the iterator to iterate
  * Return: 1 if success or 0 if no more entries in the current directory
  */
-int fat_itr_next(fat_itr *itr);
+int fat_itr_next(struct fat_itr *itr);
 
 /**
  * fat_itr_isdir() - is current cursor position pointing to a directory
  * @itr: the iterator
  * Return: true if cursor is at a directory
  */
-int fat_itr_isdir(fat_itr *itr);
+int fat_itr_isdir(struct fat_itr *itr);
 
 /**
  * fat_itr_resolve() - traverse directory structure to resolve the requested path
@@ -166,6 +166,6 @@ int fat_itr_isdir(fat_itr *itr);
  * @type: bitmask of allowable file types
  * Return: 0 on success or -errno
  */
-int fat_itr_resolve(fat_itr *itr, const char *path, uint type);
+int fat_itr_resolve(struct fat_itr *itr, const char *path, uint type);
 
 #endif /* _FAT_INTERNAL_H_ */
