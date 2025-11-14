@@ -44,6 +44,9 @@ static int bootflow_menu_set_item_props(struct scene *scn,
 	ret |= scene_obj_set_hide(scn, ITEM_VERSION_NAME + i, true);
 	scene_obj_set_hide(scn, ITEM_VERIFIED + i, true);
 	ret |= scene_obj_set_hide(scn, ITEM_KEY + i, false);
+	scene_obj_set_hide(scn, ITEM_LOCKED + i, true);
+	scene_obj_set_hide(scn, ITEM_PASS_LABEL + i, true);
+	scene_obj_set_hide(scn, ITEM_PASS_EDIT + i, true);
 	if (ret)
 		return log_msg_ret("msp", ret);
 
@@ -229,6 +232,7 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 		      struct scene **scnp)
 {
 	struct menu_priv *priv = exp->priv;
+	struct scene_obj_textline *tline;
 	char str[2], *key;
 	struct scene *scn;
 	uint preview_id;
@@ -278,6 +282,33 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 				  NULL);
 	if (ret < 0)
 		return log_msg_ret("itm", -EINVAL);
+
+	/*
+	 * Create passphrase textline with label and edit field (12 chars). Show
+	 * characters as asterisks
+	 */
+	ret = scene_textline(scn, "passphrase", ITEM_PASS + seq, 12, &tline);
+	if (ret < 0)
+		return log_msg_ret("itp", -EINVAL);
+	tline->obj.flags |= SCENEOF_PASSWORD;
+	ret = scene_txt_str(scn, "pass_label", ITEM_PASS_LABEL + seq, 0,
+			    "Passphrase:", NULL);
+	if (ret < 0)
+		return log_msg_ret("itl", -EINVAL);
+	tline->label_id = ret;
+
+	ret = scene_txt_str(scn, "pass_edit", ITEM_PASS_EDIT + seq, 0,
+			    "", NULL);
+	if (ret < 0)
+		return log_msg_ret("ite", -EINVAL);
+	tline->edit_id = ret;
+
+	/* Create message text (hidden by default) for success/error feedback */
+	ret = scene_txt_str(scn, "pass_msg", ITEM_PASS_MSG + seq,
+			    STR_PASS_MSG + seq, "", NULL);
+	if (ret < 0)
+		return log_msg_ret("ipm", -EINVAL);
+	scene_obj_set_hide(scn, ITEM_PASS_MSG + seq, true);
 
 	ret = bootflow_menu_set_item_props(scn, seq, bflow);
 	if (ret)
