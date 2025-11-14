@@ -2,4 +2,4 @@
 #
 
 obj-$(CONFIG_$(PHASE_)FS_FAT) = fat.o
-obj-$(CONFIG_$(PHASE_)FAT_WRITE) = fat_write.o
+obj-$(CONFIG_$(PHASE_)FAT_WRITE) += fat_write.o

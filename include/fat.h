@@ -84,132 +84,349 @@ struct disk_partition;
 					((fatsize) != 16 ? 0xff0 : 0xfff0) : \
 					0xffffff0))
 
-typedef struct boot_sector {
-	__u8	ignored[3];	/* Bootstrap code */
-	char	system_id[8];	/* Name of fs */
-	__u8	sector_size[2];	/* Bytes/sector */
-	__u8	cluster_size;	/* Sectors/cluster */
-	__u16	reserved;	/* Number of reserved sectors */
-	__u8	fats;		/* Number of FATs */
-	__u8	dir_entries[2];	/* Number of root directory entries */
-	__u8	sectors[2];	/* Number of sectors */
-	__u8	media;		/* Media code */
-	__u16	fat_length;	/* Sectors/FAT */
-	__u16	secs_track;	/* Sectors/track */
-	__u16	heads;		/* Number of heads */
-	__u32	hidden;		/* Number of hidden sectors */
-	__u32	total_sect;	/* Number of sectors (if sectors == 0) */
+/**
+ * struct boot_sector - FAT boot sector structure
+ * @ignored: bootstrap code (first 3 bytes)
+ * @system_id: name of filesystem (8 bytes)
+ * @sector_size: bytes per sector
+ * @cluster_size: sectors per cluster
+ * @reserved: number of reserved sectors
+ * @fats: number of FAT copies
+ * @dir_entries: number of root directory entries
+ * @sectors: number of sectors (for small disks)
+ * @media: media descriptor code
+ * @fat_length: sectors per FAT (for FAT12/16)
+ * @secs_track: sectors per track
+ * @heads: number of heads
+ * @hidden: number of hidden sectors
+ * @total_sect: total number of sectors (for larger disks)
+ * @fat32_length: sectors per FAT (FAT32 only)
+ * @flags: flags (bit 8: fat mirroring, low 4: active fat)
+ * @version: filesystem version (FAT32 only)
+ * @root_cluster: first cluster of root directory (FAT32 only)
+ * @info_sector: filesystem info sector (FAT32 only)
+ * @backup_boot: backup boot sector location (FAT32 only)
+ * @reserved2: unused (FAT32 only)
+ */
+struct boot_sector {
+	u8	ignored[3];
+	char	system_id[8];
+	u8	sector_size[2];
+	u8	cluster_size;
+	u16	reserved;
+	u8	fats;
+	u8	dir_entries[2];
+	u8	sectors[2];
+	u8	media;
+	u16	fat_length;
+	u16	secs_track;
+	u16	heads;
+	u32	hidden;
+	u32	total_sect;
 
 	/* FAT32 only */
-	__u32	fat32_length;	/* Sectors/FAT */
-	__u16	flags;		/* Bit 8: fat mirroring, low 4: active fat */
-	__u8	version[2];	/* Filesystem version */
-	__u32	root_cluster;	/* First cluster in root directory */
-	__u16	info_sector;	/* Filesystem info sector */
-	__u16	backup_boot;	/* Backup boot sector */
-	__u16	reserved2[6];	/* Unused */
-} boot_sector;
+	u32	fat32_length;
+	u16	flags;
+	u8	version[2];
+	u32	root_cluster;
+	u16	info_sector;
+	u16	backup_boot;
+	u16	reserved2[6];
+};
 
-typedef struct volume_info
-{
-	__u8 drive_number;	/* BIOS drive number */
-	__u8 reserved;		/* Unused */
-	__u8 ext_boot_sign;	/* 0x29 if fields below exist (DOS 3.3+) */
-	__u8 volume_id[4];	/* Volume ID number */
-	char volume_label[11];	/* Volume label */
-	char fs_type[8];	/* Typically FAT12, FAT16, or FAT32 */
-	/* Boot code comes next, all but 2 bytes to fill up sector */
-	/* Boot sign comes last, 2 bytes */
-} volume_info;
+/**
+ * struct volume_info - FAT volume information structure
+ * @drive_number: BIOS drive number
+ * @reserved: unused field
+ * @ext_boot_sign: extended boot signature (0x29 if fields below exist)
+ * @volume_id: volume serial number (4 bytes)
+ * @volume_label: volume label (11 bytes, padded with spaces)
+ * @fs_type: filesystem type string (typically "FAT12", "FAT16", or "FAT32")
+ *
+ * This structure is part of the boot sector, located after the common fields.
+ * Boot code follows this structure, with boot signature at the end of sector.
+ */
+struct volume_info {
+	u8 drive_number;
+	u8 reserved;
+	u8 ext_boot_sign;
+	u8 volume_id[4];
+	char volume_label[11];
+	char fs_type[8];
+};
 
 /* see dir_entry::lcase: */
 #define CASE_LOWER_BASE	8	/* base (name) is lower case */
 #define CASE_LOWER_EXT	16	/* extension is lower case */
 
+/**
+ * struct nameext - 8.3 filename components
+ * @name: filename (8 bytes)
+ * @ext: extension (3 bytes)
+ */
 struct nameext {
 	char name[8];
 	char ext[3];
 };
 
-typedef struct dir_entry {
-	struct nameext nameext;	/* Name and extension */
-	__u8	attr;		/* Attribute bits */
-	__u8	lcase;		/* Case for name and ext (CASE_LOWER_x) */
-	__u8	ctime_ms;	/* Creation time, milliseconds */
-	__u16	ctime;		/* Creation time */
-	__u16	cdate;		/* Creation date */
-	__u16	adate;		/* Last access date */
-	__u16	starthi;	/* High 16 bits of cluster in FAT32 */
-	__u16	time,date,start;/* Time, date and first cluster */
-	__u32	size;		/* File size in bytes */
-} dir_entry;
-
-typedef struct dir_slot {
-	__u8	id;		/* Sequence number for slot */
-	__u8	name0_4[10];	/* First 5 characters in name */
-	__u8	attr;		/* Attribute byte */
-	__u8	reserved;	/* Unused */
-	__u8	alias_checksum;/* Checksum for 8.3 alias */
-	__u8	name5_10[12];	/* 6 more characters in name */
-	__u16	start;		/* Unused */
-	__u8	name11_12[4];	/* Last 2 characters in name */
-} dir_slot;
-
-/*
- * Private filesystem parameters
- *
- * Note: FAT buffer has to be 32 bit aligned
- * (see FAT32 accesses)
+/**
+ * struct dir_entry - FAT directory entry
+ * @nameext: filename and extension (8.3 format)
+ * @attr: file attributes (ATTR_* flags)
+ * @lcase: case flags for name and extension (CASE_LOWER_* flags)
+ * @ctime_ms: creation time (milliseconds)
+ * @ctime: creation time (hours, minutes, seconds)
+ * @cdate: creation date
+ * @adate: last access date
+ * @starthi: high 16 bits of cluster number (FAT32 only)
+ * @time: modification time
+ * @date: modification date
+ * @start: low 16 bits of cluster number
+ * @size: file size in bytes
  */
-typedef struct {
-	__u8	*fatbuf;	/* Current FAT buffer */
-	int	fatsize;	/* Size of FAT in bits */
-	__u32	fatlength;	/* Length of FAT in sectors */
-	__u16	fat_sect;	/* Starting sector of the FAT */
-	__u8	fat_dirty;      /* Set if fatbuf has been modified */
-	__u32	rootdir_sect;	/* Start sector of root directory */
-	__u16	sect_size;	/* Size of sectors in bytes */
-	__u16	clust_size;	/* Size of clusters in sectors */
-	int	data_begin;	/* The sector of the first cluster, can be negative */
-	int	fatbufnum;	/* Used by get_fatent, init to -1 */
-	int	rootdir_size;	/* Size of root dir for non-FAT32 */
-	__u32	root_cluster;	/* First cluster of root dir for FAT32 */
-	u32	total_sect;	/* Number of sectors */
-	int	fats;		/* Number of FATs */
-} fsdata;
+struct dir_entry {
+	struct nameext nameext;
+	u8	attr;
+	u8	lcase;
+	u8	ctime_ms;
+	u16	ctime;
+	u16	cdate;
+	u16	adate;
+	u16	starthi;
+	u16	time;
+	u16	date;
+	u16	start;
+	u32	size;
+};
+
+/**
+ * struct dir_slot - VFAT long filename entry
+ * @id: sequence number (bit 6 = last entry, bits 0-4 = sequence)
+ * @name0_4: characters 0-4 of long filename (UTF-16LE)
+ * @attr: must be ATTR_VFAT (0x0F)
+ * @reserved: unused field
+ * @alias_checksum: checksum of 8.3 alias for this long name
+ * @name5_10: characters 5-10 of long filename (UTF-16LE)
+ * @start: unused (always 0)
+ * @name11_12: characters 11-12 of long filename (UTF-16LE)
+ *
+ * Long filename entries precede the corresponding short entry in directory.
+ * Multiple entries may be used to store names longer than 13 characters.
+ */
+struct dir_slot {
+	u8	id;
+	u8	name0_4[10];
+	u8	attr;
+	u8	reserved;
+	u8	alias_checksum;
+	u8	name5_10[12];
+	u16	start;
+	u8	name11_12[4];
+};
+
+/**
+ * struct fsdata - FAT filesystem instance data
+ * @fatbuf: buffer for reading/writing FAT (must be 32-bit aligned for FAT32)
+ * @fatsize: size of FAT in bits (12, 16, or 32)
+ * @fatlength: length of FAT in sectors
+ * @fat_sect: starting sector of the FAT
+ * @fat_dirty: flag indicating if fatbuf has been modified
+ * @rootdir_sect: starting sector of root directory
+ * @sect_size: size of sectors in bytes
+ * @clust_size: size of clusters in sectors
+ * @data_begin: sector offset of first data cluster (can be negative)
+ * @fatbufnum: currently buffered FAT sector number (init to -1)
+ * @rootdir_size: size of root directory in entries (for non-FAT32)
+ * @root_cluster: first cluster of root directory (FAT32 only)
+ * @total_sect: total number of sectors
+ * @fats: number of FAT copies
+ *
+ * This structure holds the runtime state of a mounted FAT filesystem.
+ * The fatbuf must be 32-bit aligned due to FAT32 sector access requirements.
+ */
+struct fsdata {
+	u8	*fatbuf;
+	int	fatsize;
+	u32	fatlength;
+	u16	fat_sect;
+	u8	fat_dirty;
+	u32	rootdir_sect;
+	u16	sect_size;
+	u16	clust_size;
+	int	data_begin;
+	int	fatbufnum;
+	int	rootdir_size;
+	u32	root_cluster;
+	u32	total_sect;
+	int	fats;
+};
 
 struct fat_itr;
-typedef struct fat_itr fat_itr;
 
-static inline u32 clust_to_sect(fsdata *fsdata, u32 clust)
+/**
+ * clust_to_sect() - convert cluster number to sector number
+ * @fsdata: filesystem instance data
+ * @clust: cluster number
+ *
+ * Return: sector number corresponding to the given cluster
+ */
+static inline u32 clust_to_sect(struct fsdata *fsdata, u32 clust)
 {
 	return fsdata->data_begin + clust * fsdata->clust_size;
 }
 
-static inline u32 sect_to_clust(fsdata *fsdata, int sect)
+/**
+ * sect_to_clust() - convert sector number to cluster number
+ * @fsdata: filesystem instance data
+ * @sect: sector number
+ *
+ * Return: cluster number corresponding to the given sector
+ */
+static inline u32 sect_to_clust(struct fsdata *fsdata, int sect)
 {
 	return (sect - fsdata->data_begin) / fsdata->clust_size;
 }
 
+/**
+ * file_fat_detectfs() - detect and initialize the FAT filesystem
+ *
+ * Return: 0 on success, -1 on error
+ */
 int file_fat_detectfs(void);
+
+/**
+ * fat_exists() - check if a file exists
+ * @filename: full path to file
+ *
+ * Return: 0 if file exists, -1 if not found or error
+ */
 int fat_exists(const char *filename);
+
+/**
+ * fat_size() - get the size of a file
+ * @filename: full path to file
+ * @size: pointer to store file size
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_size(const char *filename, loff_t *size);
+
+/**
+ * file_fat_read() - read a file from FAT filesystem
+ * @filename: full path to file
+ * @buffer: buffer to read data into
+ * @maxsize: maximum number of bytes to read
+ *
+ * Return: number of bytes read, -1 on error
+ */
 int file_fat_read(const char *filename, void *buffer, int maxsize);
+
+/**
+ * fat_set_blk_dev() - set the block device and partition for FAT operations
+ * @rbdd: block device descriptor
+ * @info: partition information
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_set_blk_dev(struct blk_desc *rbdd, struct disk_partition *info);
+
+/**
+ * fat_register_device() - register a FAT filesystem on a block device
+ * @dev_desc: block device descriptor
+ * @part_no: partition number (0 = whole device)
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_register_device(struct blk_desc *dev_desc, int part_no);
 
+/**
+ * file_fat_write() - write to a file on FAT filesystem
+ * @filename: full path to file
+ * @buf: buffer containing data to write
+ * @offset: offset in file to start writing
+ * @len: number of bytes to write
+ * @actwrite: pointer to store actual number of bytes written
+ *
+ * Return: 0 on success, -1 on error
+ */
 int file_fat_write(const char *filename, void *buf, loff_t offset, loff_t len,
 		   loff_t *actwrite);
+
+/**
+ * fat_read_file() - read from a file on FAT filesystem
+ * @filename: full path to file
+ * @buf: buffer to read data into
+ * @offset: offset in file to start reading
+ * @len: number of bytes to read
+ * @actread: pointer to store actual number of bytes read
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_read_file(const char *filename, void *buf, loff_t offset, loff_t len,
 		  loff_t *actread);
+
+/**
+ * fat_opendir() - open a directory for reading
+ * @filename: full path to directory
+ * @dirsp: pointer to store directory stream handle
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_opendir(const char *filename, struct fs_dir_stream **dirsp);
+
+/**
+ * fat_readdir() - read next entry from directory
+ * @dirs: directory stream handle
+ * @dentp: pointer to store directory entry
+ *
+ * Return: 0 on success, -1 on error or end of directory
+ */
 int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp);
+
+/**
+ * fat_closedir() - close a directory stream
+ * @dirs: directory stream handle
+ */
 void fat_closedir(struct fs_dir_stream *dirs);
+
+/**
+ * fat_unlink() - delete a file or empty directory
+ * @filename: full path to file or directory
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_unlink(const char *filename);
+
+/**
+ * fat_rename() - rename a file or directory
+ * @old_path: current full path
+ * @new_path: new full path
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_rename(const char *old_path, const char *new_path);
+
+/**
+ * fat_mkdir() - create a directory
+ * @dirname: full path to new directory
+ *
+ * Return: 0 on success, -1 on error
+ */
 int fat_mkdir(const char *dirname);
+
+/**
+ * fat_close() - close FAT filesystem and release resources
+ */
 void fat_close(void);
-void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes);
+
+/**
+ * fat_next_cluster() - get the next cluster in a chain
+ * @itr: directory iterator
+ * @nbytes: pointer to store number of bytes in cluster
+ *
+ * Return: pointer to cluster data buffer
+ */
+void *fat_next_cluster(struct fat_itr *itr, unsigned int *nbytes);
 
 /**
  * fat_uuid() - get FAT volume ID
