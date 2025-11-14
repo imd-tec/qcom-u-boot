@@ -53,8 +53,8 @@ static int cmd_test_tkey_sandbox(struct unit_test_state *uts)
 	/* Test getkey command */
 	ut_assertok(run_command("tkey getkey testuss", 0));
 	ut_assert_nextline("Public Key: 505152535455565758595a5b5c5d5e5f505152535455565758595a5b5c5d5e5f");
-	ut_assert_nextline("Disk Key: 228b2f6abf8be05649b2417586150bbf3e1b3f669afa1c6151ddc72957933c21");
-	ut_assert_nextline("Verification Hash: a72a46b8f8c7ff0824416ada886f62b6c2808896d71201a32814ab432c7a81cf");
+	ut_assert_nextline("Disk Key: e9b0599268ff8b083ef80dbd04be207ce9a19a60a888ccb3fe93710a0a70a34e");
+	ut_assert_nextline("Verification Hash: 8583a08d6c534e84ae81a8518071c16a8030893df05fecb84e514438591ba5ed");
 
 	/* After getkey, device should be in app mode */
 	ut_assertok(run_command("tkey fwmode", 0));

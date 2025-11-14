@@ -18,6 +18,8 @@
 #include <linux/kernel.h>
 #include <u-boot/blake2.h>
 #include <u-boot/schedule.h>
+#include <u-boot/sha256.h>
+#include <hexdump.h>
 
 /* TKey Protocol Constants */
 #define TKEY_FRAME_HEADER_SIZE		1
@@ -670,6 +672,7 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
 			 int app_size, const void *uss, int uss_size,
 			 void *disk_key, void *pubkey, void *key_hash)
 {
+	char pubkey_hex[TKEY_PUBKEY_SIZE * 2 + 1];
 	int ret;
 
 	/* Load the signer app with USS */
@@ -693,14 +696,22 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
 
 	log_debug("Public key retrieved\n");
 
-	/* Derive disk encryption key from public key using BLAKE2b */
-	ret = blake2b(disk_key, 32, pubkey, 32, NULL, 0);
-	if (ret) {
-		log_debug("Failed to derive disk key (error %d)\n", ret);
-		return ret;
-	}
+	/*
+	 * Derive disk encryption key from public key using SHA256
+	 * Must match Python tkey-fde-key.py implementation which does:
+	 * hashlib.sha256(pubkey.encode()).digest()
+	 *
+	 * This converts the binary public key to hex string,
+	 * then hashes the string bytes.
+	 */
+	bin2hex(pubkey_hex, pubkey, TKEY_PUBKEY_SIZE);
 
-	log_debug("Disk encryption key derived\n");
+	sha256_context ctx;
+	sha256_starts(&ctx);
+	sha256_update(&ctx, (const u8 *)pubkey_hex, TKEY_PUBKEY_SIZE * 2);
+	sha256_finish(&ctx, disk_key);
+
+	log_debug("Disk encryption key derived using SHA256\n");
 
 	/* Generate verification hash if requested */
 	if (key_hash) {
