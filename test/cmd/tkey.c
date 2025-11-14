@@ -28,10 +28,9 @@ CMD_TEST(cmd_test_tkey_help, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
 /* Test 'tkey' subcommands with emulator */
 static int cmd_test_tkey_sandbox(struct unit_test_state *uts)
 {
-	struct udevice *dev;
-
-	/* TKey device should be available in sandbox */
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	/* Use tkey-emul for predictable test results */
+	ut_assertok(run_command("tkey connect tkey-emul", 0));
+	ut_assert_nextline("Connected to TKey device");
 
 	/* Test info command */
 	ut_assertok(run_command("tkey info", 0));
