@@ -39,6 +39,10 @@ extern U_BOOT_DRIVER(bootmeth_2script);
 /* Use this as the vendor for EFI to tell the app to exit boot services */
 static u16 __efi_runtime_data test_vendor[] = u"U-Boot testing";
 
+/* comment test strings */
+#define HEADER	"Seq  Method       State   Uclass    Part  Name                      Filename"
+#define EXT0	"  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf"
+
 static int inject_response(struct unit_test_state *uts)
 {
 	/*
@@ -62,11 +66,11 @@ static int bootflow_cmd(struct unit_test_state *uts)
 	ut_assert_console_end();
 	ut_assertok(run_command("bootflow scan -lH", 0));
 	ut_assert_nextline("Scanning for bootflows in bootdev 'mmc1.bootdev'");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
@@ -74,9 +78,9 @@ static int bootflow_cmd(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing bootflows for bootdev 'mmc1.bootdev'");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
@@ -155,11 +159,11 @@ static int bootflow_cmd_glob(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow scan -lGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
@@ -168,9 +172,9 @@ static int bootflow_cmd_glob(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing all bootflows");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
@@ -187,7 +191,7 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 	ut_assertok(run_command("bootmeth order ", 0));
 	ut_assertok(run_command("bootflow scan -aleGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("  0  extlinux     media   mmc          0  mmc2.bootdev.whole        ");
@@ -220,7 +224,7 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing all bootflows");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("  0  extlinux     media   mmc          0  mmc2.bootdev.whole        ");
 	ut_assert_nextline("  1  efi          media   mmc          0  mmc2.bootdev.whole        ");
@@ -573,8 +577,7 @@ static int bootflow_scan_glob_bootmeth(struct unit_test_state *uts)
 	ut_assertok(bootmeth_set_order("efi firmware0"));
 	ut_assertok(run_command("bootflow scan -lGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline(
-		"Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(0 bootflows, 0 valid)");
@@ -582,8 +585,7 @@ static int bootflow_scan_glob_bootmeth(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow scan -lH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline(
-		"Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning global bootmeth 'firmware0':");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
@@ -941,8 +943,7 @@ static int bootflow_cmd_hunt_label(struct unit_test_state *uts)
 	ut_assert_nextline("Hunting with: mmc");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline(
-		"  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_skip_to_line("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
