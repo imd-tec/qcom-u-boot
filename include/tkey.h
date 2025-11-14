@@ -279,6 +279,42 @@ int tkey_derive_wrapping_key(struct udevice *dev, const char *password,
 			     void *wrapping_key);
 
 /**
+ * tkey_emul_reset_for_test() - Reset emulator to firmware mode for testing
+ *
+ * This is a back-door function for tests to simulate TKey replug by resetting
+ * the emulator to firmware mode. Only works with tkey-emul driver.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_reset_for_test(struct udevice *dev);
+
+/**
+ * tkey_emul_set_pubkey_for_test() - Set public key returned by emulator
+ *
+ * This is a back-door function for tests to configure what public key the
+ * emulator returns from APP_CMD_GET_PUBKEY. The disk key will be derived
+ * from this pubkey using SHA256(hex(pubkey)).
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @pubkey: Public key to return (32 bytes)
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_pubkey_for_test(struct udevice *dev, const void *pubkey);
+
+/**
+ * tkey_emul_set_app_mode_for_test() - Set emulator mode for testing
+ *
+ * This is a back-door function for tests to force the emulator into app mode
+ * or firmware mode, allowing tests to verify replug behavior.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @app_mode: true for app mode, false for firmware mode
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_app_mode_for_test(struct udevice *dev, bool app_mode);
+
+/**
  * tkey_emul_set_connected_for_test() - Simulate device connection state
  *
  * This is a back-door function for tests to simulate physical insertion or

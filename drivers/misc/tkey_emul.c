@@ -262,6 +262,47 @@ static int tkey_emul_read_all(struct udevice *dev, void *buf, int maxlen,
 	return len;
 }
 
+int tkey_emul_reset_for_test(struct udevice *dev)
+{
+	struct tkey_emul_priv *priv = dev_get_priv(dev);
+
+	/* Reset to firmware mode */
+	priv->app_loaded = false;
+	priv->total_loaded = 0;
+	priv->resp_len = 0;
+	log_debug("Reset emulator to firmware mode\n");
+
+	return 0;
+}
+
+int tkey_emul_set_pubkey_for_test(struct udevice *dev, const void *pubkey)
+{
+	struct tkey_emul_priv *priv = dev_get_priv(dev);
+
+	memcpy(priv->pubkey, pubkey, 32);
+	log_debug("Set test pubkey\n");
+
+	return 0;
+}
+
+int tkey_emul_set_app_mode_for_test(struct udevice *dev, bool app_mode)
+{
+	/*
+	 * Only set app_loaded if device is active (has priv data).
+	 * After device_remove(), priv is freed, so we can't access it.
+	 * When device is re-probed, it will start in firmware mode by default.
+	 */
+	if (device_active(dev)) {
+		struct tkey_emul_priv *priv = dev_get_priv(dev);
+
+		priv->app_loaded = app_mode;
+	}
+
+	log_debug("Set emulator to %s mode\n", app_mode ? "app" : "firmware");
+
+	return 0;
+}
+
 int tkey_emul_set_connected_for_test(struct udevice *dev, bool connected)
 {
 	struct tkey_emul_plat *plat = dev_get_plat(dev);
