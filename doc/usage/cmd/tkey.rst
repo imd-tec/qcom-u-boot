@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    tkey connect
+    tkey connect [device-name]
     tkey fwmode
     tkey getkey <uss> [verify-hash]
     tkey info
@@ -46,8 +46,19 @@ internal UDI to generate deterministic encryption keys.
 tkey connect
 ~~~~~~~~~~~~
 
-Test connectivity to a TKey device. This command attempts to find and connect
-to the first available TKey device in the system.
+Test connectivity to a TKey device and optionally select a specific device for
+subsequent commands.
+
+When called without arguments, this command connects to the first available TKey
+device in the system. When a device name is provided, it connects to that
+specific device.
+
+Once connected, the selected device is remembered and will be used by all
+subsequent tkey commands (info, getkey, loadapp, etc.) until a different device
+is selected with another connect command.
+
+device-name
+    Optional name of a specific TKey device to connect to
 
 
 tkey fwmode
@@ -160,9 +171,14 @@ password
 Example
 -------
 
-Connect to device::
+Connect to the first available device::
 
     => tkey connect
+    Connected to TKey device
+
+Connect to a specific device by name::
+
+    => tkey connect tkey@0
     Connected to TKey device
 
 Check device mode::
