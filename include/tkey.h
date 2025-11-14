@@ -13,6 +13,21 @@
 struct tkey_frame;
 struct udevice;
 
+/**
+ * struct tkey_load_ctx - Context for iterative app loading
+ *
+ * @dev: TKey device
+ * @app_data: Complete app binary data
+ * @app_size: Size of app data
+ * @offset: Current offset in app data
+ */
+struct tkey_load_ctx {
+	struct udevice *dev;
+	const void *app_data;
+	int app_size;
+	int offset;
+};
+
 /* TKey constants */
 #define TKEY_NAME_SIZE			5
 #define TKEY_CDI_SIZE			32
@@ -181,6 +196,40 @@ int tkey_load_app(struct udevice *dev, const void *app_data, int app_size);
  */
 int tkey_load_app_with_uss(struct udevice *dev, const void *app_data,
 			   int app_size, const void *uss, int uss_size);
+
+/**
+ * tkey_load_start() - Start iterative app loading
+ *
+ * @ctx: Context structure to initialize
+ * @dev: TKey device
+ * @app_data: Complete app binary data
+ * @app_size: Size of app data
+ * @uss: User-Supplied Secret (password/passphrase) - can be NULL
+ * @uss_size: Size of USS data (max 32 bytes)
+ *
+ * This function initializes the context and sends the app header.
+ * Call tkey_load_next() repeatedly to send the data blocks.
+ *
+ * Return: 0 on success, -ve error on failure (-ENOTSUPP if not in
+ *	firmware mode)
+ */
+int tkey_load_start(struct tkey_load_ctx *ctx, struct udevice *dev,
+		    const void *app_data, int app_size,
+		    const void *uss, int uss_size);
+
+/**
+ * tkey_load_next() - Send next block(s) of app data
+ *
+ * @ctx: Context structure from tkey_load_start()
+ * @max_blocks: Maximum number of blocks to send (0 = send all remaining)
+ *
+ * This function sends the next n blocks of app data. Call repeatedly
+ * until it returns 0 (done) instead of -EAGAIN (more blocks remain).
+ *
+ * Return: 0 if loading is complete, -EAGAIN if more blocks remain,
+ *	-ve error on failure
+ */
+int tkey_load_next(struct tkey_load_ctx *ctx, int max_blocks);
 
 /**
  * tkey_get_pubkey() - Get public key from signer app
