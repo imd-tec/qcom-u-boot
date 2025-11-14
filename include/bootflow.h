@@ -55,12 +55,14 @@ enum bootflow_state_t {
  * @BOOTFLOWF_USE_BUILTIN_FDT: Indicates that current bootflow uses built-in FDT
  * @BOOTFLOWF_FAKE_GO: Do a 'fake' boot, up to the last possible point, then
  * return
+ * @BOOTFLOWF_ENCRYPTED: Indicates that the partition is encrypted (e.g., LUKS)
  */
 enum bootflow_flags_t {
 	BOOTFLOWF_USE_PRIOR_FDT		= BIT(0),
 	BOOTFLOWF_STATIC_BUF		= BIT(1),
 	BOOTFLOWF_USE_BUILTIN_FDT	= BIT(2),
 	BOOTFLOWF_FAKE_GO		= BIT(3),
+	BOOTFLOWF_ENCRYPTED		= BIT(4),
 };
 
 /**
@@ -93,6 +95,7 @@ enum bootflow_flags_t {
  * @fdt_size: Size of FDT file
  * @fdt_addr: Address of loaded fdt
  * @flags: Flags for the bootflow (see enum bootflow_flags_t)
+ * @luks_version: LUKS version (1 or 2) if BOOTFLOWF_ENCRYPTED is set, else 0
  * @cmdline: OS command line, or NULL if not known (allocated)
  * @x86_setup: Pointer to x86 setup block inside @buf, NULL if not present
  * @bootmeth_priv: Private data for the bootmeth
@@ -118,6 +121,7 @@ struct bootflow {
 	int fdt_size;
 	ulong fdt_addr;
 	int flags;
+	int luks_version;
 	char *cmdline;
 	void *x86_setup;
 	void *bootmeth_priv;

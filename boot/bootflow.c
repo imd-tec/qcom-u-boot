@@ -108,11 +108,12 @@ static void report_bootflow_err(struct bootflow *bflow, int err)
 void bootflow_show(int index, struct bootflow *bflow, bool errors)
 {
 	const char *name = bootflow_guess_label(bflow);
+	char enc_mark = (bflow->flags & BOOTFLOWF_ENCRYPTED) ? 'E' : ' ';
 
-	printf("%3x  %-11s  %-6s  %-9.9s %4x  %-25.25s %s\n", index,
+	printf("%3x  %-11s  %-6s  %-9.9s %4x  %c  %-25.25s %s\n", index,
 	       bflow->method ? bflow->method->name : "(none)",
 	       bootflow_state_get_name(bflow->state), name, bflow->part,
-	       bflow->name, bflow->fname ?: "");
+	       enc_mark, bflow->name, bflow->fname ?: "");
 	if (errors)
 		report_bootflow_err(bflow, bflow->err);
 }
