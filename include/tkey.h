@@ -229,4 +229,17 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
 int tkey_derive_wrapping_key(struct udevice *dev, const char *password,
 			     void *wrapping_key);
 
+/**
+ * tkey_emul_set_connected_for_test() - Simulate device connection state
+ *
+ * This is a back-door function for tests to simulate physical insertion or
+ * removal of the TKey device. When disconnected, all I/O operations and
+ * probe attempts will fail.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @connected: true to simulate device present, false to simulate removal
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_connected_for_test(struct udevice *dev, bool connected);
+
 #endif /* _TKEY_UCLASS_H */
