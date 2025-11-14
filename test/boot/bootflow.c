@@ -1770,3 +1770,41 @@ static int bootflow_extlinux_localboot(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(bootflow_extlinux_localboot, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Check 'bootflow info' with encrypted partition on mmc12 */
+static int bootflow_cmd_info_encrypted(struct unit_test_state *uts)
+{
+	/* Enable mmc12 which has LUKS encrypted partition and scan it */
+	ut_assertok(scan_mmc_bootdev(uts, "mmc12", false));
+
+	/* Check for bootflows - should find one on mmc12 */
+	ut_assertok(run_command("bootflow list", 0));
+	ut_assert_nextline("Showing all bootflows");
+	ut_assert_nextlinen("Seq");
+	ut_assert_nextlinen("---");
+	ut_assert_nextlinen("  0  extlinux");
+	ut_assert_nextline(
+		"  1  extlinux     ready   mmc          1  %c  mmc12.bootdev.part_1      /extlinux/extlinux.conf",
+		IS_ENABLED(CONFIG_BLK_LUKS) ? 'E' : ' ');
+	ut_assert_nextline("---  -----------  ------  --------  ----  -  ------------------------  ----------------");
+	ut_assert_nextline("(2 bootflows, 2 valid)");
+	ut_assert_console_end();
+
+	/* Select the mmc12 bootflow and check info shows encryption */
+	ut_assertok(run_command("bootflow select 1", 0));
+	ut_assert_console_end();
+	ut_assertok(run_command("bootflow info", 0));
+	ut_assert_nextline("Name:      mmc12.bootdev.part_1");
+	ut_assert_nextline("Device:    mmc12.bootdev");
+	ut_assert_nextline("Block dev: mmc12.blk");
+	ut_assert_nextline("Method:    extlinux");
+	ut_assert_nextline("State:     ready");
+	ut_assert_nextline("Partition: 1");
+	if (IS_ENABLED(CONFIG_BLK_LUKS))
+		ut_assert_nextline("Encrypted: LUKSv2");
+	ut_assert_skip_to_line("Error:     0");
+	ut_assert_console_end();
+
+	return 0;
+}
+BOOTSTD_TEST(bootflow_cmd_info_encrypted, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
