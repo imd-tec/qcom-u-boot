@@ -573,6 +573,19 @@ static void scene_render_background(struct scene_obj *obj, bool box_only,
 	}
 }
 
+static void draw_string(struct udevice *cons, const char *str, int len,
+			bool password)
+{
+	if (password) {
+		int i;
+
+		for (i = 0; i < len; i++)
+			vidconsole_put_char(cons, '*');
+	} else {
+		vidconsole_put_stringn(cons, str, len);
+	}
+}
+
 static int scene_txt_render(struct expo *exp, struct udevice *dev,
 			    struct udevice *cons, struct scene_obj *obj,
 			    struct scene_txt_generic *gen, int x, int y,
@@ -630,7 +643,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 
 	if (!mline) {
 		vidconsole_set_cursor_pos(cons, x, y);
-		vidconsole_put_string(cons, str);
+		draw_string(cons, str, strlen(str),
+			    obj->flags & SCENEOF_PASSWORD);
 	}
 
 	alist_for_each(mline, &gen->lines) {
@@ -648,7 +662,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		if (y > bbox.y1)
 			break;	/* clip this line and any following */
 		vidconsole_set_cursor_pos(cons, x, y);
-		vidconsole_put_stringn(cons, str + mline->start, mline->len);
+		draw_string(cons, str + mline->start, mline->len,
+			    obj->flags & SCENEOF_PASSWORD);
 	}
 	if (obj->flags & SCENEOF_POINT)
 		vidconsole_pop_colour(cons, &old);
