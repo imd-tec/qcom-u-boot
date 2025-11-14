@@ -37,7 +37,7 @@ static int tkey_sandbox_read(struct udevice *dev, void *buffer, int len,
 	int total, ret;
 
 	if (priv->fd < 0)
-		return -ENODEV;
+		return -EIO;
 
 	log_debug("Reading %d bytes...\n", len);
 
@@ -78,7 +78,7 @@ static int tkey_sandbox_write(struct udevice *dev, const void *buffer, int len)
 	int ret;
 
 	if (priv->fd < 0)
-		return -ENODEV;
+		return -EIO;
 
 	log_debug("Writing %d bytes:", len);
 	for (int i = 0; i < len; i++)
@@ -112,17 +112,17 @@ static int tkey_sandbox_probe(struct udevice *dev)
 	/* Open the serial device */
 	priv->fd = os_open(priv->path, OS_O_RDWR);
 	if (priv->fd < 0) {
-		log_err("Failed to open %s (error %d)\n", priv->path, priv->fd);
+		log_debug("Failed to open %s (error %d)\n", priv->path, priv->fd);
 		free(priv->path);
-		return -ENODEV;
+		return -ENOENT;
 	}
 
 	/* Configure serial port for raw mode */
 	if (os_tty_set_params(priv->fd) < 0) {
-		log_err("Failed to configure serial port %s\n", priv->path);
+		log_debug("Failed to configure serial port %s\n", priv->path);
 		os_close(priv->fd);
 		free(priv->path);
-		return -ENODEV;
+		return -EIO;
 	}
 	log_debug("Connected to %s with serial parameters configured\n",
 		  priv->path);
