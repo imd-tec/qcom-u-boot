@@ -2,3 +2,6 @@
 
 obj-$(CONFIG_SYS_MTDPARTS_RUNTIME) += qemu_mtdparts.o
 obj-$(CONFIG_SET_DFU_ALT_INFO) += qemu_dfu.o
+ifdef CONFIG_QFW
+obj-$(CONFIG_$(PHASE_)EVENT) += bootcmd.o
+endif

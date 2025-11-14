@@ -8,6 +8,7 @@ Emulation
 
    acpi
    blkdev
+   common
    script
    qemu-arm
    qemu-mips
