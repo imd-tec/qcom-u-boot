@@ -1124,6 +1124,11 @@
 		};
 	};
 
+	tkey {
+		compatible = "sandbox,tkey";
+		sandbox,device-path = "/dev/ttyACM0";
+	};
+
 	tkey-emul {
 		compatible = "tkey,emul";
 	};

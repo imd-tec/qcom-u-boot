@@ -13,6 +13,21 @@
 struct tkey_frame;
 struct udevice;
 
+/**
+ * struct tkey_load_ctx - Context for iterative app loading
+ *
+ * @dev: TKey device
+ * @app_data: Complete app binary data
+ * @app_size: Size of app data
+ * @offset: Current offset in app data
+ */
+struct tkey_load_ctx {
+	struct udevice *dev;
+	const void *app_data;
+	int app_size;
+	int offset;
+};
+
 /* TKey constants */
 #define TKEY_NAME_SIZE			5
 #define TKEY_CDI_SIZE			32
@@ -183,6 +198,40 @@ int tkey_load_app_with_uss(struct udevice *dev, const void *app_data,
 			   int app_size, const void *uss, int uss_size);
 
 /**
+ * tkey_load_start() - Start iterative app loading
+ *
+ * @ctx: Context structure to initialize
+ * @dev: TKey device
+ * @app_data: Complete app binary data
+ * @app_size: Size of app data
+ * @uss: User-Supplied Secret (password/passphrase) - can be NULL
+ * @uss_size: Size of USS data (max 32 bytes)
+ *
+ * This function initializes the context and sends the app header.
+ * Call tkey_load_next() repeatedly to send the data blocks.
+ *
+ * Return: 0 on success, -ve error on failure (-ENOTSUPP if not in
+ *	firmware mode)
+ */
+int tkey_load_start(struct tkey_load_ctx *ctx, struct udevice *dev,
+		    const void *app_data, int app_size,
+		    const void *uss, int uss_size);
+
+/**
+ * tkey_load_next() - Send next block(s) of app data
+ *
+ * @ctx: Context structure from tkey_load_start()
+ * @max_blocks: Maximum number of blocks to send (0 = send all remaining)
+ *
+ * This function sends the next n blocks of app data. Call repeatedly
+ * until it returns 0 (done) instead of -EAGAIN (more blocks remain).
+ *
+ * Return: 0 if loading is complete, -EAGAIN if more blocks remain,
+ *	-ve error on failure
+ */
+int tkey_load_next(struct tkey_load_ctx *ctx, int max_blocks);
+
+/**
  * tkey_get_pubkey() - Get public key from signer app
  *
  * @dev: TKey device (must be in app mode with signer loaded)
@@ -228,5 +277,54 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
  */
 int tkey_derive_wrapping_key(struct udevice *dev, const char *password,
 			     void *wrapping_key);
+
+/**
+ * tkey_emul_reset_for_test() - Reset emulator to firmware mode for testing
+ *
+ * This is a back-door function for tests to simulate TKey replug by resetting
+ * the emulator to firmware mode. Only works with tkey-emul driver.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_reset_for_test(struct udevice *dev);
+
+/**
+ * tkey_emul_set_pubkey_for_test() - Set public key returned by emulator
+ *
+ * This is a back-door function for tests to configure what public key the
+ * emulator returns from APP_CMD_GET_PUBKEY. The disk key will be derived
+ * from this pubkey using SHA256(hex(pubkey)).
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @pubkey: Public key to return (32 bytes)
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_pubkey_for_test(struct udevice *dev, const void *pubkey);
+
+/**
+ * tkey_emul_set_app_mode_for_test() - Set emulator mode for testing
+ *
+ * This is a back-door function for tests to force the emulator into app mode
+ * or firmware mode, allowing tests to verify replug behavior.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @app_mode: true for app mode, false for firmware mode
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_app_mode_for_test(struct udevice *dev, bool app_mode);
+
+/**
+ * tkey_emul_set_connected_for_test() - Simulate device connection state
+ *
+ * This is a back-door function for tests to simulate physical insertion or
+ * removal of the TKey device. When disconnected, all I/O operations and
+ * probe attempts will fail.
+ *
+ * @dev: TKey device (must be tkey-emul)
+ * @connected: true to simulate device present, false to simulate removal
+ * Return: 0 on success, -ve error on failure
+ */
+int tkey_emul_set_connected_for_test(struct udevice *dev, bool connected);
 
 #endif /* _TKEY_UCLASS_H */

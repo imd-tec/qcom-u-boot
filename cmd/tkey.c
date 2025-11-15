@@ -19,10 +19,17 @@
 #include <linux/string.h>
 #include <linux/errno.h>
 
+/* Static device pointer set by tkey connect command */
+static struct udevice *tkey_dev;
+
 static struct udevice *tkey_get_device(void)
 {
 	struct udevice *dev;
 	int ret;
+
+	/* If a device was set by tkey connect, return it */
+	if (tkey_dev)
+		return tkey_dev;
 
 	ret = uclass_first_device_err(UCLASS_TKEY, &dev);
 	if (ret) {
@@ -47,10 +54,28 @@ static int do_tkey_connect(struct cmd_tbl *cmdtp, int flag, int argc,
 			   char *const argv[])
 {
 	struct udevice *dev;
+	int ret;
 
-	dev = tkey_get_device();
-	if (!dev)
-		return CMD_RET_FAILURE;
+	/* Check if device name is provided as optional first argument */
+	if (argc > 1) {
+		const char *dev_name = argv[1];
+
+		ret = uclass_get_device_by_name(UCLASS_TKEY, dev_name, &dev);
+		if (ret) {
+			printf("Failed to find TKey device '%s' (err %dE)\n",
+			       dev_name, ret);
+			return CMD_RET_FAILURE;
+		}
+	} else {
+		ret = uclass_first_device_err(UCLASS_TKEY, &dev);
+		if (ret) {
+			printf("No device found (err %dE)\n", ret);
+			return CMD_RET_FAILURE;
+		}
+	}
+
+	/* Set the static device pointer for subsequent commands */
+	tkey_dev = dev;
 
 	printf("Connected to TKey device\n");
 
@@ -276,7 +301,8 @@ static int do_tkey_loadapp(struct cmd_tbl *cmdtp, int flag, int argc,
 }
 
 U_BOOT_LONGHELP(tkey,
-	"connect    - Connect to TKey device\n"
+	"connect [device-name] - Connect to TKey device\n"
+	"    Optional device-name to connect to specific TKey device\n"
 	"tkey fwmode     - Check if device is in firmware or app mode\n"
 	"tkey getkey <uss> [verify-hash] - Get disk encryption key\n"
 	"    Loads app with USS, derives key. Same USS always produces same key.\n"
@@ -289,7 +315,7 @@ U_BOOT_LONGHELP(tkey,
 
 U_BOOT_CMD_WITH_SUBCMDS(tkey, "Tillitis TKey security token operations",
 			tkey_help_text,
-	U_BOOT_SUBCMD_MKENT(connect, 1, 1, do_tkey_connect),
+	U_BOOT_SUBCMD_MKENT(connect, 2, 1, do_tkey_connect),
 	U_BOOT_SUBCMD_MKENT(fwmode, 1, 1, do_tkey_fwmode),
 	U_BOOT_SUBCMD_MKENT(getkey, 3, 1, do_tkey_getkey),
 	U_BOOT_SUBCMD_MKENT(info, 1, 1, do_tkey_info),

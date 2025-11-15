@@ -18,6 +18,8 @@
 #include <linux/kernel.h>
 #include <u-boot/blake2.h>
 #include <u-boot/schedule.h>
+#include <u-boot/sha256.h>
+#include <hexdump.h>
 
 /* TKey Protocol Constants */
 #define TKEY_FRAME_HEADER_SIZE		1
@@ -502,75 +504,42 @@ static int tkey_load_app_header(struct udevice *dev, int app_size,
 	return 0;
 }
 
-static int tkey_load_app_data(struct udevice *dev, const void *data, int size)
-{
-	struct tkey_frame cmd_frame, rsp_frame;
-	int offset = 0;
-	int ret;
-
-	log_debug("Loading app data, %u bytes\n", size);
-
-	while (offset < size) {
-		int todo = min(size - offset, TKEY_MAX_DATA_SIZE - 1);
-		u8 len_code;
-
-		/* Determine length code for chunk */
-		if (todo <= 1)
-			len_code = TKEY_LEN_1_BYTE;
-		else if (todo <= 4)
-			len_code = TKEY_LEN_4_BYTES;
-		else if (todo <= 32)
-			len_code = TKEY_LEN_32_BYTES;
-		else
-			len_code = TKEY_LEN_128_BYTES;
-
-		/*
-		 * Build LOAD_APP_DATA command (always use 128-byte frames
-		 * like Go app)
-		 */
-		cmd_frame.header = make_hdr(TKEY_FRAME_ID_CMD,
-					    TKEY_ENDPOINT_FIRMWARE,
-					    TKEY_STATUS_OK,
-					    TKEY_LEN_128_BYTES);
-		cmd_frame.data[0] = TKEY_FW_CMD_LOAD_APP_DATA;
-		memcpy(&cmd_frame.data[1], data + offset, todo);
-
-		/* Pad remaining bytes with zeros */
-		if (todo + 1 < 128)
-			memset(&cmd_frame.data[todo + 1], '\0',
-			       128 - (todo + 1));
-
-		/* Send chunk (always 128 bytes like Go app) */
-		ret = tkey_send_frame(dev, &cmd_frame, 128);
-		if (ret < 0)
-			return ret;
-
-		/* Receive response */
-		ret = tkey_recv_frame(dev, &rsp_frame, TKEY_LOAD_TIMEOUT_MS);
-		if (ret < 0)
-			return ret;
-
-		/* Check response status */
-		if (rsp_frame.header & TKEY_STATUS_ERROR) {
-			log_debug("Load app data failed at offset %u\n",
-				  offset);
-			return -EIO;
-		}
-
-		offset += todo;
-		log_debug("Loaded chunk: %u/%u bytes\n", offset, size);
-		schedule();
-	}
-
-	log_debug("App data loaded successfully\n");
-
-	return 0;
-}
-
 int tkey_load_app_with_uss(struct udevice *dev, const void *app_data,
 			   int app_size, const void *uss, int uss_size)
 {
+	struct tkey_load_ctx ctx;
 	int ret;
+
+	/* Start loading */
+	ret = tkey_load_start(&ctx, dev, app_data, app_size, uss,
+			      uss_size);
+	if (ret)
+		return ret;
+
+	/* Send all remaining blocks */
+	do {
+		ret = tkey_load_next(&ctx, 0);
+	} while (ret == -EAGAIN);
+
+	return ret;
+}
+
+int tkey_load_app(struct udevice *dev, const void *app_data, int app_size)
+{
+	return tkey_load_app_with_uss(dev, app_data, app_size, NULL, 0);
+}
+
+int tkey_load_start(struct tkey_load_ctx *ctx, struct udevice *dev,
+		    const void *app_data, int app_size,
+		    const void *uss, int uss_size)
+{
+	int ret;
+
+	/* Initialize context */
+	ctx->dev = dev;
+	ctx->app_data = app_data;
+	ctx->app_size = app_size;
+	ctx->offset = 0;
 
 	/* Check if we're in firmware mode first */
 	ret = tkey_in_app_mode(dev);
@@ -584,7 +553,7 @@ int tkey_load_app_with_uss(struct udevice *dev, const void *app_data,
 		return -ENOTSUPP;
 	}
 
-	log_debug("Loading app (%u bytes)...\n", app_size);
+	log_debug("Starting iterative app load (%u bytes)...\n", app_size);
 
 	/* Send app header with size and USS (if provided) */
 	ret = tkey_load_app_header(dev, app_size, uss, uss_size);
@@ -593,21 +562,71 @@ int tkey_load_app_with_uss(struct udevice *dev, const void *app_data,
 		return ret;
 	}
 
-	/* Send app data */
-	ret = tkey_load_app_data(dev, app_data, app_size);
-	if (ret) {
-		log_debug("Failed to send app data (error %d)\n", ret);
-		return ret;
-	}
-
-	log_debug("App loaded successfully\n");
-
 	return 0;
 }
 
-int tkey_load_app(struct udevice *dev, const void *app_data, int app_size)
+int tkey_load_next(struct tkey_load_ctx *ctx, int max_blocks)
 {
-	return tkey_load_app_with_uss(dev, app_data, app_size, NULL, 0);
+	struct tkey_frame cmd_frame, rsp_frame;
+	int blocks_sent = 0;
+	int ret;
+
+	/* If max_blocks is 0, send all remaining blocks */
+	if (max_blocks == 0)
+		max_blocks = INT_MAX;
+
+	while (ctx->offset < ctx->app_size && blocks_sent < max_blocks) {
+		int todo = min(ctx->app_size - ctx->offset,
+			       TKEY_MAX_DATA_SIZE - 1);
+
+		/*
+		 * Build LOAD_APP_DATA command (always use 128-byte frames
+		 * like Go app)
+		 */
+		cmd_frame.header = make_hdr(TKEY_FRAME_ID_CMD,
+					    TKEY_ENDPOINT_FIRMWARE,
+					    TKEY_STATUS_OK,
+					    TKEY_LEN_128_BYTES);
+		cmd_frame.data[0] = TKEY_FW_CMD_LOAD_APP_DATA;
+		memcpy(&cmd_frame.data[1], ctx->app_data + ctx->offset, todo);
+
+		/* Pad remaining bytes with zeros */
+		if (todo + 1 < 128)
+			memset(&cmd_frame.data[todo + 1], '\0',
+			       128 - (todo + 1));
+
+		/* Send chunk (always 128 bytes like Go app) */
+		ret = tkey_send_frame(ctx->dev, &cmd_frame, 128);
+		if (ret < 0)
+			return ret;
+
+		/* Receive response */
+		ret = tkey_recv_frame(ctx->dev, &rsp_frame,
+				      TKEY_LOAD_TIMEOUT_MS);
+		if (ret < 0)
+			return ret;
+
+		/* Check response status */
+		if (rsp_frame.header & TKEY_STATUS_ERROR) {
+			log_debug("Load app data failed at offset %u\n",
+				  ctx->offset);
+			return -EIO;
+		}
+
+		ctx->offset += todo;
+		blocks_sent++;
+		log_debug("Loaded chunk: %u/%u bytes (%d blocks sent)\n",
+			  ctx->offset, ctx->app_size, blocks_sent);
+		schedule();
+	}
+
+	/* Check if we're done */
+	if (ctx->offset >= ctx->app_size) {
+		log_debug("App data loaded successfully\n");
+		return 0;  /* Done */
+	}
+
+	return -EAGAIN;  /* More blocks remain */
 }
 
 int tkey_get_pubkey(struct udevice *dev, void *pubkey)
@@ -653,6 +672,7 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
 			 int app_size, const void *uss, int uss_size,
 			 void *disk_key, void *pubkey, void *key_hash)
 {
+	char pubkey_hex[TKEY_PUBKEY_SIZE * 2 + 1];
 	int ret;
 
 	/* Load the signer app with USS */
@@ -676,14 +696,22 @@ int tkey_derive_disk_key(struct udevice *dev, const void *app_data,
 
 	log_debug("Public key retrieved\n");
 
-	/* Derive disk encryption key from public key using BLAKE2b */
-	ret = blake2b(disk_key, 32, pubkey, 32, NULL, 0);
-	if (ret) {
-		log_debug("Failed to derive disk key (error %d)\n", ret);
-		return ret;
-	}
+	/*
+	 * Derive disk encryption key from public key using SHA256
+	 * Must match Python tkey-fde-key.py implementation which does:
+	 * hashlib.sha256(pubkey.encode()).digest()
+	 *
+	 * This converts the binary public key to hex string,
+	 * then hashes the string bytes.
+	 */
+	bin2hex(pubkey_hex, pubkey, TKEY_PUBKEY_SIZE);
 
-	log_debug("Disk encryption key derived\n");
+	sha256_context ctx;
+	sha256_starts(&ctx);
+	sha256_update(&ctx, (const u8 *)pubkey_hex, TKEY_PUBKEY_SIZE * 2);
+	sha256_finish(&ctx, disk_key);
+
+	log_debug("Disk encryption key derived using SHA256\n");
 
 	/* Generate verification hash if requested */
 	if (key_hash) {

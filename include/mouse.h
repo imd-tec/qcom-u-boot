@@ -176,4 +176,18 @@ int mouse_set_ptr_visible(struct udevice *dev, bool visible);
  */
 int mouse_set_video(struct udevice *dev, struct udevice *video_dev);
 
+/**
+ * mouse_queue_click_for_test() - Queue a click event for testing
+ *
+ * This is a back-door function for tests to simulate a mouse click at a
+ * specific position. The click will be returned by the next call to
+ * mouse_get_click().
+ *
+ * @dev: Mouse device
+ * @x: X coordinate of click
+ * @y: Y coordinate of click
+ * Returns: 0 if OK, -ve on error
+ */
+int mouse_queue_click_for_test(struct udevice *dev, int x, int y);
+
 #endif

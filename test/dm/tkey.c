@@ -16,8 +16,9 @@ static int dm_test_tkey_find(struct unit_test_state *uts)
 {
 	struct udevice *dev;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 	ut_assertnonnull(dev);
+	ut_asserteq_str("tkey-emul", dev->name);
 
 	return 0;
 }
@@ -29,7 +30,7 @@ static int dm_test_tkey_get_udi(struct unit_test_state *uts)
 	u8 udi[TKEY_UDI_SIZE];
 	struct udevice *dev;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	ut_assertok(tkey_get_udi(dev, udi));
 
@@ -54,7 +55,7 @@ static int dm_test_tkey_get_name_version(struct unit_test_state *uts)
 	struct udevice *dev;
 	u32 version;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Get name and version */
 	ut_assertok(tkey_get_name_version(dev, name0, name1, &version));
@@ -74,7 +75,7 @@ static int dm_test_tkey_in_app_mode(struct unit_test_state *uts)
 	struct udevice *dev;
 	int ret;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Check mode - should be in firmware mode initially */
 	ret = tkey_in_app_mode(dev);
@@ -92,7 +93,7 @@ static int dm_test_tkey_load_app(struct unit_test_state *uts)
 	u8 dummy_app[128];
 	int ret;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Create a dummy app */
 	memset(dummy_app, 0x42, sizeof(dummy_app));
@@ -118,7 +119,7 @@ static int dm_test_tkey_get_pubkey(struct unit_test_state *uts)
 	u8 dummy_app[128];
 	int i;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Load a dummy app first */
 	memset(dummy_app, 0x42, sizeof(dummy_app));
@@ -149,7 +150,7 @@ static int dm_test_tkey_derive_wrapping_key(struct unit_test_state *uts)
 	};
 	struct udevice *dev;
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Derive wrapping key from password */
 	ut_assertok(tkey_derive_wrapping_key(dev, password, wrapping_key));
@@ -175,24 +176,24 @@ static int dm_test_tkey_derive_disk_key(struct unit_test_state *uts)
 		0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
 		0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
 	};
-	/* Expected disk key: BLAKE2b(pubkey) */
+	/* Expected disk key: SHA256(pubkey) - from emulator */
 	const u8 expected_disk_key[TKEY_DISK_KEY_SIZE] = {
-		0x22, 0x8b, 0x2f, 0x6a, 0xbf, 0x8b, 0xe0, 0x56,
-		0x49, 0xb2, 0x41, 0x75, 0x86, 0x15, 0x0b, 0xbf,
-		0x3e, 0x1b, 0x3f, 0x66, 0x9a, 0xfa, 0x1c, 0x61,
-		0x51, 0xdd, 0xc7, 0x29, 0x57, 0x93, 0x3c, 0x21,
+		0xe9, 0xb0, 0x59, 0x92, 0x68, 0xff, 0x8b, 0x08,
+		0x3e, 0xf8, 0x0d, 0xbd, 0x04, 0xbe, 0x20, 0x7c,
+		0xe9, 0xa1, 0x9a, 0x60, 0xa8, 0x88, 0xcc, 0xb3,
+		0xfe, 0x93, 0x71, 0x0a, 0x0a, 0x70, 0xa3, 0x4e,
 	};
 	/* Expected key hash: BLAKE2b(disk_key) */
 	const u8 expected_key_hash[TKEY_HASH_SIZE] = {
-		0xa7, 0x2a, 0x46, 0xb8, 0xf8, 0xc7, 0xff, 0x08,
-		0x24, 0x41, 0x6a, 0xda, 0x88, 0x6f, 0x62, 0xb6,
-		0xc2, 0x80, 0x88, 0x96, 0xd7, 0x12, 0x01, 0xa3,
-		0x28, 0x14, 0xab, 0x43, 0x2c, 0x7a, 0x81, 0xcf,
+		0x85, 0x83, 0xa0, 0x8d, 0x6c, 0x53, 0x4e, 0x84,
+		0xae, 0x81, 0xa8, 0x51, 0x80, 0x71, 0xc1, 0x6a,
+		0x80, 0x30, 0x89, 0x3d, 0xf0, 0x5f, 0xec, 0xb8,
+		0x4e, 0x51, 0x44, 0x38, 0x59, 0x1b, 0xa5, 0xed,
 	};
 	struct udevice *dev;
 	u8 dummy_app[128];
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Create a dummy signer app */
 	memset(dummy_app, 0x42, sizeof(dummy_app));
@@ -217,7 +218,7 @@ static int dm_test_tkey_udi_app_mode(struct unit_test_state *uts)
 	struct udevice *dev;
 	u8 dummy_app[128];
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Load an app to enter app mode */
 	memset(dummy_app, 0x42, sizeof(dummy_app));
@@ -240,7 +241,7 @@ static int dm_test_tkey_load_app_with_uss(struct unit_test_state *uts)
 	u8 dummy_app[128];
 	const char *uss = "my_secret";
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Create a dummy app */
 	memset(dummy_app, 0x55, sizeof(dummy_app));
@@ -270,7 +271,7 @@ static int dm_test_tkey_read_write(struct unit_test_state *uts)
 	u8 write_buf[129];  /* Header + command */
 	u8 read_buf[256];
 
-	ut_assertok(uclass_first_device_err(UCLASS_TKEY, &dev));
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul", &dev));
 
 	/* Prepare a GET_NAME_VERSION command */
 	write_buf[0] = 0x10;  /* Header: CMD, FIRMWARE endpoint */

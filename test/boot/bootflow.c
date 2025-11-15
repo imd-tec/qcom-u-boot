@@ -39,6 +39,10 @@ extern U_BOOT_DRIVER(bootmeth_2script);
 /* Use this as the vendor for EFI to tell the app to exit boot services */
 static u16 __efi_runtime_data test_vendor[] = u"U-Boot testing";
 
+/* comment test strings */
+#define HEADER	"Seq  Method       State   Uclass    Part  E  Name                      Filename"
+#define EXT0	"  0  extlinux     ready   mmc          1     mmc1.bootdev.part_1       /extlinux/extlinux.conf"
+
 static int inject_response(struct unit_test_state *uts)
 {
 	/*
@@ -62,11 +66,11 @@ static int bootflow_cmd(struct unit_test_state *uts)
 	ut_assert_console_end();
 	ut_assertok(run_command("bootflow scan -lH", 0));
 	ut_assert_nextline("Scanning for bootflows in bootdev 'mmc1.bootdev'");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
@@ -74,9 +78,9 @@ static int bootflow_cmd(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing bootflows for bootdev 'mmc1.bootdev'");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
@@ -155,11 +159,11 @@ static int bootflow_cmd_glob(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow scan -lGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
@@ -168,9 +172,9 @@ static int bootflow_cmd_glob(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing all bootflows");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
@@ -187,31 +191,31 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 	ut_assertok(run_command("bootmeth order ", 0));
 	ut_assertok(run_command("bootflow scan -aleGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
-	ut_assert_nextline("  0  extlinux     media   mmc          0  mmc2.bootdev.whole        ");
+	ut_assert_nextline("  0  extlinux     media   mmc          0     mmc2.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-93: Protocol not supported");
-	ut_assert_nextline("  1  efi          media   mmc          0  mmc2.bootdev.whole        ");
+	ut_assert_nextline("  1  efi          media   mmc          0     mmc2.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-93: Protocol not supported");
-	ut_assert_nextline("  2  vbe          media   mmc          0  mmc2.bootdev.whole        ");
+	ut_assert_nextline("  2  vbe          media   mmc          0     mmc2.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-93: Protocol not supported");
 
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline("  3  extlinux     media   mmc          0  mmc1.bootdev.whole        ");
+	ut_assert_nextline("  3  extlinux     media   mmc          0     mmc1.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-2: No such file or directory");
-	ut_assert_nextline("  4  efi          media   mmc          0  mmc1.bootdev.whole        ");
+	ut_assert_nextline("  4  efi          media   mmc          0     mmc1.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-2: No such file or directory");
-	ut_assert_nextline("  5  vbe          media   mmc          0  mmc1.bootdev.whole        ");
+	ut_assert_nextline("  5  vbe          media   mmc          0     mmc1.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-2: No such file or directory");
-	ut_assert_nextline("  6  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline("  6  extlinux     ready   mmc          1     mmc1.bootdev.part_1       /extlinux/extlinux.conf");
 	ut_assert_nextline(
-		"  7  efi          fs      mmc          1  mmc1.bootdev.part_1       /EFI/BOOT/%s",
+		"  7  efi          fs      mmc          1     mmc1.bootdev.part_1       /EFI/BOOT/%s",
 		efi_get_basename());
 
 	ut_assert_skip_to_line("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_skip_to_line(
-		" 5f  vbe          media   mmc          0  mmc0.bootdev.whole        ");
+		" 5f  vbe          media   mmc          0     mmc0.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-93: Protocol not supported");
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
@@ -220,11 +224,11 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing all bootflows");
-	ut_assert_nextline("Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("  0  extlinux     media   mmc          0  mmc2.bootdev.whole        ");
-	ut_assert_nextline("  1  efi          media   mmc          0  mmc2.bootdev.whole        ");
-	ut_assert_skip_to_line(" 5f  vbe          media   mmc          0  mmc0.bootdev.whole        ");
+	ut_assert_nextline("  0  extlinux     media   mmc          0     mmc2.bootdev.whole        ");
+	ut_assert_nextline("  1  efi          media   mmc          0     mmc2.bootdev.whole        ");
+	ut_assert_skip_to_line(" 5f  vbe          media   mmc          0     mmc0.bootdev.whole        ");
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(96 bootflows, 1 valid)");
 	ut_assert_console_end();
@@ -249,6 +253,8 @@ static int bootflow_cmd_info(struct unit_test_state *uts)
 	ut_assert_nextline("Method:    extlinux");
 	ut_assert_nextline("State:     ready");
 	ut_assert_nextline("Partition: 1");
+	if (IS_ENABLED(CONFIG_BLK_LUKS))
+		ut_assert_nextline("Encrypted: no");
 	ut_assert_nextline("Subdir:    (none)");
 	ut_assert_nextline("Filename:  /extlinux/extlinux.conf");
 	ut_assert_nextlinen("Buffer:    ");
@@ -499,7 +505,7 @@ static int bootflow_system(struct unit_test_state *uts)
 	bootstd_clear_glob();
 	ut_assertok(run_command("bootflow scan -lH", 0));
 	ut_assert_skip_to_line(
-		"  1  efi_mgr      ready   (none)       0  <NULL>                    ");
+		"  1  efi_mgr      ready   (none)       0     <NULL>                    ");
 	ut_assert_skip_to_line("No more bootdevs");
 	ut_assert_skip_to_line("(2 bootflows, 2 valid)");
 	ut_assert_console_end();
@@ -573,8 +579,7 @@ static int bootflow_scan_glob_bootmeth(struct unit_test_state *uts)
 	ut_assertok(bootmeth_set_order("efi firmware0"));
 	ut_assertok(run_command("bootflow scan -lGH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline(
-		"Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(0 bootflows, 0 valid)");
@@ -582,8 +587,7 @@ static int bootflow_scan_glob_bootmeth(struct unit_test_state *uts)
 
 	ut_assertok(run_command("bootflow scan -lH", 0));
 	ut_assert_nextline("Scanning for bootflows in all bootdevs");
-	ut_assert_nextline(
-		"Seq  Method       State   Uclass    Part  Name                      Filename");
+	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("Scanning global bootmeth 'firmware0':");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
@@ -941,8 +945,7 @@ static int bootflow_cmd_hunt_label(struct unit_test_state *uts)
 	ut_assert_nextline("Hunting with: mmc");
 	ut_assert_nextline("Scanning bootdev 'mmc2.bootdev':");
 	ut_assert_nextline("Scanning bootdev 'mmc1.bootdev':");
-	ut_assert_nextline(
-		"  0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline(EXT0);
 	ut_assert_nextline("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_skip_to_line("(1 bootflow, 1 valid)");
 	ut_assert_console_end();
@@ -1308,8 +1311,8 @@ static int bootflow_cros(struct unit_test_state *uts)
 	ut_assert_nextlinen("Seq");
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
-	ut_assert_nextlinen("  1  cros         ready   mmc          2  mmc5.bootdev.part_2       ");
-	ut_assert_nextlinen("  2  cros         ready   mmc          4  mmc5.bootdev.part_4       ");
+	ut_assert_nextlinen("  1  cros         ready   mmc          2     mmc5.bootdev.part_2       ");
+	ut_assert_nextlinen("  2  cros         ready   mmc          4     mmc5.bootdev.part_4       ");
 	ut_assert_nextlinen("---");
 	ut_assert_skip_to_line("(3 bootflows, 3 valid)");
 
@@ -1345,7 +1348,7 @@ static int bootflow_android_image_v4(struct unit_test_state *uts)
 	ut_assert_nextlinen("Seq");
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
-	ut_assert_nextlinen("  1  android      ready   mmc          0  mmc7.bootdev.whole        ");
+	ut_assert_nextlinen("  1  android      ready   mmc          0     mmc7.bootdev.whole        ");
 	ut_assert_nextlinen("---");
 	ut_assert_skip_to_line("(2 bootflows, 2 valid)");
 
@@ -1368,7 +1371,7 @@ static int bootflow_android_image_v2(struct unit_test_state *uts)
 	ut_assert_nextlinen("Seq");
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
-	ut_assert_nextlinen("  1  android      ready   mmc          0  mmc8.bootdev.whole        ");
+	ut_assert_nextlinen("  1  android      ready   mmc          0     mmc8.bootdev.whole        ");
 	ut_assert_nextlinen("---");
 	ut_assert_skip_to_line("(2 bootflows, 2 valid)");
 
@@ -1414,9 +1417,9 @@ static int bootflow_efi(struct unit_test_state *uts)
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
 	ut_assert_nextlinen(
-		"  1  efi          ready   usb          1  hub1.p2.usb_mass_storage. /EFI/BOOT/BOOTSBOX.EFI");
+		"  1  efi          ready   usb          1     hub1.p2.usb_mass_storage. /EFI/BOOT/BOOTSBOX.EFI");
 	ut_assert_nextlinen(
-		"  2  extlinux     ready   usb          1  hub1.p4.usb_mass_storage. /extlinux/extlinux.conf");
+		"  2  extlinux     ready   usb          1     hub1.p4.usb_mass_storage. /extlinux/extlinux.conf");
 	ut_assert_nextlinen("---");
 	ut_assert_skip_to_line("(3 bootflows, 3 valid)");
 	ut_assert_console_end();
@@ -1767,3 +1770,41 @@ static int bootflow_extlinux_localboot(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(bootflow_extlinux_localboot, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Check 'bootflow info' with encrypted partition on mmc12 */
+static int bootflow_cmd_info_encrypted(struct unit_test_state *uts)
+{
+	/* Enable mmc12 which has LUKS encrypted partition and scan it */
+	ut_assertok(scan_mmc_bootdev(uts, "mmc12", false));
+
+	/* Check for bootflows - should find one on mmc12 */
+	ut_assertok(run_command("bootflow list", 0));
+	ut_assert_nextline("Showing all bootflows");
+	ut_assert_nextlinen("Seq");
+	ut_assert_nextlinen("---");
+	ut_assert_nextlinen("  0  extlinux");
+	ut_assert_nextline(
+		"  1  extlinux     ready   mmc          1  %c  mmc12.bootdev.part_1      /extlinux/extlinux.conf",
+		IS_ENABLED(CONFIG_BLK_LUKS) ? 'E' : ' ');
+	ut_assert_nextline("---  -----------  ------  --------  ----  -  ------------------------  ----------------");
+	ut_assert_nextline("(2 bootflows, 2 valid)");
+	ut_assert_console_end();
+
+	/* Select the mmc12 bootflow and check info shows encryption */
+	ut_assertok(run_command("bootflow select 1", 0));
+	ut_assert_console_end();
+	ut_assertok(run_command("bootflow info", 0));
+	ut_assert_nextline("Name:      mmc12.bootdev.part_1");
+	ut_assert_nextline("Device:    mmc12.bootdev");
+	ut_assert_nextline("Block dev: mmc12.blk");
+	ut_assert_nextline("Method:    extlinux");
+	ut_assert_nextline("State:     ready");
+	ut_assert_nextline("Partition: 1");
+	if (IS_ENABLED(CONFIG_BLK_LUKS))
+		ut_assert_nextline("Encrypted: LUKSv2");
+	ut_assert_skip_to_line("Error:     0");
+	ut_assert_console_end();
+
+	return 0;
+}
+BOOTSTD_TEST(bootflow_cmd_info_encrypted, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);

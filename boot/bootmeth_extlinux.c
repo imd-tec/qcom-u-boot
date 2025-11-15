@@ -17,9 +17,11 @@
 #include <dm.h>
 #include <extlinux.h>
 #include <fs_legacy.h>
+#include <luks.h>
 #include <malloc.h>
 #include <mapmem.h>
 #include <mmc.h>
+#include <part.h>
 #include <pxe_utils.h>
 
 static int extlinux_get_state_desc(struct udevice *dev, char *buf, int maxsize)
@@ -60,6 +62,54 @@ static int extlinux_check(struct udevice *dev, struct bootflow_iter *iter)
 	ret = bootflow_iter_check_blk(iter);
 	if (ret)
 		return log_msg_ret("blk", ret);
+
+	return 0;
+}
+
+/**
+ * extlinux_check_luks() - Check for LUKS encryption on other partitions
+ *
+ * This scans all partitions on the same device to check for LUKS encryption.
+ * If found, it marks this bootflow as encrypted since it likely boots from
+ * an encrypted root partition.
+ *
+ * @bflow: Bootflow to potentially mark as encrypted
+ * Return: 0 on success, -ve on error
+ */
+static int extlinux_check_luks(struct bootflow *bflow)
+{
+	struct blk_desc *desc;
+	struct disk_partition info;
+	int ret, part;
+
+	if (!IS_ENABLED(CONFIG_BLK_LUKS) || !bflow->blk)
+		return 0;
+
+	desc = dev_get_uclass_plat(bflow->blk);
+	if (!desc || !desc->bdev)
+		return 0;
+
+	/*
+	 * Check all partitions on this device for LUKS encryption.
+	 * Typically partition 1 has the bootloader files and partition 2
+	 * has the encrypted root filesystem. Check up to 10 partitions.
+	 */
+	for (part = 1; part <= 10; part++) {
+		ret = part_get_info(desc, part, &info);
+		if (ret)
+			continue;  /* Partition doesn't exist */
+
+		ret = luks_detect(desc->bdev, &info);
+		if (!ret) {
+			int luks_ver = luks_get_version(desc->bdev, &info);
+
+			log_debug("LUKS partition %d detected (v%d), marking bootflow as encrypted\n",
+				  part, luks_ver);
+			bflow->flags |= BOOTFLOWF_ENCRYPTED;
+			bflow->luks_version = luks_ver;
+			return 0;
+		}
+	}
 
 	return 0;
 }
@@ -157,6 +207,10 @@ static int extlinux_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 	ret = extlinux_fill_info(bflow);
 	if (ret)
 		return log_msg_ret("inf", ret);
+
+	ret = extlinux_check_luks(bflow);
+	if (ret)
+		return log_msg_ret("luks", ret);
 
 	return 0;
 }

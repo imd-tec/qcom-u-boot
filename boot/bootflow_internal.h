@@ -26,6 +26,11 @@
  * @ITEM_VERSION_NAME: Distro's name for the version, e.g. 'Noble Numbat'
  * @ITEM_BOX: Box around the item (normally hidden)
  * @ITEM_VERIFIED: Indicates that the item is verified by the vendor
+ * @ITEM_LOCKED: Indicates that the partition is encrypted (e.g., LUKS)
+ * @ITEM_PASS: Textline object for passphrase entry
+ * @ITEM_PASS_LABEL: Label text for the passphrase field (e.g., "Passphrase:")
+ * @ITEM_PASS_EDIT: Edit field for entering the passphrase
+ * @ITEM_PASS_MSG: Message text for displaying success/error feedback
  */
 enum boomenu_id_t {
 	START,
@@ -37,6 +42,7 @@ enum boomenu_id_t {
 	STR_AUTOBOOT,
 	STR_MENU_TITLE,
 	STR_POINTER,
+	STR_PASS_MSG,
 
 	/* scene */
 	MAIN,
@@ -70,6 +76,11 @@ enum boomenu_id_t {
 	ITEM_VERSION_NAME = 1100,
 	ITEM_BOX = 1200,
 	ITEM_VERIFIED = 1300,
+	ITEM_LOCKED = 1400,
+	ITEM_PASS = 1500,
+	ITEM_PASS_LABEL = 1600,
+	ITEM_PASS_EDIT = 1700,
+	ITEM_PASS_MSG = 1800,
 
 	/* left margin for the main menu */
 	MARGIN_LEFT	 = 100,

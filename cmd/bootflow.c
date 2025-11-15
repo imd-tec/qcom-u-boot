@@ -20,13 +20,13 @@
 
 static void show_header(void)
 {
-	printf("Seq  Method       State   Uclass    Part  Name                      Filename\n");
-	printf("---  -----------  ------  --------  ----  ------------------------  ----------------\n");
+	printf("Seq  Method       State   Uclass    Part  E  Name                      Filename\n");
+	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
 }
 
 static void show_footer(int count, int num_valid)
 {
-	printf("---  -----------  ------  --------  ----  ------------------------  ----------------\n");
+	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
 	printf("(%d bootflow%s, %d valid)\n", count, count != 1 ? "s" : "",
 	       num_valid);
 }
@@ -370,6 +370,15 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	printf("Method:    %s\n", bflow->method ? bflow->method->name : "(none)");
 	printf("State:     %s\n", bootflow_state_get_name(bflow->state));
 	printf("Partition: %d\n", bflow->part);
+
+	/* Show encryption status with LUKS version if applicable */
+	if (IS_ENABLED(CONFIG_BLK_LUKS)) {
+		if (bflow->flags & BOOTFLOWF_ENCRYPTED)
+			printf("Encrypted: LUKSv%d\n", bflow->luks_version);
+		else
+			printf("Encrypted: no\n");
+	}
+
 	printf("Subdir:    %s\n", bflow->subdir ? bflow->subdir : "(none)");
 	printf("Filename:  %s\n", bflow->fname);
 	printf("Buffer:    ");

@@ -376,6 +376,7 @@ static int cedit_render_lineedit(struct unit_test_state *uts)
 	extern struct expo *cur_exp;
 	struct expo_action evt;
 	struct expo_action act;
+	struct scene_obj *edit;
 	struct udevice *dev, *con;
 	struct stdio_dev *sdev;
 	struct scene *scn;
@@ -404,6 +405,16 @@ static int cedit_render_lineedit(struct unit_test_state *uts)
 	ut_assertok(expo_render(exp));
 	ut_asserteq(5344, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
+
+	edit = scene_obj_find(scn, ID_MACHINE_NAME_EDIT, SCENEOBJT_TEXT);
+	ut_assert(edit);
+
+	/* try the password flag */
+	edit->flags |= SCENEOF_PASSWORD;
+	ut_assertok(expo_render(exp));
+	ut_asserteq(5135, video_compress_fb(uts, dev, false));
+	ut_assertok(video_check_copy_fb(uts, dev));
+	edit->flags &= ~SCENEOF_PASSWORD;
 
 	/* move to the line-edit field */
 	act.type = EXPOACT_POINT_OBJ;
