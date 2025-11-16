@@ -13,7 +13,7 @@ Synopsis
 
     luks detect <interface> <dev[:part]>
     luks info <interface> <dev[:part]>
-    luks unlock <interface> <dev[:part]> <passphrase>
+    luks unlock [-t] <interface> <dev[:part]> <passphrase>
 
 Description
 -----------
@@ -88,12 +88,17 @@ dev[:part]
 luks unlock
 ~~~~~~~~~~~
 
-Unlock a LUKS encrypted partition using a passphrase. This command:
+Unlock a LUKS encrypted partition using a passphrase or TKey hardware token.
+This command:
 
 1. Verifies the partition is LUKS encrypted (LUKS1 or LUKS2)
 2. Parses LUKS2 JSON metadata (if LUKS2) using FDT conversion
-3. Derives the encryption key using PBKDF2 or Argon2id with the provided
-   passphrase
+3. Derives the encryption key:
+
+   - **Without -t**: Uses PBKDF2 or Argon2id with the provided passphrase
+   - **With -t**: Uses TKey hardware token with passphrase as USS (User-Supplied
+     Secret) to derive a disk encryption key
+
 4. Attempts to unlock each active key slot
 5. Verifies the master key against the stored digest
 6. Creates a blkmap device providing on-the-fly decryption
@@ -118,6 +123,11 @@ be used to access files on the unlocked partition.
 * **Argon2id**: Memory-hard KDF resistant to GPU attacks (LUKS2 only, requires 
   CONFIG_ARGON2)
 
+-t
+    Optional flag to use TKey hardware security token. When specified, the
+    passphrase is used as the USS (User-Supplied Secret) to derive a disk
+    encryption key from the TKey's public key.
+
 interface
     The storage interface type (e.g., mmc, usb, scsi)
 
@@ -125,7 +135,8 @@ dev[:part]
     The device number and optional partition number
 
 passphrase
-    The passphrase to unlock the LUKS partition. Note that the passphrase is
+    The passphrase to unlock the LUKS partition. When using -t flag, this is
+    used as the USS for TKey key derivation. Note that the passphrase is
     passed as a command-line argument and may be visible in command history.
     Consider using environment variables to minimize exposure.
 
@@ -228,6 +239,17 @@ Unlock and load a kernel from encrypted partition::
 
     => bootz ${kernel_addr_r} - ${fdt_addr_r}
 
+Unlock using TKey hardware token::
+
+    => luks unlock -t mmc 0:2 mypassword
+    Using TKey for disk encryption key
+    Loading TKey signer app (7168 bytes) with USS...
+    TKey public key: 3a b2 c4 ... (32 bytes)
+    TKey disk key derived successfully
+    Unlocking LUKS2 partition...
+    Successfully unlocked with key slot 0!
+    Unlocked LUKS partition as blkmap device 'luks-mmc-0:2'
+
 Configuration
 -------------
 
@@ -253,6 +275,10 @@ For LUKS unlock functionality, additional options are required::
 For Argon2id support (modern LUKS2 KDF)::
 
     CONFIG_ARGON2=y      # Argon2 password hashing (adds ~50KB to binary)
+
+For TKey hardware token support (requires -t flag)::
+
+    CONFIG_TKEY=y        # TKey hardware security token support
 
 Return value
 ------------
