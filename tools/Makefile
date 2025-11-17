@@ -72,6 +72,7 @@ hostprogs-y += file2include
 endif
 
 FIT_OBJS-y := fit_common.o fit_image.o image-host.o generated/boot/image-fit.o
+FIT_OBJS-y += generated/boot/fit_print.o
 FIT_SIG_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := image-sig-host.o generated/boot/image-fit-sig.o
 FIT_CIPHER_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := generated/boot/image-cipher.o
 

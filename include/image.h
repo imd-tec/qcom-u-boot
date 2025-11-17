@@ -1199,6 +1199,8 @@ int fit_parse_subimage(const char *spec, ulong addr_curr,
 
 int fit_get_subimage_count(const void *fit, int images_noffset);
 
+#if CONFIG_IS_ENABLED(FIT_PRINT)
+
 /**
  * fit_print() - prints out the contents of the FIT format image
  * @fit: pointer to the FIT format image header
@@ -1243,6 +1245,16 @@ void fit_image_print(const void *fit, int noffset, const char *p);
  *     no returned results
  */
 void fit_print_contents(const void *fit);
+
+#else /* !FIT_PRINT */
+
+static inline void fit_print(const void *fit) {}
+static inline void fit_image_print(const void *fit, int noffset, const char *p)
+{
+}
+static inline void fit_print_contents(const void *fit) {}
+
+#endif
 
 /**
  * fit_get_end - get FIT image size
