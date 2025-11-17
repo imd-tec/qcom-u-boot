@@ -43,6 +43,10 @@ Release candidate schedule:
 Release History
 ---------------
 
+**2025.12-rc3** - Release Candidate
+   :Date: 2025-11-17
+   :Commit: 634ace57a6a245dacd7db6a03ce5c0a49c17ba16
+   :Subject: N/A
 **2025.10** - Final Release
    :Date: 2025-10-06
    :Commit: e4c38498ad8c5027e80a4bbf3c20dcee7f3bc9b1
@@ -58,5 +62,6 @@ Release History
 
 *Releases will be automatically added here by the CI system when version*
 *bumps occur.*
+
 
 
