@@ -455,69 +455,6 @@ out:
 }
 
 /**
- * essiv_decrypt() - Decrypt key material using ESSIV mode
- *
- * ESSIV (Encrypted Salt-Sector Initialization Vector) mode generates a unique
- * IV for each sector by encrypting the sector number with a key derived from
- * hashing the encryption key.
- *
- * @derived_key: Key derived from passphrase
- * @key_size: Size of the encryption key in bytes
- * @expkey: Expanded AES key for decryption
- * @km: Encrypted key material buffer
- * @split_key: Output buffer for decrypted key material
- * @km_blocks: Number of blocks of key material
- * @blksz: Block size in bytes
- */
-static void essiv_decrypt(u8 *derived_key, uint key_size, u8 *expkey,
-			  u8 *km, u8 *split_key, uint km_blocks, uint blksz)
-{
-	u8 essiv_expkey[AES256_EXPAND_KEY_LENGTH];
-	u8 essiv_key_material[SHA256_SUM_LEN];
-	u32 num_sectors = km_blocks;
-	u8 iv[AES_BLOCK_LENGTH];
-	uint rel_sect;
-
-	/* Generate ESSIV key by hashing the encryption key */
-	log_debug("using ESSIV mode\n");
-	sha256_csum_wd(derived_key, key_size, essiv_key_material,
-		       CHUNKSZ_SHA256);
-
-	log_debug_hex("ESSIV key[0-7]:", essiv_key_material, 8);
-
-	/* Expand ESSIV key for AES */
-	aes_expand_key(essiv_key_material, 256, essiv_expkey);
-
-	/*
-	 * Decrypt each sector with its own IV
-	 * NOTE: sector number is relative to the key material buffer,
-	 * not an absolute disk sector
-	 */
-	for (rel_sect = 0; rel_sect < num_sectors; rel_sect++) {
-		u8 sector_iv[AES_BLOCK_LENGTH];
-
-		/* Create IV: little-endian sector number padded to 16 bytes */
-		memset(sector_iv, '\0', AES_BLOCK_LENGTH);
-		put_unaligned_le32(rel_sect, sector_iv);
-
-		/* Encrypt sector number with ESSIV key to get IV */
-		aes_encrypt(256, sector_iv, essiv_expkey, iv);
-
-		/* Show the first sector for debugging */
-		if (!rel_sect) {
-			log_debug("rel_sect %x, ", rel_sect);
-			log_debug_hex("IV[0-7]:", iv, 8);
-		}
-
-		/* Decrypt this sector */
-		aes_cbc_decrypt_blocks(key_size * 8, expkey, iv,
-				       km + (rel_sect * blksz),
-				       split_key + (rel_sect * blksz),
-				       blksz / AES_BLOCK_LENGTH);
-	}
-}
-
-/**
  * decrypt_km_xts() - Decrypt key material using XTS mode
  *
  * Decrypts LUKS2 keyslot key material encrypted with AES-XTS mode.
@@ -607,9 +544,9 @@ static int decrypt_km_xts(const u8 *derived_key, uint key_size, const u8 *km,
  * @blksz: Block size in bytes
  * Return: 0 on success, negative error code on failure
  */
-static int decrypt_km_cbc(u8 *derived_key, uint key_size, const char *encrypt,
-			  u8 *km, u8 *split_key, int size, int km_blocks,
-			  int blksz)
+static int decrypt_km_cbc(const u8 *derived_key, uint key_size,
+			  const char *encrypt, u8 *km, u8 *split_key,
+			  int size, int km_blocks, int blksz)
 {
 	u8 expkey[AES256_EXPAND_KEY_LENGTH];
 
@@ -649,8 +586,9 @@ static int decrypt_km_cbc(u8 *derived_key, uint key_size, const char *encrypt,
  * Return: 0 on success, negative error code on failure
  */
 static int try_keyslot_pbkdf2(struct udevice *blk, struct disk_partition *pinfo,
-			      const struct luks2_keyslot *ks, const char *pass,
-			      mbedtls_md_type_t md_type, u8 *cand_key)
+			      const struct luks2_keyslot *ks, const u8 *pass,
+			      size_t pass_len, mbedtls_md_type_t md_type,
+			      u8 *cand_key)
 {
 	struct blk_desc *desc = dev_get_uclass_plat(blk);
 	int ret, km_blocks, size;
@@ -660,10 +598,10 @@ static int try_keyslot_pbkdf2(struct udevice *blk, struct disk_partition *pinfo,
 	log_debug("LUKS2: trying keyslot with %u iters\n", ks->kdf.iters);
 
 	/* Derive key from passphrase */
-	ret = mbedtls_pkcs5_pbkdf2_hmac_ext(md_type, (const u8 *)pass,
-					    strlen(pass), ks->kdf.salt,
-					    ks->kdf.salt_len, ks->kdf.iters,
-					    ks->area.key_size, derived_key);
+	ret = mbedtls_pkcs5_pbkdf2_hmac_ext(md_type, pass, pass_len,
+					    ks->kdf.salt, ks->kdf.salt_len,
+					    ks->kdf.iters, ks->area.key_size,
+					    derived_key);
 	if (ret)
 		return -EPROTO;
 
@@ -718,8 +656,8 @@ out:
 
 /* Unlock using Argon2 keyslot */
 static int try_keyslot_argon2(struct udevice *blk, struct disk_partition *pinfo,
-			      const struct luks2_keyslot *ks, const char *pass,
-			      u8 *cand_key)
+			      const struct luks2_keyslot *ks, const u8 *pass,
+			      size_t pass_len, u8 *cand_key)
 {
 	struct blk_desc *desc = dev_get_uclass_plat(blk);
 	int ret, km_blocks, size;
@@ -730,15 +668,18 @@ static int try_keyslot_argon2(struct udevice *blk, struct disk_partition *pinfo,
 		  ks->kdf.time, ks->kdf.memory, ks->kdf.cpus);
 
 	/* Derive key from passphrase using Argon2id */
-	log_debug("LUKS2 Argon2: passphrase='%s', t=%u, m=%u, p=%u, saltlen=%d, keylen=%u\n",
-		  pass, ks->kdf.time, ks->kdf.memory, ks->kdf.cpus,
+	log_debug("LUKS2 Argon2: pass_len=%zu, t=%u, m=%u, p=%u, saltlen=%d, keylen=%u\n",
+		  pass_len, ks->kdf.time, ks->kdf.memory, ks->kdf.cpus,
 		  ks->kdf.salt_len, ks->area.key_size);
 	ret = argon2id_hash_raw(ks->kdf.time, ks->kdf.memory, ks->kdf.cpus,
-				pass, strlen(pass), ks->kdf.salt,
+				pass, pass_len, ks->kdf.salt,
 				ks->kdf.salt_len, derived_key,
 				ks->area.key_size);
 	if (ret) {
-		log_err("Argon2id failed: %s\n", argon2_error_message(ret));
+		log_err("Argon2id failed: %s (code=%d)\n",
+			argon2_error_message(ret), ret);
+		if (ret == ARGON2_MEMORY_ALLOCATION_ERROR)
+			return -ENOMEM;
 		return -EPROTO;
 	}
 	log_debug("LUKS2 Argon2: key derivation succeeded\n");
@@ -873,7 +814,8 @@ static int verify_master_key(const struct luks2_digest *digest,
  *
  * This function attempts to unlock one keyslot by:
  * 1. Reading keyslot metadata from ofnode
- * 2. Deriving the candidate master key using the appropriate KDF
+ * 2. Deriving the candidate master key using the appropriate KDF (or using
+ *    pre-derived key directly)
  * 3. Verifying the candidate key against the stored digest
  *
  * @blk: Block device containing the LUKS partition
@@ -881,7 +823,9 @@ static int verify_master_key(const struct luks2_digest *digest,
  * @keyslot_node: ofnode for this specific keyslot
  * @digest: Digest information for verification
  * @md_type: mbedtls message digest type (for PBKDF2)
- * @pass: User-provided passphrase
+ * @pass: User-provided passphrase or pre-derived key
+ * @pass_len: Length of passphrase
+ * @pre_derived: True if pass is a pre-derived key, false for passphrase
  * @master_key: Output buffer for verified master key
  * @key_sizep: Returns the key size
  * Return: 0 if unlocked successfully, -EAGAIN to continue trying, -ve on error
@@ -889,7 +833,8 @@ static int verify_master_key(const struct luks2_digest *digest,
 static int try_unlock_keyslot(struct udevice *blk, struct disk_partition *pinfo,
 			      ofnode keyslot_node,
 			      const struct luks2_digest *digest,
-			      mbedtls_md_type_t md_type, const char *pass,
+			      mbedtls_md_type_t md_type, const u8 *pass,
+			      size_t pass_len, bool pre_derived,
 			      u8 *master_key, uint *key_sizep)
 {
 	struct luks2_keyslot keyslot;
@@ -906,15 +851,27 @@ static int try_unlock_keyslot(struct udevice *blk, struct disk_partition *pinfo,
 
 	log_debug("LUKS2: trying keyslot (type=%d)\n", keyslot.kdf.type);
 
-	/* Try the keyslot using the appropriate KDF */
-	if (keyslot.kdf.type == LUKS2_KDF_PBKDF2) {
-		log_debug("LUKS2: calling try_keyslot_pbkdf2\n");
-		ret = try_keyslot_pbkdf2(blk, pinfo, &keyslot, pass, md_type,
-					 cand_key);
+	/* If using pre-derived key, use it directly */
+	if (pre_derived) {
+		if (pass_len != keyslot.key_size) {
+			log_debug("Pre-derived key size mismatch: got %zu, need %u\n",
+				  pass_len, keyslot.key_size);
+			return -EAGAIN;
+		}
+		memcpy(cand_key, pass, pass_len);
+		ret = 0;
 	} else {
-		/* Argon2 (already checked for CONFIG_ARGON2 support) */
-		log_debug("LUKS2: calling try_keyslot_argon2\n");
-		ret = try_keyslot_argon2(blk, pinfo, &keyslot, pass, cand_key);
+		/* Try the keyslot using the appropriate KDF */
+		if (keyslot.kdf.type == LUKS2_KDF_PBKDF2) {
+			log_debug("LUKS2: calling try_keyslot_pbkdf2\n");
+			ret = try_keyslot_pbkdf2(blk, pinfo, &keyslot, pass, pass_len,
+						 md_type, cand_key);
+		} else {
+			/* Argon2 (already checked for CONFIG_ARGON2 support) */
+			log_debug("LUKS2: calling try_keyslot_argon2\n");
+			ret = try_keyslot_argon2(blk, pinfo, &keyslot, pass, pass_len,
+						 cand_key);
+		}
 	}
 	log_debug("LUKS2: keyslot try returned %d\n", ret);
 
@@ -937,7 +894,8 @@ static int try_unlock_keyslot(struct udevice *blk, struct disk_partition *pinfo,
 }
 
 int unlock_luks2(struct udevice *blk, struct disk_partition *pinfo,
-		 const char *pass, u8 *master_key, uint *key_sizep)
+		 const u8 *pass, size_t pass_len, bool pre_derived,
+		 u8 *master_key, uint *key_sizep)
 {
 	ofnode keyslots_node, keyslot_node;
 	struct luks2_digest digest;
@@ -955,7 +913,8 @@ int unlock_luks2(struct udevice *blk, struct disk_partition *pinfo,
 	ret = -EACCES;
 	ofnode_for_each_subnode(keyslot_node, keyslots_node) {
 		ret = try_unlock_keyslot(blk, pinfo, keyslot_node, &digest,
-					 md_type, pass, master_key, key_sizep);
+					 md_type, pass, pass_len, pre_derived,
+					 master_key, key_sizep);
 		if (!ret)  /* Successfully unlocked! */
 			break;
 
