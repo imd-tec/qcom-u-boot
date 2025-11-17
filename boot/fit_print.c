@@ -28,19 +28,21 @@
  * fit_print_init() - initialize FIT print context
  * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
+ * @indent: indentation string for printing
  *
  * This initializes a fit_print_ctx structure with the given FIT image.
  */
-void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
+		    const char *indent)
 {
 	ctx->fit = fit;
+	ctx->indent = indent;
 }
 
 /**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
- * @p: pointer to prefix string
  * @type: Type of information to print ("hash" or "sign")
  *
  * fit_image_print_data() lists properties for the processed hash node
@@ -52,9 +54,10 @@ void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
  *     no returned results
  */
 static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
-				 const char *p, const char *type)
+				 const char *type)
 {
 	const char *keyname, *padding, *algo;
+	const char *p = ctx->indent;
 	const void *fit = ctx->fit;
 	int value_len, ret, i;
 	uint8_t *value;
@@ -103,7 +106,6 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
  * fit_image_print_verification_data() - prints out the hash/signature details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash or signature node
- * @p: pointer to prefix string
  *
  * This lists properties for the processed hash node
  *
@@ -111,7 +113,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
  *     no returned results
  */
 static void fit_image_print_verification_data(struct fit_print_ctx *ctx,
-					      int noffset, const char *p)
+					      int noffset)
 {
 	const void *fit = ctx->fit;
 	const char *name;
@@ -123,14 +125,30 @@ static void fit_image_print_verification_data(struct fit_print_ctx *ctx,
 	 */
 	name = fit_get_name(fit, noffset);
 	if (!strncmp(name, FIT_HASH_NODENAME, strlen(FIT_HASH_NODENAME)))
-		fit_image_print_data(ctx, noffset, p, "Hash");
+		fit_image_print_data(ctx, noffset, "Hash");
 	else if (!strncmp(name, FIT_SIG_NODENAME, strlen(FIT_SIG_NODENAME)))
-		fit_image_print_data(ctx, noffset, p, "Sign");
+		fit_image_print_data(ctx, noffset, "Sign");
 }
 
-void fit_image_print(struct fit_print_ctx *ctx, int image_noffset, const char *p)
+/**
+ * fit_image_print - prints out the FIT component image details
+ * @ctx: pointer to FIT print context
+ * @image_noffset: offset of the component image node
+ * @p: pointer to prefix string
+ *
+ * fit_image_print() lists all mandatory properties for the processed component
+ * image. If present, hash nodes are printed out as well. Load
+ * address for images of type firmware is also printed out. Since the load
+ * address is not mandatory for firmware images, it will be output as
+ * "unavailable" when not present.
+ *
+ * returns:
+ *     no returned results
+ */
+void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 {
 	const void *fit = ctx->fit;
+	const char *p = ctx->indent;
 	uint8_t type, arch, os, comp = IH_COMP_NONE;
 	const char *desc;
 	size_t size;
@@ -230,7 +248,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset, const char *p
 	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
 		if (ndepth == 1) {
 			/* Direct child node of the component image node */
-			fit_image_print_verification_data(ctx, noffset, p);
+			fit_image_print_verification_data(ctx, noffset);
 		}
 	}
 }
@@ -239,7 +257,6 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset, const char *p
  * fit_conf_print - prints out the FIT configuration details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the configuration node
- * @p: pointer to prefix string
  *
  * fit_conf_print() lists all mandatory properties for the processed
  * configuration node.
@@ -247,10 +264,10 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset, const char *p
  * returns:
  *     no returned results
  */
-static void fit_conf_print(struct fit_print_ctx *ctx, int noffset,
-			   const char *p)
+static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
+	const char *p = ctx->indent;
 	const char *uname, *desc;
 	int ret, ndepth, i;
 
@@ -321,7 +338,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset,
 	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
 		if (ndepth == 1) {
 			/* Direct child node of the component config node */
-			fit_image_print_verification_data(ctx, noffset, p);
+			fit_image_print_verification_data(ctx, noffset);
 		}
 	}
 }
@@ -329,6 +346,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset,
 void fit_print(struct fit_print_ctx *ctx)
 {
 	const void *fit = ctx->fit;
+	const char *p = ctx->indent;
 	const char *desc;
 	char *uname;
 	int images_noffset;
@@ -337,11 +355,7 @@ void fit_print(struct fit_print_ctx *ctx)
 	int ndepth;
 	int count = 0;
 	int ret;
-	const char *p;
 	time_t timestamp;
-
-	/* Indent string is defined in header image.h */
-	p = IMAGE_INDENT_STRING;
 
 	/* Root node properties */
 	ret = fit_get_desc(fit, 0, &desc);
@@ -381,7 +395,7 @@ void fit_print(struct fit_print_ctx *ctx)
 			printf("%s Image %u (%s)\n", p, count++,
 			       fit_get_name(fit, noffset));
 
-			fit_image_print(ctx, noffset, p);
+			fit_image_print(ctx, noffset);
 		}
 	}
 
@@ -411,7 +425,7 @@ void fit_print(struct fit_print_ctx *ctx)
 			printf("%s Configuration %u (%s)\n", p, count++,
 			       fit_get_name(fit, noffset));
 
-			fit_conf_print(ctx, noffset, p);
+			fit_conf_print(ctx, noffset);
 		}
 	}
 }
@@ -420,6 +434,6 @@ void fit_print_contents(const void *fit)
 {
 	struct fit_print_ctx ctx;
 
-	fit_print_init(&ctx, fit);
+	fit_print_init(&ctx, fit, IMAGE_INDENT_STRING);
 	fit_print(&ctx);
 }

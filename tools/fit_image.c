@@ -976,8 +976,8 @@ static int fit_extract_contents(void *ptr, struct imgtool *itl)
 				printf("Extracted:\n%s Image %u (%s)\n", p,
 				       count, fit_get_name(fit, noffset));
 
-				fit_print_init(&ctx, fit);
-				fit_image_print(&ctx, noffset, p);
+				fit_print_init(&ctx, fit, p);
+				fit_image_print(&ctx, noffset);
 
 				return fit_image_extract(fit, noffset,
 						itl->outfile);

@@ -1202,9 +1202,11 @@ int fit_get_subimage_count(const void *fit, int images_noffset);
 /**
  * struct fit_print_ctx - context for FIT printing
  * @fit: pointer to the FIT format image header
+ * @indent: indentation string for printing
  */
 struct fit_print_ctx {
 	const void *fit;
+	const char *indent;
 };
 
 #if CONFIG_IS_ENABLED(FIT_PRINT)
@@ -1213,10 +1215,12 @@ struct fit_print_ctx {
  * fit_print_init() - initialize FIT print context
  * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
+ * @indent: indentation string for printing
  *
  * This inits a fit_print_ctx structure with the given FIT image.
  */
-void fit_print_init(struct fit_print_ctx *ctx, const void *fit);
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
+		    const char *indent);
 
 /**
  * fit_print() - prints out the contents of the FIT format image
@@ -1231,10 +1235,9 @@ void fit_print_init(struct fit_print_ctx *ctx, const void *fit);
 void fit_print(struct fit_print_ctx *ctx);
 
 /**
- * fit_image_print - prints out the FIT component image details
+ * fit_image_print() - prints out the FIT component image details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the component image node
- * @p: pointer to prefix string
  *
  * fit_image_print() lists all mandatory properties for the processed component
  * image. If present, hash nodes are printed out as well. Load
@@ -1245,7 +1248,7 @@ void fit_print(struct fit_print_ctx *ctx);
  * returns:
  *     no returned results
  */
-void fit_image_print(struct fit_print_ctx *ctx, int noffset, const char *p);
+void fit_image_print(struct fit_print_ctx *ctx, int noffset);
 
 /**
  * fit_print_contents() - prints out the contents of the FIT format image
@@ -1263,11 +1266,12 @@ void fit_print_contents(const void *fit);
 
 #else /* !FIT_PRINT */
 
-static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit) {}
-static inline void fit_print(const void *fit) {}
-static inline void fit_image_print(const void *fit, int noffset, const char *p)
+static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
+				  const char *indent)
 {
 }
+static inline void fit_print(const void *fit) {}
+static inline void fit_image_print(const void *fit, int noffset) {}
 static inline void fit_print_contents(const void *fit) {}
 
 #endif
