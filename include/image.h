@@ -1198,8 +1198,51 @@ int fit_parse_subimage(const char *spec, ulong addr_curr,
 		ulong *addr, const char **image_name);
 
 int fit_get_subimage_count(const void *fit, int images_noffset);
-void fit_print_contents(const void *fit);
+
+/**
+ * fit_print() - prints out the contents of the FIT format image
+ * @fit: pointer to the FIT format image header
+ * @p: pointer to prefix string
+ *
+ * This formats a multi line FIT image contents description.
+ * The routine prints out FIT image properties (root node level) followed by
+ * the details of each component image.
+ *
+ * returns:
+ *     no returned results
+ */
+void fit_print(const void *fit);
+
+/**
+ * fit_image_print - prints out the FIT component image details
+ * @fit: pointer to the FIT format image header
+ * @image_noffset: offset of the component image node
+ * @p: pointer to prefix string
+ *
+ * fit_image_print() lists all mandatory properties for the processed component
+ * image. If present, hash nodes are printed out as well. Load
+ * address for images of type firmware is also printed out. Since the load
+ * address is not mandatory for firmware images, it will be output as
+ * "unavailable" when not present.
+ *
+ * returns:
+ *     no returned results
+ */
 void fit_image_print(const void *fit, int noffset, const char *p);
+
+/**
+ * fit_print_contents() - prints out the contents of the FIT format image
+ * @fit: pointer to the FIT format image header
+ * @p: pointer to prefix string
+ *
+ * This formats a multi line FIT image contents description.
+ * The routine prints out FIT image properties (root node level) followed by
+ * the details of each component image.
+ *
+ * returns:
+ *     no returned results
+ */
+void fit_print_contents(const void *fit);
 
 /**
  * fit_get_end - get FIT image size
