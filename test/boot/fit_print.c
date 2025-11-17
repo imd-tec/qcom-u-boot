@@ -80,6 +80,10 @@ static int test_fit_print_norun(struct unit_test_state *uts)
 	ut_assert_nextline("     Kernel:       kernel");
 	ut_assert_nextline("     Init Ramdisk: ramdisk");
 	ut_assert_nextline("     FDT:          fdt");
+	ut_assert_nextline("     Sign algo:    sha256,rsa2048:test-key");
+	ut_assert_nextline("     Sign padding: pkcs-1.5");
+	ut_assert_nextlinen("     Sign value:   9ed5738204714c0ecf46");
+	ut_assert_nextline("     Timestamp:    2009-02-13  23:31:30 UTC");
 	ut_assert_nextline("    Configuration 1 (conf-2)");
 	ut_assert_nextline("     Description:  Alternate configuration");
 	ut_assert_nextline("     Kernel:       kernel");

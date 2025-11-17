@@ -63,6 +63,12 @@ PRINT_ITS = '''
 			kernel = "kernel";
 			fdt = "fdt";
 			ramdisk = "ramdisk";
+			signature {
+				algo = "sha256,rsa2048";
+				padding = "pkcs-1.5";
+				key-name-hint = "test-key";
+				sign-images = "fdt", "kernel", "ramdisk";
+			};
 		};
 		conf-2 {
 			description = "Alternate configuration";
@@ -76,6 +82,7 @@ PRINT_ITS = '''
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('fit_print')
 @pytest.mark.requiredtool('dtc')
+@pytest.mark.requiredtool('openssl')
 def test_fit_print(ubman):
     """Test fit_print_contents() via C unit test"""
     mkimage = os.path.join(ubman.config.build_dir, 'tools/mkimage')
@@ -113,6 +120,56 @@ def test_fit_print(ubman):
     fit = os.path.join(ubman.config.persistent_data_dir, 'test-fit.fit')
     its = fit_util.make_its(ubman, PRINT_ITS, params)
     utils.run_and_log(ubman, [mkimage, '-f', its, fit], env=env)
+
+    # Use a fixed RSA key pair for reproducible signatures
+    tmpdir = ubman.config.result_dir + '/'
+
+    # Fixed 2048-bit RSA private key for testing (for reproducible signatures)
+    key_pem = '''-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDU18AB+xpQw+GX
+mywzH4nsEIECgLVnBTNaAnE4XSIqbiviZetumBP6Ib2W+0OIOn8/hIh3UnzzyWIP
+aRus94CVfFQPqwhi6/M9ptL7N7lCXq9DwQ0EY55GquwoO9jZnnDsCSU76jgKg+Nc
+dsbvprfFDxBjkrLBfdEgzJtNUaJnUCd58RG8sII7EOP4JTGnXn2wVTsKYcTmr8y6
+bOZTUQfsYj9BGFTbskkLYj1RJ6Dpzk4yBqyUn4fUYhfqsAHwlJs/64Byx2m7J7Ia
+rfp49NkqgOFlTvDzKnecxGt4pmgEA+4MtRxUFDliZ/bG3TvG/xNlXvWaHp9DG05u
+4h9jy2NPAgMBAAECggEAAMZKOheeWGXmF8WmSwdV2qiSt54dSuMvdSfmHpTkL3BY
+M4o4aZ4fEH138ak3bTL9TI9gacLAlqiIdVLmGWKLMsARlD8EmEuQhoxpXyWsRGwQ
+yjfVIst0A4DSvDC/kMctVQaRfp7TFmK1fJwoDC44o/xyjFI32VFqZeqotAbUhvi3
+gIYvP5Q4Kvbaq9aZNURqazJHuEVD9LpwbnroUd4cBrcorstJzaDmTIyb5swLX+IX
+FjMOVtHtBDKOG9Ce1wlEOXZtSsoZtAEgkd1IQYBCTBUDkxPdx+ZKPdfT4aKWX3S4
+WQ65lDEGAnplMmetFRV+k9NNJvEia9JoX/SJqhUWGQKBgQD1/rffQZnFWqGM2dD1
+CEkXpCN23xAEaZjQtuIhPMBWEWufAPZhyZSbq3eLjcqSS5mzU8B+n1c9Zxw6r0qM
+BXlcUftreFPKvEXeyp1YWh7loxHiVVuasp2lEDx4arwUrI61XtAaixUb9Opxxj/x
+UDrY5cj7BIRhrkDZtnor/EbRaQKBgQDdf9pymbbxRmHHFGERSzo6/gbr1GRK9fUA
+ZNrzfBM5Sdvmm2aKgYd7hIKhOgeKIkS858gEOsRw75x6nvlrjZvFZGIfetXXxaN9
+c6Uqq/f6rTRUTB9/SqvMgKZMuJ2SFms8I1nbxSE/PMD0T6TRbhjaFoZwZP42HVsM
+wAN2Oiq/9wKBgQC7sQHyYkdFgYVJxtfcXdoHI8G7bS73buqeNSwMWCIYiWooA7/5
+lKjCre2kmSc6wFwhq4FwG3ug6g9r51tlwrd6bUL8GO81/LkC6G1tgDWa2PVIUAB4
+5FfMHbtF1Ypz68VnNVRrLDuK/S/0Z2NaZ/C+lXTnseaf8Sih9Mz6yp3uIQKBgBc4
+61cuhH6hSWkM2uxsPaunrGQXPXiadthWupnifUV5V+PCkSqeT+0ERInQwq+Zzikc
+B91hp+zLQlWcyzuaeiVk0+DHCRp5Lx3c/QkPRI10kVLxNDAtTPvA1S6gAG0rioyg
+jDA9Z7Hwla5Hl1kZuONMj0XDYN+djkk07Gf9yzObAoGAbiS3mRID0pLFhWR1L64h
+NlRJpZjsHNRPd0WFVxXnJRzZxkStoTwL2BhPtG3Xx1ReIkNVCxlu1Dk0rLLKl1nj
+4B/X9Qu6aejXnOsbqp1/JBXYxD8l5B2yg5//wz18um/SOSagpAPeH4i/V3NxOup5
+S0n8gbs0Ht/ZckLk8mPclbk=
+-----END PRIVATE KEY-----'''
+
+    with open(tmpdir + 'test-key.key', 'w', encoding='utf-8') as f:
+        f.write(key_pem)
+
+    utils.run_and_log(ubman,
+        f'openssl req -batch -new -x509 -key {tmpdir}test-key.key '
+        f'-out {tmpdir}test-key.crt')
+
+    # Create a dummy DTB for the public key
+    dtb = fit_util.make_fname(ubman, 'test-key.dtb')
+    utils.run_and_log(ubman, ['dtc', '-I', 'dts', '-O', 'dtb', '-o', dtb],
+                      stdin=b'/dts-v1/; / { };')
+
+    # Sign the FIT configuration (use env for reproducible timestamp)
+    utils.run_and_log(ubman, [mkimage, '-F', '-k', tmpdir, '-K', dtb,
+                              '-r', fit, '-c', 'Configuration signing'],
+                      env=env)
 
     # Run the C test which will load and verify this FIT
     ubman.run_command('ut -f bootstd test_fit_print_norun')
