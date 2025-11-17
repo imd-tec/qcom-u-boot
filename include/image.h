@@ -1225,15 +1225,15 @@ ulong fit_get_end(const void *fit);
 /**
  * fit_get_name - get FIT node name
  * @fit: pointer to the FIT format image header
+ * @noffset: node offset
  *
  * returns:
  *     NULL, on error
  *     pointer to node name, on success
  */
-static inline const char *fit_get_name(const void *fit_hdr,
-		int noffset, int *len)
+static inline const char *fit_get_name(const void *fit_hdr, int noffset)
 {
-	return fdt_get_name(fit_hdr, noffset, len);
+	return fdt_get_name(fit_hdr, noffset, NULL);
 }
 
 /**

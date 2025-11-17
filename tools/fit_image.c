@@ -972,7 +972,7 @@ static int fit_extract_contents(void *ptr, struct imgtool *itl)
 			 */
 			if (itl->pflag == count) {
 				printf("Extracted:\n%s Image %u (%s)\n", p,
-				       count, fit_get_name(fit, noffset, NULL));
+				       count, fit_get_name(fit, noffset));
 
 				fit_image_print(fit, noffset, p);
 

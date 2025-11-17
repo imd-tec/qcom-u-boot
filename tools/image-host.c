@@ -46,7 +46,7 @@ static int fit_set_hash_value(void *fit, int noffset, uint8_t *value,
 	ret = fdt_setprop(fit, noffset, FIT_VALUE_PROP, value, value_len);
 	if (ret) {
 		fprintf(stderr, "Can't set hash '%s' property for '%s' node(%s)\n",
-			FIT_VALUE_PROP, fit_get_name(fit, noffset, NULL),
+			FIT_VALUE_PROP, fit_get_name(fit, noffset),
 			fdt_strerror(ret));
 		return ret == -FDT_ERR_NOSPACE ? -ENOSPC : -EIO;
 	}
@@ -76,7 +76,7 @@ static int fit_image_process_hash(void *fit, const char *image_name,
 	const char *algo;
 	int ret;
 
-	node_name = fit_get_name(fit, noffset, NULL);
+	node_name = fit_get_name(fit, noffset);
 
 	if (fit_image_hash_get_algo(fit, noffset, &algo)) {
 		fprintf(stderr,
@@ -176,7 +176,7 @@ static int fit_image_setup_sig(struct image_sign_info *info,
 	const char *node_name;
 	const char *padding_name;
 
-	node_name = fit_get_name(fit, noffset, NULL);
+	node_name = fit_get_name(fit, noffset);
 	if (!algo_name) {
 		if (fit_image_hash_get_algo(fit, noffset, &algo_name)) {
 			fprintf(stderr,
@@ -247,7 +247,7 @@ static int fit_image_process_sig(const char *keydir, const char *keyfile,
 				engine_id, algo_name))
 		return -1;
 
-	node_name = fit_get_name(fit, noffset, NULL);
+	node_name = fit_get_name(fit, noffset);
 	region.data = data;
 	region.size = size;
 	ret = info.crypto->sign(&info, &region, 1, &value, &value_len);
@@ -585,7 +585,7 @@ int fit_image_cipher_data(const char *keydir, void *keydest,
 	int cipher_node_offset, len;
 
 	/* Get image name */
-	image_name = fit_get_name(fit, image_noffset, NULL);
+	image_name = fit_get_name(fit, image_noffset);
 	if (!image_name) {
 		fprintf(stderr, "Can't get image name\n");
 		return -1;
@@ -677,7 +677,7 @@ int fit_image_add_verification_data(const char *keydir, const char *keyfile,
 		return -1;
 	}
 
-	image_name = fit_get_name(fit, image_noffset, NULL);
+	image_name = fit_get_name(fit, image_noffset);
 
 	/* Process all hash subnodes of the component image node */
 	for (noffset = fdt_first_subnode(fit, image_noffset);
@@ -691,7 +691,7 @@ int fit_image_add_verification_data(const char *keydir, const char *keyfile,
 		 * Multiple hash nodes require unique unit node
 		 * names, e.g. hash-1, hash-2, signature-1, etc.
 		 */
-		node_name = fit_get_name(fit, noffset, NULL);
+		node_name = fit_get_name(fit, noffset);
 		if (!strncmp(node_name, FIT_HASH_NODENAME,
 			     strlen(FIT_HASH_NODENAME))) {
 			ret = fit_image_process_hash(fit, image_name, noffset,
@@ -809,7 +809,7 @@ static int fit_config_add_hash(const void *fit, int image_noffset,
 	for (noffset = fdt_first_subnode(fit, image_noffset);
 	     noffset >= 0;
 	     noffset = fdt_next_subnode(fit, noffset)) {
-		const char *name = fit_get_name(fit, noffset, NULL);
+		const char *name = fit_get_name(fit, noffset);
 
 		if (strncmp(name, FIT_HASH_NODENAME,
 			    strlen(FIT_HASH_NODENAME)))
@@ -884,8 +884,8 @@ static int fit_config_get_hash_list(const void *fit, int conf_noffset,
 	int image_count;
 	int ret, len;
 
-	conf_name = fit_get_name(fit, conf_noffset, NULL);
-	sig_name = fit_get_name(fit, sig_offset, NULL);
+	conf_name = fit_get_name(fit, conf_noffset);
+	sig_name = fit_get_name(fit, sig_offset);
 
 	/*
 	 * Build a list of nodes we need to hash. We always need the root
@@ -991,8 +991,8 @@ static int fit_config_get_regions(const void *fit, int conf_noffset,
 	char *region_prop;
 	int ret, len;
 
-	conf_name = fit_get_name(fit, conf_noffset, NULL);
-	sig_name = fit_get_name(fit, sig_offset, NULL);
+	conf_name = fit_get_name(fit, conf_noffset);
+	sig_name = fit_get_name(fit, sig_offset);
 	debug("%s: conf='%s', sig='%s'\n", __func__, conf_name, sig_name);
 
 	/* Get a list of nodes we want to hash */
@@ -1084,7 +1084,7 @@ static int fit_config_process_sig(const char *keydir, const char *keyfile,
 	uint value_len;
 	int ret;
 
-	node_name = fit_get_name(fit, noffset, NULL);
+	node_name = fit_get_name(fit, noffset);
 	if (fit_config_get_regions(fit, conf_noffset, noffset, &region,
 				   &region_count, &region_prop,
 				   &region_proplen))
@@ -1148,7 +1148,7 @@ static int fit_config_add_verification_data(const char *keydir,
 	const char *conf_name;
 	int noffset;
 
-	conf_name = fit_get_name(fit, conf_noffset, NULL);
+	conf_name = fit_get_name(fit, conf_noffset);
 
 	/* Process all hash subnodes of the configuration node */
 	for (noffset = fdt_first_subnode(fit, conf_noffset);
@@ -1157,7 +1157,7 @@ static int fit_config_add_verification_data(const char *keydir,
 		const char *node_name;
 		int ret = 0;
 
-		node_name = fit_get_name(fit, noffset, NULL);
+		node_name = fit_get_name(fit, noffset);
 		if (!strncmp(node_name, FIT_SIG_NODENAME,
 			     strlen(FIT_SIG_NODENAME))) {
 			ret = fit_config_process_sig(keydir, keyfile, keydest,

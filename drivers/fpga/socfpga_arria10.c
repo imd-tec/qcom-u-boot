@@ -613,7 +613,7 @@ static int first_loading_rbf_to_buffer(struct udevice *dev,
 		images_noffset = fit_conf_get_prop_node_index(buffer_p,
 							     confs_noffset,
 							     FIT_FPGA_PROP, i);
-		uname = fit_get_name(buffer_p, images_noffset, NULL);
+		uname = fit_get_name(buffer_p, images_noffset);
 		if (uname) {
 			debug("FPGA: %s\n", uname);
 

@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("NAME: %s\n", fit_get_name(fit_blob, nodeoffset, NULL));
+	printf("NAME: %s\n", fit_get_name(fit_blob, nodeoffset));
 	printf("LEN: %d\n", len);
 	printf("OFF: %d\n", (int)(nodep - fit_blob));
 	(void) munmap((void *)fit_blob, fsbuf.st_size);

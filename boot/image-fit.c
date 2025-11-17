@@ -148,7 +148,7 @@ static void fit_get_debug(const void *fit, int noffset,
 		char *prop_name, int err)
 {
 	debug("Can't get '%s' property from FIT 0x%08lx, node: offset %d, name %s (%s)\n",
-	      prop_name, (ulong)fit, noffset, fit_get_name(fit, noffset, NULL),
+	      prop_name, (ulong)fit, noffset, fit_get_name(fit, noffset),
 	      fdt_strerror(err));
 }
 
@@ -205,8 +205,7 @@ static void fit_image_print_data(const void *fit, int noffset, const char *p,
 	bool required;
 	int ret, i;
 
-	debug("%s  %s node:    '%s'\n", p, type,
-	      fit_get_name(fit, noffset, NULL));
+	debug("%s  %s node:    '%s'\n", p, type, fit_get_name(fit, noffset));
 	printf("%s  %s algo:    ", p, type);
 	if (fit_image_hash_get_algo(fit, noffset, &algo)) {
 		printf("invalid/unsupported\n");
@@ -271,7 +270,7 @@ static void fit_image_print_verification_data(const void *fit, int noffset,
 	 * Multiple hash/signature nodes require unique unit node
 	 * names, e.g. hash-1, hash-2, signature-1, signature-2, etc.
 	 */
-	name = fit_get_name(fit, noffset, NULL);
+	name = fit_get_name(fit, noffset);
 	if (!strncmp(name, FIT_HASH_NODENAME, strlen(FIT_HASH_NODENAME))) {
 		fit_image_print_data(fit, noffset, p, "Hash");
 	} else if (!strncmp(name, FIT_SIG_NODENAME,
@@ -436,7 +435,7 @@ void fit_print_contents(const void *fit)
 			 * i.e. component image node.
 			 */
 			printf("%s Image %u (%s)\n", p, count++,
-			       fit_get_name(fit, noffset, NULL));
+			       fit_get_name(fit, noffset));
 
 			fit_image_print(fit, noffset, p);
 		}
@@ -466,7 +465,7 @@ void fit_print_contents(const void *fit)
 			 * i.e. configuration node.
 			 */
 			printf("%s Configuration %u (%s)\n", p, count++,
-			       fit_get_name(fit, noffset, NULL));
+			       fit_get_name(fit, noffset));
 
 			fit_conf_print(fit, noffset, p);
 		}
@@ -1215,7 +1214,7 @@ int fit_set_timestamp(void *fit, int noffset, time_t timestamp)
 				sizeof(uint32_t));
 	if (ret) {
 		debug("Can't set '%s' property for '%s' node (%s)\n",
-		      FIT_TIMESTAMP_PROP, fit_get_name(fit, noffset, NULL),
+		      FIT_TIMESTAMP_PROP, fit_get_name(fit, noffset),
 		      fdt_strerror(ret));
 		return ret == -FDT_ERR_NOSPACE ? -ENOSPC : -1;
 	}
@@ -1352,7 +1351,7 @@ int fit_image_verify_with_data(const void *fit, int image_noffset,
 
 	/* Process all hash subnodes of the component image node */
 	fdt_for_each_subnode(noffset, fit, image_noffset) {
-		const char *name = fit_get_name(fit, noffset, NULL);
+		const char *name = fit_get_name(fit, noffset);
 
 		/*
 		 * Check subnode name, must be equal to "hash".
@@ -1393,8 +1392,8 @@ int fit_image_verify_with_data(const void *fit, int image_noffset,
 
 error:
 	printf(" error!\n%s for '%s' hash node in '%s' image node\n",
-	       err_msg, fit_get_name(fit, noffset, NULL),
-	       fit_get_name(fit, image_noffset, NULL));
+	       err_msg, fit_get_name(fit, noffset),
+	       fit_get_name(fit, image_noffset));
 	return 0;
 }
 
@@ -1413,7 +1412,7 @@ error:
  */
 int fit_image_verify(const void *fit, int image_noffset)
 {
-	const char *name = fit_get_name(fit, image_noffset, NULL);
+	const char *name = fit_get_name(fit, image_noffset);
 	const void	*data;
 	size_t		size;
 	char		*err_msg = "";
@@ -1437,7 +1436,7 @@ int fit_image_verify(const void *fit, int image_noffset)
 
 err:
 	printf("error!\n%s in '%s' image node\n", err_msg,
-	       fit_get_name(fit, image_noffset, NULL));
+	       fit_get_name(fit, image_noffset));
 	return 0;
 }
 
@@ -1480,7 +1479,7 @@ int fit_all_image_verify(const void *fit)
 			 * i.e. component image node.
 			 */
 			printf("   Hash(es) for Image %u (%s): ", count,
-			       fit_get_name(fit, noffset, NULL));
+			       fit_get_name(fit, noffset));
 			count++;
 
 			if (!fit_image_verify(fit, noffset))
@@ -2127,7 +2126,7 @@ static int select_from_config(const void *fit, struct bootm_headers *images,
 			return -ENOPKG;
 	}
 
-	*fit_unamep = fit_get_name(fit, noffset, NULL);
+	*fit_unamep = fit_get_name(fit, noffset);
 
 	return noffset;
 }
@@ -2639,7 +2638,7 @@ int boot_get_fdt_fit(struct bootm_headers *images, ulong addr,
 		if (i < count) {
 			noffset = fit_conf_get_prop_node_index(fit, cfg_noffset,
 							       FIT_FDT_PROP, i);
-			uname = fit_get_name(fit, noffset, NULL);
+			uname = fit_get_name(fit, noffset);
 			uconfig = NULL;
 		} else {
 			if (!next_config)
