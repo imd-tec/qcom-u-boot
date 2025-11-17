@@ -78,8 +78,8 @@ struct unit_test_state {
 	bool force_run;
 	void *old_bloblist;
 	bool soft_fail;
-	char expect_str[512];
-	char actual_str[512];
+	char expect_str[1024];
+	char actual_str[1024];
 };
 
 /* Test flags for each test */
