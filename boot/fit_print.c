@@ -25,8 +25,20 @@
 #include <u-boot/crc.h>
 
 /**
- * fit_image_print_data() - prints out the hash node details
+ * fit_print_init() - initialize FIT print context
+ * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
+ *
+ * This initializes a fit_print_ctx structure with the given FIT image.
+ */
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
+{
+	ctx->fit = fit;
+}
+
+/**
+ * fit_image_print_data() - prints out the hash node details
+ * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
  * @p: pointer to prefix string
  * @type: Type of information to print ("hash" or "sign")
@@ -39,10 +51,11 @@
  * returns:
  *     no returned results
  */
-static void fit_image_print_data(const void *fit, int noffset, const char *p,
-				 const char *type)
+static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
+				 const char *p, const char *type)
 {
 	const char *keyname, *padding, *algo;
+	const void *fit = ctx->fit;
 	int value_len, ret, i;
 	uint8_t *value;
 
@@ -88,7 +101,7 @@ static void fit_image_print_data(const void *fit, int noffset, const char *p,
 
 /**
  * fit_image_print_verification_data() - prints out the hash/signature details
- * @fit: pointer to the FIT format image header
+ * @ctx: pointer to FIT print context
  * @noffset: offset of the hash or signature node
  * @p: pointer to prefix string
  *
@@ -97,9 +110,10 @@ static void fit_image_print_data(const void *fit, int noffset, const char *p,
  * returns:
  *     no returned results
  */
-static void fit_image_print_verification_data(const void *fit, int noffset,
-					      const char *p)
+static void fit_image_print_verification_data(struct fit_print_ctx *ctx,
+					      int noffset, const char *p)
 {
+	const void *fit = ctx->fit;
 	const char *name;
 
 	/*
@@ -109,13 +123,14 @@ static void fit_image_print_verification_data(const void *fit, int noffset,
 	 */
 	name = fit_get_name(fit, noffset);
 	if (!strncmp(name, FIT_HASH_NODENAME, strlen(FIT_HASH_NODENAME)))
-		fit_image_print_data(fit, noffset, p, "Hash");
+		fit_image_print_data(ctx, noffset, p, "Hash");
 	else if (!strncmp(name, FIT_SIG_NODENAME, strlen(FIT_SIG_NODENAME)))
-		fit_image_print_data(fit, noffset, p, "Sign");
+		fit_image_print_data(ctx, noffset, p, "Sign");
 }
 
-void fit_image_print(const void *fit, int image_noffset, const char *p)
+void fit_image_print(struct fit_print_ctx *ctx, int image_noffset, const char *p)
 {
+	const void *fit = ctx->fit;
 	uint8_t type, arch, os, comp = IH_COMP_NONE;
 	const char *desc;
 	size_t size;
@@ -124,9 +139,6 @@ void fit_image_print(const void *fit, int image_noffset, const char *p)
 	int noffset;
 	int ndepth;
 	int ret;
-
-	if (!CONFIG_IS_ENABLED(FIT_PRINT))
-		return;
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, image_noffset, &desc);
@@ -218,14 +230,14 @@ void fit_image_print(const void *fit, int image_noffset, const char *p)
 	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
 		if (ndepth == 1) {
 			/* Direct child node of the component image node */
-			fit_image_print_verification_data(fit, noffset, p);
+			fit_image_print_verification_data(ctx, noffset, p);
 		}
 	}
 }
 
 /**
  * fit_conf_print - prints out the FIT configuration details
- * @fit: pointer to the FIT format image header
+ * @ctx: pointer to FIT print context
  * @noffset: offset of the configuration node
  * @p: pointer to prefix string
  *
@@ -235,8 +247,10 @@ void fit_image_print(const void *fit, int image_noffset, const char *p)
  * returns:
  *     no returned results
  */
-static void fit_conf_print(const void *fit, int noffset, const char *p)
+static void fit_conf_print(struct fit_print_ctx *ctx, int noffset,
+			   const char *p)
 {
+	const void *fit = ctx->fit;
 	const char *uname, *desc;
 	int ret, ndepth, i;
 
@@ -307,13 +321,14 @@ static void fit_conf_print(const void *fit, int noffset, const char *p)
 	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
 		if (ndepth == 1) {
 			/* Direct child node of the component config node */
-			fit_image_print_verification_data(fit, noffset, p);
+			fit_image_print_verification_data(ctx, noffset, p);
 		}
 	}
 }
 
-void fit_print(const void *fit)
+void fit_print(struct fit_print_ctx *ctx)
 {
+	const void *fit = ctx->fit;
 	const char *desc;
 	char *uname;
 	int images_noffset;
@@ -366,7 +381,7 @@ void fit_print(const void *fit)
 			printf("%s Image %u (%s)\n", p, count++,
 			       fit_get_name(fit, noffset));
 
-			fit_image_print(fit, noffset, p);
+			fit_image_print(ctx, noffset, p);
 		}
 	}
 
@@ -396,12 +411,15 @@ void fit_print(const void *fit)
 			printf("%s Configuration %u (%s)\n", p, count++,
 			       fit_get_name(fit, noffset));
 
-			fit_conf_print(fit, noffset, p);
+			fit_conf_print(ctx, noffset, p);
 		}
 	}
 }
 
 void fit_print_contents(const void *fit)
 {
-	fit_print(fit);
+	struct fit_print_ctx ctx;
+
+	fit_print_init(&ctx, fit);
+	fit_print(&ctx);
 }

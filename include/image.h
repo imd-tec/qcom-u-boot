@@ -1199,26 +1199,41 @@ int fit_parse_subimage(const char *spec, ulong addr_curr,
 
 int fit_get_subimage_count(const void *fit, int images_noffset);
 
+/**
+ * struct fit_print_ctx - context for FIT printing
+ * @fit: pointer to the FIT format image header
+ */
+struct fit_print_ctx {
+	const void *fit;
+};
+
 #if CONFIG_IS_ENABLED(FIT_PRINT)
 
 /**
- * fit_print() - prints out the contents of the FIT format image
+ * fit_print_init() - initialize FIT print context
+ * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
- * @p: pointer to prefix string
  *
- * This formats a multi line FIT image contents description.
+ * This inits a fit_print_ctx structure with the given FIT image.
+ */
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit);
+
+/**
+ * fit_print() - prints out the contents of the FIT format image
+ * @ctx: pointer to FIT print context
+ *
  * The routine prints out FIT image properties (root node level) followed by
  * the details of each component image.
  *
  * returns:
  *     no returned results
  */
-void fit_print(const void *fit);
+void fit_print(struct fit_print_ctx *ctx);
 
 /**
  * fit_image_print - prints out the FIT component image details
- * @fit: pointer to the FIT format image header
- * @image_noffset: offset of the component image node
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the component image node
  * @p: pointer to prefix string
  *
  * fit_image_print() lists all mandatory properties for the processed component
@@ -1230,7 +1245,7 @@ void fit_print(const void *fit);
  * returns:
  *     no returned results
  */
-void fit_image_print(const void *fit, int noffset, const char *p);
+void fit_image_print(struct fit_print_ctx *ctx, int noffset, const char *p);
 
 /**
  * fit_print_contents() - prints out the contents of the FIT format image
@@ -1248,6 +1263,7 @@ void fit_print_contents(const void *fit);
 
 #else /* !FIT_PRINT */
 
+static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit) {}
 static inline void fit_print(const void *fit) {}
 static inline void fit_image_print(const void *fit, int noffset, const char *p)
 {

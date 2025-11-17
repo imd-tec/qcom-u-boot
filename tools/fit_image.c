@@ -971,10 +971,13 @@ static int fit_extract_contents(void *ptr, struct imgtool *itl)
 			 * i.e. component image node.
 			 */
 			if (itl->pflag == count) {
+				struct fit_print_ctx ctx;
+
 				printf("Extracted:\n%s Image %u (%s)\n", p,
 				       count, fit_get_name(fit, noffset));
 
-				fit_image_print(fit, noffset, p);
+				fit_print_init(&ctx, fit);
+				fit_image_print(&ctx, noffset, p);
 
 				return fit_image_extract(fit, noffset,
 						itl->outfile);

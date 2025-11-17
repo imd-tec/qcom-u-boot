@@ -1555,7 +1555,10 @@ int fit_get_data_conf_prop(const void *fit, const char *prop_name,
 
 static int print_and_verify(const void *fit, int rd_noffset, int verify)
 {
-	fit_image_print(fit, rd_noffset, "   ");
+	struct fit_print_ctx ctx;
+
+	fit_print_init(&ctx, fit);
+	fit_image_print(&ctx, rd_noffset, "   ");
 
 	if (verify) {
 		puts("   Verifying Hash Integrity ... ");
