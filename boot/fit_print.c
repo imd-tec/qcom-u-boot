@@ -284,6 +284,28 @@ static void fit_image_print_verification_data(struct fit_print_ctx *ctx,
 }
 
 /**
+ * process_subnodes() - process and print verification data for all subnodes
+ * @ctx: pointer to FIT print context
+ * @parent: parent node offset
+ *
+ * Iterates through all direct child nodes of the parent and prints their
+ * verification data (hash/signature information).
+ */
+static void process_subnodes(struct fit_print_ctx *ctx, int parent)
+{
+	const void *fit = ctx->fit;
+	int noffset;
+	int ndepth;
+
+	for (ndepth = 0, noffset = fdt_next_node(fit, parent, &ndepth);
+	     (noffset >= 0) && (ndepth > 0);
+	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
+		if (ndepth == 1)
+			fit_image_print_verification_data(ctx, noffset);
+	}
+}
+
+/**
  * fit_image_print - prints out the FIT component image details
  * @ctx: pointer to FIT print context
  * @image_noffset: offset of the component image node
@@ -305,8 +327,6 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	size_t size;
 	ulong load, entry;
 	const void *data;
-	int noffset;
-	int ndepth;
 	int ret;
 
 	/* Mandatory properties */
@@ -366,14 +386,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	}
 
 	/* Process all hash subnodes of the component image node */
-	for (ndepth = 0, noffset = fdt_next_node(fit, image_noffset, &ndepth);
-	     (noffset >= 0) && (ndepth > 0);
-	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
-		if (ndepth == 1) {
-			/* Direct child node of the component image node */
-			fit_image_print_verification_data(ctx, noffset);
-		}
-	}
+	process_subnodes(ctx, image_noffset);
 }
 
 /**
@@ -391,7 +404,6 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
 	const char *uname;
-	int ndepth;
 
 	/* Mandatory properties */
 	emit_desc(ctx, noffset, "Description");
@@ -408,14 +420,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	emit_stringlist(ctx, noffset, FIT_COMPATIBLE_PROP, "Compatible");
 
 	/* Process all hash subnodes of the component configuration node */
-	for (ndepth = 0, noffset = fdt_next_node(fit, noffset, &ndepth);
-	     (noffset >= 0) && (ndepth > 0);
-	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
-		if (ndepth == 1) {
-			/* Direct child node of the component config node */
-			fit_image_print_verification_data(ctx, noffset);
-		}
-	}
+	process_subnodes(ctx, noffset);
 }
 
 void fit_print(struct fit_print_ctx *ctx)
