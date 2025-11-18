@@ -25,9 +25,13 @@
 #undef MKIMAGE_DEBUG
 
 #ifdef MKIMAGE_DEBUG
-#define debug(fmt,args...)	printf (fmt ,##args)
+#define debug(fmt, args...)	printf(fmt, ##args)
 #else
-#define debug(fmt,args...)
+#define debug(fmt, args...) \
+	do { \
+		if (0) \
+			printf(fmt, ##args); \
+	} while (0)
 #endif /* MKIMAGE_DEBUG */
 
 #define log_debug(fmt, args...)	debug(fmt, ##args)
