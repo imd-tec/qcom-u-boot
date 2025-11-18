@@ -69,7 +69,7 @@ static void emit_label(struct fit_print_ctx *ctx, const char *label)
 {
 	int len;
 
-	len = printf("%*s%s:", ctx->indent, "", label);
+	len = printf("%*s%s%c", ctx->indent, "", label, *label ? ':' : ' ');
 	printf("%*s", ctx->tab - len, "");
 }
 
@@ -315,7 +315,6 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
-	int p = ctx->indent;
 	const char *uname, *desc;
 	int ret, ndepth, i;
 
@@ -338,13 +337,8 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	for (i = 0;
 	     uname = fdt_stringlist_get(fit, noffset, FIT_FDT_PROP,
 					i, NULL), uname;
-	     i++) {
-		if (!i)
-			emit_label(ctx, "FDT");
-		else
-			printf("%*s               ", p, "");
-		printf("%s\n", uname);
-	}
+	     i++)
+		emit_label_val(ctx, i ? "" : "FDT", uname);
 
 	uname = fdt_getprop(fit, noffset, FIT_FPGA_PROP, NULL);
 	if (uname)
@@ -354,23 +348,13 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	for (i = 0;
 	     uname = fdt_stringlist_get(fit, noffset, FIT_LOADABLE_PROP,
 					i, NULL), uname;
-	     i++) {
-		if (!i)
-			emit_label(ctx, "Loadables");
-		else
-			printf("%*s               ", p, "");
-		printf("%s\n", uname);
-	}
+	     i++)
+		emit_label_val(ctx, i ? "" : "Loadables", uname);
 
 	/* Show the list of compatible strings */
 	for (i = 0; uname = fdt_stringlist_get(fit, noffset,
-				FIT_COMPATIBLE_PROP, i, NULL), uname; i++) {
-		if (!i)
-			emit_label(ctx, "Compatible");
-		else
-			printf("%*s               ", p, "");
-		printf("%s\n", uname);
-	}
+				FIT_COMPATIBLE_PROP, i, NULL), uname; i++)
+		emit_label_val(ctx, i ? "" : "Compatible", uname);
 
 	/* Process all hash subnodes of the component configuration node */
 	for (ndepth = 0, noffset = fdt_next_node(fit, noffset, &ndepth);
@@ -399,11 +383,7 @@ void fit_print(struct fit_print_ctx *ctx)
 
 	/* Root node properties */
 	ret = fit_get_desc(fit, 0, &desc);
-	printf("%*sFIT description: ", p, "");
-	if (ret)
-		printf("unavailable\n");
-	else
-		printf("%s\n", desc);
+	emit_label_val(ctx, "FIT description", ret ? "unavailable" : desc);
 
 	if (IMAGE_ENABLE_TIMESTAMP) {
 		ret = fit_get_timestamp(fit, 0, &timestamp);
