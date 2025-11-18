@@ -35,7 +35,7 @@ void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
 {
 	ctx->fit = fit;
 	ctx->indent = IMAGE_INDENT;
-	ctx->tab = 16 + IMAGE_INDENT;
+	ctx->tab = 17 + IMAGE_INDENT;
 }
 
 /**
@@ -113,6 +113,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 	int value_len, ret, i;
 	uint8_t *value;
 
+	debug("%s node:    '%s'\n", type, fit_get_name(fit, noffset));
 	emit_type(ctx, type, "algo");
 	if (fit_image_hash_get_algo(fit, noffset, &algo)) {
 		printf("invalid/unsupported\n");
@@ -126,7 +127,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 
 	padding = fdt_getprop(fit, noffset, "padding", NULL);
 	if (padding)
-		printf("%*s%s padding: %s\n", p, "", type, padding);
+		printf("%*s%s padding:  %s\n", p, "", type, padding);
 
 	ret = fit_image_hash_get_value(fit, noffset, &value, &value_len);
 	emit_type(ctx, type, "value");
@@ -341,7 +342,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "FDT");
 		else
-			printf("%*s              ", p, "");
+			printf("%*s               ", p, "");
 		printf("%s\n", uname);
 	}
 
@@ -357,7 +358,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "Loadables");
 		else
-			printf("%*s              ", p, "");
+			printf("%*s               ", p, "");
 		printf("%s\n", uname);
 	}
 
@@ -367,7 +368,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "Compatible");
 		else
-			printf("%*s              ", p, "");
+			printf("%*s               ", p, "");
 		printf("%s\n", uname);
 	}
 
