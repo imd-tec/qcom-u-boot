@@ -76,6 +76,23 @@ static void emit_label(struct fit_print_ctx *ctx, const char *label)
 }
 
 /**
+ * emit_label_val() - print a label with value
+ * @ctx: pointer to FIT print context
+ * @label: label string (e.g., "Type" or "OS")
+ * @val: value string to print after the label
+ *
+ * Prints the indentation, label with padding to ctx->tab, and the value
+ * followed by a newline. This is a convenience function that combines
+ * emit_label() and printf() for simple label-value pairs.
+ */
+static void emit_label_val(struct fit_print_ctx *ctx, const char *label,
+			   const char *val)
+{
+	emit_label(ctx, label);
+	printf("%s\n", val);
+}
+
+/**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
@@ -195,11 +212,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, image_noffset, &desc);
-	emit_label(ctx, "Description");
-	if (ret)
-		printf("unavailable\n");
-	else
-		printf("%s\n", desc);
+	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
 
 	if (IMAGE_ENABLE_TIMESTAMP) {
 		time_t timestamp;
@@ -213,12 +226,10 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	}
 
 	fit_image_get_type(fit, image_noffset, &type);
-	emit_label(ctx, "Type");
-	printf("%s\n", genimg_get_type_name(type));
+	emit_label_val(ctx, "Type", genimg_get_type_name(type));
 
 	fit_image_get_comp(fit, image_noffset, &comp);
-	emit_label(ctx, "Compression");
-	printf("%s\n", genimg_get_comp_name(comp));
+	emit_label_val(ctx, "Compression", genimg_get_comp_name(comp));
 
 	ret = fit_image_get_data(fit, image_noffset, &data, &size);
 
@@ -244,15 +255,13 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	    type == IH_TYPE_RAMDISK || type == IH_TYPE_FIRMWARE ||
 	    type == IH_TYPE_FLATDT) {
 		fit_image_get_arch(fit, image_noffset, &arch);
-		emit_label(ctx, "Architecture");
-		printf("%s\n", genimg_get_arch_name(arch));
+		emit_label_val(ctx, "Architecture", genimg_get_arch_name(arch));
 	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_RAMDISK ||
 	    type == IH_TYPE_FIRMWARE) {
 		fit_image_get_os(fit, image_noffset, &os);
-		emit_label(ctx, "OS");
-		printf("%s\n", genimg_get_os_name(os));
+		emit_label_val(ctx, "OS", genimg_get_os_name(os));
 	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
@@ -316,31 +325,19 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, noffset, &desc);
-	emit_label(ctx, "Description");
-	if (ret)
-		printf("unavailable\n");
-	else
-		printf("%s\n", desc);
+	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
 
 	uname = fdt_getprop(fit, noffset, FIT_KERNEL_PROP, NULL);
-	emit_label(ctx, "Kernel");
-	if (!uname)
-		printf("unavailable\n");
-	else
-		printf("%s\n", uname);
+	emit_label_val(ctx, "Kernel", uname ?: "unavailable");
 
 	/* Optional properties */
 	uname = fdt_getprop(fit, noffset, FIT_RAMDISK_PROP, NULL);
-	if (uname) {
-		emit_label(ctx, "Init Ramdisk");
-		printf("%s\n", uname);
-	}
+	if (uname)
+		emit_label_val(ctx, "Init Ramdisk", uname);
 
 	uname = fdt_getprop(fit, noffset, FIT_FIRMWARE_PROP, NULL);
-	if (uname) {
-		emit_label(ctx, "Firmware");
-		printf("%s\n", uname);
-	}
+	if (uname)
+		emit_label_val(ctx, "Firmware", uname);
 
 	for (i = 0;
 	     uname = fdt_stringlist_get(fit, noffset, FIT_FDT_PROP,
@@ -354,10 +351,8 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	}
 
 	uname = fdt_getprop(fit, noffset, FIT_FPGA_PROP, NULL);
-	if (uname) {
-		emit_label(ctx, "FPGA");
-		printf("%s\n", uname);
-	}
+	if (uname)
+		emit_label_val(ctx, "FPGA", uname);
 
 	/* Print out all of the specified loadables */
 	for (i = 0;
