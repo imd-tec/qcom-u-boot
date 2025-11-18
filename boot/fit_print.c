@@ -126,11 +126,37 @@ static void emit_timestamp(struct fit_print_ctx *ctx, int noffset,
 {
 	time_t timestamp;
 
+	if (!IMAGE_ENABLE_TIMESTAMP)
+		return;
 	emit_label(ctx, label);
 	if (fit_get_timestamp(ctx->fit, noffset, &timestamp))
 		printf("unavailable\n");
 	else
 		genimg_print_time(timestamp);
+}
+
+/**
+ * emit_stringlist() - print a stringlist property
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the node containing the property
+ * @prop: property name to get and print
+ * @label: label string to use when printing
+ *
+ * Gets a stringlist property from the specified node and prints each string
+ * with the given label. The first string shows the label, subsequent strings
+ * are indented to align with the first value. If the property doesn't exist,
+ * nothing is printed.
+ */
+static void emit_stringlist(struct fit_print_ctx *ctx, int noffset,
+			    const char *prop, const char *label)
+{
+	const char *val;
+	int i;
+
+	for (i = 0;
+	     val = fdt_stringlist_get(ctx->fit, noffset, prop, i, NULL), val;
+	     i++)
+		emit_label_val(ctx, i ? "" : label, val);
 }
 
 /**
@@ -248,8 +274,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	ret = fit_get_desc(fit, image_noffset, &desc);
 	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
 
-	if (IMAGE_ENABLE_TIMESTAMP)
-		emit_timestamp(ctx, 0, "Created");
+	emit_timestamp(ctx, 0, "Created");
 
 	fit_image_get_type(fit, image_noffset, &type);
 	emit_label_val(ctx, "Type", genimg_get_type_name(type));
@@ -344,7 +369,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
 	const char *uname, *desc;
-	int ret, ndepth, i;
+	int ret, ndepth;
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, noffset, &desc);
@@ -356,26 +381,10 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	/* Optional properties */
 	emit_prop(ctx, noffset, FIT_RAMDISK_PROP, "Init Ramdisk");
 	emit_prop(ctx, noffset, FIT_FIRMWARE_PROP, "Firmware");
-
-	for (i = 0;
-	     uname = fdt_stringlist_get(fit, noffset, FIT_FDT_PROP,
-					i, NULL), uname;
-	     i++)
-		emit_label_val(ctx, i ? "" : "FDT", uname);
-
+	emit_stringlist(ctx, noffset, FIT_FDT_PROP, "FDT");
 	emit_prop(ctx, noffset, FIT_FPGA_PROP, "FPGA");
-
-	/* Print out all of the specified loadables */
-	for (i = 0;
-	     uname = fdt_stringlist_get(fit, noffset, FIT_LOADABLE_PROP,
-					i, NULL), uname;
-	     i++)
-		emit_label_val(ctx, i ? "" : "Loadables", uname);
-
-	/* Show the list of compatible strings */
-	for (i = 0; uname = fdt_stringlist_get(fit, noffset,
-				FIT_COMPATIBLE_PROP, i, NULL), uname; i++)
-		emit_label_val(ctx, i ? "" : "Compatible", uname);
+	emit_stringlist(ctx, noffset, FIT_LOADABLE_PROP, "Loadables");
+	emit_stringlist(ctx, noffset, FIT_COMPATIBLE_PROP, "Compatible");
 
 	/* Process all hash subnodes of the component configuration node */
 	for (ndepth = 0, noffset = fdt_next_node(fit, noffset, &ndepth);
@@ -405,8 +414,7 @@ void fit_print(struct fit_print_ctx *ctx)
 	ret = fit_get_desc(fit, 0, &desc);
 	emit_label_val(ctx, "FIT description", ret ? "unavailable" : desc);
 
-	if (IMAGE_ENABLE_TIMESTAMP)
-		emit_timestamp(ctx, 0, "Created");
+	emit_timestamp(ctx, 0, "Created");
 
 	/* Find images parent node offset */
 	images_noffset = fdt_path_offset(fit, FIT_IMAGES_PATH);
