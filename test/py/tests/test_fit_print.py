@@ -45,9 +45,19 @@ PRINT_ITS = '''
 				algo = "sha256";
 			};
 		};
-		fdt {
-			description = "Test FDT";
-			data = /incbin/("%(fdt)s");
+		fdt-1 {
+			description = "Test FDT 1";
+			data = /incbin/("%(fdt1)s");
+			type = "flat_dt";
+			arch = "sandbox";
+			compression = "none";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-2 {
+			description = "Test FDT 2";
+			data = /incbin/("%(fdt2)s");
 			type = "flat_dt";
 			arch = "sandbox";
 			compression = "none";
@@ -61,19 +71,19 @@ PRINT_ITS = '''
 		conf-1 {
 			description = "Test configuration";
 			kernel = "kernel";
-			fdt = "fdt";
+			fdt = "fdt-1";
 			ramdisk = "ramdisk";
 			signature {
 				algo = "sha256,rsa2048";
 				padding = "pkcs-1.5";
 				key-name-hint = "test-key";
-				sign-images = "fdt", "kernel", "ramdisk";
+				sign-images = "fdt-1", "kernel", "ramdisk";
 			};
 		};
 		conf-2 {
 			description = "Alternate configuration";
 			kernel = "kernel";
-			fdt = "fdt";
+			fdt = "fdt-1", "fdt-2";
 		};
 	};
 };
@@ -95,14 +105,22 @@ def test_fit_print(ubman):
     kernel_gz = kernel + '.gz'
     utils.run_and_log(ubman, ['gzip', '-f', '-n', '-k', kernel])
 
-    fdt = fit_util.make_dtb(ubman, '''
+    fdt1 = fit_util.make_dtb(ubman, '''
 /dts-v1/;
 / {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	model = "Test";
+	model = "Test FDT 1";
 };
-''', 'test-fdt')
+''', 'test-fdt-1')
+    fdt2 = fit_util.make_dtb(ubman, '''
+/dts-v1/;
+/ {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	model = "Test FDT 2";
+};
+''', 'test-fdt-2')
     ramdisk = fit_util.make_kernel(ubman, 'test-ramdisk.bin', 'ramdisk')
 
     # Compress the ramdisk (with -n to avoid timestamps for reproducibility)
@@ -112,7 +130,8 @@ def test_fit_print(ubman):
     # Create FIT image with fixed timestamp for reproducible output
     params = {
         'kernel': kernel_gz,
-        'fdt': fdt,
+        'fdt1': fdt1,
+        'fdt2': fdt2,
         'ramdisk': ramdisk_gz,
     }
     env = os.environ.copy()
