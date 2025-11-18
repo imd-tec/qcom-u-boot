@@ -180,6 +180,26 @@ static void emit_desc(struct fit_print_ctx *ctx, int noffset,
 }
 
 /**
+ * emit_addr() - print an address property
+ * @ctx: pointer to FIT print context
+ * @label: label string to use when printing
+ * @addr: address value to print
+ * @valid: true if the address is valid, false to print "unavailable"
+ *
+ * Prints an address with the given label. If valid is false, prints
+ * "unavailable" instead of the address value.
+ */
+static void emit_addr(struct fit_print_ctx *ctx, const char *label, ulong addr,
+		      bool valid)
+{
+	emit_label(ctx, label);
+	if (valid)
+		printf("0x%08lx\n", addr);
+	else
+		printf("unavailable\n");
+}
+
+/**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
@@ -335,30 +355,16 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
 	    type == IH_TYPE_FIRMWARE || type == IH_TYPE_RAMDISK ||
-	    type == IH_TYPE_FPGA) {
+	    type == IH_TYPE_FPGA || type == IH_TYPE_FLATDT) {
 		ret = fit_image_get_load(fit, image_noffset, &load);
-		emit_label(ctx, "Load Address");
-		if (ret)
-			printf("unavailable\n");
-		else
-			printf("0x%08lx\n", load);
-	}
-
-	/* optional load address for FDT */
-	if (type == IH_TYPE_FLATDT &&
-	    !fit_image_get_load(fit, image_noffset, &load)) {
-		emit_label(ctx, "Load Address");
-		printf("0x%08lx\n", load);
+		if ((type != IH_TYPE_FLATDT) || !ret)
+			emit_addr(ctx, "Load Address", load, !ret);
 	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
 	    type == IH_TYPE_RAMDISK) {
 		ret = fit_image_get_entry(fit, image_noffset, &entry);
-		emit_label(ctx, "Entry Point");
-		if (ret)
-			printf("unavailable\n");
-		else
-			printf("0x%08lx\n", entry);
+		emit_addr(ctx, "Entry Point", entry, !ret);
 	}
 
 	/* Process all hash subnodes of the component image node */
