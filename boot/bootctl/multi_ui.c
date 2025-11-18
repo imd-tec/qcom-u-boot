@@ -577,6 +577,86 @@ static int multiboot_ui_of_to_plat(struct udevice *dev)
 	return 0;
 }
 
+static int multiboot_ui_show_pass(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+	int ret;
+
+	scene_obj_set_hide(scn, ITEM_PASS + seq, !show);
+	scene_obj_set_hide(scn, ITEM_PASS_LABEL + seq, !show);
+	scene_obj_set_hide(scn, ITEM_PASS_EDIT + seq, !show);
+
+	if (show) {
+		struct scene_obj_textline *tline;
+		char *buf;
+
+		/* Clear the passphrase buffer for retry */
+		tline = scene_obj_find(scn, ITEM_PASS + seq,
+				       SCENEOBJT_TEXTLINE);
+		if (!tline)
+			return log_msg_ret("tln", -ENOENT);
+		buf = abuf_data(&tline->buf);
+		*buf = '\0';
+
+		/* Set highlight and open the textline for editing */
+		scene_set_highlight_id(scn, ITEM_PASS + seq);
+		ret = scene_set_open(scn, ITEM_PASS + seq, true);
+		if (ret)
+			return log_msg_ret("sop", ret);
+	} else {
+		/* Close the textline */
+		ret = scene_set_open(scn, ITEM_PASS + seq, false);
+		if (ret)
+			return log_msg_ret("sop", ret);
+	}
+
+	return 0;
+}
+
+static int multiboot_ui_get_pass(struct udevice *dev, int seq,
+				 const char **passp)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+	struct scene_obj_textline *tline;
+
+	tline = scene_obj_find(scn, ITEM_PASS + seq, SCENEOBJT_TEXTLINE);
+	if (!tline)
+		return log_msg_ret("tln", -ENOENT);
+
+	*passp = abuf_data(&tline->buf);
+
+	return 0;
+}
+
+static int multiboot_ui_show_pass_msg(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+
+	scene_obj_set_hide(scn, ITEM_PASS_MSG + seq, !show);
+
+	return 0;
+}
+
+static int multiboot_ui_set_pass_msg(struct udevice *dev, int seq,
+				     const char *msg)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct expo *exp = upriv->expo;
+	struct abuf *buf;
+	int ret;
+
+	ret = expo_edit_str(exp, STR_PASS_MSG + seq, NULL, &buf);
+	if (ret)
+		return log_msg_ret("spm", ret);
+
+	abuf_set(buf, (void *)msg, strlen(msg) + 1);
+
+	return 0;
+}
+
 static struct bc_ui_ops ops = {
 	.print	= multiboot_ui_print,
 	.show	= multiboot_ui_show,
@@ -584,6 +664,10 @@ static struct bc_ui_ops ops = {
 	.render	= multiboot_ui_render,
 	.poll	= multiboot_ui_poll,
 	.switch_layout = multiboot_ui_switch_layout,
+	.show_pass = multiboot_ui_show_pass,
+	.get_pass = multiboot_ui_get_pass,
+	.show_pass_msg = multiboot_ui_show_pass_msg,
+	.set_pass_msg = multiboot_ui_set_pass_msg,
 };
 
 static const struct udevice_id multiboot_ui_ids[] = {

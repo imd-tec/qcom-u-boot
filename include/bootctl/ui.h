@@ -99,6 +99,46 @@ struct bc_ui_ops {
 	 * Return 0 if OK, -ve on error
 	 */
 	int (*switch_layout)(struct udevice *dev);
+
+	/**
+	 * show_pass() - Show or hide the passphrase input field
+	 *
+	 * @dev: Display device
+	 * @seq: Sequence number of the bootflow item
+	 * @show: true to show the pass field, false to hide it
+	 * Return 0 if OK, -ve on error
+	 */
+	int (*show_pass)(struct udevice *dev, int seq, bool show);
+
+	/**
+	 * get_pass() - Get the passphrase entered by the user
+	 *
+	 * @dev: Display device
+	 * @seq: Sequence number of the bootflow item
+	 * @passp: Returns pointer to the passphrase string
+	 * Return 0 if OK, -ve on error
+	 */
+	int (*get_pass)(struct udevice *dev, int seq, const char **passp);
+
+	/**
+	 * show_pass_msg() - Show or hide the pass message
+	 *
+	 * @dev: Display device
+	 * @seq: Sequence number of the bootflow item
+	 * @show: true to show the message, false to hide it
+	 * Return 0 if OK, -ve on error
+	 */
+	int (*show_pass_msg)(struct udevice *dev, int seq, bool show);
+
+	/**
+	 * set_pass_msg() - Set the pass message text
+	 *
+	 * @dev: Display device
+	 * @seq: Sequence number of the bootflow item
+	 * @msg: Message text to display
+	 * Return 0 if OK, -ve on error
+	 */
+	int (*set_pass_msg)(struct udevice *dev, int seq, const char *msg);
 };
 
 #define bc_ui_get_ops(dev)  ((struct bc_ui_ops *)(dev)->driver->ops)
@@ -147,5 +187,45 @@ int bc_ui_poll(struct udevice *dev, int *seqp, bool *selectedp);
  * Return 0 if OK, -ve on error
  */
 int bc_ui_switch_layout(struct udevice *dev);
+
+/**
+ * bc_ui_show_pass() - Show or hide the pass input field
+ *
+ * @dev: Display device
+ * @seq: Sequence number of the bootflow item
+ * @show: true to show the pass field, false to hide it
+ * Return 0 if OK, -ve on error
+ */
+int bc_ui_show_pass(struct udevice *dev, int seq, bool show);
+
+/**
+ * bc_ui_get_pass() - Get the pass entered by the user
+ *
+ * @dev: Display device
+ * @seq: Sequence number of the bootflow item
+ * @passp: Returns pointer to the pass string
+ * Return 0 if OK, -ve on error
+ */
+int bc_ui_get_pass(struct udevice *dev, int seq, const char **passp);
+
+/**
+ * bc_ui_show_pass_msg() - Show or hide the pass message
+ *
+ * @dev: Display device
+ * @seq: Sequence number of the bootflow item
+ * @show: true to show the message, false to hide it
+ * Return 0 if OK, -ve on error
+ */
+int bc_ui_show_pass_msg(struct udevice *dev, int seq, bool show);
+
+/**
+ * bc_ui_set_pass_msg() - Set the pass message text
+ *
+ * @dev: Display device
+ * @seq: Sequence number of the bootflow item
+ * @msg: Message text to display
+ * Return 0 if OK, -ve on error
+ */
+int bc_ui_set_pass_msg(struct udevice *dev, int seq, const char *msg);
 
 #endif
