@@ -143,12 +143,21 @@ static int multiboot_set_item_props(struct scene *scn, int i,
 	scene_obj_set_pos(scn, ITEM_LOCKED + i,
 			  x + BOX_W - BOX_MARGIN - 24, IMAGES_Y + BOX_MARGIN);
 
+	/* Position passphrase textline at bottom of box, hidden by default */
+	scene_obj_set_pos(scn, ITEM_PASS + i, x + BOX_MARGIN,
+			  IMAGES_Y + BOX_H - 60);
+
+	/* Position message below passphrase, hidden by default */
+	scene_obj_set_pos(scn, ITEM_PASS_MSG + i, x + BOX_MARGIN,
+			  IMAGES_Y + BOX_H - 35);
+
 	ret |= scene_obj_set_hide(scn, ITEM_PREVIEW + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_BOX + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERSION_NAME + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERIFIED + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_LOCKED + i,
 				  !(bflow->flags & BOOTFLOWF_ENCRYPTED));
+	ret |= scene_obj_set_hide(scn, ITEM_PASS + i, false);
 
 	/* Hide key in multiboot mode (not used with mouse) */
 	ret |= scene_obj_set_hide(scn, ITEM_KEY + i, true);
@@ -215,6 +224,10 @@ static int multiboot_ui_set_props(struct udevice *dev, struct scene *scn,
 
 	scene_obj_set_pos(scn, OBJ_PROMPT2, MAIN_X, 180);
 	scene_obj_set_halign(scn, OBJ_PROMPT2, SCENEOA_LEFT);
+
+	/* Position passphrase input at bottom and hide by default */
+	scene_obj_set_pos(scn, ITEM_PASS, MAIN_X, 750);
+	scene_obj_set_hide(scn, ITEM_PASS, true);
 
 	scene_obj_set_hide(scn, OBJ_AUTOBOOT, !lpriv->opt_autoboot);
 
