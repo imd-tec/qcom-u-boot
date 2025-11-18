@@ -160,6 +160,26 @@ static void emit_stringlist(struct fit_print_ctx *ctx, int noffset,
 }
 
 /**
+ * emit_desc() - print a description
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the node containing the description
+ * @label: label string to use when printing
+ *
+ * Gets the description from the specified node and prints it with the given
+ * label. If the description is not available, prints "unavailable" instead.
+ * This is a convenience function for printing FIT descriptions.
+ */
+static void emit_desc(struct fit_print_ctx *ctx, int noffset,
+		      const char *label)
+{
+	const char *desc;
+	int ret;
+
+	ret = fit_get_desc(ctx->fit, noffset, &desc);
+	emit_label_val(ctx, label, ret ? "unavailable" : desc);
+}
+
+/**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
@@ -262,7 +282,6 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 {
 	const void *fit = ctx->fit;
 	uint8_t type, arch, os, comp = IH_COMP_NONE;
-	const char *desc;
 	size_t size;
 	ulong load, entry;
 	const void *data;
@@ -271,8 +290,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	int ret;
 
 	/* Mandatory properties */
-	ret = fit_get_desc(fit, image_noffset, &desc);
-	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
+	emit_desc(ctx, image_noffset, "Description");
 
 	emit_timestamp(ctx, 0, "Created");
 
@@ -368,12 +386,11 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
-	const char *uname, *desc;
-	int ret, ndepth;
+	const char *uname;
+	int ndepth;
 
 	/* Mandatory properties */
-	ret = fit_get_desc(fit, noffset, &desc);
-	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
+	emit_desc(ctx, noffset, "Description");
 
 	uname = fdt_getprop(fit, noffset, FIT_KERNEL_PROP, NULL);
 	emit_label_val(ctx, "Kernel", uname ?: "unavailable");
@@ -401,18 +418,15 @@ void fit_print(struct fit_print_ctx *ctx)
 {
 	const void *fit = ctx->fit;
 	int p = ctx->indent;
-	const char *desc;
 	char *uname;
 	int images_noffset;
 	int confs_noffset;
 	int noffset;
 	int ndepth;
 	int count = 0;
-	int ret;
 
 	/* Root node properties */
-	ret = fit_get_desc(fit, 0, &desc);
-	emit_label_val(ctx, "FIT description", ret ? "unavailable" : desc);
+	emit_desc(ctx, 0, "FIT description");
 
 	emit_timestamp(ctx, 0, "Created");
 
