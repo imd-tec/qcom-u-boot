@@ -312,16 +312,18 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	const char *uname, *desc;
 	int ret, ndepth, i;
 
+	ctx->tab = 19;
+
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, noffset, &desc);
-	printf("%s  Description:  ", p);
+	emit_label(ctx, "Description");
 	if (ret)
 		printf("unavailable\n");
 	else
 		printf("%s\n", desc);
 
 	uname = fdt_getprop(fit, noffset, FIT_KERNEL_PROP, NULL);
-	printf("%s  Kernel:       ", p);
+	emit_label(ctx, "Kernel");
 	if (!uname)
 		printf("unavailable\n");
 	else
@@ -329,27 +331,33 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 
 	/* Optional properties */
 	uname = fdt_getprop(fit, noffset, FIT_RAMDISK_PROP, NULL);
-	if (uname)
-		printf("%s  Init Ramdisk: %s\n", p, uname);
+	if (uname) {
+		emit_label(ctx, "Init Ramdisk");
+		printf("%s\n", uname);
+	}
 
 	uname = fdt_getprop(fit, noffset, FIT_FIRMWARE_PROP, NULL);
-	if (uname)
-		printf("%s  Firmware:     %s\n", p, uname);
+	if (uname) {
+		emit_label(ctx, "Firmware");
+		printf("%s\n", uname);
+	}
 
 	for (i = 0;
 	     uname = fdt_stringlist_get(fit, noffset, FIT_FDT_PROP,
 					i, NULL), uname;
 	     i++) {
 		if (!i)
-			printf("%s  FDT:          ", p);
+			emit_label(ctx, "FDT");
 		else
 			printf("%s                ", p);
 		printf("%s\n", uname);
 	}
 
 	uname = fdt_getprop(fit, noffset, FIT_FPGA_PROP, NULL);
-	if (uname)
-		printf("%s  FPGA:         %s\n", p, uname);
+	if (uname) {
+		emit_label(ctx, "FPGA");
+		printf("%s\n", uname);
+	}
 
 	/* Print out all of the specified loadables */
 	for (i = 0;
@@ -357,7 +365,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 					i, NULL), uname;
 	     i++) {
 		if (!i)
-			printf("%s  Loadables:    ", p);
+			emit_label(ctx, "Loadables");
 		else
 			printf("%s                ", p);
 		printf("%s\n", uname);
@@ -367,7 +375,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	for (i = 0; uname = fdt_stringlist_get(fit, noffset,
 				FIT_COMPATIBLE_PROP, i, NULL), uname; i++) {
 		if (!i)
-			printf("%s  Compatible:   ", p);
+			emit_label(ctx, "Compatible");
 		else
 			printf("%s                ", p);
 		printf("%s\n", uname);
