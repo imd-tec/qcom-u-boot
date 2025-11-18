@@ -295,14 +295,9 @@ static void process_subnodes(struct fit_print_ctx *ctx, int parent)
 {
 	const void *fit = ctx->fit;
 	int noffset;
-	int ndepth;
 
-	for (ndepth = 0, noffset = fdt_next_node(fit, parent, &ndepth);
-	     (noffset >= 0) && (ndepth > 0);
-	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
-		if (ndepth == 1)
-			fit_image_print_verification_data(ctx, noffset);
-	}
+	fdt_for_each_subnode(noffset, fit, parent)
+		fit_image_print_verification_data(ctx, noffset);
 }
 
 /**
@@ -431,8 +426,7 @@ void fit_print(struct fit_print_ctx *ctx)
 	int images_noffset;
 	int confs_noffset;
 	int noffset;
-	int ndepth;
-	int count = 0;
+	int count;
 
 	/* Root node properties */
 	emit_desc(ctx, 0, "FIT description");
@@ -448,22 +442,18 @@ void fit_print(struct fit_print_ctx *ctx)
 	}
 
 	/* Process its subnodes, print out component images details */
-	for (ndepth = 0, count = 0,
-		noffset = fdt_next_node(fit, images_noffset, &ndepth);
-	     (noffset >= 0) && (ndepth > 0);
-	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
-		if (ndepth == 1) {
-			/*
-			 * Direct child node of the images parent node,
-			 * i.e. component image node.
-			 */
-			printf("%*s Image %u (%s)\n", p, "", count++,
-			       fit_get_name(fit, noffset));
+	count = 0;
+	fdt_for_each_subnode(noffset, fit, images_noffset) {
+		/*
+		 * Direct child node of the images parent node,
+		 * i.e. component image node.
+		 */
+		printf("%*s Image %u (%s)\n", p, "", count++,
+		       fit_get_name(fit, noffset));
 
-			ctx->indent += 2;
-			fit_image_print(ctx, noffset);
-			ctx->indent -= 2;
-		}
+		ctx->indent += 2;
+		fit_image_print(ctx, noffset);
+		ctx->indent -= 2;
 	}
 
 	/* Find configurations parent node offset */
@@ -475,27 +465,23 @@ void fit_print(struct fit_print_ctx *ctx)
 	}
 
 	/* get default configuration unit name from default property */
-	uname = (char *)fdt_getprop(fit, noffset, FIT_DEFAULT_PROP, NULL);
+	uname = (char *)fdt_getprop(fit, confs_noffset, FIT_DEFAULT_PROP, NULL);
 	if (uname)
 		printf("%*s Default Configuration: '%s'\n", p, "", uname);
 
 	/* Process its subnodes, print out configurations details */
-	for (ndepth = 0, count = 0,
-		noffset = fdt_next_node(fit, confs_noffset, &ndepth);
-	     (noffset >= 0) && (ndepth > 0);
-	     noffset = fdt_next_node(fit, noffset, &ndepth)) {
-		if (ndepth == 1) {
-			/*
-			 * Direct child node of the configurations parent node,
-			 * i.e. configuration node.
-			 */
-			printf("%*s Configuration %u (%s)\n", p, "", count++,
-			       fit_get_name(fit, noffset));
+	count = 0;
+	fdt_for_each_subnode(noffset, fit, confs_noffset) {
+		/*
+		 * Direct child node of the configurations parent node,
+		 * i.e. configuration node.
+		 */
+		printf("%*s Configuration %u (%s)\n", p, "", count++,
+		       fit_get_name(fit, noffset));
 
-			ctx->indent += 2;
-			fit_conf_print(ctx, noffset);
-			ctx->indent -= 2;
-		}
+		ctx->indent += 2;
+		fit_conf_print(ctx, noffset);
+		ctx->indent -= 2;
 	}
 }
 
