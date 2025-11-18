@@ -140,11 +140,15 @@ static int multiboot_set_item_props(struct scene *scn, int i,
 			  IMAGES_Y + 5);
 	scene_obj_set_pos(scn, ITEM_VERIFIED + i,
 			  x + BOX_MARGIN + 40 + 32, IMAGES_Y + 80 + 21);
+	scene_obj_set_pos(scn, ITEM_LOCKED + i,
+			  x + BOX_W - BOX_MARGIN - 24, IMAGES_Y + BOX_MARGIN);
 
 	ret |= scene_obj_set_hide(scn, ITEM_PREVIEW + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_BOX + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERSION_NAME + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERIFIED + i, false);
+	ret |= scene_obj_set_hide(scn, ITEM_LOCKED + i,
+				  !(bflow->flags & BOOTFLOWF_ENCRYPTED));
 
 	/* Hide key in multiboot mode (not used with mouse) */
 	ret |= scene_obj_set_hide(scn, ITEM_KEY + i, true);
@@ -421,6 +425,10 @@ static int multiboot_ui_add(struct udevice *dev, struct osinfo *info)
 
 		logo = video_image_getptr(tick);
 		ret |= scene_img(scn, "verified", ITEM_VERIFIED + seq, logo,
+				 NULL);
+
+		logo = video_image_getptr(lock);
+		ret |= scene_img(scn, "locked", ITEM_LOCKED + seq, logo,
 				 NULL);
 	}
 
