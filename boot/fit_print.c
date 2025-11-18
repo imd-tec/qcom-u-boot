@@ -112,6 +112,28 @@ static void emit_prop(struct fit_print_ctx *ctx, int noffset,
 }
 
 /**
+ * emit_timestamp() - print a timestamp
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the node containing the timestamp
+ * @label: label string to use when printing
+ *
+ * Gets the timestamp from the specified node and prints it with the given
+ * label. If the timestamp is not available, prints "unavailable" instead.
+ * This is a convenience function for printing FIT timestamps.
+ */
+static void emit_timestamp(struct fit_print_ctx *ctx, int noffset,
+			   const char *label)
+{
+	time_t timestamp;
+
+	emit_label(ctx, label);
+	if (fit_get_timestamp(ctx->fit, noffset, &timestamp))
+		printf("unavailable\n");
+	else
+		genimg_print_time(timestamp);
+}
+
+/**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
@@ -163,15 +185,8 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 	debug("%s len:     %d\n", type, value_len);
 
 	/* Signatures have a time stamp */
-	if (IMAGE_ENABLE_TIMESTAMP && keyname) {
-		time_t timestamp;
-
-		emit_label(ctx, "Timestamp");
-		if (fit_get_timestamp(fit, noffset, &timestamp))
-			printf("unavailable\n");
-		else
-			genimg_print_time(timestamp);
-	}
+	if (IMAGE_ENABLE_TIMESTAMP && keyname)
+		emit_timestamp(ctx, noffset, "Timestamp");
 }
 
 /**
@@ -233,16 +248,8 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	ret = fit_get_desc(fit, image_noffset, &desc);
 	emit_label_val(ctx, "Description", ret ? "unavailable" : desc);
 
-	if (IMAGE_ENABLE_TIMESTAMP) {
-		time_t timestamp;
-
-		ret = fit_get_timestamp(fit, 0, &timestamp);
-		emit_label(ctx, "Created");
-		if (ret)
-			printf("unavailable\n");
-		else
-			genimg_print_time(timestamp);
-	}
+	if (IMAGE_ENABLE_TIMESTAMP)
+		emit_timestamp(ctx, 0, "Created");
 
 	fit_image_get_type(fit, image_noffset, &type);
 	emit_label_val(ctx, "Type", genimg_get_type_name(type));
@@ -393,20 +400,13 @@ void fit_print(struct fit_print_ctx *ctx)
 	int ndepth;
 	int count = 0;
 	int ret;
-	time_t timestamp;
 
 	/* Root node properties */
 	ret = fit_get_desc(fit, 0, &desc);
 	emit_label_val(ctx, "FIT description", ret ? "unavailable" : desc);
 
-	if (IMAGE_ENABLE_TIMESTAMP) {
-		ret = fit_get_timestamp(fit, 0, &timestamp);
-		printf("%*sCreated:         ", p, "");
-		if (ret)
-			printf("unavailable\n");
-		else
-			genimg_print_time(timestamp);
-	}
+	if (IMAGE_ENABLE_TIMESTAMP)
+		emit_timestamp(ctx, 0, "Created");
 
 	/* Find images parent node offset */
 	images_noffset = fdt_path_offset(fit, FIT_IMAGES_PATH);
