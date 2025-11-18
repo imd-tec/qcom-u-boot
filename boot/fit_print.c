@@ -37,6 +37,42 @@ void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
 {
 	ctx->fit = fit;
 	ctx->indent = indent;
+	ctx->tab = 16 + strlen(indent);
+}
+
+/**
+ * emit_type() - print a label with indentation and padding
+ * @ctx: pointer to FIT print context
+ * @type: type prefix (e.g., "Hash" or "Sign")
+ * @label: label suffix (e.g., "algo" or "value")
+ *
+ * Prints the indentation from the context, followed by two spaces, the type,
+ * a space, the label, a colon, and padding to align values to ctx->tab.
+ */
+static void emit_type(struct fit_print_ctx *ctx, const char *type,
+		      const char *label)
+{
+	int len;
+
+	len = printf("%s  %s %s:", ctx->indent, type, label);
+	printf("%*s", ctx->tab - len, "");
+}
+
+/**
+ * emit_label() - print a label with indentation and padding
+ * @ctx: pointer to FIT print context
+ * @type: type prefix (e.g., "Hash" or "Sign")
+ * @label: label suffix (e.g., "algo" or "value")
+ *
+ * Prints the indentation from the context, followed by two spaces, a space,
+ * the label, a colon, and padding to align values to ctx->tab.
+ */
+static void emit_label(struct fit_print_ctx *ctx, const char *label)
+{
+	int len;
+
+	len = printf("%s  %s:", ctx->indent, label);
+	printf("%*s", ctx->tab - len, "");
 }
 
 /**
@@ -63,7 +99,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 	uint8_t *value;
 
 	debug("%s  %s node:    '%s'\n", p, type, fit_get_name(fit, noffset));
-	printf("%s  %s algo:    ", p, type);
+	emit_type(ctx, type, "algo");
 	if (fit_image_hash_get_algo(fit, noffset, &algo)) {
 		printf("invalid/unsupported\n");
 		return;
@@ -79,7 +115,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 		printf("%s  %s padding: %s\n", p, type, padding);
 
 	ret = fit_image_hash_get_value(fit, noffset, &value, &value_len);
-	printf("%s  %s value:   ", p, type);
+	emit_type(ctx, type, "value");
 	if (ret) {
 		printf("unavailable\n");
 	} else {
@@ -94,7 +130,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 	if (IMAGE_ENABLE_TIMESTAMP && keyname) {
 		time_t timestamp;
 
-		printf("%s  Timestamp:    ", p);
+		emit_label(ctx, "Timestamp");
 		if (fit_get_timestamp(fit, noffset, &timestamp))
 			printf("unavailable\n");
 		else

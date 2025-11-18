@@ -1203,10 +1203,12 @@ int fit_get_subimage_count(const void *fit, int images_noffset);
  * struct fit_print_ctx - context for FIT printing
  * @fit: pointer to the FIT format image header
  * @indent: indentation string for printing
+ * @tab: amount of space to tab out for the label
  */
 struct fit_print_ctx {
 	const void *fit;
 	const char *indent;
+	int tab;
 };
 
 #if CONFIG_IS_ENABLED(FIT_PRINT)
