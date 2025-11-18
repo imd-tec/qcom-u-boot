@@ -37,10 +37,10 @@ struct udevice;
  * @default_os: name of the default OS to boot
  * @osinfo: List of OSes to show
  * @refresh: true if we need to refresh the UI because something has changed
+ * @selected_seq: sequence number of OS waiting for passphrase, or -1 if none
+ * @ready_to_boot: true if success message shown, ready to boot on next poll
  *
  * @iter: oslist iterator, used to find new OSes
- * @selected: index of selected OS in osinfo alist, or -1 if none has been
- *	selected yet
  * @meas: TPM-measurement device
  * @oslist: provides OSes to boot; we iterate through each osinfo driver to find
  * all OSes
@@ -68,6 +68,8 @@ struct logic_priv {
 	const char *default_os;
 	struct alist osinfo;
 	bool refresh;
+	int selected_seq;
+	bool ready_to_boot;
 
 	struct oslist_iter iter;
 	struct udevice *meas;

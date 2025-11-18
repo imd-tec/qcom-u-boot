@@ -242,8 +242,22 @@ static int logic_poll(struct udevice *dev)
 		struct osinfo *os;
 
 		os = alist_getw(&priv->osinfo, seq, struct osinfo);
+		if (!os)
+			return log_msg_ret("gos", -ENOENT);
+		priv->ready_to_boot = false;
+		priv->selected_seq = seq;
+	}
+
+	if (priv->ready_to_boot) {
+		struct osinfo *os;
+
+		seq = priv->selected_seq;
+		os = alist_getw(&priv->osinfo, seq, struct osinfo);
+		if (!os)
+			return log_msg_ret("gbo", -ENOENT);
 		log_info("Selected %d: %s\n", seq, os->bflow.os_name);
 
+		priv->ready_to_boot = false;
 		/*
 		 * try to read the images first; some methods don't support
 		 * this
