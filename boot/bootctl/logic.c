@@ -74,8 +74,6 @@ static int logic_start(struct udevice *dev)
 	int ret;
 
 	if (priv->opt_persist_state) {
-		int ret;
-
 		/* read in our state */
 		ret = bc_state_load(priv->state);
 		if (ret)
@@ -263,16 +261,11 @@ static int logic_poll(struct udevice *dev)
 		 * this
 		 */
 		ret = read_images(dev, os);
-		if (ret && ret != -ENOSYS) {
-			if (ret)
-				return log_msg_ret("lri", ret);
-		}
+		if (ret && ret != -ENOSYS)
+			return log_msg_ret("lri", ret);
 		ret = prepare_for_boot(dev, os);
 		if (ret)
 			return log_msg_ret("lpb", ret);
-
-		/* debugging */
-		// return -ESHUTDOWN;
 
 		/* boot OS */
 		ret = bootflow_boot(&os->bflow);
