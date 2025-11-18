@@ -17,8 +17,6 @@
 #include <dm.h>
 #include <expo.h>
 #include <os.h>
-#include <test/ut.h>
-#include <test/video.h>
 #include "bootctl_common.h"
 #include <bootctl/logic.h>
 #include <bootctl/measure.h>
@@ -26,6 +24,8 @@
 #include <bootctl/state.h>
 #include <bootctl/ui.h>
 #include <dm/lists.h>
+#include <test/ut.h>
+#include <test/video.h>
 #include "../bootstd_common.h"
 
 /* test that expected devices are available and can be probed */
