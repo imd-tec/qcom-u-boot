@@ -396,7 +396,7 @@ static int check_multiboot_ui(struct unit_test_state *uts,
 	ut_assertok(bc_ui_add(ui_dev, &info[0]));
 	ut_assertok(bc_ui_add(ui_dev, &info[1]));
 	ut_assertok(bc_ui_render(ui_dev));
-	ut_asserteq(16645, video_compress_fb(uts, vid_dev, false));
+	ut_asserteq(13702, video_compress_fb(uts, vid_dev, false));
 
 	/* dump after render - buf2 is golden for multiboot_ui */
 	uc_priv = dev_get_uclass_priv(ui_dev);
@@ -435,7 +435,7 @@ static int check_multiboot_ui(struct unit_test_state *uts,
 	/* switch back to multiboot UI style and check against buf2 */
 	ut_assertok(bc_ui_switch_layout(ui_dev));
 	ut_assertok(bc_ui_render(ui_dev));
-	ut_asserteq(16645, video_compress_fb(uts, vid_dev, false));
+	ut_asserteq(13702, video_compress_fb(uts, vid_dev, false));
 
 	/* dump after switch back to multiboot - buf4 should match buf2 */
 	ut_assertok(membuf_new(&buf4, 4096));

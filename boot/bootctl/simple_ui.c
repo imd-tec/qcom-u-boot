@@ -92,8 +92,11 @@ static int simple_ui_show(struct udevice *dev)
 	abuf_printf(buf, "Boot control");
 
 	if (upriv->logo) {
-		ret = scene_img_set_data(scn, OBJ_U_BOOT_LOGO,
-					       upriv->logo, upriv->logo_size);
+		const void *logo;
+		int size;
+
+		logo = video_get_u_boot_logo(&size);
+		ret = scene_img_set_data(scn, OBJ_U_BOOT_LOGO, logo, size);
 		if (ret)
 			return log_msg_ret("log", ret);
 		ret = scene_obj_set_pos(scn, OBJ_U_BOOT_LOGO, 1135, 10);

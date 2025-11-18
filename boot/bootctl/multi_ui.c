@@ -215,6 +215,10 @@ static int multiboot_ui_set_props(struct udevice *dev, struct scene *scn,
 	scene_obj_set_hide(scn, OBJ_AUTOBOOT, !lpriv->opt_autoboot);
 
 	if (upriv->logo) {
+		ret = scene_img_set_data(scn, OBJ_U_BOOT_LOGO, upriv->logo,
+					 upriv->logo_size);
+		if (ret)
+			return log_msg_ret("log", ret);
 		ret = scene_obj_set_pos(scn, OBJ_U_BOOT_LOGO, 1045, 10);
 		if (ret)
 			return log_msg_ret("lop", ret);

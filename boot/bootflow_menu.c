@@ -80,8 +80,17 @@ int bootflow_menu_set_props(struct expo *exp, struct scene *scn, bool has_logo,
 				  1366, 60);
 	ret |= scene_obj_set_halign(scn, OBJ_MENU_TITLE, SCENEOA_CENTRE);
 
-	if (has_logo)
+	if (has_logo) {
+		const void *logo;
+		int size;
+
 		ret |= scene_obj_set_pos(scn, OBJ_U_BOOT_LOGO, 1165, 100);
+
+		logo = video_get_u_boot_logo(&size);
+		ret |= scene_img_set_data(scn, OBJ_U_BOOT_LOGO, logo, size);
+		if (ret)
+			return log_msg_ret("log", ret);
+	}
 
 	ret |= scene_obj_set_bbox(scn, OBJ_PROMPT1A, 0, 590,
 				  1366, 590 + 40);

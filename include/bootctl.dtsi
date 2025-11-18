@@ -120,6 +120,9 @@
 			"bootctl,ui";
 		graphical = "if-available";
 		textual = "if-available";
+#ifdef CANONICAL_LOGO
+		logo = /incbin/("/home/sglass/u/boot/bootctl/canonical.bmp");
+#endif
 	};
 
 	ui-simple {
