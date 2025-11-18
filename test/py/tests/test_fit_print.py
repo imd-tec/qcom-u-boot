@@ -65,6 +65,44 @@ PRINT_ITS = '''
 				algo = "sha256";
 			};
 		};
+		firmware-1 {
+			description = "Test Firmware 1";
+			data = /incbin/("%(firmware1)s");
+			type = "firmware";
+			arch = "sandbox";
+			compression = "none";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		firmware-2 {
+			description = "Test Firmware 2";
+			data = /incbin/("%(firmware2)s");
+			type = "firmware";
+			arch = "sandbox";
+			compression = "none";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fpga {
+			description = "Test FPGA";
+			data = /incbin/("%(fpga)s");
+			type = "fpga";
+			arch = "sandbox";
+			compression = "none";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		script {
+			data = /incbin/("%(script)s");
+			type = "script";
+			compression = "none";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
 	};
 	configurations {
 		default = "conf-1";
@@ -73,6 +111,7 @@ PRINT_ITS = '''
 			kernel = "kernel";
 			fdt = "fdt-1";
 			ramdisk = "ramdisk";
+			compatible = "vendor,board-1.0", "vendor,board";
 			signature {
 				algo = "sha256,rsa2048";
 				padding = "pkcs-1.5";
@@ -84,6 +123,12 @@ PRINT_ITS = '''
 			description = "Alternate configuration";
 			kernel = "kernel";
 			fdt = "fdt-1", "fdt-2";
+			fpga = "fpga";
+			loadables = "firmware-1", "firmware-2";
+			compatible = "vendor,board-2.0";
+		};
+		conf-3 {
+			loadables = "script";
 		};
 	};
 };
@@ -121,7 +166,11 @@ def test_fit_print(ubman):
 	model = "Test FDT 2";
 };
 ''', 'test-fdt-2')
+    firmware1 = fit_util.make_kernel(ubman, 'test-firmware-1.bin', 'firmware 1')
+    firmware2 = fit_util.make_kernel(ubman, 'test-firmware-2.bin', 'firmware 2')
+    fpga = fit_util.make_kernel(ubman, 'test-fpga.bin', 'fpga bitstream')
     ramdisk = fit_util.make_kernel(ubman, 'test-ramdisk.bin', 'ramdisk')
+    script = fit_util.make_kernel(ubman, 'test-script.bin', 'echo test')
 
     # Compress the ramdisk (with -n to avoid timestamps for reproducibility)
     ramdisk_gz = ramdisk + '.gz'
@@ -132,7 +181,11 @@ def test_fit_print(ubman):
         'kernel': kernel_gz,
         'fdt1': fdt1,
         'fdt2': fdt2,
+        'firmware1': firmware1,
+        'firmware2': firmware2,
+        'fpga': fpga,
         'ramdisk': ramdisk_gz,
+        'script': script,
     }
     env = os.environ.copy()
     env['SOURCE_DATE_EPOCH'] = '1234567890'  # 2009-02-13 23:31:30 UTC
@@ -189,6 +242,10 @@ S0n8gbs0Ht/ZckLk8mPclbk=
     utils.run_and_log(ubman, [mkimage, '-F', '-k', tmpdir, '-K', dtb,
                               '-r', fit, '-c', 'Configuration signing'],
                       env=env)
+
+    # Delete the algo property from the hash-1 node to test invalid/unsupported
+    utils.run_and_log(ubman, ['fdtput', '-d', fit, '/images/script/hash-1',
+                              'algo'])
 
     # Run the C test which will load and verify this FIT
     ubman.run_command('ut -f bootstd test_fit_print_norun')
