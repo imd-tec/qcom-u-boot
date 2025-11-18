@@ -26,6 +26,7 @@ struct fdt_region;
 #include <sys/types.h>
 #include <linux/kconfig.h>
 
+#define IMAGE_INDENT		0
 #define IMAGE_INDENT_STRING	""
 #define BIT(nr)			(1UL << (nr))
 
@@ -37,6 +38,7 @@ struct fdt_region;
 #include <linker_lists.h>
 #include <linux/bitops.h>
 
+#define IMAGE_INDENT		3
 #define IMAGE_INDENT_STRING	"   "
 
 #endif /* USE_HOSTCC */
@@ -1202,12 +1204,12 @@ int fit_get_subimage_count(const void *fit, int images_noffset);
 /**
  * struct fit_print_ctx - context for FIT printing
  * @fit: pointer to the FIT format image header
- * @indent: indentation string for printing
+ * @indent: indentation level for printing
  * @tab: amount of space to tab out for the label
  */
 struct fit_print_ctx {
 	const void *fit;
-	const char *indent;
+	int indent;
 	int tab;
 };
 
@@ -1217,12 +1219,10 @@ struct fit_print_ctx {
  * fit_print_init() - initialize FIT print context
  * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
- * @indent: indentation string for printing
  *
  * This inits a fit_print_ctx structure with the given FIT image.
  */
-void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
-		    const char *indent);
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit);
 
 /**
  * fit_print() - prints out the contents of the FIT format image
@@ -1268,8 +1268,7 @@ void fit_print_contents(const void *fit);
 
 #else /* !FIT_PRINT */
 
-static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
-				  const char *indent)
+static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
 {
 }
 static inline void fit_print(const void *fit) {}

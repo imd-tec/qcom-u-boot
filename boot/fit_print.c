@@ -28,16 +28,14 @@
  * fit_print_init() - initialize FIT print context
  * @ctx: pointer to FIT print context to initialize
  * @fit: pointer to the FIT format image header
- * @indent: indentation string for printing
  *
  * This initializes a fit_print_ctx structure with the given FIT image.
  */
-void fit_print_init(struct fit_print_ctx *ctx, const void *fit,
-		    const char *indent)
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
 {
 	ctx->fit = fit;
-	ctx->indent = indent;
-	ctx->tab = 16 + strlen(indent);
+	ctx->indent = IMAGE_INDENT;
+	ctx->tab = 16 + IMAGE_INDENT;
 }
 
 /**
@@ -54,7 +52,7 @@ static void emit_type(struct fit_print_ctx *ctx, const char *type,
 {
 	int len;
 
-	len = printf("%s  %s %s:", ctx->indent, type, label);
+	len = printf("%*s%s %s:", ctx->indent, "", type, label);
 	printf("%*s", ctx->tab - len, "");
 }
 
@@ -71,7 +69,7 @@ static void emit_label(struct fit_print_ctx *ctx, const char *label)
 {
 	int len;
 
-	len = printf("%s  %s:", ctx->indent, label);
+	len = printf("%*s%s:", ctx->indent, "", label);
 	printf("%*s", ctx->tab - len, "");
 }
 
@@ -110,12 +108,11 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 				 const char *type)
 {
 	const char *keyname, *padding, *algo;
-	const char *p = ctx->indent;
+	int p = ctx->indent;
 	const void *fit = ctx->fit;
 	int value_len, ret, i;
 	uint8_t *value;
 
-	debug("%s  %s node:    '%s'\n", p, type, fit_get_name(fit, noffset));
 	emit_type(ctx, type, "algo");
 	if (fit_image_hash_get_algo(fit, noffset, &algo)) {
 		printf("invalid/unsupported\n");
@@ -129,7 +126,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 
 	padding = fdt_getprop(fit, noffset, "padding", NULL);
 	if (padding)
-		printf("%s  %s padding: %s\n", p, type, padding);
+		printf("%*s%s padding: %s\n", p, "", type, padding);
 
 	ret = fit_image_hash_get_value(fit, noffset, &value, &value_len);
 	emit_type(ctx, type, "value");
@@ -141,7 +138,7 @@ static void fit_image_print_data(struct fit_print_ctx *ctx, int noffset,
 		printf("\n");
 	}
 
-	debug("%s  %s len:     %d\n", p, type, value_len);
+	debug("%s len:     %d\n", type, value_len);
 
 	/* Signatures have a time stamp */
 	if (IMAGE_ENABLE_TIMESTAMP && keyname) {
@@ -317,11 +314,9 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 {
 	const void *fit = ctx->fit;
-	const char *p = ctx->indent;
+	int p = ctx->indent;
 	const char *uname, *desc;
 	int ret, ndepth, i;
-
-	ctx->tab = 19;
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, noffset, &desc);
@@ -346,7 +341,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "FDT");
 		else
-			printf("%s                ", p);
+			printf("%*s              ", p, "");
 		printf("%s\n", uname);
 	}
 
@@ -362,7 +357,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "Loadables");
 		else
-			printf("%s                ", p);
+			printf("%*s              ", p, "");
 		printf("%s\n", uname);
 	}
 
@@ -372,7 +367,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 		if (!i)
 			emit_label(ctx, "Compatible");
 		else
-			printf("%s                ", p);
+			printf("%*s              ", p, "");
 		printf("%s\n", uname);
 	}
 
@@ -390,7 +385,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 void fit_print(struct fit_print_ctx *ctx)
 {
 	const void *fit = ctx->fit;
-	const char *p = ctx->indent;
+	int p = ctx->indent;
 	const char *desc;
 	char *uname;
 	int images_noffset;
@@ -403,7 +398,7 @@ void fit_print(struct fit_print_ctx *ctx)
 
 	/* Root node properties */
 	ret = fit_get_desc(fit, 0, &desc);
-	printf("%sFIT description: ", p);
+	printf("%*sFIT description: ", p, "");
 	if (ret)
 		printf("unavailable\n");
 	else
@@ -411,7 +406,7 @@ void fit_print(struct fit_print_ctx *ctx)
 
 	if (IMAGE_ENABLE_TIMESTAMP) {
 		ret = fit_get_timestamp(fit, 0, &timestamp);
-		printf("%sCreated:         ", p);
+		printf("%*sCreated:         ", p, "");
 		if (ret)
 			printf("unavailable\n");
 		else
@@ -436,10 +431,12 @@ void fit_print(struct fit_print_ctx *ctx)
 			 * Direct child node of the images parent node,
 			 * i.e. component image node.
 			 */
-			printf("%s Image %u (%s)\n", p, count++,
+			printf("%*s Image %u (%s)\n", p, "", count++,
 			       fit_get_name(fit, noffset));
 
+			ctx->indent += 2;
 			fit_image_print(ctx, noffset);
+			ctx->indent -= 2;
 		}
 	}
 
@@ -454,7 +451,7 @@ void fit_print(struct fit_print_ctx *ctx)
 	/* get default configuration unit name from default property */
 	uname = (char *)fdt_getprop(fit, noffset, FIT_DEFAULT_PROP, NULL);
 	if (uname)
-		printf("%s Default Configuration: '%s'\n", p, uname);
+		printf("%*s Default Configuration: '%s'\n", p, "", uname);
 
 	/* Process its subnodes, print out configurations details */
 	for (ndepth = 0, count = 0,
@@ -466,10 +463,12 @@ void fit_print(struct fit_print_ctx *ctx)
 			 * Direct child node of the configurations parent node,
 			 * i.e. configuration node.
 			 */
-			printf("%s Configuration %u (%s)\n", p, count++,
+			printf("%*s Configuration %u (%s)\n", p, "", count++,
 			       fit_get_name(fit, noffset));
 
+			ctx->indent += 2;
 			fit_conf_print(ctx, noffset);
+			ctx->indent -= 2;
 		}
 	}
 }
@@ -478,6 +477,6 @@ void fit_print_contents(const void *fit)
 {
 	struct fit_print_ctx ctx;
 
-	fit_print_init(&ctx, fit, IMAGE_INDENT_STRING);
+	fit_print_init(&ctx, fit);
 	fit_print(&ctx);
 }

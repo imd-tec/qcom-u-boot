@@ -940,10 +940,10 @@ static int fit_extract_contents(void *ptr, struct imgtool *itl)
 	int ndepth;
 	const void *fit = ptr;
 	int count = 0;
-	const char *p;
+	int p;
 
-	/* Indent string is defined in header image.h */
-	p = IMAGE_INDENT_STRING;
+	/* Indent value is defined in header image.h */
+	p = 5;
 
 	/* Find images parent node offset */
 	images_noffset = fdt_path_offset(fit, FIT_IMAGES_PATH);
@@ -973,10 +973,10 @@ static int fit_extract_contents(void *ptr, struct imgtool *itl)
 			if (itl->pflag == count) {
 				struct fit_print_ctx ctx;
 
-				printf("Extracted:\n%s Image %u (%s)\n", p,
+				printf("Extracted:\n%*s Image %u (%s)\n", p, "",
 				       count, fit_get_name(fit, noffset));
 
-				fit_print_init(&ctx, fit, p);
+				fit_print_init(&ctx, fit);
 				fit_image_print(&ctx, noffset);
 
 				return fit_image_extract(fit, noffset,

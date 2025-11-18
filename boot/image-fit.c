@@ -1557,7 +1557,7 @@ static int print_and_verify(const void *fit, int rd_noffset, int verify)
 {
 	struct fit_print_ctx ctx;
 
-	fit_print_init(&ctx, fit, "   ");
+	fit_print_init(&ctx, fit);
 	fit_image_print(&ctx, rd_noffset);
 
 	if (verify) {
