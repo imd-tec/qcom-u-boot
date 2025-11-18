@@ -158,3 +158,35 @@ static int test_fit_print_norun(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(test_fit_print_norun, UTF_CONSOLE | UTF_MANUAL);
+
+/* Test fit_print_contents() with missing FIT description */
+static int test_fit_print_no_desc_norun(struct unit_test_state *uts)
+{
+	char fname[256];
+	void *fit;
+	void *buf;
+	ulong addr;
+	int size;
+
+	/* Load the FIT created by the Python test (with deleted description) */
+	ut_assertok(os_persistent_file(fname, sizeof(fname),
+				       "test-fit-nodesc.fit"));
+	ut_assertok(os_read_file(fname, &buf, &size));
+
+	/* Copy to address 0x10000 and print from there */
+	addr = 0x10000;
+	fit = map_sysmem(addr, size);
+	memcpy(fit, buf, size);
+
+	/* Print it and check just the first line */
+	console_record_reset_enable();
+	fit_print_contents(fit);
+
+	/* Check the first line shows unavailable */
+	ut_assert_nextline("   FIT description: unavailable");
+
+	os_free(buf);
+
+	return 0;
+}
+BOOTSTD_TEST(test_fit_print_no_desc_norun, UTF_CONSOLE | UTF_MANUAL);
