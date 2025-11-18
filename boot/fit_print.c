@@ -91,6 +91,27 @@ static void emit_label_val(struct fit_print_ctx *ctx, const char *label,
 }
 
 /**
+ * emit_prop() - print a property if it exists
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the node containing the property
+ * @prop: property name to get and print
+ * @label: label string to use when printing
+ *
+ * Gets a property from the specified node and prints it with the given label
+ * only if the property exists. This is a convenience function for optional
+ * properties that should only be printed when present.
+ */
+static void emit_prop(struct fit_print_ctx *ctx, int noffset,
+		      const char *prop, const char *label)
+{
+	const char *val;
+
+	val = fdt_getprop(ctx->fit, noffset, prop, NULL);
+	if (val)
+		emit_label_val(ctx, label, val);
+}
+
+/**
  * fit_image_print_data() - prints out the hash node details
  * @ctx: pointer to FIT print context
  * @noffset: offset of the hash node
@@ -326,13 +347,8 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	emit_label_val(ctx, "Kernel", uname ?: "unavailable");
 
 	/* Optional properties */
-	uname = fdt_getprop(fit, noffset, FIT_RAMDISK_PROP, NULL);
-	if (uname)
-		emit_label_val(ctx, "Init Ramdisk", uname);
-
-	uname = fdt_getprop(fit, noffset, FIT_FIRMWARE_PROP, NULL);
-	if (uname)
-		emit_label_val(ctx, "Firmware", uname);
+	emit_prop(ctx, noffset, FIT_RAMDISK_PROP, "Init Ramdisk");
+	emit_prop(ctx, noffset, FIT_FIRMWARE_PROP, "Firmware");
 
 	for (i = 0;
 	     uname = fdt_stringlist_get(fit, noffset, FIT_FDT_PROP,
@@ -340,9 +356,7 @@ static void fit_conf_print(struct fit_print_ctx *ctx, int noffset)
 	     i++)
 		emit_label_val(ctx, i ? "" : "FDT", uname);
 
-	uname = fdt_getprop(fit, noffset, FIT_FPGA_PROP, NULL);
-	if (uname)
-		emit_label_val(ctx, "FPGA", uname);
+	emit_prop(ctx, noffset, FIT_FPGA_PROP, "FPGA");
 
 	/* Print out all of the specified loadables */
 	for (i = 0;
