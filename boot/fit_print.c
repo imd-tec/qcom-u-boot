@@ -340,29 +340,27 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 		genimg_print_size(size);
 
 	/* Remaining, type dependent properties */
-	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
-	    type == IH_TYPE_RAMDISK || type == IH_TYPE_FIRMWARE ||
-	    type == IH_TYPE_FLATDT) {
+	bool loadable = type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
+			type == IH_TYPE_RAMDISK;
+
+	if (loadable || type == IH_TYPE_FIRMWARE || type == IH_TYPE_FLATDT) {
 		fit_image_get_arch(fit, image_noffset, &arch);
 		emit_label_val(ctx, "Architecture", genimg_get_arch_name(arch));
 	}
 
-	if (type == IH_TYPE_KERNEL || type == IH_TYPE_RAMDISK ||
-	    type == IH_TYPE_FIRMWARE) {
+	if (loadable || type == IH_TYPE_FIRMWARE) {
 		fit_image_get_os(fit, image_noffset, &os);
 		emit_label_val(ctx, "OS", genimg_get_os_name(os));
 	}
 
-	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
-	    type == IH_TYPE_FIRMWARE || type == IH_TYPE_RAMDISK ||
-	    type == IH_TYPE_FPGA || type == IH_TYPE_FLATDT) {
+	if (loadable || type == IH_TYPE_FIRMWARE || type == IH_TYPE_FPGA ||
+	    type == IH_TYPE_FLATDT) {
 		ret = fit_image_get_load(fit, image_noffset, &load);
-		if ((type != IH_TYPE_FLATDT) || !ret)
+		if (type != IH_TYPE_FLATDT || !ret)
 			emit_addr(ctx, "Load Address", load, !ret);
 	}
 
-	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
-	    type == IH_TYPE_RAMDISK) {
+	if (loadable) {
 		ret = fit_image_get_entry(fit, image_noffset, &entry);
 		emit_addr(ctx, "Entry Point", entry, !ret);
 	}
