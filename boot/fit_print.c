@@ -184,7 +184,6 @@ static void fit_image_print_verification_data(struct fit_print_ctx *ctx,
 void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 {
 	const void *fit = ctx->fit;
-	const char *p = ctx->indent;
 	uint8_t type, arch, os, comp = IH_COMP_NONE;
 	const char *desc;
 	size_t size;
@@ -196,7 +195,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 
 	/* Mandatory properties */
 	ret = fit_get_desc(fit, image_noffset, &desc);
-	printf("%s  Description:  ", p);
+	emit_label(ctx, "Description");
 	if (ret)
 		printf("unavailable\n");
 	else
@@ -206,7 +205,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 		time_t timestamp;
 
 		ret = fit_get_timestamp(fit, 0, &timestamp);
-		printf("%s  Created:      ", p);
+		emit_label(ctx, "Created");
 		if (ret)
 			printf("unavailable\n");
 		else
@@ -214,15 +213,17 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	}
 
 	fit_image_get_type(fit, image_noffset, &type);
-	printf("%s  Type:         %s\n", p, genimg_get_type_name(type));
+	emit_label(ctx, "Type");
+	printf("%s\n", genimg_get_type_name(type));
 
 	fit_image_get_comp(fit, image_noffset, &comp);
-	printf("%s  Compression:  %s\n", p, genimg_get_comp_name(comp));
+	emit_label(ctx, "Compression");
+	printf("%s\n", genimg_get_comp_name(comp));
 
 	ret = fit_image_get_data(fit, image_noffset, &data, &size);
 
 	if (!tools_build()) {
-		printf("%s  Data Start:   ", p);
+		emit_label(ctx, "Data Start");
 		if (ret) {
 			printf("unavailable\n");
 		} else {
@@ -232,7 +233,7 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 		}
 	}
 
-	printf("%s  Data Size:    ", p);
+	emit_label(ctx, "Data Size");
 	if (ret)
 		printf("unavailable\n");
 	else
@@ -243,20 +244,22 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 	    type == IH_TYPE_RAMDISK || type == IH_TYPE_FIRMWARE ||
 	    type == IH_TYPE_FLATDT) {
 		fit_image_get_arch(fit, image_noffset, &arch);
-		printf("%s  Architecture: %s\n", p, genimg_get_arch_name(arch));
+		emit_label(ctx, "Architecture");
+		printf("%s\n", genimg_get_arch_name(arch));
 	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_RAMDISK ||
 	    type == IH_TYPE_FIRMWARE) {
 		fit_image_get_os(fit, image_noffset, &os);
-		printf("%s  OS:           %s\n", p, genimg_get_os_name(os));
+		emit_label(ctx, "OS");
+		printf("%s\n", genimg_get_os_name(os));
 	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
 	    type == IH_TYPE_FIRMWARE || type == IH_TYPE_RAMDISK ||
 	    type == IH_TYPE_FPGA) {
 		ret = fit_image_get_load(fit, image_noffset, &load);
-		printf("%s  Load Address: ", p);
+		emit_label(ctx, "Load Address");
 		if (ret)
 			printf("unavailable\n");
 		else
@@ -265,13 +268,15 @@ void fit_image_print(struct fit_print_ctx *ctx, int image_noffset)
 
 	/* optional load address for FDT */
 	if (type == IH_TYPE_FLATDT &&
-	    !fit_image_get_load(fit, image_noffset, &load))
-		printf("%s  Load Address: 0x%08lx\n", p, load);
+	    !fit_image_get_load(fit, image_noffset, &load)) {
+		emit_label(ctx, "Load Address");
+		printf("0x%08lx\n", load);
+	}
 
 	if (type == IH_TYPE_KERNEL || type == IH_TYPE_STANDALONE ||
 	    type == IH_TYPE_RAMDISK) {
 		ret = fit_image_get_entry(fit, image_noffset, &entry);
-		printf("%s  Entry Point:  ", p);
+		emit_label(ctx, "Entry Point");
 		if (ret)
 			printf("unavailable\n");
 		else
