@@ -5,6 +5,8 @@
 """Test for FIT image printing"""
 
 import os
+import re
+import time
 
 import pytest
 
@@ -280,3 +282,150 @@ def test_fit_print_no_desc(ubman):
     ubman.run_command('ut -f bootstd test_fit_print_no_desc_norun')
     result = ubman.run_command('echo $?')
     assert '0' == result
+
+@pytest.mark.boardspec('sandbox')
+@pytest.mark.buildconfigspec('fit_print')
+@pytest.mark.requiredtool('dtc')
+@pytest.mark.requiredtool('openssl')
+def test_fit_print_mkimage(ubman):
+    """Test 'mkimage -l' output on FIT image"""
+    mkimage = os.path.join(ubman.config.build_dir, 'tools/mkimage')
+    fit = fit_util.make_fname(ubman, 'test-fit-mkimage.fit')
+    build_test_fit(ubman, fit)
+
+    # Run mkimage -l and capture output
+    output = utils.run_and_log(ubman, [mkimage, '-l', fit])
+
+    # Extract the actual timestamp from mkimage output to avoid timezone issues
+    # mkimage uses localtime() which can vary based on system timezone
+    match = re.search(r'Created:\s+(.+)', output)
+    if not match:
+        raise ValueError("Could not find Created: line in mkimage output")
+    timestamp_str = match.group(1).strip()
+
+    expected_timestamp = 1234567890
+    # Validate timestamp is reasonable (SOURCE_DATE_EPOCH)
+    parsed_time = time.strptime(timestamp_str, '%a %b %d %H:%M:%S %Y')
+    parsed_timestamp = time.mktime(parsed_time)
+    time_diff = abs(parsed_timestamp - expected_timestamp)
+
+    # Check it is within 24 hours (86400 seconds)
+    assert time_diff < 86400, \
+        f"Timestamp {timestamp_str} is more than 24 hours from expected"
+
+    # Expected output (complete output from mkimage -l)
+    expected = f'''
+FIT description: Test FIT image for printing
+Created:         {timestamp_str}
+ Image 0 (kernel)
+  Description:  Test kernel
+  Created:      {timestamp_str}
+  Type:         Kernel Image
+  Compression:  gzip compressed
+  Data Size:    327 Bytes = 0.32 KiB = 0.00 MiB
+  Architecture: Sandbox
+  OS:           Linux
+  Load Address: 0x01000000
+  Entry Point:  0x01000000
+  Hash algo:    sha256
+  Hash value:   fad998b94ef12fdac0c347915d8b9b6069a4011399e1a2097638a2cb33244cee
+ Image 1 (ramdisk)
+  Description:  Test ramdisk
+  Created:      {timestamp_str}
+  Type:         RAMDisk Image
+  Compression:  uncompressed
+  Data Size:    301 Bytes = 0.29 KiB = 0.00 MiB
+  Architecture: Sandbox
+  OS:           Linux
+  Load Address: 0x02000000
+  Entry Point:  unavailable
+  Hash algo:    sha256
+  Hash value:   53e2a65d92ad890dcd89d83a1f95ad6b8206e0e4889548b035062fc494e7f655
+ Image 2 (fdt-1)
+  Description:  Test FDT 1
+  Created:      {timestamp_str}
+  Type:         Flat Device Tree
+  Compression:  uncompressed
+  Data Size:    161 Bytes = 0.16 KiB = 0.00 MiB
+  Architecture: Sandbox
+  Hash algo:    sha256
+  Hash value:   1264bc4619a1162736fdca8e63e44a1b009fbeaaa259c356b555b91186257ffb
+ Image 3 (fdt-2)
+  Description:  Test FDT 2
+  Created:      {timestamp_str}
+  Type:         Flat Device Tree
+  Compression:  uncompressed
+  Data Size:    161 Bytes = 0.16 KiB = 0.00 MiB
+  Architecture: Sandbox
+  Hash algo:    sha256
+  Hash value:   3a07e37c76dd48c2a17927981f0959758ac6fd0d649e2032143c5afeea9a98a4
+ Image 4 (firmware-1)
+  Description:  Test Firmware 1
+  Created:      {timestamp_str}
+  Type:         Firmware
+  Compression:  uncompressed
+  Data Size:    3891 Bytes = 3.80 KiB = 0.00 MiB
+  Architecture: Sandbox
+  OS:           Unknown OS
+  Load Address: unavailable
+  Hash algo:    sha256
+  Hash value:   53f1358540a556282764ceaf2912e701d2e25902a6b069b329e57e3c59148414
+ Image 5 (firmware-2)
+  Description:  Test Firmware 2
+  Created:      {timestamp_str}
+  Type:         Firmware
+  Compression:  uncompressed
+  Data Size:    3891 Bytes = 3.80 KiB = 0.00 MiB
+  Architecture: Sandbox
+  OS:           Unknown OS
+  Load Address: unavailable
+  Hash algo:    sha256
+  Hash value:   6a12ac2283f3c9605113b5c2287e983da5671d8d0015381009d75169526676f1
+ Image 6 (fpga)
+  Description:  Test FPGA
+  Created:      {timestamp_str}
+  Type:         FPGA Image
+  Compression:  uncompressed
+  Data Size:    4291 Bytes = 4.19 KiB = 0.00 MiB
+  Load Address: unavailable
+  Hash algo:    sha256
+  Hash value:   2f588e50e95abc7f9d6afd1d5b3f2bf285cccd55efcf52f47a975dbff3265622
+ Image 7 (script)
+  Description:  unavailable
+  Created:      {timestamp_str}
+  Type:         Script
+  Compression:  uncompressed
+  Data Size:    3791 Bytes = 3.70 KiB = 0.00 MiB
+  Hash algo:    invalid/unsupported
+ Default Configuration: 'conf-1'
+ Configuration 0 (conf-1)
+  Description:  Test configuration
+  Kernel:       kernel
+  Init Ramdisk: ramdisk
+  FDT:          fdt-1
+  Compatible:   vendor,board-1.0
+                vendor,board
+  Sign algo:    sha256,rsa2048:test-key
+  Sign padding: pkcs-1.5
+  Sign value:   c20f64d9bf79ddb0b1a69293b2375ad88e70536684705a9577f2156e6da4df6d
+  Timestamp:    {timestamp_str}
+ Configuration 1 (conf-2)
+  Description:  Alternate configuration
+  Kernel:       kernel
+  FDT:          fdt-1
+                fdt-2
+  FPGA:         fpga
+  Loadables:    firmware-1
+                firmware-2
+  Compatible:   vendor,board-2.0
+ Configuration 2 (conf-3)
+  Description:  unavailable
+  Kernel:       unavailable
+  Loadables:    script
+'''.strip().split('\n')
+
+    lines = output.split('\n')
+    for seq, (expected, line) in enumerate(zip(expected, lines)):
+        exp = expected[:80]
+        act = line[:80]
+        assert exp == act, f"line {seq + 1}: expect '{exp}' got '{act}'"
