@@ -76,7 +76,7 @@ static int fit_image_setup_decrypt(struct image_cipher_info *info,
 	char *algo_name;
 	int ret;
 
-	node_name = fit_get_name(fit, image_noffset, NULL);
+	node_name = fit_get_name(fit, image_noffset);
 	if (!node_name) {
 		printf("Can't get node name\n");
 		return -1;

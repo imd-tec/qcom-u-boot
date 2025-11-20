@@ -145,7 +145,7 @@ static int fit_image_verify_sig(const void *fit, int image_noffset,
 
 	/* Process all hash subnodes of the component image node */
 	fdt_for_each_subnode(noffset, fit, image_noffset) {
-		const char *name = fit_get_name(fit, noffset, NULL);
+		const char *name = fit_get_name(fit, noffset);
 
 		/*
 		 * We don't support this since libfdt considers names with the
@@ -178,8 +178,8 @@ static int fit_image_verify_sig(const void *fit, int image_noffset,
 
 error:
 	printf(" error!\n%s for '%s' hash node in '%s' image node\n",
-	       err_msg, fit_get_name(fit, noffset, NULL),
-	       fit_get_name(fit, image_noffset, NULL));
+	       err_msg, fit_get_name(fit, noffset),
+	       fit_get_name(fit, image_noffset));
 	return -1;
 }
 
@@ -212,7 +212,7 @@ int fit_image_verify_required_sigs(const void *fit, int image_noffset,
 					   key_blob, noffset);
 		if (ret) {
 			printf("Failed to verify required signature '%s'\n",
-			       fit_get_name(key_blob, noffset, NULL));
+			       fit_get_name(key_blob, noffset));
 			return ret;
 		}
 		verify_count++;
@@ -277,10 +277,10 @@ static int fit_config_check_sig(const void *fit, int noffset, int conf_noffset,
 	char path[200];
 	int count;
 
-	config_name = fit_get_name(fit, conf_noffset, NULL);
+	config_name = fit_get_name(fit, conf_noffset);
 	debug("%s: fdt=%p, conf='%s', sig='%s'\n", __func__, key_blob,
-	      fit_get_name(fit, noffset, NULL),
-	      fit_get_name(key_blob, required_keynode, NULL));
+	      fit_get_name(fit, noffset),
+	      fit_get_name(key_blob, required_keynode));
 	*err_msgp = NULL;
 	if (fit_image_setup_verify(&info, fit, noffset, key_blob,
 				   required_keynode, err_msgp))
@@ -421,7 +421,7 @@ static int fit_config_verify_key(const void *fit, int conf_noffset,
 
 	/* Process all hash subnodes of the component conf node */
 	fdt_for_each_subnode(noffset, fit, conf_noffset) {
-		const char *name = fit_get_name(fit, noffset, NULL);
+		const char *name = fit_get_name(fit, noffset);
 
 		if (!strncmp(name, FIT_SIG_NODENAME,
 			     strlen(FIT_SIG_NODENAME))) {
@@ -448,8 +448,8 @@ static int fit_config_verify_key(const void *fit, int conf_noffset,
 
 error:
 	printf(" error!\n%s for '%s' hash node in '%s' config node\n",
-	       err_msg, fit_get_name(fit, noffset, NULL),
-	       fit_get_name(fit, conf_noffset, NULL));
+	       err_msg, fit_get_name(fit, noffset),
+	       fit_get_name(fit, conf_noffset));
 	return -EPERM;
 }
 
@@ -469,7 +469,7 @@ error:
 static int fit_config_verify_required_keys(const void *fit, int conf_noffset,
 					   const void *key_blob)
 {
-	const char *name = fit_get_name(fit, conf_noffset, NULL);
+	const char *name = fit_get_name(fit, conf_noffset);
 	int noffset;
 	int key_node;
 	int verified = 0;
@@ -525,7 +525,7 @@ static int fit_config_verify_required_keys(const void *fit, int conf_noffset,
 		if (ret) {
 			if (reqd_policy_all) {
 				printf("Failed to verify required signature '%s'\n",
-				       fit_get_name(key_blob, noffset, NULL));
+				       fit_get_name(key_blob, noffset));
 				return ret;
 			}
 		} else {

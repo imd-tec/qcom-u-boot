@@ -26,6 +26,7 @@ struct fdt_region;
 #include <sys/types.h>
 #include <linux/kconfig.h>
 
+#define IMAGE_INDENT		0
 #define IMAGE_INDENT_STRING	""
 #define BIT(nr)			(1UL << (nr))
 
@@ -37,6 +38,7 @@ struct fdt_region;
 #include <linker_lists.h>
 #include <linux/bitops.h>
 
+#define IMAGE_INDENT		3
 #define IMAGE_INDENT_STRING	"   "
 
 #endif /* USE_HOSTCC */
@@ -1198,8 +1200,82 @@ int fit_parse_subimage(const char *spec, ulong addr_curr,
 		ulong *addr, const char **image_name);
 
 int fit_get_subimage_count(const void *fit, int images_noffset);
+
+/**
+ * struct fit_print_ctx - context for FIT printing
+ * @fit: pointer to the FIT format image header
+ * @indent: indentation level for printing
+ * @tab: amount of space to tab out for the label
+ */
+struct fit_print_ctx {
+	const void *fit;
+	int indent;
+	int tab;
+};
+
+#if CONFIG_IS_ENABLED(FIT_PRINT)
+
+/**
+ * fit_print_init() - initialize FIT print context
+ * @ctx: pointer to FIT print context to initialize
+ * @fit: pointer to the FIT format image header
+ *
+ * This inits a fit_print_ctx structure with the given FIT image.
+ */
+void fit_print_init(struct fit_print_ctx *ctx, const void *fit);
+
+/**
+ * fit_print() - prints out the contents of the FIT format image
+ * @ctx: pointer to FIT print context
+ *
+ * The routine prints out FIT image properties (root node level) followed by
+ * the details of each component image.
+ *
+ * returns:
+ *     no returned results
+ */
+void fit_print(struct fit_print_ctx *ctx);
+
+/**
+ * fit_image_print() - prints out the FIT component image details
+ * @ctx: pointer to FIT print context
+ * @noffset: offset of the component image node
+ *
+ * fit_image_print() lists all mandatory properties for the processed component
+ * image. If present, hash nodes are printed out as well. Load
+ * address for images of type firmware is also printed out. Since the load
+ * address is not mandatory for firmware images, it will be output as
+ * "unavailable" when not present.
+ *
+ * returns:
+ *     no returned results
+ */
+void fit_image_print(struct fit_print_ctx *ctx, int noffset);
+
+/**
+ * fit_print_contents() - prints out the contents of the FIT format image
+ * @fit: pointer to the FIT format image header
+ * @p: pointer to prefix string
+ *
+ * This formats a multi line FIT image contents description.
+ * The routine prints out FIT image properties (root node level) followed by
+ * the details of each component image.
+ *
+ * returns:
+ *     no returned results
+ */
 void fit_print_contents(const void *fit);
-void fit_image_print(const void *fit, int noffset, const char *p);
+
+#else /* !FIT_PRINT */
+
+static inline void fit_print_init(struct fit_print_ctx *ctx, const void *fit)
+{
+}
+static inline void fit_print(const void *fit) {}
+static inline void fit_image_print(const void *fit, int noffset) {}
+static inline void fit_print_contents(const void *fit) {}
+
+#endif
 
 /**
  * fit_get_end - get FIT image size
@@ -1225,15 +1301,15 @@ ulong fit_get_end(const void *fit);
 /**
  * fit_get_name - get FIT node name
  * @fit: pointer to the FIT format image header
+ * @noffset: node offset
  *
  * returns:
  *     NULL, on error
  *     pointer to node name, on success
  */
-static inline const char *fit_get_name(const void *fit_hdr,
-		int noffset, int *len)
+static inline const char *fit_get_name(const void *fit_hdr, int noffset)
 {
-	return fdt_get_name(fit_hdr, noffset, len);
+	return fdt_get_name(fit_hdr, noffset, NULL);
 }
 
 /**

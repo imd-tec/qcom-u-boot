@@ -255,7 +255,7 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 	if (fit_image_get_load(fit, node, &load_addr)) {
 		if (!image_info->load_addr) {
 			printf("Can't load %s: No load address and no buffer\n",
-			       fit_get_name(fit, node, NULL));
+			       fit_get_name(fit, node));
 			return -ENOBUFS;
 		}
 		load_addr = image_info->load_addr;
@@ -281,7 +281,7 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 		/* Dont bother to copy 0 byte data, but warn, though */
 		if (!len) {
 			log_warning("%s: Skip load '%s': image size is 0!\n",
-				    __func__, fit_get_name(fit, node, NULL));
+				    __func__, fit_get_name(fit, node));
 			return 0;
 		}
 
@@ -318,7 +318,7 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 
 	if (CONFIG_IS_ENABLED(FIT_SIGNATURE)) {
 		printf("## Checking hash(es) for Image %s ... ",
-		       fit_get_name(fit, node, NULL));
+		       fit_get_name(fit, node));
 		if (!fit_image_verify_with_data(fit, node, gd_fdt_blob(), src,
 						length))
 			return -EPERM;
@@ -489,12 +489,12 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 							(void *)image_info.load_addr);
 			if (ret) {
 				pr_err("failed to apply DT overlay %s\n",
-				       fit_get_name(ctx->fit, node, NULL));
+				       fit_get_name(ctx->fit, node));
 				break;
 			}
 
 			debug("%s: DT overlay %s applied\n", __func__,
-			      fit_get_name(ctx->fit, node, NULL));
+			      fit_get_name(ctx->fit, node));
 		}
 		free(tmpbuffer);
 		if (ret)
@@ -720,7 +720,7 @@ static int spl_simple_fit_parse(struct spl_fit_info *ctx)
 
 	if (IS_ENABLED(CONFIG_SPL_FIT_SIGNATURE)) {
 		printf("## Checking hash(es) for config %s ... ",
-		       fit_get_name(ctx->fit, ctx->conf_node, NULL));
+		       fit_get_name(ctx->fit, ctx->conf_node));
 		if (fit_config_verify(ctx->fit, ctx->conf_node))
 			return -EPERM;
 		puts("OK\n");

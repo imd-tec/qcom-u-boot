@@ -32,6 +32,7 @@ make sandbox_defconfig O=/tmp/<build_dir>
 # Build
 make -j$(nproc) O=/tmp/<build_dir>
 ```
+
 ## Testing
 
 There are aliases in ~/bin/git-alias which you can use.
@@ -67,3 +68,5 @@ pyt <test_name>
 - This follows U-Boot's established naming convention for output parameters
 - Keep commit messages concise - focus on the key change and essential details only
 - Code should be formatted to 80 columns and not have trailing spaces
+- Remember to use Co-developed-by in commits
+- Remember not to cd into the build directory; run U-Boot directly in the source dir

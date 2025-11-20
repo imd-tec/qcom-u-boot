@@ -278,7 +278,7 @@ got_update_file:
 		if (ndepth != 1)
 			goto next_node;
 
-		fit_image_name = (char *)fit_get_name(fit, noffset, NULL);
+		fit_image_name = (char *)fit_get_name(fit, noffset);
 		printf("Processing update '%s' :", fit_image_name);
 
 		if (!fit_image_verify(fit, noffset)) {
@@ -354,7 +354,7 @@ int fit_update(const void *fit)
 		if (ndepth != 1)
 			goto next_node;
 
-		fit_image_name = (char *)fit_get_name(fit, noffset, NULL);
+		fit_image_name = (char *)fit_get_name(fit, noffset);
 		printf("Processing update '%s' :", fit_image_name);
 
 		if (!fit_image_verify(fit, noffset)) {
