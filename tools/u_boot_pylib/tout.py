@@ -11,8 +11,6 @@ from u_boot_pylib import terminal
 # Output verbosity levels that we support
 FATAL, ERROR, WARNING, NOTICE, INFO, DETAIL, DEBUG = range(7)
 
-in_progress = False
-
 """
 This class handles output of progress and other useful information
 to the user. It provides for simple verbosity level control and can
@@ -46,11 +44,8 @@ def user_is_present():
 
 def clear_progress():
     """Clear any active progress message on the terminal."""
-    global in_progress
-    if verbose > ERROR and stdout_is_tty and in_progress:
-        _stdout.write('\r%s\r' % (" " * len (_progress)))
-        _stdout.flush()
-        in_progress = False
+    if verbose > ERROR and stdout_is_tty:
+        terminal.print_clear()
 
 def progress(msg, warning=False, trailer='...'):
     """Display progress information.
@@ -58,17 +53,14 @@ def progress(msg, warning=False, trailer='...'):
     Args:
         msg: Message to display.
         warning: True if this is a warning."""
-    global in_progress
     clear_progress()
     if verbose > ERROR:
         _progress = msg + trailer
         if stdout_is_tty:
             col = _color.YELLOW if warning else _color.GREEN
-            _stdout.write('\r' + _color.build(col, _progress))
-            _stdout.flush()
-            in_progress = True
+            terminal.tprint('\r' + _progress, newline=False, colour=col, col=_color)
         else:
-            _stdout.write(_progress + '\n')
+            terminal.tprint(_progress)
 
 def _output(level, msg, color=None):
     """Output a message to the terminal.
@@ -81,12 +73,10 @@ def _output(level, msg, color=None):
     """
     if verbose >= level:
         clear_progress()
-        if color:
-            msg = _color.build(color, msg)
-        if level < NOTICE:
-            print(msg, file=sys.stderr)
+        if level <= WARNING:
+            terminal.tprint(msg, colour=color, col=_color, stderr=True)
         else:
-            print(msg)
+            terminal.tprint(msg, colour=color, col=_color)
     if level == FATAL:
         sys.exit(1)
 

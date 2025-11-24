@@ -101,6 +101,7 @@ Refactoring
 
    checkpatch
    coccinelle
+   codman
    qconfig
 
 Code quality

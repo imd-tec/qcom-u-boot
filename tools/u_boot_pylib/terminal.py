@@ -141,7 +141,7 @@ def trim_ascii_len(text, size):
 
 
 def tprint(text='', newline=True, colour=None, limit_to_line=False,
-           bright=True, back=None, col=None):
+           bright=True, back=None, col=None, stderr=False):
     """Handle a line of output to the terminal.
 
     In test mode this is recorded in a list. Otherwise it is output to the
@@ -151,6 +151,7 @@ def tprint(text='', newline=True, colour=None, limit_to_line=False,
         text: Text to print
         newline: True to add a new line at the end of the text
         colour: Colour to use for the text
+        stderr: True to print to stderr instead of stdout
     """
     global last_print_len
 
@@ -161,14 +162,17 @@ def tprint(text='', newline=True, colour=None, limit_to_line=False,
             if not col:
                 col = Color()
             text = col.build(colour, text, bright=bright, back=back)
+
+        file = sys.stderr if stderr else sys.stdout
+
         if newline:
-            print(text)
+            print(text, file=file)
             last_print_len = None
         else:
             if limit_to_line:
                 cols = shutil.get_terminal_size().columns
                 text = trim_ascii_len(text, cols)
-            print(text, end='', flush=True)
+            print(text, end='', flush=True, file=file)
             last_print_len = calc_ascii_len(text)
 
 def print_clear():
