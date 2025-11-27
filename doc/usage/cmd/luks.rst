@@ -13,7 +13,7 @@ Synopsis
 
     luks detect <interface> <dev[:part]>
     luks info <interface> <dev[:part]>
-    luks unlock [-t] <interface> <dev[:part]> <passphrase>
+    luks unlock [-t] [-p] <interface> <dev[:part]> <passphrase>
 
 Description
 -----------
@@ -97,7 +97,8 @@ This command:
 
    - **Without -t**: Uses PBKDF2 or Argon2id with the provided passphrase
    - **With -t**: Uses TKey hardware token with passphrase as USS (User-Supplied
-     Secret) to derive a disk encryption key
+     Secret) to derive a disk encryption key. You can use 'tkey connect' to
+     select which TKey to use, otherwise it uses the first one it finds.
 
 4. Attempts to unlock each active key slot
 5. Verifies the master key against the stored digest
@@ -127,6 +128,12 @@ be used to access files on the unlocked partition.
     Optional flag to use TKey hardware security token. When specified, the
     passphrase is used as the USS (User-Supplied Secret) to derive a disk
     encryption key from the TKey's public key.
+
+-p
+    Optional flag to treat the passphrase as a hex-encoded pre-derived master
+    key, skipping the KDF (Key Derivation Function) step. This is useful when
+    the master key has already been derived externally, such as from a hardware
+    security module or other key management system.
 
 interface
     The storage interface type (e.g., mmc, usb, scsi)
@@ -246,6 +253,13 @@ Unlock using TKey hardware token::
     Loading TKey signer app (7168 bytes) with USS...
     TKey public key: 3a b2 c4 ... (32 bytes)
     TKey disk key derived successfully
+    Unlocking LUKS2 partition...
+    Successfully unlocked with key slot 0!
+    Unlocked LUKS partition as blkmap device 'luks-mmc-0:2'
+
+Unlock using a pre-derived master key (hex-encoded)::
+
+    => luks unlock -p mmc 0:2 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     Unlocking LUKS2 partition...
     Successfully unlocked with key slot 0!
     Unlocked LUKS partition as blkmap device 'luks-mmc-0:2'
