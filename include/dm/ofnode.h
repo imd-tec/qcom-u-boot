@@ -140,6 +140,7 @@ static inline void oftree_dispose(oftree tree) {}
 
 #endif /* OFNODE_MULTI_TREE */
 
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * oftree_new() - Create a new, empty tree
  *
@@ -160,6 +161,17 @@ int oftree_new(oftree *treep);
  * error
  */
 int oftree_to_fdt(oftree tree, struct abuf *buf);
+#else
+static inline int oftree_new(oftree *treep)
+{
+	return -ENOSYS;
+}
+
+static inline int oftree_to_fdt(oftree tree, struct abuf *buf)
+{
+	return -ENOSYS;
+}
+#endif /* OF_REAL */
 
 /**
  * ofnode_to_np() - convert an ofnode to a live DT node pointer
@@ -387,6 +399,7 @@ static inline oftree oftree_from_np(struct device_node *root)
 	return tree;
 }
 
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * ofnode_name_eq() - Check a node name ignoring its unit address
  *
@@ -483,6 +496,56 @@ int ofnode_read_u32_index(ofnode node, const char *propname, int index,
  */
 int ofnode_read_u64_index(ofnode node, const char *propname, int index,
 			  u64 *outp);
+#else
+static inline bool ofnode_name_eq(ofnode node, const char *name)
+{
+	return false;
+}
+
+static inline bool ofnode_name_eq_unit(ofnode node, const char *name)
+{
+	return false;
+}
+
+static inline int ofnode_read_u8(ofnode node, const char *propname, u8 *outp)
+{
+	return -EINVAL;
+}
+
+static inline u8 ofnode_read_u8_default(ofnode node, const char *propname,
+					u8 def)
+{
+	return def;
+}
+
+static inline int ofnode_read_u16(ofnode node, const char *propname, u16 *outp)
+{
+	return -EINVAL;
+}
+
+static inline u16 ofnode_read_u16_default(ofnode node, const char *propname,
+					  u16 def)
+{
+	return def;
+}
+
+static inline int ofnode_read_u32(ofnode node, const char *propname, u32 *outp)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_u32_index(ofnode node, const char *propname,
+					int index, u32 *outp)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_u64_index(ofnode node, const char *propname,
+					int index, u64 *outp)
+{
+	return -EINVAL;
+}
+#endif /* OF_REAL */
 
 /**
  * ofnode_read_s32() - Read a 32-bit integer from a property
@@ -498,6 +561,7 @@ static inline int ofnode_read_s32(ofnode node, const char *propname,
 	return ofnode_read_u32(node, propname, (u32 *)outp);
 }
 
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * ofnode_read_u32_default() - Read a 32-bit integer from a property
  *
@@ -620,8 +684,72 @@ ofnode ofnode_find_subnode(ofnode node, const char *subnode_name);
  * subnode)
  */
 ofnode ofnode_find_subnode_unit(ofnode node, const char *subnode_name);
+#else
+static inline u32 ofnode_read_u32_default(ofnode node, const char *propname,
+					  u32 def)
+{
+	return def;
+}
 
-#if CONFIG_IS_ENABLED(DM_INLINE_OFNODE)
+static inline u32 ofnode_read_u32_index_default(ofnode node,
+						const char *propname,
+						int index, u32 def)
+{
+	return def;
+}
+
+static inline int ofnode_read_s32_default(ofnode node, const char *propname,
+					  s32 def)
+{
+	return def;
+}
+
+static inline int ofnode_read_u64(ofnode node, const char *propname, u64 *outp)
+{
+	return -EINVAL;
+}
+
+static inline u64 ofnode_read_u64_default(ofnode node, const char *propname,
+					  u64 def)
+{
+	return def;
+}
+
+static inline const void *ofnode_read_prop(ofnode node, const char *propname,
+					   int *sizep)
+{
+	return NULL;
+}
+
+static inline const char *ofnode_read_string(ofnode node, const char *propname)
+{
+	return NULL;
+}
+
+static inline int ofnode_read_u32_array(ofnode node, const char *propname,
+					u32 *out_values, size_t sz)
+{
+	return -EINVAL;
+}
+
+static inline bool ofnode_read_bool(ofnode node, const char *propname)
+{
+	return false;
+}
+
+static inline ofnode ofnode_find_subnode(ofnode node, const char *subnode_name)
+{
+	return ofnode_null();
+}
+
+static inline ofnode ofnode_find_subnode_unit(ofnode node,
+					      const char *subnode_name)
+{
+	return ofnode_null();
+}
+#endif
+
+#if CONFIG_IS_ENABLED(OF_REAL) && CONFIG_IS_ENABLED(DM_INLINE_OFNODE)
 #include <asm/global_data.h>
 
 static inline bool ofnode_is_enabled(ofnode node)
@@ -653,7 +781,7 @@ static inline ofnode ofnode_next_subnode(ofnode node)
 	return offset_to_ofnode(
 		fdt_next_subnode(gd->fdt_blob, ofnode_to_offset(node)));
 }
-#else
+#elif CONFIG_IS_ENABLED(OF_REAL)
 /**
  * ofnode_is_enabled() - Checks whether a node is enabled.
  * This looks for a 'status' property. If this exists, then returns true if
@@ -683,8 +811,47 @@ ofnode ofnode_first_subnode(ofnode node);
  * has no more siblings)
  */
 ofnode ofnode_next_subnode(ofnode node);
-#endif /* DM_INLINE_OFNODE */
+#else
+static inline bool ofnode_is_enabled(ofnode node)
+{
+	return false;
+}
 
+static inline ofnode ofnode_first_subnode(ofnode node)
+{
+	return ofnode_null();
+}
+
+static inline ofnode ofnode_next_subnode(ofnode node)
+{
+	return ofnode_null();
+}
+#endif
+
+/**
+ * ofnode_for_each_subnode() - iterate over all subnodes of a parent
+ *
+ * @node:       child node (ofnode, lvalue)
+ * @parent:     parent node (ofnode)
+ *
+ * This is a wrapper around a for loop and is used like so::
+ *
+ *   ofnode node;
+ *   ofnode_for_each_subnode(node, parent) {
+ *       Use node
+ *       ...
+ *   }
+ *
+ * Note that this is implemented as a macro and @node is used as
+ * iterator in the loop. The parent variable can be a constant or even a
+ * literal.
+ */
+#define ofnode_for_each_subnode(node, parent) \
+	for (node = ofnode_first_subnode(parent); \
+	     ofnode_valid(node); \
+	     node = ofnode_next_subnode(node))
+
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * ofnode_get_parent() - get the ofnode's parent (enclosing ofnode)
  *
@@ -1203,30 +1370,6 @@ int ofnode_first_property(ofnode node, struct ofprop *prop);
 int ofnode_next_property(struct ofprop *prop);
 
 /**
- * ofnode_for_each_prop() - iterate over all properties of a node
- *
- * @prop:	struct ofprop
- * @node:	node (lvalue, ofnode)
- *
- * This is a wrapper around a for loop and is used like this::
- *
- *   ofnode node;
- *   struct ofprop prop;
- *
- *   ofnode_for_each_prop(prop, node) {
- *       ...use prop...
- *   }
- *
- * Note that this is implemented as a macro and @prop is used as
- * iterator in the loop. The parent variable can be a constant or even a
- * literal.
- */
-#define ofnode_for_each_prop(prop, node) \
-	for (ofnode_first_property(node, &prop); \
-	     ofprop_valid(&prop); \
-	     ofnode_next_property(&prop))
-
-/**
  * ofprop_get_property() - get a pointer to the value of a property
  *
  * Get value for the property identified by the provided reference.
@@ -1441,52 +1584,6 @@ ofnode ofnode_by_prop_value(ofnode from, const char *propname,
 			    const void *propval, int proplen);
 
 /**
- * ofnode_for_each_subnode() - iterate over all subnodes of a parent
- *
- * @node:       child node (ofnode, lvalue)
- * @parent:     parent node (ofnode)
- *
- * This is a wrapper around a for loop and is used like so::
- *
- *   ofnode node;
- *   ofnode_for_each_subnode(node, parent) {
- *       Use node
- *       ...
- *   }
- *
- * Note that this is implemented as a macro and @node is used as
- * iterator in the loop. The parent variable can be a constant or even a
- * literal.
- */
-#define ofnode_for_each_subnode(node, parent) \
-	for (node = ofnode_first_subnode(parent); \
-	     ofnode_valid(node); \
-	     node = ofnode_next_subnode(node))
-
-/**
- * ofnode_for_each_compatible_node() - iterate over all nodes with a given
- *				       compatible string
- *
- * @node:       child node (ofnode, lvalue)
- * @compat:     compatible string to match
- *
- * This is a wrapper around a for loop and is used like so::
- *
- *   ofnode node;
- *   ofnode_for_each_compatible_node(node, parent, compatible) {
- *      Use node
- *      ...
- *   }
- *
- * Note that this is implemented as a macro and @node is used as
- * iterator in the loop.
- */
-#define ofnode_for_each_compatible_node(node, compat) \
-	for (node = ofnode_by_compatible(ofnode_null(), compat); \
-	     ofnode_valid(node); \
-	     node = ofnode_by_compatible(node, compat))
-
-/**
  * ofnode_get_child_count() - get the child count of a ofnode
  *
  * @parent: valid node to get its child count
@@ -1663,8 +1760,423 @@ ofnode ofnode_get_phy_node(ofnode eth_node);
  *	   error
  */
 phy_interface_t ofnode_read_phy_mode(ofnode mac_node);
+#else
+static inline ofnode ofnode_get_parent(ofnode node)
+{
+	return ofnode_null();
+}
 
-#if CONFIG_IS_ENABLED(DM)
+static inline const char *ofnode_get_name(ofnode node)
+{
+	return NULL;
+}
+
+static inline int ofnode_get_path(ofnode node, char *buf, int buflen)
+{
+	return -EINVAL;
+}
+
+static inline ofnode ofnode_get_by_phandle(uint phandle)
+{
+	return ofnode_null();
+}
+
+static inline ofnode oftree_get_by_phandle(oftree tree, uint phandle)
+{
+	return ofnode_null();
+}
+
+static inline int ofnode_read_size(ofnode node, const char *propname)
+{
+	return -EINVAL;
+}
+
+static inline fdt_addr_t ofnode_get_addr_size_index(ofnode node, int index,
+						    fdt_size_t *size)
+{
+	return FDT_ADDR_T_NONE;
+}
+
+static inline fdt_addr_t ofnode_get_addr_size_index_notrans(ofnode node,
+							    int index,
+							    fdt_size_t *size)
+{
+	return FDT_ADDR_T_NONE;
+}
+
+static inline fdt_addr_t ofnode_get_addr_index(ofnode node, int index)
+{
+	return FDT_ADDR_T_NONE;
+}
+
+static inline fdt_addr_t ofnode_get_addr(ofnode node)
+{
+	return FDT_ADDR_T_NONE;
+}
+
+static inline fdt_size_t ofnode_get_size(ofnode node)
+{
+	return FDT_SIZE_T_NONE;
+}
+
+static inline int ofnode_stringlist_search(ofnode node, const char *propname,
+					   const char *string)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_string_index(ofnode node, const char *propname,
+					   int index, const char **outp)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_string_count(ofnode node, const char *property)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_string_list(ofnode node, const char *property,
+					  const char ***listp)
+{
+	return -EINVAL;
+}
+
+static inline ofnode ofnode_parse_phandle(ofnode node, const char *phandle_name,
+					  int index)
+{
+	return ofnode_null();
+}
+
+static inline int ofnode_parse_phandle_with_args(ofnode node,
+						 const char *list_name,
+						 const char *cells_name,
+						 int cell_count, int index,
+						 struct ofnode_phandle_args *out_args)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_count_phandle_with_args(ofnode node,
+						 const char *list_name,
+						 const char *cells_name,
+						 int cell_count)
+{
+	return -EINVAL;
+}
+
+static inline ofnode oftree_parse_phandle(oftree tree, ofnode node,
+					  const char *phandle_name, int index)
+{
+	return ofnode_null();
+}
+
+static inline int oftree_parse_phandle_with_args(oftree tree, ofnode node,
+						 const char *list_name,
+						 const char *cells_name,
+						 int cell_count, int index,
+						 struct ofnode_phandle_args *out_args)
+{
+	return -EINVAL;
+}
+
+static inline int oftree_count_phandle_with_args(oftree tree, ofnode node,
+						 const char *list_name,
+						 const char *cells_name,
+						 int cell_count)
+{
+	return -EINVAL;
+}
+
+static inline ofnode ofnode_path(const char *path)
+{
+	return ofnode_null();
+}
+
+static inline ofnode oftree_path(oftree tree, const char *path)
+{
+	return ofnode_null();
+}
+
+static inline ofnode oftree_root(oftree tree)
+{
+	return ofnode_null();
+}
+
+static inline const void *ofnode_read_chosen_prop(const char *propname,
+						  int *sizep)
+{
+	return NULL;
+}
+
+static inline const char *ofnode_read_chosen_string(const char *propname)
+{
+	return NULL;
+}
+
+static inline ofnode ofnode_get_chosen_node(const char *propname)
+{
+	return ofnode_null();
+}
+
+static inline int ofnode_read_baud(void)
+{
+	return -EINVAL;
+}
+
+static inline const void *ofnode_read_aliases_prop(const char *propname,
+						   int *sizep)
+{
+	return NULL;
+}
+
+static inline ofnode ofnode_get_aliases_node(const char *propname)
+{
+	return ofnode_null();
+}
+
+static inline int ofnode_decode_display_timing(ofnode node, int index,
+					       struct display_timing *config)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_decode_panel_timing(ofnode node,
+					     struct display_timing *config)
+{
+	return -EINVAL;
+}
+
+static inline const void *ofnode_get_property(ofnode node, const char *propname,
+					      int *lenp)
+{
+	return NULL;
+}
+
+static inline bool ofnode_has_property(ofnode node, const char *propname)
+{
+	return false;
+}
+
+static inline int ofnode_first_property(ofnode node, struct ofprop *prop)
+{
+	return -FDT_ERR_NOTFOUND;
+}
+
+static inline int ofnode_next_property(struct ofprop *prop)
+{
+	return -FDT_ERR_NOTFOUND;
+}
+
+static inline const void *ofprop_get_property(const struct ofprop *prop,
+					      const char **propname, int *lenp)
+{
+	return NULL;
+}
+
+static inline fdt_addr_t ofnode_get_addr_size(ofnode node, const char *propname,
+					      fdt_size_t *sizep)
+{
+	return FDT_ADDR_T_NONE;
+}
+
+static inline const uint8_t *ofnode_read_u8_array_ptr(ofnode node,
+						      const char *propname,
+						      size_t sz)
+{
+	return NULL;
+}
+
+static inline int ofnode_read_pci_addr(ofnode node, enum fdt_pci_space type,
+				       const char *propname,
+				       struct fdt_pci_addr *addr,
+				       fdt_size_t *size)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_pci_vendev(ofnode node, u16 *vendor, u16 *device)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_eth_phy_id(ofnode node, u16 *vendor, u16 *device)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_addr_cells(ofnode node)
+{
+	return 0;
+}
+
+static inline int ofnode_read_size_cells(ofnode node)
+{
+	return 0;
+}
+
+static inline int ofnode_read_simple_addr_cells(ofnode node)
+{
+	return 0;
+}
+
+static inline int ofnode_read_simple_size_cells(ofnode node)
+{
+	return 0;
+}
+
+static inline bool ofnode_pre_reloc(ofnode node)
+{
+	return false;
+}
+
+static inline int ofnode_read_resource(ofnode node, uint index,
+				       struct resource *res)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_resource_byname(ofnode node, const char *name,
+					      struct resource *res)
+{
+	return -EINVAL;
+}
+
+static inline ofnode ofnode_by_compatible(ofnode from, const char *compat)
+{
+	return ofnode_null();
+}
+
+static inline ofnode ofnode_by_prop_value(ofnode from, const char *propname,
+					  const void *propval, int proplen)
+{
+	return ofnode_null();
+}
+
+static inline int ofnode_get_child_count(ofnode parent)
+{
+	return 0;
+}
+
+static inline u64 ofnode_translate_address(ofnode node, const fdt32_t *in_addr)
+{
+	return OF_BAD_ADDR;
+}
+
+static inline u64 ofnode_translate_dma_address(ofnode node,
+					       const fdt32_t *in_addr)
+{
+	return OF_BAD_ADDR;
+}
+
+static inline int ofnode_get_dma_range(ofnode node, phys_addr_t *cpu,
+				       dma_addr_t *bus, u64 *size)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_device_is_compatible(ofnode node, const char *compat)
+{
+	return 0;
+}
+
+static inline int ofnode_write_prop(ofnode node, const char *propname,
+				    const void *value, int len, bool copy)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_write_string(ofnode node, const char *propname,
+				      const char *value)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_write_u32(ofnode node, const char *propname, u32 value)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_write_u64(ofnode node, const char *propname, u64 value)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_write_bool(ofnode node, const char *propname,
+				    bool value)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_delete_prop(ofnode node, const char *propname)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_set_enabled(ofnode node, bool value)
+{
+	return -ENOSYS;
+}
+
+static inline ofnode ofnode_get_phy_node(ofnode eth_node)
+{
+	return ofnode_null();
+}
+
+static inline phy_interface_t ofnode_read_phy_mode(ofnode mac_node)
+{
+	return PHY_INTERFACE_MODE_NA;
+}
+#endif /* OF_REAL */
+
+/**
+ * ofnode_for_each_compatible_node() - iterate over all nodes with a given
+ *				       compatible string
+ *
+ * @node:       child node (ofnode, lvalue)
+ * @compat:     compatible string to match
+ *
+ * This is a wrapper around a for loop and is used like so::
+ *
+ *   ofnode node;
+ *   ofnode_for_each_compatible_node(node, compatible) {
+ *      Use node
+ *      ...
+ *   }
+ *
+ * Note that this is implemented as a macro and @node is used as
+ * iterator in the loop.
+ */
+#define ofnode_for_each_compatible_node(node, compat) \
+	for (node = ofnode_by_compatible(ofnode_null(), compat); \
+	     ofnode_valid(node); \
+	     node = ofnode_by_compatible(node, compat))
+
+/**
+ * ofnode_for_each_prop() - iterate over all properties of a node
+ *
+ * @prop:	struct ofprop
+ * @node:	node (lvalue, ofnode)
+ *
+ * This is a wrapper around a for loop and is used like this::
+ *
+ *   ofnode node;
+ *   struct ofprop prop;
+ *
+ *   ofnode_for_each_prop(prop, node) {
+ *       ...use prop...
+ *   }
+ *
+ * Note that this is implemented as a macro and @prop is used as
+ * iterator in the loop. The parent variable can be a constant or even a
+ * literal.
+ */
+#define ofnode_for_each_prop(prop, node) \
+	for (ofnode_first_property(node, &prop); \
+	     ofprop_valid(&prop); \
+	     ofnode_next_property(&prop))
+
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * ofnode_conf_read_bool() - Read a boolean value from the U-Boot config
  *
@@ -1802,8 +2314,7 @@ int ofnode_read_bootscript_address(u64 *bootscr_address, u64 *bootscr_offset);
  */
 int ofnode_read_bootscript_flash(u64 *bootscr_flash_offset,
 				 u64 *bootscr_flash_size);
-
-#else /* CONFIG_DM */
+#else
 static inline bool ofnode_conf_read_bool(const char *prop_name)
 {
 	return false;
@@ -1819,7 +2330,29 @@ static inline const char *ofnode_conf_read_str(const char *prop_name)
 	return NULL;
 }
 
-static inline int ofnode_read_bootscript_address(u64 *bootscr_address, u64 *bootscr_offset)
+static inline bool ofnode_options_read_bool(const char *prop_name)
+{
+	return false;
+}
+
+static inline int ofnode_options_read_int(const char *prop_name, int default_val)
+{
+	return default_val;
+}
+
+static inline const char *ofnode_options_read_str(const char *prop_name)
+{
+	return NULL;
+}
+
+static inline int ofnode_options_get_by_phandle(const char *prop_name,
+						ofnode *nodep)
+{
+	return -EINVAL;
+}
+
+static inline int ofnode_read_bootscript_address(u64 *bootscr_address,
+						 u64 *bootscr_offset)
 {
 	return -EINVAL;
 }
@@ -1829,9 +2362,9 @@ static inline int ofnode_read_bootscript_flash(u64 *bootscr_flash_offset,
 {
 	return -EINVAL;
 }
+#endif /* OF_REAL */
 
-#endif /* CONFIG_DM */
-
+#if CONFIG_IS_ENABLED(OF_REAL)
 /**
  * of_add_subnode() - add a new subnode to a node
  *
@@ -1887,5 +2420,28 @@ int ofnode_copy_node(ofnode dst_parent, const char *name, ofnode src,
  *
  */
 int ofnode_delete(ofnode *nodep);
+#else
+static inline int ofnode_add_subnode(ofnode parent, const char *name,
+				     ofnode *nodep)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_copy_props(ofnode dst, ofnode src)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_copy_node(ofnode dst_parent, const char *name,
+				   ofnode src, ofnode *nodep)
+{
+	return -ENOSYS;
+}
+
+static inline int ofnode_delete(ofnode *nodep)
+{
+	return -ENOSYS;
+}
+#endif /* OF_REAL */
 
 #endif
