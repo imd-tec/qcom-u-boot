@@ -470,12 +470,12 @@ static int tkey_load_app_header(struct udevice *dev, int app_size,
 			return ret;
 		}
 
-		/* USS present flag */
-		cmd_frame.data[5] = 1;
-		/* Copy USS hash (32 bytes) */
-		memcpy(&cmd_frame.data[6], uss_hash, 32);
+		log_debug("USS hash: %*ph\n", 32, uss_hash);
+
+		/* Copy USS hash (32 bytes) starting at data[5] */
+		memcpy(&cmd_frame.data[5], uss_hash, 32);
 		/* Pad remaining bytes with zeros */
-		memset(&cmd_frame.data[38], '\0', 128 - 38);
+		memset(&cmd_frame.data[37], '\0', 128 - 37);
 
 		log_debug("USS hash included in app header\n");
 	} else {
@@ -657,9 +657,9 @@ int tkey_get_pubkey(struct udevice *dev, void *pubkey)
 		return -EIO;
 	}
 
-	/* Extract public key (32 bytes) from response */
-	if (ret >= TKEY_FRAME_HEADER_SIZE + TKEY_PUBKEY_SIZE) {
-		memcpy(pubkey, rsp_frame.data, TKEY_PUBKEY_SIZE);
+	/* Extract public key (32 bytes) from response, skip response code byte */
+	if (ret >= TKEY_FRAME_HEADER_SIZE + 1 + TKEY_PUBKEY_SIZE) {
+		memcpy(pubkey, rsp_frame.data + 1, TKEY_PUBKEY_SIZE);
 		log_debug("Public key retrieved successfully\n");
 		return 0;
 	}
