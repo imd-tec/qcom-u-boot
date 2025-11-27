@@ -334,9 +334,9 @@ static int perform_tkey_unlock(struct udevice *dev, struct osinfo *os, int seq,
 	 * processed by PBKDF2/Argon2 just like a text passphrase would be.
 	 * This matches how cryptsetup --key-file works.
 	 */
-	log_info("Using LUKS1 unlock with binary passphrase\n");
+	log_info("Using LUKS unlock with binary passphrase\n");
 	ret = luks_unlock(os->bflow.blk, &pinfo, priv->tkey_disk_key,
-			  TKEY_DISK_KEY_SIZE, true, master_key, key_sizep);
+			  TKEY_DISK_KEY_SIZE, false, master_key, key_sizep);
 	if (ret)
 		return log_msg_ret("htu", ret);
 
