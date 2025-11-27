@@ -22,7 +22,7 @@
 /* Static device pointer set by tkey connect command */
 static struct udevice *tkey_dev;
 
-static struct udevice *tkey_get_device(void)
+struct udevice *tkey_get_device(void)
 {
 	struct udevice *dev;
 	int ret;

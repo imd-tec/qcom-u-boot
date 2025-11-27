@@ -327,4 +327,11 @@ int tkey_emul_set_app_mode_for_test(struct udevice *dev, bool app_mode);
  */
 int tkey_emul_set_connected_for_test(struct udevice *dev, bool connected);
 
+/**
+ * tkey_get_device() - Get the current TKey device
+ *
+ * Return: Pointer to TKey device, or NULL if not found
+ */
+struct udevice *tkey_get_device(void);
+
 #endif /* _TKEY_UCLASS_H */
