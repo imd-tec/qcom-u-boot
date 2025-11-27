@@ -31,6 +31,11 @@
 		measure;
 #endif
 
+		/* use TKey for unlocking encrypted volumes */
+#ifdef CONFIG_SANDBOX
+		tkey;
+#endif
+
 		/* restrict labels to boot (separated by space) */
 #ifdef CONFIG_QEMU
 		labels = "virtio";
