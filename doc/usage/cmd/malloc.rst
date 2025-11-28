@@ -19,8 +19,9 @@ Description
 The malloc command shows information about the malloc heap.
 
 info
-    Shows memory-allocation statistics, including the total heap size and the
-    amount currently in use.
+    Shows memory-allocation statistics, including the total heap size, the
+    amount currently in use, and call counts for malloc(), free(), and
+    realloc().
 
 The total heap size is set by ``CONFIG_SYS_MALLOC_LEN``.
 
@@ -30,8 +31,11 @@ Example
 ::
 
     => malloc info
-    total bytes  = 96 MiB
-    in use bytes = 700.9 KiB
+    total bytes   = 96 MiB
+    in use bytes  = 700.9 KiB
+    malloc count  = 1234
+    free count    = 567
+    realloc count = 89
 
 Configuration
 -------------

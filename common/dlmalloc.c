@@ -646,6 +646,12 @@ ulong mem_malloc_start;
 ulong mem_malloc_end;
 ulong mem_malloc_brk;
 
+#ifndef NO_MALLOC_STATS
+static ulong malloc_count;
+static ulong free_count;
+static ulong realloc_count;
+#endif /* !NO_MALLOC_STATS */
+
 #endif /* __UBOOT__ */
 
 #ifndef SMALLCHUNKS_AS_FUNCS
@@ -3699,6 +3705,9 @@ int malloc_get_info(struct malloc_info *info)
 
   info->total_bytes = mem_malloc_end - mem_malloc_start;
   info->in_use_bytes = mi.uordblks;
+  info->malloc_count = malloc_count;
+  info->free_count = free_count;
+  info->realloc_count = realloc_count;
 
   return 0;
 }
@@ -4926,6 +4935,9 @@ void* dlmalloc_impl(size_t bytes) {
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
     return malloc_simple(bytes);
 #endif
+#if !NO_MALLOC_STATS
+  malloc_count++;
+#endif
 
   /* Return NULL if not initialized yet */
   if (!mem_malloc_start && !mem_malloc_end)
@@ -5092,6 +5104,9 @@ void* dlmalloc_impl(size_t bytes) {
 STATIC_IF_MCHECK
 void dlfree_impl(void* mem) {
 #ifdef __UBOOT__
+#if !NO_MALLOC_STATS
+  free_count++;
+#endif
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* free() is a no-op - all the memory will be freed on relocation */
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
@@ -5662,6 +5677,9 @@ static void internal_inspect_all(mstate m,
 STATIC_IF_MCHECK
 void* dlrealloc_impl(void* oldmem, size_t bytes) {
 #ifdef __UBOOT__
+#if !NO_MALLOC_STATS
+  realloc_count++;
+#endif
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
     /* This is harder to support and should not be needed */

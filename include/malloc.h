@@ -675,10 +675,16 @@ void mspace_inspect_all(mspace msp,
  *
  * @total_bytes: Total bytes available in the heap
  * @in_use_bytes: Current bytes allocated (in use by application)
+ * @malloc_count: Number of calls to malloc()
+ * @free_count: Number of calls to free()
+ * @realloc_count: Number of calls to realloc()
  */
 struct malloc_info {
 	ulong total_bytes;
 	ulong in_use_bytes;
+	ulong malloc_count;
+	ulong free_count;
+	ulong realloc_count;
 };
 
 /* Memory pool boundaries */

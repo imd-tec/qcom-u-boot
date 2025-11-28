@@ -21,8 +21,11 @@ static int do_malloc_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	if (ret)
 		return CMD_RET_FAILURE;
 
-	printf("total bytes  = %s\n", format_size(buf, info.total_bytes));
-	printf("in use bytes = %s\n", format_size(buf, info.in_use_bytes));
+	printf("total bytes   = %s\n", format_size(buf, info.total_bytes));
+	printf("in use bytes  = %s\n", format_size(buf, info.in_use_bytes));
+	printf("malloc count  = %lu\n", info.malloc_count);
+	printf("free count    = %lu\n", info.free_count);
+	printf("realloc count = %lu\n", info.realloc_count);
 
 	return 0;
 }
