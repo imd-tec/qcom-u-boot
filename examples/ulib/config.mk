@@ -44,4 +44,4 @@ SHARED_LDFLAGS := -L$(UBOOT_BUILD) -lu-boot -Wl,-rpath,$(UBOOT_BUILD)
 STATIC_LDFLAGS := -Wl,-T,$(LIB_STATIC_LDS) \
 	-Wl,--whole-archive $(UBOOT_BUILD)/libu-boot.a \
 	-Wl,--no-whole-archive \
-	-lpthread -ldl $(PLATFORM_LIBS) -Wl,-z,noexecstack
+	-lpthread -ldl -lbacktrace $(PLATFORM_LIBS) -Wl,-z,noexecstack

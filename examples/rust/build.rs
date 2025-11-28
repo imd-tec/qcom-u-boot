@@ -65,6 +65,9 @@ fn main() {
             // Fallback to just SDL2 if sdl2-config is not available
             println!("cargo:rustc-link-arg=-lSDL2");
         }
+
+        // Link with libbacktrace for backtrace support on sandbox
+        println!("cargo:rustc-link-arg=-lbacktrace");
     }
 
     // For dynamic linking, link required system libraries normally

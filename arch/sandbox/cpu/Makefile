@@ -15,9 +15,14 @@ extra-y	:= start.o
 extra-$(CONFIG_SANDBOX_SDL)    += sdl.o
 obj-$(CONFIG_XPL_BUILD)	+= spl.o
 obj-$(CONFIG_ETH_SANDBOX_RAW)	+= eth-raw-os.o
+obj-$(CONFIG_BACKTRACE)	+= backtrace.o
 
 # Compile these files with system headers
-CFLAGS_USE_SYSHDRS := eth-raw-os.o fuzz.o main.o os.o sdl.o tty.o
+CFLAGS_USE_SYSHDRS := backtrace.o eth-raw-os.o fuzz.o main.o os.o sdl.o tty.o
+
+# backtrace.c needs libbacktrace header from GCC
+LIBBT_INC := $(dir $(shell $(CC) -print-file-name=include/backtrace.h))
+CFLAGS_backtrace.o += -isystem $(LIBBT_INC)
 
 # sdl.c fails to build with -fshort-wchar using musl
 cmd_cc_sdl.o = $(CC) $(filter-out -nostdinc -fshort-wchar, \

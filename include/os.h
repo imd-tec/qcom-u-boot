@@ -577,6 +577,40 @@ int os_setup_signal_handlers(void);
 void os_signal_action(int sig, unsigned long pc);
 
 /**
+ * os_backtrace() - get backtrace addresses
+ *
+ * Collect backtrace addresses into a caller-supplied buffer.
+ *
+ * @buffer: array to fill with return addresses
+ * @size: maximum number of entries in buffer
+ * @skip: number of stack frames to skip (0 to include os_backtrace itself)
+ * Return: number of addresses collected
+ */
+uint os_backtrace(void **buffer, uint size, uint skip);
+
+/**
+ * os_backtrace_symbols() - convert addresses to symbol strings
+ *
+ * Convert backtrace addresses to human-readable symbol strings. The returned
+ * array and strings are allocated with malloc() and must be freed with
+ * os_backtrace_symbols_free().
+ *
+ * @buffer: array of addresses from os_backtrace()
+ * @count: number of addresses in buffer
+ * Return: array of symbol strings, or NULL on error
+ */
+char **os_backtrace_symbols(void *const *buffer, uint count);
+
+/**
+ * os_backtrace_symbols_free() - free symbol strings
+ *
+ * Free the array returned by os_backtrace_symbols().
+ *
+ * @strings: array to free (may be NULL)
+ */
+void os_backtrace_symbols_free(char **strings);
+
+/**
  * os_get_time_offset() - get time offset
  *
  * Get the time offset from environment variable UBOOT_SB_TIME_OFFSET.
