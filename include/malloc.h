@@ -60,6 +60,14 @@ extern "C" {
 
 #if !ONLY_MSPACES
 
+/*
+ * Rename the U-Boot alloc functions so that sandbox can still use the system
+ * ones
+ */
+#ifdef CONFIG_SANDBOX
+#define USE_DL_PREFIX
+#endif
+
 #ifndef USE_DL_PREFIX
 #define dlcalloc               calloc
 #define dlfree                 free
@@ -82,6 +90,21 @@ extern "C" {
 #define dlindependent_calloc   independent_calloc
 #define dlindependent_comalloc independent_comalloc
 #define dlbulk_free            bulk_free
+#else /* USE_DL_PREFIX */
+/* Ensure that U-Boot actually uses dlmalloc versions */
+#define calloc(n, s)           dlcalloc(n, s)
+#define free(p)                dlfree(p)
+#define malloc(s)              dlmalloc(s)
+#define memalign(a, s)         dlmemalign(a, s)
+#define posix_memalign(p, a, s) dlposix_memalign(p, a, s)
+#define realloc(p, s)          dlrealloc(p, s)
+#define valloc(s)              dlvalloc(s)
+#define pvalloc(s)             dlpvalloc(s)
+#define mallinfo()             dlmallinfo()
+#define mallopt(p, v)          dlmallopt(p, v)
+#define malloc_trim(s)         dlmalloc_trim(s)
+#define malloc_stats()         dlmalloc_stats()
+#define malloc_usable_size(p)  dlmalloc_usable_size(p)
 #endif /* USE_DL_PREFIX */
 
 #if !NO_MALLINFO 
