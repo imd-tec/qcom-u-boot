@@ -337,6 +337,14 @@ config SYS_MALLOC_LEN
 	  This defines memory to be allocated for Dynamic allocation
 	  TODO: Use for other architectures
 
+config MALLOC_DEBUG
+	bool "Enable malloc debugging"
+	default y if UNIT_TEST && !CPU_RISCV
+	help
+	  Enable debugging features in the malloc implementation. This
+	  enables additional assertions and the malloc_get_info() function
+	  to retrieve memory-allocation statistics.
+
 config SPL_SYS_MALLOC_F
 	bool "Enable malloc() pool in SPL"
 	depends on SPL_FRAMEWORK && SYS_MALLOC_F && SPL

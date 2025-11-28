@@ -753,9 +753,9 @@ int initf_malloc(void);
  * malloc_get_info() - Get memory allocation statistics
  *
  * @info: Place to put the statistics
- * Return: 0 on success, -ENOSYS if not available (DEBUG not defined)
+ * Return: 0 on success, -ENOSYS if not available (MALLOC_DEBUG not enabled)
  */
-#ifdef DEBUG
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
 int malloc_get_info(struct malloc_info *info);
 #else
 static inline int malloc_get_info(struct malloc_info *info)

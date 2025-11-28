@@ -568,7 +568,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #ifdef __UBOOT__
 
-#if CONFIG_IS_ENABLED(UNIT_TEST)
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
 #define DEBUG 1
 #endif
 
