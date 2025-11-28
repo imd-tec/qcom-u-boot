@@ -538,6 +538,15 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DLMALLOC_VERSION 20806
 #endif /* DLMALLOC_VERSION */
 
+/*
+ * For U-Boot, use hidden visibility to prevent malloc symbols from being
+ * hooked into the GOT, avoiding issues during early initialization before
+ * gd is set up.
+ */
+#ifdef __UBOOT__
+#define DLMALLOC_EXPORT extern __attribute__((visibility("hidden")))
+#endif
+
 #ifndef DLMALLOC_EXPORT
 #define DLMALLOC_EXPORT extern
 #endif
