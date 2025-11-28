@@ -4975,6 +4975,46 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
     size_t nb = request2size(bytes);
     size_t req = nb + alignment + MIN_CHUNK_SIZE - CHUNK_OVERHEAD;
     mem = internal_malloc(m, req);
+#ifdef __UBOOT__
+    /*
+     * The attempt to over-allocate (with a size large enough to guarantee the
+     * ability to find an aligned region within allocated memory) failed.
+     *
+     * Try again, this time only allocating exactly the size the user wants.
+     * If the allocation now succeeds and just happens to be aligned, we can
+     * still fulfill the user's request.
+     */
+    if (mem == 0) {
+      size_t extra, extra2;
+
+      mem = internal_malloc(m, bytes);
+      /* Aligned -> use it */
+      if (mem != 0 && (((size_t)(mem)) & (alignment - 1)) == 0)
+        return mem;
+      /*
+       * Otherwise, try again, requesting enough extra space to be able to
+       * acquire alignment.
+       */
+      if (mem != 0) {
+        internal_free(m, mem);
+        /* Add in extra bytes to match misalignment of unexpanded alloc */
+        extra = alignment - (((size_t)(mem)) % alignment);
+        mem = internal_malloc(m, bytes + extra);
+        /*
+         * mem might not be the same as before. Validate that the previous
+         * value of extra still works for the current value of mem.
+         */
+        if (mem != 0) {
+          extra2 = alignment - (((size_t)(mem)) % alignment);
+          if (extra2 > extra) {
+            internal_free(m, mem);
+            mem = 0;
+          }
+        }
+      }
+      /* Fall through to original NULL check and chunk splitting logic */
+    }
+#endif
     if (mem != 0) {
       mchunkptr p = mem2chunk(mem);
       if (PREACTION(m))
