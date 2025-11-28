@@ -5628,7 +5628,12 @@ void *dlrealloc(void *oldmem, size_t bytes)
 
 void *dlmemalign(size_t alignment, size_t bytes)
 {
-	return NULL;
+	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
+	void *p = dlmemalign_impl(alignment, fullsz);
+
+	if (!p)
+		return p;
+	return mcheck_memalign_posthook(alignment, p, bytes);
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
