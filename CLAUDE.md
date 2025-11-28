@@ -59,6 +59,7 @@ pyt <test_name>
 - Always run `make mrproper` if you encounter build issues
 - The sandbox build creates a test environment for U-Boot that runs on the host system
 - When using `git diff`, add `--no-ext-diff` to avoid external diff tools that may not work in this environment
+- crosfw shows now output if everything was ok!
 
 ## Coding Conventions
 
