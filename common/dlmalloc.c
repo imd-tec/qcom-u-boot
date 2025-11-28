@@ -4877,6 +4877,15 @@ void* dlcalloc(size_t n_elements, size_t elem_size) {
       req = MAX_SIZE_T; /* force downstream failure on overflow */
   }
   mem = dlmalloc(req);
+#ifdef __UBOOT__
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+  /* For pre-reloc simple malloc, just zero the memory directly */
+  if (mem != 0 && !(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
+    memset(mem, '\0', req);
+    return mem;
+  }
+#endif
+#endif
   if (mem != 0 && calloc_must_clear(mem2chunk(mem)))
     memset(mem, 0, req);
   return mem;
