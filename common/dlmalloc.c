@@ -588,6 +588,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #include <mapmem.h>
 #include <vsprintf.h>
 #include <asm/global_data.h>
+#include <valgrind/memcheck.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -4743,6 +4744,10 @@ void* dlmalloc(size_t bytes) {
 
   postaction:
     POSTACTION(gm);
+#ifdef __UBOOT__
+    if (mem)
+      VALGRIND_MALLOCLIKE_BLOCK(mem, bytes, SIZE_SZ, false);
+#endif
     return mem;
   }
 
@@ -4755,8 +4760,10 @@ void dlfree(void* mem) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* free() is a no-op - all the memory will be freed on relocation */
-  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
+    VALGRIND_FREELIKE_BLOCK(mem, SIZE_SZ);
     return;
+  }
 #endif
 #endif
   /*
@@ -4778,6 +4785,9 @@ void dlfree(void* mem) {
 #endif /* FOOTERS */
     if (!PREACTION(fm)) {
       check_inuse_chunk(fm, p);
+#ifdef __UBOOT__
+      VALGRIND_FREELIKE_BLOCK(mem, SIZE_SZ);
+#endif
       if (RTCHECK(ok_address(fm, p) && ok_inuse(p))) {
         size_t psize = chunksize(p);
         mchunkptr next = chunk_plus_offset(p, psize);
@@ -5349,12 +5359,25 @@ void* dlrealloc(void* oldmem, size_t bytes) {
       if (newp != 0) {
         check_inuse_chunk(m, newp);
         mem = chunk2mem(newp);
+#ifdef __UBOOT__
+        if (mem == oldmem) {
+          VALGRIND_RESIZEINPLACE_BLOCK(oldmem, 0, bytes, SIZE_SZ);
+          VALGRIND_MAKE_MEM_DEFINED(oldmem, bytes);
+        } else {
+          VALGRIND_MALLOCLIKE_BLOCK(mem, bytes, SIZE_SZ, false);
+          VALGRIND_FREELIKE_BLOCK(oldmem, SIZE_SZ);
+        }
+#endif
       }
       else {
         mem = internal_malloc(m, bytes);
         if (mem != 0) {
           size_t oc = chunksize(oldp) - overhead_for(oldp);
           memcpy(mem, oldmem, (oc < bytes)? oc : bytes);
+#ifdef __UBOOT__
+          VALGRIND_MALLOCLIKE_BLOCK(mem, bytes, SIZE_SZ, false);
+          VALGRIND_FREELIKE_BLOCK(oldmem, SIZE_SZ);
+#endif
           internal_free(m, oldmem);
         }
       }
@@ -5387,6 +5410,10 @@ void* dlrealloc_in_place(void* oldmem, size_t bytes) {
         if (newp == oldp) {
           check_inuse_chunk(m, newp);
           mem = oldmem;
+#ifdef __UBOOT__
+          VALGRIND_RESIZEINPLACE_BLOCK(oldmem, 0, bytes, SIZE_SZ);
+          VALGRIND_MAKE_MEM_DEFINED(oldmem, bytes);
+#endif
         }
       }
     }
