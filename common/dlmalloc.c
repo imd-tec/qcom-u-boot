@@ -542,6 +542,18 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DLMALLOC_EXPORT extern
 #endif
 
+#ifdef __UBOOT__
+#include <mapmem.h>
+#include <asm/global_data.h>
+
+DECLARE_GLOBAL_DATA_PTR;
+
+ulong mem_malloc_start;
+ulong mem_malloc_end;
+ulong mem_malloc_brk;
+
+#endif /* __UBOOT__ */
+
 #ifndef WIN32
 #ifdef _WIN32
 #define WIN32 1
@@ -6290,3 +6302,42 @@ History:
          structure of old version,  but most details differ.)
 
 */
+
+/* --------------------- U-Boot additions --------------------- */
+
+#ifdef __UBOOT__
+
+void *sbrk(ptrdiff_t increment)
+{
+	ulong old = mem_malloc_brk;
+	ulong new = old + increment;
+
+	/* mem_malloc_end points one byte past the end, so >= is correct */
+	if ((new < mem_malloc_start) || (new >= mem_malloc_end))
+		return (void *)MORECORE_FAILURE;
+
+	/*
+	 * if we are giving memory back make sure we clear it out since
+	 * we set MORECORE_CLEARS to 1
+	 */
+	if (increment < 0)
+		memset((void *)new, '\0', -increment);
+
+	mem_malloc_brk = new;
+
+	return (void *)old;
+}
+
+void mem_malloc_init(ulong start, ulong size)
+{
+	mem_malloc_start = (ulong)map_sysmem(start, size);
+	mem_malloc_end = mem_malloc_start + size;
+	mem_malloc_brk = mem_malloc_end;
+
+	debug("using memory %#lx-%#lx for malloc()\n", mem_malloc_start,
+	      mem_malloc_end);
+#if CONFIG_IS_ENABLED(SYS_MALLOC_CLEAR_ON_INIT)
+	memset((void *)mem_malloc_start, '\0', size);
+#endif
+}
+#endif /* __UBOOT__ */

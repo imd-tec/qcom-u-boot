@@ -625,6 +625,33 @@ void mspace_inspect_all(mspace msp,
                         void* arg);
 #endif  /* MSPACES */
 
+/* --------------------- U-Boot additions --------------------- */
+
+#ifdef __UBOOT__
+#include <linux/types.h>
+
+/* Memory pool boundaries */
+extern ulong mem_malloc_start;
+extern ulong mem_malloc_end;
+extern ulong mem_malloc_brk;
+
+/**
+ * mem_malloc_init() - Initialize the malloc() heap
+ *
+ * @start: Start address of heap memory region
+ * @size: Size of heap memory region in bytes
+ */
+void mem_malloc_init(ulong start, ulong size);
+
+/**
+ * sbrk() - Extend the heap
+ *
+ * @increment: Number of bytes to add (or remove if negative)
+ * Return: Previous break value on success, MORECORE_FAILURE on error
+ */
+void *sbrk(ptrdiff_t increment);
+#endif /* __UBOOT__ */
+
 #ifdef __cplusplus
 };  /* end of extern "C" */
 #endif
