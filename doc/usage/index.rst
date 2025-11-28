@@ -97,6 +97,7 @@ Shell commands
    cmd/loadx
    cmd/loady
    cmd/luks
+   cmd/malloc
    cmd/meminfo
    cmd/mbr
    cmd/md
