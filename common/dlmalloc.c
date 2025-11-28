@@ -557,6 +557,17 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DEBUG 1
 #endif
 
+#ifdef MCHECK_HEAP_PROTECTION
+#define STATIC_IF_MCHECK static
+#else
+#define STATIC_IF_MCHECK
+#define dlmalloc_impl dlmalloc
+#define dlfree_impl dlfree
+#define dlrealloc_impl dlrealloc
+#define dlmemalign_impl dlmemalign
+#define dlcalloc_impl dlcalloc
+#endif
+
 #define LACKS_FCNTL_H
 #define LACKS_UNISTD_H
 #define LACKS_SYS_PARAM_H
@@ -4607,7 +4618,8 @@ static void* tmalloc_small(mstate m, size_t nb) {
 
 #if !ONLY_MSPACES
 
-void* dlmalloc(size_t bytes) {
+STATIC_IF_MCHECK
+void* dlmalloc_impl(size_t bytes) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
@@ -4764,7 +4776,8 @@ void* dlmalloc(size_t bytes) {
 
 /* ---------------------------- free --------------------------- */
 
-void dlfree(void* mem) {
+STATIC_IF_MCHECK
+void dlfree_impl(void* mem) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* free() is a no-op - all the memory will be freed on relocation */
@@ -4885,7 +4898,8 @@ void dlfree(void* mem) {
 #endif /* FOOTERS */
 }
 
-void* dlcalloc(size_t n_elements, size_t elem_size) {
+STATIC_IF_MCHECK
+void* dlcalloc_impl(size_t n_elements, size_t elem_size) {
   void* mem;
   size_t req = 0;
   if (n_elements != 0) {
@@ -4894,7 +4908,7 @@ void* dlcalloc(size_t n_elements, size_t elem_size) {
         (req / n_elements != elem_size))
       req = MAX_SIZE_T; /* force downstream failure on overflow */
   }
-  mem = dlmalloc(req);
+  mem = dlmalloc_impl(req);
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* For pre-reloc simple malloc, just zero the memory directly */
@@ -5328,7 +5342,8 @@ static void internal_inspect_all(mstate m,
 
 #if !ONLY_MSPACES
 
-void* dlrealloc(void* oldmem, size_t bytes) {
+STATIC_IF_MCHECK
+void* dlrealloc_impl(void* oldmem, size_t bytes) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
@@ -5343,14 +5358,14 @@ void* dlrealloc(void* oldmem, size_t bytes) {
 #endif
   void* mem = 0;
   if (oldmem == 0) {
-    mem = dlmalloc(bytes);
+    mem = dlmalloc_impl(bytes);
   }
   else if (bytes >= MAX_REQUEST) {
     MALLOC_FAILURE_ACTION;
   }
 #ifdef REALLOC_ZERO_BYTES_FREES
   else if (bytes == 0) {
-    dlfree(oldmem);
+    dlfree_impl(oldmem);
   }
 #endif /* REALLOC_ZERO_BYTES_FREES */
   else {
@@ -5433,7 +5448,8 @@ void* dlrealloc_in_place(void* oldmem, size_t bytes) {
   return mem;
 }
 
-void* dlmemalign(size_t alignment, size_t bytes) {
+STATIC_IF_MCHECK
+void* dlmemalign_impl(size_t alignment, size_t bytes) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
@@ -5441,7 +5457,7 @@ void* dlmemalign(size_t alignment, size_t bytes) {
 #endif
 #endif
   if (alignment <= MALLOC_ALIGNMENT) {
-    return dlmalloc(bytes);
+    return dlmalloc_impl(bytes);
   }
   return internal_memalign(gm, alignment, bytes);
 }
@@ -5449,7 +5465,7 @@ void* dlmemalign(size_t alignment, size_t bytes) {
 int dlposix_memalign(void** pp, size_t alignment, size_t bytes) {
   void* mem = 0;
   if (alignment == MALLOC_ALIGNMENT)
-    mem = dlmalloc(bytes);
+    mem = dlmalloc_impl(bytes);
   else {
     size_t d = alignment / sizeof(void*);
     size_t r = alignment % sizeof(void*);
@@ -5473,14 +5489,14 @@ void* dlvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign(pagesz, bytes);
+  return dlmemalign_impl(pagesz, bytes);
 }
 
 void* dlpvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
+  return dlmemalign_impl(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
 }
 
 void** dlindependent_calloc(size_t n_elements, size_t elem_size,
