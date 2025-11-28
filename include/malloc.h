@@ -1,16 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Stub header to include the old malloc header
- *
- * This allows the old malloc implementation to be preserved while
- * preparing for a new dlmalloc version.
- */
-
-#include <malloc_old.h>
-
-#if 0 /* not active yet */
-
-/*
   Default header file for malloc-2.8.x, written by Doug Lea
   and released to the public domain, as explained at
   http://creativecommons.org/publicdomain/zero/1.0/ 
@@ -31,6 +20,12 @@
 
   * If MSPACES is defined, declarations for mspace versions are included.
 */
+
+#ifdef CONFIG_SYS_MALLOC_LEGACY
+
+#include <malloc_old.h>
+
+#else
 
 #ifndef MALLOC_280_H
 #define MALLOC_280_H
@@ -748,4 +743,4 @@ int initf_malloc(void);
 
 #endif /* MALLOC_280_H */
 
-#endif /* not active yet */
+#endif /* !CONFIG_SYS_MALLOC_LEGACY */

@@ -511,6 +511,22 @@ config SPL_SYS_MALLOC_SMALL
 
 	  If unsure, say Y to minimize SPL code size.
 
+config SYS_MALLOC_LEGACY
+	bool "Use legacy dlmalloc 2.6.6 instead of dlmalloc 2.8.6"
+	help
+	  Select this option to use the older dlmalloc 2.6.6 implementation
+	  instead of the newer 2.8.6 version. The legacy allocator uses a
+	  simpler bin system, has larger code size in most cases and uses more
+	  static data.
+
+	  The legacy allocator may have slightly worse fragmentation behavior
+	  for some workloads but has been well-tested over many years in U-Boot.
+
+	  This option is provided for compatibility and testing. New boards
+	  should use the default dlmalloc 2.8.6.
+
+	  If unsure, say N to use the modern allocator.
+
 config TOOLS_DEBUG
 	bool "Enable debug information for tools"
 	help
