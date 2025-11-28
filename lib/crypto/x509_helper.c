@@ -5,6 +5,8 @@
  * Copyright (C) 2012 Red Hat, Inc. All Rights Reserved.
  * Written by David Howells (dhowells@redhat.com)
  */
+
+#include <string.h>
 #include <linux/err.h>
 #include <crypto/public_key.h>
 #include <crypto/x509_parser.h>

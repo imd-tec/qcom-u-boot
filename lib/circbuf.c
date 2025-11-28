@@ -6,6 +6,7 @@
 
 #include <log.h>
 #include <malloc.h>
+#include <string.h>
 
 #include <circbuf.h>
 

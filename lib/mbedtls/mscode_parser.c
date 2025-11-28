@@ -8,6 +8,7 @@
 
 #include <linux/kernel.h>
 #include <linux/err.h>
+#include <string.h>
 #include <crypto/pkcs7.h>
 #include <crypto/mscode.h>
 

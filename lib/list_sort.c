@@ -8,6 +8,7 @@
 #include <linux/compat.h>
 #include <malloc.h>
 #include <linux/printk.h>
+#include <string.h>
 #endif
 #include <linux/list.h>
 #include <linux/list_sort.h>

@@ -13,6 +13,7 @@
 /* #define DEBUG */
 #include <config.h>
 #include <log.h>
+#include <string.h>
 #include <linux/delay.h>
 #include <linux/types.h>
 #include <linux/err.h>
