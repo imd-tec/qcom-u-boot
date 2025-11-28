@@ -559,6 +559,10 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #ifdef MCHECK_HEAP_PROTECTION
 #define STATIC_IF_MCHECK static
+#undef MALLOC_COPY
+#undef MALLOC_ZERO
+static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
+static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
 #else
 #define STATIC_IF_MCHECK
 #define dlmalloc_impl dlmalloc
