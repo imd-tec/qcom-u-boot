@@ -5596,6 +5596,7 @@ size_t dlmalloc_usable_size(const void* mem) {
 
 void *dlmalloc(size_t bytes)
 {
+	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
 	void *p = dlmalloc_impl(fullsz);
 
@@ -5608,6 +5609,7 @@ void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
 
 void *dlrealloc(void *oldmem, size_t bytes)
 {
+	mcheck_pedantic_prehook();
 	if (bytes == 0) {
 		if (oldmem)
 			dlfree(oldmem);
@@ -5628,6 +5630,7 @@ void *dlrealloc(void *oldmem, size_t bytes)
 
 void *dlmemalign(size_t alignment, size_t bytes)
 {
+	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
 	void *p = dlmemalign_impl(alignment, fullsz);
 
@@ -5640,6 +5643,7 @@ void *dlmemalign(size_t alignment, size_t bytes)
 
 void *dlcalloc(size_t n, size_t elem_size)
 {
+	mcheck_pedantic_prehook();
 	/* NB: no overflow check here */
 	size_t fullsz = mcheck_alloc_prehook(n * elem_size);
 	void *p = dlcalloc_impl(1, fullsz);
@@ -5650,11 +5654,19 @@ void *dlcalloc(size_t n, size_t elem_size)
 }
 
 /* mcheck API */
+int mcheck_pedantic(mcheck_abortfunc_t f)
+{
+	mcheck_initialize(f, 1);
+	return 0;
+}
+
 int mcheck(mcheck_abortfunc_t f)
 {
 	mcheck_initialize(f, 0);
 	return 0;
 }
+
+void mcheck_check_all(void) { mcheck_pedantic_check(); }
 
 enum mcheck_status mprobe(void *__ptr) { return mcheck_mprobe(__ptr); }
 #endif /* MCHECK_HEAP_PROTECTION */
