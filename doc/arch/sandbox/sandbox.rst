@@ -616,6 +616,23 @@ Here is an example trace::
    Hit any key to stop autoboot:  1
 
 
+Backtrace Support
+-----------------
+
+Sandbox supports printing a backtrace of the current call stack, which can be
+useful for debugging. The :doc:`backtrace <../../usage/cmd/backtrace>` command
+prints a backtrace showing function names, source files, and line numbers.
+
+This uses the libbacktrace library (bundled with GCC) to provide detailed symbol
+information, including for static functions.
+
+To use it, simply run::
+
+    => backtrace
+
+This command is enabled with ``CONFIG_CMD_BACKTRACE``.
+
+
 Debugging the init sequence
 ---------------------------
 
