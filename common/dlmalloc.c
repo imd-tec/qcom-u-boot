@@ -5591,6 +5591,69 @@ size_t dlmalloc_usable_size(const void* mem) {
   return 0;
 }
 
+#ifdef MCHECK_HEAP_PROTECTION
+#include "mcheck_core.inc.h"
+
+void *dlmalloc(size_t bytes)
+{
+	size_t fullsz = mcheck_alloc_prehook(bytes);
+	void *p = dlmalloc_impl(fullsz);
+
+	if (!p)
+		return p;
+	return mcheck_alloc_posthook(p, bytes);
+}
+
+void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
+
+void *dlrealloc(void *oldmem, size_t bytes)
+{
+	if (bytes == 0) {
+		if (oldmem)
+			dlfree(oldmem);
+		return NULL;
+	}
+
+	if (oldmem == NULL)
+		return dlmalloc(bytes);
+
+	void *p = mcheck_reallocfree_prehook(oldmem);
+	size_t newsz = mcheck_alloc_prehook(bytes);
+
+	p = dlrealloc_impl(p, newsz);
+	if (!p)
+		return p;
+	return mcheck_alloc_noclean_posthook(p, bytes);
+}
+
+void *dlmemalign(size_t alignment, size_t bytes)
+{
+	return NULL;
+}
+
+/* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
+
+void *dlcalloc(size_t n, size_t elem_size)
+{
+	/* NB: no overflow check here */
+	size_t fullsz = mcheck_alloc_prehook(n * elem_size);
+	void *p = dlcalloc_impl(1, fullsz);
+
+	if (!p)
+		return p;
+	return mcheck_alloc_noclean_posthook(p, n * elem_size);
+}
+
+/* mcheck API */
+int mcheck(mcheck_abortfunc_t f)
+{
+	mcheck_initialize(f, 0);
+	return 0;
+}
+
+enum mcheck_status mprobe(void *__ptr) { return mcheck_mprobe(__ptr); }
+#endif /* MCHECK_HEAP_PROTECTION */
+
 #endif /* !ONLY_MSPACES */
 
 /* ----------------------------- user mspaces ---------------------------- */
