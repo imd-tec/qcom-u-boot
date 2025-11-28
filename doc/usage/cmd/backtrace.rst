@@ -29,15 +29,15 @@ Example
 
     => backtrace
     backtrace: 14 addresses
-      backtrace_show() at /home/user/u-boot/lib/backtrace.c:17
-      do_backtrace() at /home/user/u-boot/cmd/backtrace.c:18
-      cmd_process() at /home/user/u-boot/common/command.c:637
-      run_list_real() at /home/user/u-boot/common/cli_hush.c:1868
-      parse_stream_outer() at /home/user/u-boot/common/cli_hush.c:3207
-      parse_string_outer() at /home/user/u-boot/common/cli_hush.c:3257
-      run_command_list() at /home/user/u-boot/common/cli.c:168
-      sandbox_main_loop_init() at /home/user/u-boot/arch/sandbox/cpu/start.c:153
-      board_init_r() at /home/user/u-boot/common/board_r.c:774
+      backtrace_show() at lib/backtrace.c:18
+      do_backtrace() at cmd/backtrace.c:17
+      cmd_process() at common/command.c:637
+      run_list_real() at common/cli_hush.c:1868
+      parse_stream_outer() at common/cli_hush.c:3207
+      parse_string_outer() at common/cli_hush.c:3257
+      run_command_list() at common/cli.c:168
+      sandbox_main_loop_init() at arch/sandbox/cpu/start.c:153
+      board_init_r() at common/board_r.c:774
       ...
 
 Configuration

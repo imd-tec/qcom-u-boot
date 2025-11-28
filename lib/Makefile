@@ -148,6 +148,7 @@ obj-$(CONFIG_LIB_UUID) += uuid.o
 obj-$(CONFIG_LIB_RAND) += rand.o
 obj-y += panic.o
 obj-$(CONFIG_BACKTRACE) += backtrace.o
+CFLAGS_backtrace.o += -DSRCTREE='"$(srctree)/"'
 
 ifeq ($(CONFIG_XPL_BUILD),y)
 # SPL U-Boot may use full-printf, tiny-printf or none at all

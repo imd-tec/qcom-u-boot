@@ -8,6 +8,21 @@
 
 #include <backtrace.h>
 #include <stdio.h>
+#include <string.h>
+
+static void print_sym(const char *sym)
+{
+	const char *p;
+
+	/* Look for SRCTREE prefix in the string and skip it */
+	p = strstr(sym, SRCTREE);
+	if (p) {
+		/* Print part before SRCTREE, then the rest after SRCTREE */
+		printf("  %.*s%s\n", (int)(p - sym), sym, p + strlen(SRCTREE));
+	} else {
+		printf("  %s\n", sym);
+	}
+}
 
 int backtrace_show(void)
 {
@@ -29,7 +44,7 @@ int backtrace_show(void)
 	printf("backtrace: %d addresses\n", ctx.count);
 	for (i = 0; i < ctx.count; i++) {
 		if (ctx.syms[i])
-			printf("  %s\n", ctx.syms[i]);
+			print_sym(ctx.syms[i]);
 		else
 			printf("  %p\n", ctx.addrs[i]);
 	}

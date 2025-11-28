@@ -14,8 +14,13 @@
 /* Test 'backtrace' command */
 static int cmd_test_backtrace(struct unit_test_state *uts)
 {
-	/* for now, just run the command */
 	ut_assertok(run_command("backtrace", 0));
+
+	ut_assert_nextlinen("backtrace:");
+	ut_assert_nextlinen("  backtrace_show() at lib/backtrace.c:");
+	ut_assert_nextlinen("  do_backtrace() at cmd/backtrace.c:");
+	ut_assert_nextlinen("  cmd_process() at common/command.c:");
+	ut_assert_skip_to_linen("  cmd_test_backtrace() at test/cmd/backtrace.c:");
 
 	return 0;
 }
