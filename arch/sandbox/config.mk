@@ -3,7 +3,13 @@
 
 PLATFORM_CPPFLAGS += -D__SANDBOX__ -U_FORTIFY_SOURCE
 PLATFORM_CPPFLAGS += -fPIC -ffunction-sections -fdata-sections
+
+ifeq ($(CONFIG_BACKTRACE),y)
+GCC_LIB_DIR := $(shell $(CC) -print-file-name=)
+PLATFORM_LIBS += -L$(GCC_LIB_DIR) -lbacktrace
+endif
 PLATFORM_LIBS += -lrt
+
 SDL_CONFIG ?= sdl2-config
 
 # Define this to avoid linking with SDL, which requires SDL libraries
