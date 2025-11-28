@@ -543,6 +543,26 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #endif
 
 #ifdef __UBOOT__
+
+#define LACKS_FCNTL_H
+#define LACKS_UNISTD_H
+#define LACKS_SYS_PARAM_H
+#define LACKS_SYS_MMAN_H
+#define LACKS_SYS_TYPES_H
+#define LACKS_SCHED_H
+#define LACKS_TIME_H
+#define HAVE_MMAP 0
+#define HAVE_MREMAP 0
+#define MORECORE_CONTIGUOUS 1
+#define MORECORE_CANNOT_TRIM 1
+#define MORECORE_CLEARS 1
+#define NO_MALLOC_STATS 1
+#define USE_LOCKS 0
+#define USE_SPIN_LOCKS 0
+#define MALLOC_FAILURE_ACTION
+#define ABORT do {} while (1)
+
+#include <malloc.h>
 #include <mapmem.h>
 #include <asm/global_data.h>
 
@@ -1020,7 +1040,7 @@ DLMALLOC_EXPORT size_t dlmalloc_max_footprint(void);
   guarantee that this number of bytes can actually be obtained from
   the system.
 */
-DLMALLOC_EXPORT size_t dlmalloc_footprint_limit();
+DLMALLOC_EXPORT size_t dlmalloc_footprint_limit(void);
 
 /*
   malloc_set_footprint_limit();
@@ -1281,7 +1301,7 @@ DLMALLOC_EXPORT void  dlmalloc_stats(void);
   p = malloc(n);
   assert(malloc_usable_size(p) >= 256);
 */
-size_t dlmalloc_usable_size(void*);
+size_t dlmalloc_usable_size(const void*);
 
 #endif /* ONLY_MSPACES */
 
@@ -5400,9 +5420,9 @@ int dlmallopt(int param_number, int value) {
   return change_mparam(param_number, value);
 }
 
-size_t dlmalloc_usable_size(void* mem) {
+size_t dlmalloc_usable_size(const void* mem) {
   if (mem != 0) {
-    mchunkptr p = mem2chunk(mem);
+    mchunkptr p = mem2chunk((void*)mem);
     if (is_inuse(p))
       return chunksize(p) - overhead_for(p);
   }
@@ -6314,7 +6334,7 @@ void *sbrk(ptrdiff_t increment)
 
 	/* mem_malloc_end points one byte past the end, so >= is correct */
 	if ((new < mem_malloc_start) || (new >= mem_malloc_end))
-		return (void *)MORECORE_FAILURE;
+		return MFAIL;
 
 	/*
 	 * if we are giving memory back make sure we clear it out since
