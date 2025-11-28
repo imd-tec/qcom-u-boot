@@ -4582,6 +4582,11 @@ static void* tmalloc_small(mstate m, size_t nb) {
 #if !ONLY_MSPACES
 
 void* dlmalloc(size_t bytes) {
+#ifdef __UBOOT__
+  /* Return NULL if not initialized yet */
+  if (!mem_malloc_start && !mem_malloc_end)
+    return NULL;
+#endif
   /*
      Basic algorithm:
      If a small request (< 256 bytes minus per-chunk overhead):
