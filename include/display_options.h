@@ -11,6 +11,20 @@
 
 #include <linux/types.h>
 
+#if CONFIG_IS_ENABLED(LIB_FORMAT_SIZE)
+/**
+ * format_size() - Format a size with a suffix
+ *
+ * Format sizes as "xxx KiB", "xxx.y KiB", "xxx MiB", "xxx.y MiB",
+ * xxx GiB, xxx.y GiB, etc as needed
+ *
+ * @buf:	Buffer to write to (must be at least 12 bytes)
+ * @size:	Size to format
+ * Return: @buf
+ */
+char *format_size(char *buf, uint64_t size);
+#endif
+
 /**
  * print_size() - Print a size with a suffix
  *

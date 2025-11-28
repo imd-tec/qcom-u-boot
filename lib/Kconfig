@@ -36,6 +36,13 @@ config BACKTRACE
 	  stack. This is currently only available on sandbox. The backtrace
 	  command can be used to print the backtrace.
 
+config LIB_FORMAT_SIZE
+	bool
+	default y
+	help
+	  Enables the format_size() helper which formats a size as a
+	  human-readable string.
+
 config BCH
 	bool "Enable Software based BCH ECC"
 	help

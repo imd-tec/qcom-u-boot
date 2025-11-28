@@ -68,3 +68,17 @@ static int lib_test_print_size(struct unit_test_state *uts)
 	return 0;
 }
 LIB_TEST(lib_test_print_size, UTF_CONSOLE);
+
+static int lib_test_format_size(struct unit_test_state *uts)
+{
+	char buf[12];
+
+	ut_asserteq_str("321 Bytes", format_size(buf, 321));
+	ut_asserteq_str("4.2 KiB", format_size(buf, 4321));
+	ut_asserteq_str("53 KiB", format_size(buf, 54321));
+	ut_asserteq_str("1 GiB", format_size(buf, 1073741824));
+	ut_asserteq_str("49.4 TiB", format_size(buf, 54321987654321));
+
+	return 0;
+}
+LIB_TEST(lib_test_format_size, 0);

@@ -98,7 +98,11 @@ void print_freq(uint64_t freq, const char *s)
 	printf(" %cHz%s", c, s);
 }
 
-void print_size(uint64_t size, const char *s)
+#if CONFIG_IS_ENABLED(LIB_FORMAT_SIZE)
+char *format_size(char *buf, uint64_t size)
+#else
+static char *format_size(char *buf, uint64_t size)
+#endif
 {
 	unsigned long m = 0, n;
 	uint64_t f;
@@ -107,6 +111,7 @@ void print_size(uint64_t size, const char *s)
 	char c = 0;
 	unsigned int i;
 
+	/* Find the best unit to display */
 	for (i = 0; i < ARRAY_SIZE(names); i++, d -= 10) {
 		if (size >> d) {
 			c = names[i];
@@ -116,12 +121,12 @@ void print_size(uint64_t size, const char *s)
 
 	if (!c) {
 		/*
-		 * SPL tiny-printf is not capable for printing uint64_t.
-		 * We have just checked that the size is small enought to fit
+		 * SPL tiny-printf is not capable of printing uint64_t.
+		 * We have just checked that the size is small enough to fit
 		 * unsigned int safely.
 		 */
-		printf("%u Bytes%s", (unsigned int)size, s);
-		return;
+		sprintf(buf, "%u Bytes", (unsigned int)size);
+		return buf;
 	}
 
 	n = size >> d;
@@ -143,11 +148,20 @@ void print_size(uint64_t size, const char *s)
 		}
 	}
 
-	printf ("%lu", n);
-	if (m) {
-		printf (".%ld", m);
-	}
-	printf (" %ciB%s", c, s);
+	if (m)
+		sprintf(buf, "%lu.%ld %ciB", n, m, c);
+	else
+		sprintf(buf, "%lu %ciB", n, c);
+
+	return buf;
+}
+
+void print_size(uint64_t size, const char *s)
+{
+	char buf[12];
+
+	format_size(buf, size);
+	printf("%s%s", buf, s);
 }
 
 #define MAX_LINE_LENGTH_BYTES		64
