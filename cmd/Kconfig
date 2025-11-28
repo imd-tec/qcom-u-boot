@@ -136,6 +136,14 @@ config CMD_ADDR_FIND
 	  sufficiently large to hold a file. If successful, it sets the
 	  loadaddr variable to this address.
 
+config CMD_BACKTRACE
+	bool "backtrace"
+	depends on BACKTRACE
+	default y if BACKTRACE
+	help
+	  This command prints a backtrace showing the current call stack.
+	  This can be useful for debugging.
+
 config CMD_ADDRMAP
 	bool "addrmap"
 	depends on ADDR_MAP

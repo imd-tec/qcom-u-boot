@@ -31,6 +31,7 @@ Shell commands
    cmd/addrmap
    cmd/armffa
    cmd/askenv
+   cmd/backtrace
    cmd/base
    cmd/bdinfo
    cmd/bind
