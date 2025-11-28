@@ -592,6 +592,9 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 DECLARE_GLOBAL_DATA_PTR;
 
+static bool malloc_testing;	/* enable test mode */
+static int malloc_max_allocs;	/* return NULL after this many calls to malloc() */
+
 ulong mem_malloc_start;
 ulong mem_malloc_end;
 ulong mem_malloc_brk;
@@ -4614,6 +4617,11 @@ void* dlmalloc(size_t bytes) {
   /* Return NULL if not initialized yet */
   if (!mem_malloc_start && !mem_malloc_end)
     return NULL;
+
+  if (CONFIG_IS_ENABLED(UNIT_TEST) && malloc_testing) {
+    if (--malloc_max_allocs < 0)
+      return NULL;
+  }
 #endif
   /*
      Basic algorithm:
@@ -5328,6 +5336,10 @@ void* dlrealloc(void* oldmem, size_t bytes) {
     panic("pre-reloc realloc() is not supported");
   }
 #endif
+  if (CONFIG_IS_ENABLED(UNIT_TEST) && malloc_testing) {
+    if (--malloc_max_allocs < 0)
+      return NULL;
+  }
 #endif
   void* mem = 0;
   if (oldmem == 0) {
@@ -6491,6 +6503,17 @@ void mem_malloc_init(ulong start, ulong size)
 #endif
 }
 
+void malloc_enable_testing(int max_allocs)
+{
+	malloc_testing = true;
+	malloc_max_allocs = max_allocs;
+}
+
+void malloc_disable_testing(void)
+{
+	malloc_testing = false;
+}
+
 int initf_malloc(void)
 {
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
@@ -6501,4 +6524,5 @@ int initf_malloc(void)
 
 	return 0;
 }
+
 #endif /* __UBOOT__ */

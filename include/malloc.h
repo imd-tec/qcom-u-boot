@@ -659,6 +659,18 @@ extern ulong mem_malloc_end;
 extern ulong mem_malloc_brk;
 
 /**
+ * malloc_enable_testing() - Enable malloc failure testing
+ *
+ * @max_allocs: Number of allocations to allow before returning NULL
+ */
+void malloc_enable_testing(int max_allocs);
+
+/**
+ * malloc_disable_testing() - Disable malloc failure testing
+ */
+void malloc_disable_testing(void);
+
+/**
  * mem_malloc_init() - Initialize the malloc() heap
  *
  * @start: Start address of heap memory region
