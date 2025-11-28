@@ -562,6 +562,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define MALLOC_FAILURE_ACTION
 #define ABORT do {} while (1)
 
+#include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
 #include <asm/global_data.h>
