@@ -68,6 +68,24 @@ extern "C" {
 #define USE_DL_PREFIX
 #endif
 
+/*
+ * When using simple malloc (SPL/TPL), redirect to simple implementations.
+ * Skip this when compiling dlmalloc.c itself to avoid conflicts.
+ */
+#if CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE)
+#define malloc malloc_simple
+#define realloc realloc_simple
+#define calloc calloc_simple
+#define memalign memalign_simple
+#if IS_ENABLED(CONFIG_VALGRIND)
+#define free free_simple
+#else
+static inline void free(void *ptr) {}
+#endif
+void *calloc(size_t nmemb, size_t size);
+void *realloc_simple(void *ptr, size_t size);
+#else /* !SYS_MALLOC_SIMPLE || COMPILING_DLMALLOC */
+
 #ifndef USE_DL_PREFIX
 #define dlcalloc               calloc
 #define dlfree                 free
@@ -106,6 +124,7 @@ extern "C" {
 #define malloc_stats()         dlmalloc_stats()
 #define malloc_usable_size(p)  dlmalloc_usable_size(p)
 #endif /* USE_DL_PREFIX */
+#endif /* !SYS_MALLOC_SIMPLE || COMPILING_DLMALLOC */
 
 #if !NO_MALLINFO 
 #ifndef HAVE_USR_INCLUDE_MALLOC_H
