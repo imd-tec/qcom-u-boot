@@ -3689,6 +3689,16 @@ static struct mallinfo internal_mallinfo(mstate m) {
   }
   return nm;
 }
+
+int malloc_get_info(struct malloc_info *info)
+{
+  struct mallinfo mi = internal_mallinfo(gm);
+
+  info->total_bytes = mem_malloc_end - mem_malloc_start;
+  info->in_use_bytes = mi.uordblks;
+
+  return 0;
+}
 #endif /* !NO_MALLINFO */
 
 #if !NO_MALLOC_STATS

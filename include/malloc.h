@@ -665,7 +665,21 @@ void mspace_inspect_all(mspace msp,
 /* --------------------- U-Boot additions --------------------- */
 
 #ifdef __UBOOT__
+#include <linux/errno.h>
 #include <linux/types.h>
+
+/**
+ * struct malloc_info - Memory allocation statistics
+ *
+ * This is filled in by malloc_get_info().
+ *
+ * @total_bytes: Total bytes available in the heap
+ * @in_use_bytes: Current bytes allocated (in use by application)
+ */
+struct malloc_info {
+	ulong total_bytes;
+	ulong in_use_bytes;
+};
 
 /* Memory pool boundaries */
 extern ulong mem_malloc_start;
@@ -734,6 +748,21 @@ void *memalign_simple(size_t alignment, size_t bytes);
  * Return: 0 (always succeeds)
  */
 int initf_malloc(void);
+
+/**
+ * malloc_get_info() - Get memory allocation statistics
+ *
+ * @info: Place to put the statistics
+ * Return: 0 on success, -ENOSYS if not available (DEBUG not defined)
+ */
+#ifdef DEBUG
+int malloc_get_info(struct malloc_info *info);
+#else
+static inline int malloc_get_info(struct malloc_info *info)
+{
+	return -ENOSYS;
+}
+#endif
 
 #endif /* __UBOOT__ */
 
