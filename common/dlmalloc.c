@@ -544,6 +544,10 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #ifdef __UBOOT__
 
+#if CONFIG_IS_ENABLED(UNIT_TEST)
+#define DEBUG 1
+#endif
+
 #define LACKS_FCNTL_H
 #define LACKS_UNISTD_H
 #define LACKS_SYS_PARAM_H
