@@ -563,6 +563,14 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define NO_MALLOC_STATS 1
 #define USE_LOCKS 0
 #define USE_SPIN_LOCKS 0
+
+#if !CONFIG_IS_ENABLED(UNIT_TEST)
+#define NO_MALLINFO 1
+#endif
+#if !CONFIG_IS_ENABLED(SANDBOX)
+#define INSECURE 1
+#endif
+
 #define MALLOC_FAILURE_ACTION
 #define ABORT do {} while (1)
 
