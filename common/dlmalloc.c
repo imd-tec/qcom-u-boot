@@ -595,6 +595,10 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define INSECURE 1
 #endif
 
+#if CONFIG_IS_ENABLED(SYS_MALLOC_SMALL)
+#define NO_REALLOC_IN_PLACE 1
+#endif
+
 /* Use simplified sys_alloc for non-sandbox builds */
 #if !IS_ENABLED(CONFIG_SANDBOX)
 #define SIMPLE_SYSALLOC 1
@@ -807,6 +811,9 @@ ulong mem_malloc_brk;
 #ifndef NO_SEGMENT_TRAVERSAL
 #define NO_SEGMENT_TRAVERSAL 0
 #endif /* NO_SEGMENT_TRAVERSAL */
+#ifndef NO_REALLOC_IN_PLACE
+#define NO_REALLOC_IN_PLACE 0
+#endif /* NO_REALLOC_IN_PLACE */
 
 /*
   mallopt tuning options.  SVID/XPG defines four standard parameter
@@ -3984,7 +3991,7 @@ static mchunkptr mmap_resize(mstate m, mchunkptr oldp, size_t nb, int flags) {
   }
   return 0;
 }
-#endif /* !NO_REALLOC_IN_PLACE */
+#endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
 
 
 /* -------------------------- mspace management -------------------------- */
@@ -5002,6 +5009,7 @@ void* dlcalloc_impl(size_t n_elements, size_t elem_size) {
 
 /* ------------ Internal support for realloc, memalign, etc -------------- */
 
+#if !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE
 /* Try to realloc; only in-place unless can_move true */
 static mchunkptr try_realloc_chunk(mstate m, mchunkptr p, size_t nb,
                                    int can_move) {
@@ -5081,6 +5089,7 @@ static mchunkptr try_realloc_chunk(mstate m, mchunkptr p, size_t nb,
   }
   return newp;
 }
+#endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
 
 static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   void* mem = 0;
@@ -5444,8 +5453,9 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
   }
 #endif /* REALLOC_ZERO_BYTES_FREES */
   else {
-    size_t nb = request2size(bytes);
     mchunkptr oldp = mem2chunk(oldmem);
+#if !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE
+    size_t nb = request2size(bytes);
 #if ! FOOTERS
     mstate m = gm;
 #else /* FOOTERS */
@@ -5484,10 +5494,23 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
         }
       }
     }
+#else /* defined(__UBOOT__) && NO_REALLOC_IN_PLACE */
+    mem = dlmalloc_impl(bytes);
+    if (mem != 0) {
+      size_t oc = chunksize(oldp) - overhead_for(oldp);
+      memcpy(mem, oldmem, (oc < bytes)? oc : bytes);
+#ifdef __UBOOT__
+      VALGRIND_MALLOCLIKE_BLOCK(mem, bytes, SIZE_SZ, false);
+      VALGRIND_FREELIKE_BLOCK(oldmem, SIZE_SZ);
+#endif
+      dlfree_impl(oldmem);
+    }
+#endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
   }
   return mem;
 }
 
+#if !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE
 void* dlrealloc_in_place(void* oldmem, size_t bytes) {
   void* mem = 0;
   if (oldmem != 0) {
@@ -5522,6 +5545,7 @@ void* dlrealloc_in_place(void* oldmem, size_t bytes) {
   }
   return mem;
 }
+#endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
 
 STATIC_IF_MCHECK
 void* dlmemalign_impl(size_t alignment, size_t bytes) {
