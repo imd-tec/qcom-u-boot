@@ -595,6 +595,11 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define INSECURE 1
 #endif
 
+/* Use simplified sys_alloc for non-sandbox builds */
+#if !IS_ENABLED(CONFIG_SANDBOX)
+#define SIMPLE_SYSALLOC 1
+#endif
+
 #define MALLOC_FAILURE_ACTION
 #define ABORT do {} while (1)
 
@@ -2719,7 +2724,12 @@ static struct malloc_state _gm_;
 
 #endif /* !ONLY_MSPACES */
 
+#if defined(__UBOOT__) && SIMPLE_SYSALLOC
+/* U-Boot initializes in mem_malloc_init() so is_initialized() is always true */
+#define is_initialized(M)  1
+#else
 #define is_initialized(M)  ((M)->top != 0)
+#endif
 
 /* -------------------------- system alloc setup ------------------------- */
 
@@ -3903,6 +3913,7 @@ static void internal_malloc_stats(mstate m) {
   requirements (especially in memalign).
 */
 
+#if !defined(__UBOOT__) || !SIMPLE_SYSALLOC
 /* Malloc using mmap */
 static void* mmap_alloc(mstate m, size_t nb) {
   size_t mmsize = mmap_align(nb + SIX_SIZE_T_SIZES + CHUNK_ALIGN_MASK);
@@ -3934,7 +3945,9 @@ static void* mmap_alloc(mstate m, size_t nb) {
   }
   return 0;
 }
+#endif /* !defined(__UBOOT__) || !SIMPLE_SYSALLOC */
 
+#if !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE
 /* Realloc using mmap */
 static mchunkptr mmap_resize(mstate m, mchunkptr oldp, size_t nb, int flags) {
   size_t oldsize = chunksize(oldp);
@@ -3969,12 +3982,13 @@ static mchunkptr mmap_resize(mstate m, mchunkptr oldp, size_t nb, int flags) {
   }
   return 0;
 }
+#endif /* !NO_REALLOC_IN_PLACE */
 
 
 /* -------------------------- mspace management -------------------------- */
 
 /* Initialize top chunk and its size */
-static void init_top(mstate m, mchunkptr p, size_t psize) {
+static void __maybe_unused init_top(mstate m, mchunkptr p, size_t psize) {
   /* Ensure alignment */
   size_t offset = align_offset(chunk2mem(p));
   p = (mchunkptr)((char*)p + offset);
@@ -3989,7 +4003,7 @@ static void init_top(mstate m, mchunkptr p, size_t psize) {
 }
 
 /* Initialize bins for a new mstate that is otherwise zeroed out */
-static void init_bins(mstate m) {
+static void __maybe_unused init_bins(mstate m) {
   /* Establish circular links for smallbins */
   bindex_t i;
   for (i = 0; i < NSMALLBINS; ++i) {
@@ -4017,6 +4031,7 @@ static void reset_on_error(mstate m) {
 }
 #endif /* PROCEED_ON_ERROR */
 
+#if !defined(__UBOOT__) || !SIMPLE_SYSALLOC
 /* Allocate chunk and prepend remainder with chunk in successor base. */
 static void* prepend_alloc(mstate m, char* newbase, char* oldbase,
                            size_t nb) {
@@ -4111,8 +4126,61 @@ static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
 
   check_top_chunk(m, m->top);
 }
+#endif /* !__UBOOT__ || !SIMPLE_SYSALLOC */
 
 /* -------------------------- System allocation -------------------------- */
+
+#if defined(__UBOOT__) && SIMPLE_SYSALLOC
+/*
+ * U-Boot simplified sys_alloc: The heap is pre-allocated with fixed size in
+ * mem_malloc_init(), so we can only extend via sbrk() if space remains.
+ * No mmap, no multiple segments, no complex merging needed.
+ */
+static void* sys_alloc(mstate m, size_t nb) {
+  char* tbase;
+  size_t asize;
+  size_t tsize;
+
+  asize = granularity_align(nb + SYS_ALLOC_PADDING);
+  if (asize <= nb)
+    return NULL; /* wraparound */
+
+  tbase = (char *)CALL_MORECORE(asize);
+  if (tbase == CMFAIL) {
+    MALLOC_FAILURE_ACTION;
+    return NULL;
+  }
+  tsize = asize;
+
+  m->footprint += tsize;
+  if (m->footprint > m->max_footprint)
+    m->max_footprint = m->footprint;
+
+  /* Extend the top chunk - sbrk returns contiguous memory */
+  if (tbase == m->seg.base + m->seg.size) {
+    m->seg.size += tsize;
+    init_top(m, m->top, m->topsize + tsize);
+  } else {
+    /* Non-contiguous - shouldn't happen with U-Boot's simple sbrk */
+    return NULL;
+  }
+
+  if (nb < m->topsize) {
+    size_t rsize = m->topsize -= nb;
+    mchunkptr p = m->top;
+    mchunkptr r = m->top = chunk_plus_offset(p, nb);
+    r->head = rsize | PINUSE_BIT;
+    set_size_and_pinuse_of_inuse_chunk(m, p, nb);
+    check_top_chunk(m, m->top);
+    check_malloced_chunk(m, chunk2mem(p), nb);
+    return chunk2mem(p);
+  }
+
+  MALLOC_FAILURE_ACTION;
+  return NULL;
+}
+
+#else /* !__UBOOT__ || !SIMPLE_SYSALLOC */
 
 /* Get memory from system using MORECORE or MMAP */
 static void* sys_alloc(mstate m, size_t nb) {
@@ -4322,6 +4390,7 @@ static void* sys_alloc(mstate m, size_t nb) {
   MALLOC_FAILURE_ACTION;
   return 0;
 }
+#endif /* !__UBOOT__ || !SIMPLE_SYSALLOC */
 
 /* -----------------------  system deallocation -------------------------- */
 
@@ -6600,6 +6669,21 @@ void mem_malloc_init(ulong start, ulong size)
 	      mem_malloc_end);
 #if CONFIG_IS_ENABLED(SYS_MALLOC_CLEAR_ON_INIT)
 	memset((void *)mem_malloc_start, '\0', size);
+#endif
+
+#if !CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE)
+	/* Initialize the malloc state so is_initialized() is true */
+	gm->least_addr = (char *)mem_malloc_start;
+	gm->seg.base = (char *)mem_malloc_start;
+	gm->seg.size = size;
+	gm->seg.sflags = 0;	/* not mmapped */
+	gm->magic = mparams.magic;
+	gm->release_checks = MAX_RELEASE_CHECK_RATE;
+	gm->mflags = mparams.default_mflags;
+	init_bins(gm);
+	init_top(gm, (mchunkptr)mem_malloc_start, size - TOP_FOOT_SIZE);
+	gm->footprint = size;
+	gm->max_footprint = size;
 #endif
 }
 
