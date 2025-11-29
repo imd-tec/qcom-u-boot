@@ -650,6 +650,42 @@ void mem_malloc_init(ulong start, ulong size);
  * Return: Previous break value on success, MORECORE_FAILURE on error
  */
 void *sbrk(ptrdiff_t increment);
+
+/**
+ * malloc_simple() - Allocate memory from the simple malloc pool
+ *
+ * Allocates memory from a simple pool used before full malloc() is available.
+ * This is used before relocation when BSS is not yet available for dlmalloc's
+ * state. Memory allocated with this function cannot be freed.
+ *
+ * @size: Number of bytes to allocate
+ * Return: Pointer to allocated memory, or NULL if pool is exhausted
+ */
+void *malloc_simple(size_t size);
+
+/**
+ * memalign_simple() - Allocate aligned memory from the simple malloc pool
+ *
+ * Allocates aligned memory from a simple pool used before full malloc() is
+ * available. This is used before relocation when BSS is not yet available
+ * for dlmalloc's state. Memory allocated with this function cannot be freed.
+ *
+ * @alignment: Required alignment (must be a power of 2)
+ * @bytes: Number of bytes to allocate
+ * Return: Pointer to allocated memory, or NULL if pool is exhausted
+ */
+void *memalign_simple(size_t alignment, size_t bytes);
+
+/**
+ * initf_malloc() - Set up the early malloc() pool
+ *
+ * Sets up the simple malloc() pool which is used before full malloc()
+ * is available after relocation.
+ *
+ * Return: 0 (always succeeds)
+ */
+int initf_malloc(void);
+
 #endif /* __UBOOT__ */
 
 #ifdef __cplusplus

@@ -565,6 +565,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <vsprintf.h>
 #include <asm/global_data.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -4583,6 +4584,11 @@ static void* tmalloc_small(mstate m, size_t nb) {
 
 void* dlmalloc(size_t bytes) {
 #ifdef __UBOOT__
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+    return malloc_simple(bytes);
+#endif
+
   /* Return NULL if not initialized yet */
   if (!mem_malloc_start && !mem_malloc_end)
     return NULL;
@@ -4725,6 +4731,13 @@ void* dlmalloc(size_t bytes) {
 /* ---------------------------- free --------------------------- */
 
 void dlfree(void* mem) {
+#ifdef __UBOOT__
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+  /* free() is a no-op - all the memory will be freed on relocation */
+  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+    return;
+#endif
+#endif
   /*
      Consolidate freed chunks with preceeding or succeeding bordering
      free chunks, if they exist, and then place in a bin.  Intermixed
@@ -5228,6 +5241,14 @@ static void internal_inspect_all(mstate m,
 #if !ONLY_MSPACES
 
 void* dlrealloc(void* oldmem, size_t bytes) {
+#ifdef __UBOOT__
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
+    /* This is harder to support and should not be needed */
+    panic("pre-reloc realloc() is not supported");
+  }
+#endif
+#endif
   void* mem = 0;
   if (oldmem == 0) {
     mem = dlmalloc(bytes);
@@ -5304,6 +5325,12 @@ void* dlrealloc_in_place(void* oldmem, size_t bytes) {
 }
 
 void* dlmemalign(size_t alignment, size_t bytes) {
+#ifdef __UBOOT__
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+  if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+    return memalign_simple(alignment, bytes);
+#endif
+#endif
   if (alignment <= MALLOC_ALIGNMENT) {
     return dlmalloc(bytes);
   }
@@ -6365,5 +6392,16 @@ void mem_malloc_init(ulong start, ulong size)
 #if CONFIG_IS_ENABLED(SYS_MALLOC_CLEAR_ON_INIT)
 	memset((void *)mem_malloc_start, '\0', size);
 #endif
+}
+
+int initf_malloc(void)
+{
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
+	assert(gd->malloc_base);	/* Set up by crt0.S */
+	gd->malloc_limit = CONFIG_VAL(SYS_MALLOC_F_LEN);
+	gd->malloc_ptr = 0;
+#endif
+
+	return 0;
 }
 #endif /* __UBOOT__ */
