@@ -1,5 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
+ * U-Boot Dynamic Memory Allocator
+ *
+ * This is Doug Lea's dlmalloc version 2.8.6, adapted for U-Boot.
+ *
+ * U-Boot Configuration:
+ *   - Uses sbrk() via MORECORE (no mmap support)
+ *   - Pre-relocation: redirects to malloc_simple.c
+ *   - Post-relocation: full dlmalloc with heap from CONFIG_SYS_MALLOC_LEN
+ *   - Sandbox keeps full features for testing; other boards use:
+ *       INSECURE=1, NO_MALLINFO=1, NO_REALLOC_IN_PLACE=1
+ *
+ * See doc/develop/malloc.rst for more information.
+ */
+
+/*
 Copyright 2023 Doug Lea
 
 Permission is hereby granted, free of charge, to any person obtaining

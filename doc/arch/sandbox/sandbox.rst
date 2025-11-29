@@ -688,6 +688,8 @@ If sdl-config is on a different path from the default, set the SDL_CONFIG
 environment variable to the correct pathname before building U-Boot.
 
 
+.. _sandbox_valgrind:
+
 Using valgrind / memcheck
 -------------------------
 
