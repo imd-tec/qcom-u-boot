@@ -599,6 +599,7 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define NO_REALLOC_IN_PLACE 1
 #define SIMPLE_MEMALIGN 1
 #define NO_TREE_BINS 1
+#define SMALLCHUNKS_AS_FUNCS 1
 #else
 #define NO_TREE_BINS 0
 #define SIMPLE_MEMALIGN 0
@@ -631,6 +632,10 @@ ulong mem_malloc_end;
 ulong mem_malloc_brk;
 
 #endif /* __UBOOT__ */
+
+#ifndef SMALLCHUNKS_AS_FUNCS
+#define SMALLCHUNKS_AS_FUNCS 0
+#endif
 
 #ifndef WIN32
 #ifdef _WIN32
@@ -3714,6 +3719,25 @@ static void internal_malloc_stats(mstate m) {
 */
 
 /* Link a free chunk into a smallbin  */
+#if defined(__UBOOT__) && SMALLCHUNKS_AS_FUNCS
+static void insert_small_chunk(mstate M, mchunkptr P, size_t S) {
+  bindex_t I  = small_index(S);
+  mchunkptr B = smallbin_at(M, I);
+  mchunkptr F = B;
+  assert(S >= MIN_CHUNK_SIZE);
+  if (!smallmap_is_marked(M, I))
+    mark_smallmap(M, I);
+  else if (RTCHECK(ok_address(M, B->fd)))
+    F = B->fd;
+  else {
+    CORRUPTION_ERROR_ACTION(M);
+  }
+  B->fd = P;
+  F->bk = P;
+  P->fd = F;
+  P->bk = B;
+}
+#else
 #define insert_small_chunk(M, P, S) {\
   bindex_t I  = small_index(S);\
   mchunkptr B = smallbin_at(M, I);\
@@ -3731,6 +3755,7 @@ static void internal_malloc_stats(mstate m) {
   P->fd = F;\
   P->bk = B;\
 }
+#endif
 
 /* Unlink a chunk from a smallbin  */
 #define unlink_small_chunk(M, P, S) {\
@@ -3759,6 +3784,24 @@ static void internal_malloc_stats(mstate m) {
 }
 
 /* Unlink the first chunk from a smallbin */
+#if defined(__UBOOT__) && SMALLCHUNKS_AS_FUNCS
+static void unlink_first_small_chunk(mstate M, mchunkptr B, mchunkptr P, bindex_t I) {
+  mchunkptr F = P->fd;
+  assert(P != B);
+  assert(P != F);
+  assert(chunksize(P) == small_index2size(I));
+  if (B == F) {
+    clear_smallmap(M, I);
+  }
+  else if (RTCHECK(ok_address(M, F) && F->bk == P)) {
+    F->bk = B;
+    B->fd = F;
+  }
+  else {
+    CORRUPTION_ERROR_ACTION(M);
+  }
+}
+#else
 #define unlink_first_small_chunk(M, B, P, I) {\
   mchunkptr F = P->fd;\
   assert(P != B);\
@@ -3775,6 +3818,7 @@ static void internal_malloc_stats(mstate m) {
     CORRUPTION_ERROR_ACTION(M);\
   }\
 }
+#endif
 
 /* Replace dv node, binning the old one */
 /* Used only when dvsize known to be small */
@@ -3982,9 +4026,15 @@ static void unlink_large_chunk(mstate M, tchunkptr X) {
 
 /* Relays to large vs small bin operations */
 
+#if defined(__UBOOT__) && SMALLCHUNKS_AS_FUNCS
+#define insert_chunk(M, P, S)\
+  if (is_small(S)) { insert_small_chunk(M, P, S); }\
+  else { tchunkptr TP = (tchunkptr)(P); insert_large_chunk(M, TP, S); }
+#else
 #define insert_chunk(M, P, S)\
   if (is_small(S)) insert_small_chunk(M, P, S)\
   else { tchunkptr TP = (tchunkptr)(P); insert_large_chunk(M, TP, S); }
+#endif
 
 #define unlink_chunk(M, P, S)\
   if (is_small(S)) unlink_small_chunk(M, P, S)\
