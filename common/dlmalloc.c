@@ -597,6 +597,9 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 
 #if CONFIG_IS_ENABLED(SYS_MALLOC_SMALL)
 #define NO_REALLOC_IN_PLACE 1
+#define NO_TREE_BINS 1
+#else
+#define NO_TREE_BINS 0
 #endif
 
 /* Use simplified sys_alloc for non-sandbox builds */
@@ -2686,7 +2689,11 @@ struct malloc_state {
   size_t     release_checks;
   size_t     magic;
   mchunkptr  smallbins[(NSMALLBINS+1)*2];
+#if defined(__UBOOT__) && NO_TREE_BINS
+  mchunkptr  largebin;  /* Single linked list for all large chunks */
+#else
   tbinptr    treebins[NTREEBINS];
+#endif
   size_t     footprint;
   size_t     max_footprint;
   size_t     footprint_limit; /* zero means no limit */
@@ -2914,7 +2921,9 @@ static void   do_check_mmapped_chunk(mstate m, mchunkptr p);
 static void   do_check_inuse_chunk(mstate m, mchunkptr p);
 static void   do_check_free_chunk(mstate m, mchunkptr p);
 static void   do_check_malloced_chunk(mstate m, void* mem, size_t s);
+#if !defined(__UBOOT__) || !NO_TREE_BINS
 static void   do_check_tree(mstate m, tchunkptr t);
+#endif
 static void   do_check_treebin(mstate m, bindex_t i);
 static void   do_check_smallbin(mstate m, bindex_t i);
 static void   do_check_malloc_state(mstate m);
@@ -2924,6 +2933,8 @@ static size_t traverse_and_check(mstate m);
 
 /* ---------------------------- Indexing Bins ---------------------------- */
 
+/* When NO_TREE_BINS is enabled, large chunks use a single linked list
+   in treebin[0] instead of the tree structure */
 #define is_small(s)         (((s) >> SMALLBIN_SHIFT) < NSMALLBINS)
 #define small_index(s)      (bindex_t)((s)  >> SMALLBIN_SHIFT)
 #define small_index2size(i) ((i)  << SMALLBIN_SHIFT)
@@ -3397,6 +3408,7 @@ static void do_check_malloced_chunk(mstate m, void* mem, size_t s) {
   }
 }
 
+#if !defined(__UBOOT__) || !NO_TREE_BINS
 /* Check a tree and its subtrees.  */
 static void do_check_tree(mstate m, tchunkptr t) {
   tchunkptr head = 0;
@@ -3447,9 +3459,28 @@ static void do_check_tree(mstate m, tchunkptr t) {
   } while (u != t);
   assert(head != 0);
 }
+#endif
 
 /*  Check all the chunks in a treebin.  */
 static void do_check_treebin(mstate m, bindex_t i) {
+#if defined(__UBOOT__) && NO_TREE_BINS
+  /* With NO_TREE_BINS, only index 0 is used for the large bin list */
+  if (i == 0) {
+    mchunkptr p = m->largebin;
+    if (p != 0) {
+      /* Check the linked list */
+      mchunkptr start = p;
+      do {
+        do_check_any_chunk(m, p);
+        assert(!is_inuse(p));
+        assert(!next_pinuse(p));
+        assert(p->fd->bk == p);
+        assert(p->bk->fd == p);
+        p = p->fd;
+      } while (p != start);
+    }
+  }
+#else
   tbinptr* tb = treebin_at(m, i);
   tchunkptr t = *tb;
   int empty = (m->treemap & (1U << i)) == 0;
@@ -3457,6 +3488,7 @@ static void do_check_treebin(mstate m, bindex_t i) {
     assert(empty);
   if (!empty)
     do_check_tree(m, t);
+#endif
 }
 
 /*  Check all the chunks in a smallbin.  */
@@ -3498,6 +3530,18 @@ static int bin_find(mstate m, mchunkptr x) {
     }
   }
   else {
+#if defined(__UBOOT__) && NO_TREE_BINS
+    /* With NO_TREE_BINS, all large chunks are in largebin list */
+    if (m->largebin != 0) {
+      mchunkptr p = m->largebin;
+      mchunkptr start = p;
+      do {
+        if (p == x)
+          return 1;
+        p = p->fd;
+      } while (p != start);
+    }
+#else
     bindex_t tidx;
     compute_tree_index(size, tidx);
     if (treemap_is_marked(m, tidx)) {
@@ -3515,6 +3559,7 @@ static int bin_find(mstate m, mchunkptr x) {
         } while ((u = u->fd) != t);
       }
     }
+#endif
   }
   return 0;
 }
@@ -3744,6 +3789,53 @@ static void internal_malloc_stats(mstate m) {
 
 /* ------------------------- Operations on trees ------------------------- */
 
+#if defined(__UBOOT__) && NO_TREE_BINS
+/* When tree bins are disabled, use a simple doubly-linked list for all large chunks */
+static void insert_large_chunk(mstate M, tchunkptr X, size_t S) {
+  mchunkptr XP = (mchunkptr)(X);
+  mchunkptr F = M->largebin;
+  (void)S; /* unused in NO_TREE_BINS mode */
+  if (F == 0) {
+    M->largebin = XP;
+    XP->fd = XP->bk = XP;
+  }
+  else if (RTCHECK(ok_address(M, F))) {
+    mchunkptr B = F->bk;
+    if (RTCHECK(ok_address(M, B))) {
+      XP->fd = F;
+      XP->bk = B;
+      F->bk = XP;
+      B->fd = XP;
+    }
+    else {
+      CORRUPTION_ERROR_ACTION(M);
+    }
+  }
+  else {
+    CORRUPTION_ERROR_ACTION(M);
+  }
+}
+
+static void unlink_large_chunk(mstate M, tchunkptr X) {
+  mchunkptr XP = (mchunkptr)(X);
+  mchunkptr F = XP->fd;
+  mchunkptr B = XP->bk;
+  if (F == XP) {
+    M->largebin = 0;
+  }
+  else if (RTCHECK(ok_address(M, F) && F->bk == XP && ok_address(M, B) && B->fd == XP)) {
+    F->bk = B;
+    B->fd = F;
+    if (M->largebin == XP)
+      M->largebin = F;
+  }
+  else {
+    CORRUPTION_ERROR_ACTION(M);
+  }
+}
+
+#else /* !defined(__UBOOT__) || !NO_TREE_BINS */
+
 /* Insert chunk into tree */
 #define insert_large_chunk(M, X, S) {\
   tbinptr* H;\
@@ -3883,6 +3975,8 @@ static void internal_malloc_stats(mstate m) {
     }\
   }\
 }
+
+#endif /* !defined(__UBOOT__) || !NO_TREE_BINS */
 
 /* Relays to large vs small bin operations */
 
@@ -4593,7 +4687,26 @@ static void dispose_chunk(mstate m, mchunkptr p, size_t psize) {
 static void* tmalloc_large(mstate m, size_t nb) {
   tchunkptr v = 0;
   size_t rsize = -nb; /* Unsigned negation */
+#if !defined(__UBOOT__) || !NO_TREE_BINS
   tchunkptr t;
+#endif
+#if defined(__UBOOT__) && NO_TREE_BINS
+  /* With NO_TREE_BINS, do a linear search through largebin list */
+  if (m->largebin != 0) {
+    mchunkptr p = m->largebin;
+    mchunkptr start = p;
+    do {
+      size_t trem = chunksize(p) - nb;
+      if (trem < rsize) {
+        rsize = trem;
+        v = (tchunkptr)p;
+        if (rsize == 0)
+          break;
+      }
+      p = p->fd;
+    } while (p != start);
+  }
+#else
   bindex_t idx;
   compute_tree_index(nb, idx);
   if ((t = *treebin_at(m, idx)) != 0) {
@@ -4637,6 +4750,7 @@ static void* tmalloc_large(mstate m, size_t nb) {
     }
     t = leftmost_child(t);
   }
+#endif
 
   /*  If dv is a better fit, return 0 so malloc will use it */
   if (v != 0 && rsize < (size_t)(m->dvsize - nb)) {
@@ -4662,8 +4776,32 @@ static void* tmalloc_large(mstate m, size_t nb) {
 
 /* allocate a small request from the best fitting chunk in a treebin */
 static void* tmalloc_small(mstate m, size_t nb) {
-  tchunkptr t, v;
+#if !defined(__UBOOT__) || !NO_TREE_BINS
+  tchunkptr t;
+#endif
+  tchunkptr v;
   size_t rsize;
+#if defined(__UBOOT__) && NO_TREE_BINS
+  /* With NO_TREE_BINS, use largebin list for best fit search */
+  if (m->largebin != 0) {
+    mchunkptr p = m->largebin;
+    mchunkptr best = p;
+    rsize = chunksize(p) - nb;
+    /* Scan the list for the best fit */
+    mchunkptr start = p;
+    while ((p = p->fd) != start) {
+      size_t trem = chunksize(p) - nb;
+      if (trem < rsize) {
+        rsize = trem;
+        best = p;
+      }
+    }
+    v = (tchunkptr)best;
+  }
+  else {
+    return 0;
+  }
+#else
   bindex_t i;
   binmap_t leastbit = least_bit(m->treemap);
   compute_bit2idx(leastbit, i);
@@ -4677,6 +4815,7 @@ static void* tmalloc_small(mstate m, size_t nb) {
       v = t;
     }
   }
+#endif
 
   if (RTCHECK(ok_address(m, v))) {
     mchunkptr r = chunk_plus_offset(v, nb);
@@ -4794,7 +4933,13 @@ void* dlmalloc_impl(size_t bytes) {
           goto postaction;
         }
 
-        else if (gm->treemap != 0 && (mem = tmalloc_small(gm, nb)) != 0) {
+        else if (
+#if defined(__UBOOT__) && NO_TREE_BINS
+          gm->largebin != 0 &&
+#else
+          gm->treemap != 0 &&
+#endif
+          (mem = tmalloc_small(gm, nb)) != 0) {
           check_malloced_chunk(gm, mem, nb);
           goto postaction;
         }
@@ -4804,7 +4949,13 @@ void* dlmalloc_impl(size_t bytes) {
       nb = MAX_SIZE_T; /* Too big to allocate. Force failure (in sys alloc) */
     else {
       nb = pad_request(bytes);
-      if (gm->treemap != 0 && (mem = tmalloc_large(gm, nb)) != 0) {
+      if (
+#if defined(__UBOOT__) && NO_TREE_BINS
+        gm->largebin != 0 &&
+#else
+        gm->treemap != 0 &&
+#endif
+        (mem = tmalloc_large(gm, nb)) != 0) {
         check_malloced_chunk(gm, mem, nb);
         goto postaction;
       }
