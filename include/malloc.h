@@ -72,7 +72,7 @@ extern "C" {
  * When using simple malloc (SPL/TPL), redirect to simple implementations.
  * Skip this when compiling dlmalloc.c itself to avoid conflicts.
  */
-#if CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE)
+#if CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE) && !defined(COMPILING_DLMALLOC)
 #define malloc malloc_simple
 #define realloc realloc_simple
 #define calloc calloc_simple

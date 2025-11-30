@@ -603,6 +603,8 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define MALLOC_FAILURE_ACTION
 #define ABORT do {} while (1)
 
+#define COMPILING_DLMALLOC
+
 #include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
