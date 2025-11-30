@@ -597,9 +597,11 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 
 #if CONFIG_IS_ENABLED(SYS_MALLOC_SMALL)
 #define NO_REALLOC_IN_PLACE 1
+#define SIMPLE_MEMALIGN 1
 #define NO_TREE_BINS 1
 #else
 #define NO_TREE_BINS 0
+#define SIMPLE_MEMALIGN 0
 #endif
 
 /* Use simplified sys_alloc for non-sandbox builds */
@@ -5260,7 +5262,7 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
     size_t nb = request2size(bytes);
     size_t req = nb + alignment + MIN_CHUNK_SIZE - CHUNK_OVERHEAD;
     mem = internal_malloc(m, req);
-#ifdef __UBOOT__
+#if defined(__UBOOT__) && !SIMPLE_MEMALIGN
     /*
      * The attempt to over-allocate (with a size large enough to guarantee the
      * ability to find an aligned region within allocated memory) failed.
