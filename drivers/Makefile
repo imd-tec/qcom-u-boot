@@ -8,6 +8,10 @@ obj-$(CONFIG_$(PHASE_)BUTTON) += button/
 obj-$(CONFIG_$(PHASE_)CACHE) += cache/
 obj-$(CONFIG_$(PHASE_)CLK) += clk/
 obj-$(CONFIG_$(PHASE_)DM) += core/
+# ofnode functions are needed for OF_REAL even without full DM
+ifndef CONFIG_$(PHASE_)DM
+obj-$(CONFIG_$(PHASE_)OF_REAL) += core/ofnode.o
+endif
 obj-$(CONFIG_$(PHASE_)DMA) += dma/
 obj-$(CONFIG_$(PHASE_)DMA_LEGACY) += dma/
 obj-$(CONFIG_$(PHASE_)DFU) += dfu/
