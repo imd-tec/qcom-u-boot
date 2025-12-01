@@ -464,6 +464,53 @@ config SYS_MALLOC_DEFAULT_TO_INIT
 
 	  If such a scenario is sought choose yes.
 
+config SYS_MALLOC_SMALL
+	bool "Optimise malloc for code size"
+	help
+	  Enable code-size optimisations for dlmalloc. This:
+
+	  - Disables tree bins for allocations >= 256 bytes, using simple
+	    linked-list bins instead. This changes large-allocation performance
+	    from O(log n) to O(n) but saves ~1.5-2KB.
+
+	  - Simplifies memalign() by removing fallback retry logic that attempts
+	    multiple allocation strategies when initial over-allocation fails.
+	    This saves ~100-150 bytes.
+
+	  - Disables in-place realloc optimisation, which resizes allocations
+	    without copying if space permits. This saves ~200 bytes.
+
+	  - Uses static malloc parameters instead of runtime-configurable ones.
+
+	  These optimisations may increase fragmentation and reduce performance
+	  for workloads with many large or aligned allocations, but are suitable
+	  for most U-Boot use cases where code size is more important.
+
+	  If unsure, say N.
+
+config SPL_SYS_MALLOC_SMALL
+	bool "Optimise malloc for code size in SPL"
+	depends on SPL && !SPL_SYS_MALLOC_SIMPLE
+	default y
+	help
+	  Enable code-size optimisations for dlmalloc in SPL. This:
+
+	  - Disables tree bins for allocations >= 256 bytes, using simple
+	    linked-list bins instead. This changes large-allocation performance
+	    from O(log n) to O(n) but saves ~1.5-2KB.
+
+	  - Simplifies memalign() by removing fallback retry logic. This saves
+	    ~100-150 bytes.
+
+	  - Disables in-place realloc optimisation. This saves ~200 bytes.
+
+	  - Uses static malloc parameters instead of runtime-configurable ones.
+
+	  SPL typically has predictable memory usage where these optimisations
+	  have minimal impact, making the code size savings worthwhile.
+
+	  If unsure, say Y to minimize SPL code size.
+
 config TOOLS_DEBUG
 	bool "Enable debug information for tools"
 	help
