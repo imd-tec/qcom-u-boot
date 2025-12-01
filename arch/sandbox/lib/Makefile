@@ -5,6 +5,7 @@
 # (C) Copyright 2002-2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 
+obj-$(CONFIG_BACKTRACE)		+= backtrace.o
 obj-y				+= fdt_fixup.o interrupts.o
 obj-$(CONFIG_PCI)		+= pci_io.o
 obj-$(CONFIG_BOOT)		+= bootm.o

@@ -3,7 +3,13 @@
 
 PLATFORM_CPPFLAGS += -D__SANDBOX__ -U_FORTIFY_SOURCE
 PLATFORM_CPPFLAGS += -fPIC -ffunction-sections -fdata-sections
+
+ifeq ($(CONFIG_BACKTRACE),y)
+GCC_LIB_DIR := $(shell $(CC) -print-file-name=)
+PLATFORM_LIBS += -L$(GCC_LIB_DIR) -lbacktrace
+endif
 PLATFORM_LIBS += -lrt
+
 SDL_CONFIG ?= sdl2-config
 
 # Define this to avoid linking with SDL, which requires SDL libraries
@@ -22,6 +28,11 @@ SANITIZERS	+= -fsanitize=fuzzer
 endif
 KBUILD_CFLAGS	+= $(SANITIZERS)
 
+# Avoid defeating linker's garbage collection
+ifeq ($(CONFIG_BACKTRACE)$(CONFIG_CMDLINE),yy)
+RDYNAMIC += -rdynamic
+endif
+
 cmd_u-boot__ = $(CC) -o $@ -Wl,-T u-boot.lds $(u-boot-init) \
 	$(KBUILD_LDFLAGS:%=-Wl,%) \
 	$(SANITIZERS) \
@@ -30,7 +41,7 @@ cmd_u-boot__ = $(CC) -o $@ -Wl,-T u-boot.lds $(u-boot-init) \
 		$(u-boot-main) \
 		$(u-boot-keep-syms-lto) \
 	-Wl,--no-whole-archive \
-	$(PLATFORM_LIBS) -Wl,-Map -Wl,u-boot.map -Wl,--gc-sections
+	$(RDYNAMIC) $(PLATFORM_LIBS) -Wl,-Map -Wl,u-boot.map -Wl,--gc-sections
 
 cmd_u-boot-spl = (cd $(obj) && $(CC) -o $(SPL_BIN) -Wl,-T u-boot-spl.lds \
 	$(KBUILD_LDFLAGS:%=-Wl,%) \
