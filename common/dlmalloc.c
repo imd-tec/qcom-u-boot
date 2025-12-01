@@ -599,12 +599,12 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define MORECORE_CONTIGUOUS 1
 #define MORECORE_CANNOT_TRIM 1
 #define MORECORE_CLEARS 1
-#define NO_MALLOC_STATS 1
 #define USE_LOCKS 0
 #define USE_SPIN_LOCKS 0
 
-#if !CONFIG_IS_ENABLED(UNIT_TEST)
+#if !CONFIG_IS_ENABLED(UNIT_TEST) && !IS_ENABLED(CONFIG_MALLOC_DEBUG)
 #define NO_MALLINFO 1
+#define NO_MALLOC_STATS 1
 #endif
 #if !CONFIG_IS_ENABLED(SANDBOX)
 #define INSECURE 1
@@ -3690,6 +3690,9 @@ static struct mallinfo internal_mallinfo(mstate m) {
   return nm;
 }
 
+#endif /* !NO_MALLINFO */
+
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
 int malloc_get_info(struct malloc_info *info)
 {
   struct mallinfo mi = internal_mallinfo(gm);
@@ -3699,7 +3702,7 @@ int malloc_get_info(struct malloc_info *info)
 
   return 0;
 }
-#endif /* !NO_MALLINFO */
+#endif
 
 #if !NO_MALLOC_STATS
 static void internal_malloc_stats(mstate m) {
