@@ -30,19 +30,23 @@ Install concept releases using snap::
 Next Release
 ------------
 
-The next final release is scheduled for **2025.12**
-on Monday, December 01, 2025.
+The next final release is scheduled for **2026.02**
+on Monday, February 02, 2026.
 
 Release candidate schedule:
 
-* **2025.12-rc3**: Mon 20-Oct-2025
-* **2025.12-rc2**: Mon 03-Nov-2025
-* **2025.12-rc1**: Mon 17-Nov-2025
-* **2025.12** (Final): Mon 01-Dec-2025
+* **2026.02-rc3**: Mon 22-Dec-2025
+* **2026.02-rc2**: Mon 05-Jan-2026
+* **2026.02-rc1**: Mon 19-Jan-2026
+* **2026.02** (Final): Mon 02-Feb-2026
 
 Release History
 ---------------
 
+**2025.12** - Final Release
+   :Date: 2025-12-01
+   :Commit: a7a93faecd2116fbdd3b5992bc93a0075f164406
+   :Subject: N/A
 **2025.12-rc3** - Release Candidate
    :Date: 2025-11-17
    :Commit: 634ace57a6a245dacd7db6a03ce5c0a49c17ba16
@@ -62,6 +66,7 @@ Release History
 
 *Releases will be automatically added here by the CI system when version*
 *bumps occur.*
+
 
 
 
