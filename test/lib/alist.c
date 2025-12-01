@@ -5,6 +5,7 @@
  */
 
 #include <alist.h>
+#include <env_internal.h>
 #include <string.h>
 #include <test/lib.h>
 #include <test/test.h>
@@ -41,7 +42,7 @@ static int lib_test_alist_init(struct unit_test_state *uts)
 
 	/* use an impossible size */
 	ut_asserteq(false, alist_init(&lst, obj_size,
-				      CONFIG_SYS_MALLOC_LEN));
+				      TOTAL_MALLOC_LEN));
 	ut_assertnull(lst.data);
 	ut_asserteq(0, lst.count);
 	ut_asserteq(0, lst.alloc);
