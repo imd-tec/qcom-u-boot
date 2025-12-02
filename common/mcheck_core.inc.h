@@ -45,8 +45,8 @@
  *       an array, for index(+1/-1) errors.
  *
  * U-Boot is a BL, not an OS with a lib. Activity of the library is set not in runtime,
- * rather in compile-time, by MCHECK_HEAP_PROTECTION macro. That guarantees that
- * we haven't missed first malloc.
+ * rather in compile-time, by CONFIG_MCHECK_HEAP_PROTECTION macro. That
+ * guarantees that we haven't missed first malloc.
  */
 
 /*
@@ -59,7 +59,7 @@
 #define _MCHECKCORE_INC_H      1
 #include "mcheck.h"
 
-#if defined(MCHECK_HEAP_PROTECTION)
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #define mcheck_flood memset
 
 // these are from /dev/random:

@@ -749,7 +749,7 @@ static int setup_reloc(void)
 	if (gd->flags & GD_FLG_SKIP_RELOC) {
 		debug("Skipping relocation due to flag\n");
 	} else {
-#ifdef MCHECK_HEAP_PROTECTION
+#ifdef CONFIG_MCHECK_HEAP_PROTECTION
 		mcheck_on_ramrelocation(gd->reloc_off);
 #endif
 		debug("Relocation Offset is: %08lx\n", gd->reloc_off);

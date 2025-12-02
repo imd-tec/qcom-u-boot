@@ -572,7 +572,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DEBUG 1
 #endif
 
-#ifdef MCHECK_HEAP_PROTECTION
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #define STATIC_IF_MCHECK static
 #undef MALLOC_COPY
 #undef MALLOC_ZERO
@@ -5451,7 +5451,7 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   }
   return mem;
 }
-#endif /* !CONFIG_MCHECK_HEAP_PROTECTION || MSPACES */
+#endif /* !MCHECK_HEAP_PROTECTION || MSPACES */
 
 /*
   Common support for independent_X routines, handling
@@ -5937,7 +5937,7 @@ size_t dlmalloc_usable_size(const void* mem) {
   return 0;
 }
 
-#ifdef MCHECK_HEAP_PROTECTION
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #include "mcheck_core.inc.h"
 
 void *dlmalloc(size_t bytes)
