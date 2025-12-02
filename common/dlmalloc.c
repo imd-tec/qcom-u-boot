@@ -7093,6 +7093,39 @@ next:
 
 	return NULL;
 }
+
+/**
+ * find_freed_mcheck_hdr() - find a freed mcheck header in a free chunk
+ *
+ * For freed chunks, the mcheck header remains with MAGICFREE canaries.
+ * Since freed entries are removed from the registry, scan the chunk
+ * for the MAGICFREE pattern. Only check offset 0 since free chunks
+ * may have been coalesced and we want the first (original) allocation.
+ *
+ * Note: dlmalloc overwrites the first 16 bytes (size, aln_skip) with
+ * free list pointers (fd, bk), but the canary and caller remain intact.
+ *
+ * @mem: chunk memory pointer (from chunk2mem)
+ * @sz: chunk size
+ * Return: pointer to mcheck header if found, NULL otherwise
+ */
+static struct mcheck_hdr *find_freed_mcheck_hdr(void *mem, size_t sz)
+{
+	struct mcheck_hdr *hdr = (struct mcheck_hdr *)mem;
+	int i;
+
+	/* Only check at offset 0 - coalesced chunks lose alignment info */
+	if (sz < sizeof(struct mcheck_hdr))
+		return NULL;
+
+	/* Check for MAGICFREE canary pattern */
+	for (i = 0; i < CANARY_DEPTH; i++) {
+		if (hdr->canary.elems[i] != MAGICFREE)
+			return NULL;
+	}
+
+	return hdr;
+}
 #endif
 
 void malloc_dump(void)
@@ -7142,8 +7175,20 @@ void malloc_dump(void)
 				used += sz;
 				used_count++;
 			} else {
-				printf("%12lx  %10zx  <free>\n",
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+				struct mcheck_hdr *hdr;
+
+				hdr = find_freed_mcheck_hdr(mem, sz);
+				if (hdr && hdr->caller[0])
+					printf("%12lx  %10zx  free  %s\n",
+					       (ulong)mem, sz, hdr->caller);
+				else
+					printf("%12lx  %10zx  free\n",
+					       (ulong)mem, sz);
+#else
+				printf("%12lx  %10zx  free\n",
 				       (ulong)mem, sz);
+#endif
 				free_space += sz;
 				free_count++;
 			}
