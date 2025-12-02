@@ -5309,6 +5309,7 @@ static mchunkptr try_realloc_chunk(mstate m, mchunkptr p, size_t nb,
 }
 #endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
 
+#if !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION) || MSPACES
 static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   void* mem = 0;
   if (alignment <  MIN_CHUNK_SIZE) /* must be at least a minimum chunk size */
@@ -5422,6 +5423,7 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   }
   return mem;
 }
+#endif /* !CONFIG_MCHECK_HEAP_PROTECTION || MSPACES */
 
 /*
   Common support for independent_X routines, handling
