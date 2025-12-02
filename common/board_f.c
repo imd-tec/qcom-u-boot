@@ -33,6 +33,7 @@
 #include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <mcheck.h>
 #include <os.h>
 #include <post.h>
 #include <relocate.h>
@@ -723,7 +724,6 @@ static int reloc_bloblist(void)
 	return 0;
 }
 
-void mcheck_on_ramrelocation(size_t offset);
 static int setup_reloc(void)
 {
 	if (!(gd->flags & GD_FLG_SKIP_RELOC)) {
