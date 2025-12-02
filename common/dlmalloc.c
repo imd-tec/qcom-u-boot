@@ -572,21 +572,6 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DEBUG 1
 #endif
 
-#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
-#define STATIC_IF_MCHECK static
-#undef MALLOC_COPY
-#undef MALLOC_ZERO
-static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
-static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
-#else
-#define STATIC_IF_MCHECK
-#define dlmalloc_impl dlmalloc
-#define dlfree_impl dlfree
-#define dlrealloc_impl dlrealloc
-#define dlmemalign_impl dlmemalign
-#define dlcalloc_impl dlcalloc
-#endif
-
 #define LACKS_FCNTL_H
 #define LACKS_UNISTD_H
 #define LACKS_SYS_PARAM_H
@@ -633,11 +618,28 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <string.h>
 #include <vsprintf.h>
 #include <asm/global_data.h>
+#include <linux/types.h>
 #include <valgrind/memcheck.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#define STATIC_IF_MCHECK static
+#undef MALLOC_COPY
+#undef MALLOC_ZERO
+static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
+static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
+#else
+#define STATIC_IF_MCHECK
+#define dlmalloc_impl dlmalloc
+#define dlfree_impl dlfree
+#define dlrealloc_impl dlrealloc
+#define dlmemalign_impl dlmemalign
+#define dlcalloc_impl dlcalloc
+#endif
 
 static bool malloc_testing;	/* enable test mode */
 static int malloc_max_allocs;	/* return NULL after this many calls to malloc() */
