@@ -713,6 +713,21 @@ void malloc_disable_testing(void);
 void malloc_dump(void);
 
 /**
+ * malloc_backtrace_skip() - Control backtrace collection in malloc
+ *
+ * When the stack is corrupted (e.g., by a stack overflow), collecting
+ * a backtrace during malloc can crash. Use this function to disable
+ * backtrace collection before corrupting the stack.
+ *
+ * @skip: true to skip backtrace collection, false to enable it
+ */
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+void malloc_backtrace_skip(bool skip);
+#else
+static inline void malloc_backtrace_skip(bool skip) {}
+#endif
+
+/**
  * mem_malloc_init() - Initialize the malloc() heap
  *
  * @start: Start address of heap memory region

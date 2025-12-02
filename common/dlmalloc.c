@@ -5953,7 +5953,34 @@ size_t dlmalloc_usable_size(const void* mem) {
 }
 
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#include <backtrace.h>
 #include "mcheck_core.inc.h"
+
+/* Guard against recursive backtrace calls during malloc */
+static bool in_backtrace __section(".data");
+
+/*
+ * Flag to disable backtrace collection when the stack is known to be corrupt.
+ * Set via malloc_backtrace_skip() before calling panic().
+ */
+static bool mcheck_skip_backtrace __section(".data");
+
+void malloc_backtrace_skip(bool skip)
+{
+	mcheck_skip_backtrace = skip;
+}
+
+static const char *mcheck_caller(void)
+{
+	const char *caller = NULL;
+
+	if (!in_backtrace && !mcheck_skip_backtrace) {
+		in_backtrace = true;
+		caller = backtrace_str(2);
+		in_backtrace = false;
+	}
+	return caller;
+}
 
 void *dlmalloc(size_t bytes)
 {
@@ -5963,7 +5990,7 @@ void *dlmalloc(size_t bytes)
 
 	if (!p)
 		return p;
-	return mcheck_alloc_posthook(p, bytes, NULL);
+	return mcheck_alloc_posthook(p, bytes, mcheck_caller());
 }
 
 void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
@@ -5988,7 +6015,7 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	p = dlrealloc_impl(p, newsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, bytes, NULL);
+	return mcheck_alloc_noclean_posthook(p, bytes, mcheck_caller());
 }
 
 void *dlmemalign(size_t alignment, size_t bytes)
@@ -5999,7 +6026,7 @@ void *dlmemalign(size_t alignment, size_t bytes)
 
 	if (!p)
 		return p;
-	return mcheck_memalign_posthook(alignment, p, bytes, NULL);
+	return mcheck_memalign_posthook(alignment, p, bytes, mcheck_caller());
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
@@ -6013,7 +6040,7 @@ void *dlcalloc(size_t n, size_t elem_size)
 
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, n * elem_size, NULL);
+	return mcheck_alloc_noclean_posthook(p, n * elem_size, mcheck_caller());
 }
 
 /* mcheck API */

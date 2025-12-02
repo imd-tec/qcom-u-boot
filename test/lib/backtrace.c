@@ -68,16 +68,17 @@ static int lib_test_backtrace_str(struct unit_test_state *uts)
 		 line);
 	ut_asserteq_regex(pattern, str);
 
-	/* Test backtrace_str() */
+	/* Test backtrace_str() - copy result before printf since it may recurse */
 	line = __LINE__ + 1;
 	cstr = backtrace_str(0);
 	ut_assertnonnull(cstr);
+	strlcpy(buf, cstr, sizeof(buf));
 
-	printf("backtrace_str: %s\n", cstr);
+	printf("backtrace_str: %s\n", buf);
 	snprintf(pattern, sizeof(pattern),
 		 "lib_test_backtrace_str:%d <-ut_run_test:\\d+ <-ut_run_test_live_flat:\\d+",
 		 line);
-	ut_asserteq_regex(pattern, cstr);
+	ut_asserteq_regex(pattern, buf);
 
 	return 0;
 }

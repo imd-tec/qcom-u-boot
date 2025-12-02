@@ -59,6 +59,18 @@ Example
     Used: c2ef0 bytes in 931 chunks
     Free: 5f3f0c0 bytes in 2 chunks + top
 
+With CONFIG_MCHECK_HEAP_PROTECTION enabled, the caller backtrace is shown::
+
+    => malloc dump
+    Heap dump: 18a1d000 - 1ea1f000
+         Address        Size  Status
+    ----------------------------------
+        18a1d000          10  (chunk header)
+        18a1d010          90  used  log_init:453 <-board_init_r:774
+        18a1d0a0        6060  used  membuf_new:420 <-console_record
+        18a3b840          90  used  of_alias_scan:911 <-board_init_
+        ...
+
 Configuration
 -------------
 
