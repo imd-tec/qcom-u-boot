@@ -94,4 +94,40 @@ void backtrace_uninit(struct backtrace_ctx *ctx);
  */
 int backtrace_show(void);
 
+/**
+ * backtrace_strf() - get a condensed backtrace string into a buffer
+ *
+ * Return a string containing the last CONFIG_BACKTRACE_SUMMARY_FRAMES function names
+ * and line number, separated by ``<-``.
+ *
+ * For example: ``func_a:12 <-func_b:34 <-func_c:56``
+ *
+ * @skip: number of stack frames to skip (0 to include backtrace_strf itself)
+ * @buf: buffer to write the string to
+ * @size: size of buffer
+ * Return: pointer to buf, or NULL on error
+ */
+char *backtrace_strf(unsigned int skip, char *buf, int size);
+
+/**
+ * backtrace_str() - get a condensed backtrace string
+ *
+ * Return a string containing the last CONFIG_BACKTRACE_SUMMARY_FRAMES function names
+ * and line number, separated by ``<-``. The string is statically allocated and
+ * will be overwritten on the next call.
+ *
+ * For example: ``func_a:12 <-func_b:34 <-func_c:56``
+ *
+ * @skip: number of stack frames to skip (0 to include backtrace_str itself)
+ * Return: pointer to static string, or NULL on error
+ */
+#if CONFIG_IS_ENABLED(BACKTRACE)
+const char *backtrace_str(unsigned int skip);
+#else
+static inline const char *backtrace_str(unsigned int skip)
+{
+	return NULL;
+}
+#endif
+
 #endif /* __BACKTRACE_H */

@@ -46,3 +46,39 @@ static int lib_test_backtrace(struct unit_test_state *uts)
 	return 0;
 }
 LIB_TEST(lib_test_backtrace, 0);
+
+/* Test backtrace_strf() and backtrace_str() */
+static int lib_test_backtrace_str(struct unit_test_state *uts)
+{
+	char pattern[128];
+	char buf[256];
+	const char *cstr;
+	char *str;
+	int line;
+
+	/* Test backtrace_strf() with skip=1 to skip backtrace_strf() itself */
+	line = __LINE__ + 1;
+	str = backtrace_strf(1, buf, sizeof(buf));
+	ut_assertnonnull(str);
+	ut_asserteq_ptr(buf, str);
+
+	printf("backtrace_strf: %s\n", str);
+	snprintf(pattern, sizeof(pattern),
+		 "lib_test_backtrace_str:%d <-ut_run_test:\\d+ <-ut_run_test_live_flat:\\d+",
+		 line);
+	ut_asserteq_regex(pattern, str);
+
+	/* Test backtrace_str() */
+	line = __LINE__ + 1;
+	cstr = backtrace_str(0);
+	ut_assertnonnull(cstr);
+
+	printf("backtrace_str: %s\n", cstr);
+	snprintf(pattern, sizeof(pattern),
+		 "lib_test_backtrace_str:%d <-ut_run_test:\\d+ <-ut_run_test_live_flat:\\d+",
+		 line);
+	ut_asserteq_regex(pattern, cstr);
+
+	return 0;
+}
+LIB_TEST(lib_test_backtrace_str, 0);
