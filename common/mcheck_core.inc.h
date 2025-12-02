@@ -73,6 +73,7 @@
 // Full test suite can exceed 10000 concurrent allocations
 #define REGISTRY_SZ	12000
 #define CANARY_DEPTH	2
+#define MCHECK_CALLER_LEN	48
 
 // avoid problems with BSS at early stage:
 static char mcheck_pedantic_flag __section(".data") = 0;
@@ -88,6 +89,7 @@ struct mcheck_hdr {
 	size_t size; /* Exact size requested by user.  */
 	size_t aln_skip; /* Ignored bytes, before the mcheck_hdr, to fulfill alignment */
 	mcheck_canary canary; /* Magic number to check header integrity.  */
+	char caller[MCHECK_CALLER_LEN]; /* caller info for debugging */
 };
 
 static void mcheck_default_abort(enum mcheck_status status, const void *p)
@@ -196,7 +198,8 @@ static size_t mcheck_alloc_prehook(size_t sz)
 }
 
 static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
-				     size_t alignment, int clean_content)
+				     size_t alignment, int clean_content,
+				     const char *caller)
 {
 	const size_t slop = alignment ?
 		mcheck_evaluate_memalign_prefix_size(alignment) - sizeof(struct mcheck_hdr) : 0;
@@ -207,6 +210,10 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 	hdr->aln_skip = slop;
 	for (i = 0; i < CANARY_DEPTH; ++i)
 		hdr->canary.elems[i] = MAGICWORD;
+	if (caller)
+		strlcpy(hdr->caller, caller, MCHECK_CALLER_LEN);
+	else
+		hdr->caller[0] = '\0';
 
 	char *payload = (char *)&hdr[1];
 
@@ -239,14 +246,19 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 	return payload;
 }
 
-static void *mcheck_alloc_posthook(void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_alloc_posthook(void *altoghether_ptr, size_t customer_sz,
+				   const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, ANY_ALIGNMENT, CLEAN_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz,
+				       ANY_ALIGNMENT, CLEAN_CONTENT, caller);
 }
 
-static void *mcheck_alloc_noclean_posthook(void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_alloc_noclean_posthook(void *altoghether_ptr,
+					   size_t customer_sz,
+					   const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, ANY_ALIGNMENT, KEEP_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz,
+				       ANY_ALIGNMENT, KEEP_CONTENT, caller);
 }
 
 static size_t mcheck_memalign_prehook(size_t alig, size_t sz)
@@ -254,9 +266,11 @@ static size_t mcheck_memalign_prehook(size_t alig, size_t sz)
 	return mcheck_evaluate_memalign_prefix_size(alig) + sz + sizeof(mcheck_canary);
 }
 
-static void *mcheck_memalign_posthook(size_t alignment, void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_memalign_posthook(size_t alignment, void *altoghether_ptr,
+				      size_t customer_sz, const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, alignment, CLEAN_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz, alignment,
+				       CLEAN_CONTENT, caller);
 }
 
 static enum mcheck_status mcheck_mprobe(void *ptr)

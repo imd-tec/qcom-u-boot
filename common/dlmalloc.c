@@ -5954,7 +5954,7 @@ void *dlmalloc(size_t bytes)
 
 	if (!p)
 		return p;
-	return mcheck_alloc_posthook(p, bytes);
+	return mcheck_alloc_posthook(p, bytes, NULL);
 }
 
 void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
@@ -5979,7 +5979,7 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	p = dlrealloc_impl(p, newsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, bytes);
+	return mcheck_alloc_noclean_posthook(p, bytes, NULL);
 }
 
 void *dlmemalign(size_t alignment, size_t bytes)
@@ -5990,7 +5990,7 @@ void *dlmemalign(size_t alignment, size_t bytes)
 
 	if (!p)
 		return p;
-	return mcheck_memalign_posthook(alignment, p, bytes);
+	return mcheck_memalign_posthook(alignment, p, bytes, NULL);
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
@@ -6004,7 +6004,7 @@ void *dlcalloc(size_t n, size_t elem_size)
 
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, n * elem_size);
+	return mcheck_alloc_noclean_posthook(p, n * elem_size, NULL);
 }
 
 /* mcheck API */
