@@ -422,6 +422,11 @@ ut_asserteq_addr(expr1, expr2)
     Assert that two addresses (converted from pointers via map_to_sysmem())
     are equal
 
+ut_asserteq_regex(pattern, str)
+    Assert that a string matches a regular expression pattern. Uses the SLRE
+    library for regex matching. Useful when exact matching is fragile, e.g.
+    when output contains line numbers or variable content.
+
 Pointer assertions
 ~~~~~~~~~~~~~~~~~~
 
