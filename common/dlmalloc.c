@@ -570,6 +570,13 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #if CONFIG_IS_ENABLED(MALLOC_DEBUG)
 #define DEBUG 1
+#define CALLER_PARAM , const char *caller
+#define CALLER_ARG , caller
+#define CALLER_NULL , NULL
+#else
+#define CALLER_PARAM
+#define CALLER_ARG
+#define CALLER_NULL
 #endif
 
 #define LACKS_FCNTL_H
@@ -626,12 +633,14 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION) || CONFIG_IS_ENABLED(MALLOC_DEBUG)
 #define STATIC_IF_MCHECK static
+#ifdef CONFIG_MCHECK_HEAP_PROTECTION
 #undef MALLOC_COPY
 #undef MALLOC_ZERO
 static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
 static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
+#endif
 #else
 #define STATIC_IF_MCHECK
 #define dlmalloc_impl dlmalloc
@@ -4097,7 +4106,7 @@ static void unlink_large_chunk(mstate M, tchunkptr X) {
  * to avoid going through the mcheck wrappers which expect user pointers.
  */
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
-#define internal_malloc(m, b) dlmalloc_impl(b)
+#define internal_malloc(m, b) dlmalloc_impl(b CALLER_NULL)
 #define internal_free(m, mem) dlfree_impl(mem)
 #else
 #define internal_malloc(m, b) dlmalloc(b)
@@ -4940,7 +4949,7 @@ static void* tmalloc_small(mstate m, size_t nb) {
 #if !ONLY_MSPACES
 
 STATIC_IF_MCHECK
-void* dlmalloc_impl(size_t bytes) {
+void *dlmalloc_impl(size_t bytes CALLER_PARAM) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
@@ -5247,7 +5256,7 @@ void* dlcalloc_impl(size_t n_elements, size_t elem_size) {
         (req / n_elements != elem_size))
       req = MAX_SIZE_T; /* force downstream failure on overflow */
   }
-  mem = dlmalloc_impl(req);
+  mem = dlmalloc_impl(req CALLER_NULL);
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* For pre-reloc simple malloc, just zero the memory directly */
@@ -5702,7 +5711,7 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
 #endif
   void* mem = 0;
   if (oldmem == 0) {
-    mem = dlmalloc_impl(bytes);
+    mem = dlmalloc_impl(bytes CALLER_NULL);
   }
   else if (bytes >= MAX_REQUEST) {
     MALLOC_FAILURE_ACTION;
@@ -5755,7 +5764,7 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
       }
     }
 #else /* defined(__UBOOT__) && NO_REALLOC_IN_PLACE */
-    mem = dlmalloc_impl(bytes);
+    mem = dlmalloc_impl(bytes CALLER_NULL);
     if (mem != 0) {
       size_t oc = chunksize(oldp) - overhead_for(oldp);
       memcpy(mem, oldmem, (oc < bytes)? oc : bytes);
@@ -5821,7 +5830,7 @@ void* dlmemalign_impl(size_t alignment, size_t bytes) {
    * The base pointer must still be properly aligned for this to work.
    */
   if (alignment <= MALLOC_ALIGNMENT)
-    return dlmalloc_impl(bytes);
+    return dlmalloc_impl(bytes CALLER_NULL);
   return internal_memalign(gm, alignment, bytes);
 }
 
@@ -5950,7 +5959,7 @@ void *dlmalloc(size_t bytes)
 {
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
-	void *p = dlmalloc_impl(fullsz);
+	void *p = dlmalloc_impl(fullsz CALLER_NULL);
 
 	if (!p)
 		return p;
@@ -6023,6 +6032,35 @@ int mcheck(mcheck_abortfunc_t f)
 void mcheck_check_all(void) { mcheck_pedantic_check(); }
 
 enum mcheck_status mprobe(void *__ptr) { return mcheck_mprobe(__ptr); }
+#elif CONFIG_IS_ENABLED(MALLOC_DEBUG)
+/*
+ * Simple wrappers when MALLOC_DEBUG is enabled but not MCHECK.
+ * These just forward to the _impl functions.
+ */
+void *dlmalloc(size_t bytes)
+{
+	return dlmalloc_impl(bytes CALLER_NULL);
+}
+
+void dlfree(void *mem)
+{
+	dlfree_impl(mem);
+}
+
+void *dlrealloc(void *oldmem, size_t bytes)
+{
+	return dlrealloc_impl(oldmem, bytes);
+}
+
+void *dlmemalign(size_t alignment, size_t bytes)
+{
+	return dlmemalign_impl(alignment, bytes);
+}
+
+void *dlcalloc(size_t n, size_t elem_size)
+{
+	return dlcalloc_impl(n, elem_size);
+}
 #endif /* MCHECK_HEAP_PROTECTION */
 
 #endif /* !ONLY_MSPACES */
