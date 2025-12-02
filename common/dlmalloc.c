@@ -4092,8 +4092,17 @@ static void unlink_large_chunk(mstate M, tchunkptr X) {
 #define internal_free(m, mem)\
    if (m == gm) dlfree(mem); else mspace_free(m,mem);
 #else /* MSPACES */
+/*
+ * When mcheck is enabled, internal calls must use the _impl functions
+ * to avoid going through the mcheck wrappers which expect user pointers.
+ */
+#ifdef CONFIG_MCHECK_HEAP_PROTECTION
+#define internal_malloc(m, b) dlmalloc_impl(b)
+#define internal_free(m, mem) dlfree_impl(mem)
+#else
 #define internal_malloc(m, b) dlmalloc(b)
 #define internal_free(m, mem) dlfree(mem)
+#endif
 #endif /* MSPACES */
 #endif /* ONLY_MSPACES */
 
@@ -5339,7 +5348,6 @@ static mchunkptr try_realloc_chunk(mstate m, mchunkptr p, size_t nb,
 }
 #endif /* !defined(__UBOOT__) || !NO_REALLOC_IN_PLACE */
 
-#if !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION) || MSPACES
 static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   void* mem = 0;
   if (alignment <  MIN_CHUNK_SIZE) /* must be at least a minimum chunk size */
@@ -5453,7 +5461,6 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
   }
   return mem;
 }
-#endif /* !MCHECK_HEAP_PROTECTION || MSPACES */
 
 /*
   Common support for independent_X routines, handling
@@ -5808,9 +5815,13 @@ void* dlmemalign_impl(size_t alignment, size_t bytes) {
     return memalign_simple(alignment, bytes);
 #endif
 #endif
-  if (alignment <= MALLOC_ALIGNMENT) {
+  /*
+   * With mcheck, the wrapper handles alignment via mcheck_memalign_prehook()
+   * which adds space for the header aligned to the requested alignment.
+   * The base pointer must still be properly aligned for this to work.
+   */
+  if (alignment <= MALLOC_ALIGNMENT)
     return dlmalloc_impl(bytes);
-  }
   return internal_memalign(gm, alignment, bytes);
 }
 
