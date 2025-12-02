@@ -32,3 +32,23 @@ static int cmd_test_malloc_info(struct unit_test_state *uts)
 	return 0;
 }
 CMD_TEST(cmd_test_malloc_info, UTF_CONSOLE);
+
+/* Test 'malloc dump' command */
+static int cmd_test_malloc_dump(struct unit_test_state *uts)
+{
+	/* this takes a long time to dump, with truetype enabled, so skip it */
+	return -EAGAIN;
+
+	ut_assertok(run_command("malloc dump", 0));
+	ut_assert_nextlinen("Heap dump: ");
+	ut_assert_nextline("%12s  %10s  %s", "Address", "Size", "Status");
+	ut_assert_nextline("----------------------------------");
+	ut_assert_nextline("%12lx  %10x  (chunk header)", mem_malloc_start, 0x10);
+	ut_assert_skip_to_line("----------------------------------");
+	ut_assert_nextlinen("Used: ");
+	ut_assert_nextlinen("Free: ");
+	ut_assert_console_end();
+
+	return 0;
+}
+CMD_TEST(cmd_test_malloc_dump, UTF_CONSOLE);

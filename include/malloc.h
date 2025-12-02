@@ -705,6 +705,14 @@ void malloc_enable_testing(int max_allocs);
 void malloc_disable_testing(void);
 
 /**
+ * malloc_dump() - Print a dump of all heap chunks
+ *
+ * Walks the dlmalloc heap from start to end, printing each chunk's
+ * address, size, and status (used/free/top).
+ */
+void malloc_dump(void);
+
+/**
  * mem_malloc_init() - Initialize the malloc() heap
  *
  * @start: Start address of heap memory region

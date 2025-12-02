@@ -635,7 +635,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION) || CONFIG_IS_ENABLED(MALLOC_DEBUG)
 #define STATIC_IF_MCHECK static
-#ifdef CONFIG_MCHECK_HEAP_PROTECTION
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #undef MALLOC_COPY
 #undef MALLOC_ZERO
 static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
@@ -7019,6 +7019,75 @@ void malloc_enable_testing(int max_allocs)
 void malloc_disable_testing(void)
 {
 	malloc_testing = false;
+}
+
+void malloc_dump(void)
+{
+	mchunkptr q;
+	msegmentptr s;
+	size_t used = 0, free_space = 0;
+	int used_count = 0, free_count = 0;
+
+	if (!is_initialized(gm)) {
+		printf("dlmalloc not initialized\n");
+		return;
+	}
+
+	printf("Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
+	printf("%12s  %10s  %s\n", "Address", "Size", "Status");
+	printf("----------------------------------\n");
+
+	s = &gm->seg;
+	while (s != 0) {
+		q = align_as_chunk(s->base);
+
+		/* Show chunk header before first allocation */
+		printf("%12lx  %10zx  (chunk header)\n", (ulong)s->base,
+		       (size_t)((char *)chunk2mem(q) - (char *)s->base));
+
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			size_t sz = chunksize(q);
+			void *mem = chunk2mem(q);
+
+			if (is_inuse(q)) {
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+				struct mcheck_hdr *hdr = (struct mcheck_hdr *)mem;
+
+				if (hdr->caller[0])
+					printf("%12lx  %10zx        %s\n",
+					       (ulong)mem, sz, hdr->caller);
+				else
+					printf("%12lx  %10zx\n",
+					       (ulong)mem, sz);
+#else
+				printf("%12lx  %10zx\n",
+				       (ulong)mem, sz);
+#endif
+				used += sz;
+				used_count++;
+			} else {
+				printf("%12lx  %10zx  <free>\n",
+				       (ulong)mem, sz);
+				free_space += sz;
+				free_count++;
+			}
+			q = next_chunk(q);
+		}
+		s = s->next;
+	}
+
+	/* Print top chunk (wilderness) */
+	if (gm->top && gm->topsize > 0) {
+		printf("%12lx  %10zx  top\n",
+		       (ulong)chunk2mem(gm->top), gm->topsize);
+		free_space += gm->topsize;
+	}
+
+	printf("%12lx  %10s  end\n", mem_malloc_end, "");
+	printf("----------------------------------\n");
+	printf("Used: %zx bytes in %d chunks\n", used, used_count);
+	printf("Free: %zx bytes in %d chunks + top\n", free_space, free_count);
 }
 
 int initf_malloc(void)

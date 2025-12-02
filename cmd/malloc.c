@@ -30,8 +30,18 @@ static int do_malloc_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
+static int do_malloc_dump(struct cmd_tbl *cmdtp, int flag, int argc,
+			  char *const argv[])
+{
+	malloc_dump();
+
+	return 0;
+}
+
 U_BOOT_LONGHELP(malloc,
-	"info - display malloc statistics\n");
+	"info - display malloc statistics\n"
+	"malloc dump - dump heap chunks (address, size, status)\n");
 
 U_BOOT_CMD_WITH_SUBCMDS(malloc, "malloc information", malloc_help_text,
-	U_BOOT_SUBCMD_MKENT(info, 1, 1, do_malloc_info));
+	U_BOOT_SUBCMD_MKENT(info, 1, 1, do_malloc_info),
+	U_BOOT_SUBCMD_MKENT(dump, 1, 1, do_malloc_dump));
