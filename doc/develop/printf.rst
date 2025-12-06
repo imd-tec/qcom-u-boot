@@ -257,3 +257,78 @@ Pointers
         prints text description of a GUID or if such is not known little endian,
         lower case (requires CONFIG_LIB_UUID), e.g. 'system' for a GUID
         identifying an EFI system partition.
+
+
+Tiny printf
+-----------
+
+For space-constrained environments like SPL, U-Boot provides a minimal printf
+implementation enabled by CONFIG_SPL_USE_TINY_PRINTF (and corresponding
+CONFIG_TPL_USE_TINY_PRINTF, CONFIG_VPL_USE_TINY_PRINTF for TPL and VPL). This
+reduces code size by approximately 2.5KiB on armv7.
+
+The tiny printf supports only a limited set of format specifiers:
+
+Basic specifiers
+''''''''''''''''
+
+%c
+        prints a single character
+
+%s
+        prints a string
+
+%d, %i
+        signed decimal integer
+
+%u
+        unsigned decimal integer
+
+%x
+        unsigned hexadecimal (lowercase)
+
+%%
+        a literal '%' character
+
+Length modifiers
+''''''''''''''''
+
+%l
+        long (e.g., %ld, %lu, %lx)
+
+Width and padding
+'''''''''''''''''
+
+Field width and zero-padding are supported (e.g., %08x, %4d).
+
+Pointer specifiers (CONFIG_SPL_NET only)
+''''''''''''''''''''''''''''''''''''''''
+
+When CONFIG_SPL_NET is enabled, the following pointer formats are available:
+
+%pM
+        MAC address colon-separated, e.g. '00:11:22:33:44:55'
+
+%pm
+        MAC address without separators, e.g. '001122334455'
+
+%pI4
+        IPv4 address, e.g. '192.168.1.1'
+
+Limitations
+'''''''''''
+
+The tiny printf does NOT support:
+
+* Floating point (%f, %e, %g, etc.)
+* Long long (%ll)
+* Size/ptrdiff modifiers (%z, %t)
+* Precision (%.Nf, %.Ns)
+* Most pointer formats (%pU, %pD, %pV, etc.)
+* The snprintf() size parameter is ignored - no bounds checking is performed
+
+.. warning::
+
+   Because snprintf() ignores the size parameter in tiny printf, buffer
+   overflows are possible. Ensure buffers are large enough for the expected
+   output.
