@@ -1,7 +1,62 @@
 .. SPDX-License-Identifier: GPL-2.0+
 
-Printf() format codes
-=====================
+Printf-style Functions
+======================
+
+U-Boot provides a family of printf-style functions for formatted output.
+
+Functions
+---------
+
+printf()
+        Prints formatted output to the console.
+
+        .. code-block:: c
+
+            int printf(const char *fmt, ...);
+
+vprintf()
+        Like printf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vprintf(const char *fmt, va_list args);
+
+sprintf()
+        Prints formatted output to a string buffer. The buffer must be large
+        enough to hold the output.
+
+        .. code-block:: c
+
+            int sprintf(char *buf, const char *fmt, ...);
+
+vsprintf()
+        Like sprintf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vsprintf(char *buf, const char *fmt, va_list args);
+
+snprintf()
+        Prints formatted output to a string buffer with a size limit. At most
+        size-1 characters are written, and the buffer is always null-terminated.
+        Returns the number of characters that would have been written if the
+        buffer were large enough.
+
+        .. code-block:: c
+
+            int snprintf(char *buf, size_t size, const char *fmt, ...);
+
+vsnprintf()
+        Like snprintf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
+
+
+Format Specification
+--------------------
 
 Each conversion specification consists of:
 
@@ -166,10 +221,15 @@ Pointers
 	* resource_size_t
 
 %pD
-        prints a UEFI device path
+        prints a UEFI device path (requires CONFIG_EFI_DEVICE_PATH_TO_TEXT)
 
 %pi4, %pI4
-        prints IPv4 address, e.g. '192.168.0.1'
+        prints IPv4 address, e.g. '192.168.0.1'. Lower case (%pi4) omits the
+        dot separators.
+
+%pi6, %pI6
+        prints IPv6 address (requires CONFIG_IPV6). Lower case (%pi6) omits the
+        colon separators.
 
 %pm
         prints MAC address without separators, e.g. '001122334455'
@@ -178,22 +238,22 @@ Pointers
         print MAC address colon separated, e.g. '00:01:02:03:04:05'
 
 %pUb
-        prints GUID big endian, lower case
+        prints GUID big endian, lower case (requires CONFIG_LIB_UUID)
         e.g. '00112233-4455-6677-8899-aabbccddeeff'
 
 %pUB
-        prints GUID big endian, upper case
+        prints GUID big endian, upper case (requires CONFIG_LIB_UUID)
         e.g. '00112233-4455-6677-8899-AABBCCDDEEFF'
 
 %pUl
-        prints GUID little endian, lower case
+        prints GUID little endian, lower case (requires CONFIG_LIB_UUID)
         e.g. '33221100-5544-7766-8899-aabbccddeeff'
 
 %pUL
-        prints GUID little endian, upper case
+        prints GUID little endian, upper case (requires CONFIG_LIB_UUID)
         e.g. '33221100-5544-7766-8899-AABBCCDDEEFF'
 
 %pUs
         prints text description of a GUID or if such is not known little endian,
-        lower case, e.g. 'system' for a GUID identifying an EFI system
-	partition.
+        lower case (requires CONFIG_LIB_UUID), e.g. 'system' for a GUID
+        identifying an EFI system partition.
