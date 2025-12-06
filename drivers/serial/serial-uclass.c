@@ -271,6 +271,8 @@ static int __serial_puts(struct udevice *dev, const char *str, size_t len)
 	do {
 		ssize_t written = ops->puts(dev, str, len);
 
+		if (written == -EAGAIN)
+			continue;
 		if (written < 0)
 			return written;
 		str += written;
