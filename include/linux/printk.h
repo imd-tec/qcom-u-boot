@@ -84,4 +84,9 @@
 #define printk_once(fmt, ...) \
 	printk(fmt, ##__VA_ARGS__)
 
+struct va_format {
+	const char *fmt;
+	va_list *va;
+};
+
 #endif

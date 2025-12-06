@@ -258,6 +258,25 @@ Pointers
         lower case (requires CONFIG_LIB_UUID), e.g. 'system' for a GUID
         identifying an EFI system partition.
 
+%pV
+        prints a struct va_format, which contains a format string and a va_list
+        pointer. This allows recursive printf formatting and is used for
+        implementing custom print functions that wrap printf.
+
+        .. code-block:: c
+
+            void my_print(const char *fmt, ...)
+            {
+                struct va_format vaf;
+                va_list args;
+
+                va_start(args, fmt);
+                vaf.fmt = fmt;
+                vaf.va = &args;
+                printf("prefix: %pV\n", &vaf);
+                va_end(args);
+            }
+
 
 Tiny printf
 -----------
