@@ -94,13 +94,16 @@ static void sandbox_print_color(struct udevice *dev)
 static int sandbox_serial_putc(struct udevice *dev, const char ch)
 {
 	struct sandbox_serial_priv *priv = dev_get_priv(dev);
+	ssize_t ret;
 
 	if (ch == '\n')
 		priv->start_of_line = true;
 
 	if (sandbox_serial_enabled) {
 		sandbox_print_color(dev);
-		os_write(1, &ch, 1);
+		ret = os_write(1, &ch, 1);
+		if (ret != 1)
+			return -EAGAIN;
 	}
 	_sandbox_serial_written += 1;
 	return 0;
@@ -120,6 +123,8 @@ static ssize_t sandbox_serial_puts(struct udevice *dev, const char *s,
 		ret = os_write(1, s, len);
 		if (ret < 0)
 			return ret;
+		if (ret != len)
+			return -EAGAIN;
 	} else {
 		ret = len;
 	}
