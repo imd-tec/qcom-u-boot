@@ -1082,30 +1082,28 @@ static void send_key_obj(struct scene *scn, struct scene_obj *obj, int key,
 
 int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 {
-	struct scene_obj *obj;
+	struct scene_obj *cur, *obj;
 	int ret;
 
 	event->type = EXPOACT_NONE;
 
 	/*
-	 * In 'popup' mode, arrow keys move betwen objects, unless a menu is
-	 * opened
+	 * In 'popup' mode, arrow keys move betwen objects, unless a menu or
+	 * textline is opened
 	 */
+	cur = NULL;
+	if (scn->highlight_id)
+		cur = scene_obj_find(scn, scn->highlight_id, SCENEOBJT_NONE);
 	if (scn->expo->popup) {
-		obj = NULL;
-		if (scn->highlight_id) {
-			obj = scene_obj_find(scn, scn->highlight_id,
-					     SCENEOBJT_NONE);
-		}
-		if (!obj)
+		if (!cur)
 			return 0;
 
-		if (!(obj->flags & SCENEOF_OPEN)) {
-			send_key_obj(scn, obj, key, event);
+		if (!(cur->flags & SCENEOF_OPEN)) {
+			send_key_obj(scn, cur, key, event);
 			return 0;
 		}
 
-		switch (obj->type) {
+		switch (cur->type) {
 		case SCENEOBJT_NONE:
 		case SCENEOBJT_IMAGE:
 		case SCENEOBJT_TEXT:
@@ -1114,7 +1112,7 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 		case SCENEOBJT_MENU: {
 			struct scene_obj_menu *menu;
 
-			menu = (struct scene_obj_menu *)obj,
+			menu = (struct scene_obj_menu *)cur,
 			ret = scene_menu_send_key(scn, menu, key, event);
 			if (ret)
 				return log_msg_ret("key", ret);
@@ -1123,7 +1121,7 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 		case SCENEOBJT_TEXTLINE: {
 			struct scene_obj_textline *tline;
 
-			tline = (struct scene_obj_textline *)obj,
+			tline = (struct scene_obj_textline *)cur,
 			ret = scene_textline_send_key(scn, tline, key, event);
 			if (ret)
 				return log_msg_ret("key", ret);
