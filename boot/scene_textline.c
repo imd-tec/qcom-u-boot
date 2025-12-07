@@ -189,28 +189,21 @@ int scene_textline_render_deps(struct scene *scn,
 {
 	const bool open = tline->obj.flags & SCENEOF_OPEN;
 	struct udevice *cons = scn->expo->cons;
-	struct scene_obj_txt *txt;
-	int ret;
+	uint i;
 
-	scene_render_deps(scn, tline->label_id);
-	scene_render_deps(scn, tline->edit_id);
-
-	/* show the vidconsole cursor if open */
+	/* if open, render the edit text on top of the background */
 	if (open) {
-		/* get the position within the field */
-		txt = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
-		if (!txt)
-			return log_msg_ret("cur", -ENOENT);
-
-		if (txt->gen.font_name || txt->gen.font_size) {
-			ret = vidconsole_select_font(cons,
-						     txt->gen.font_name,
-						     txt->gen.font_size);
-		} else {
-			ret = vidconsole_select_font(cons, NULL, 0);
-		}
+		int ret;
 
 		ret = vidconsole_entry_restore(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		scene_render_obj(scn, tline->edit_id);
+
+		/* move cursor back to the correct position */
+		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
+			vidconsole_put_char(cons, '\b');
+		ret = vidconsole_entry_save(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
 
