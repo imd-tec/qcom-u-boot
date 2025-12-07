@@ -446,7 +446,7 @@ static int cedit_render_textline(struct unit_test_state *uts)
 
 	return 0;
 }
-BOOTSTD_TEST(cedit_render_textline, UTF_DM | UTF_SCAN_FDT);
+BOOTSTD_TEST(cedit_render_textline, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);
 
 /* Check the cedit is arranged correctly */
 static int cedit_position(struct unit_test_state *uts)
