@@ -457,6 +457,13 @@ int bootflow_menu_poll(struct expo *exp, int *seqp)
 	}
 	case EXPOACT_QUIT:
 		return -EPIPE;
+	case EXPOACT_CLOSE:
+		/*
+		 * Password textline closed (Enter pressed) - treat as
+		 * selection
+		 */
+		*seqp = act.select.id - ITEM_PASS;
+		break;
 	case EXPOACT_CLICK:
 		if (act.select.id == OBJ_SETTINGS)
 			return -ECOMM;  /* layout change request */
