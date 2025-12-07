@@ -67,14 +67,15 @@ static void dump_menu(struct dump_ctx *ctx, struct scene_obj_menu *menu)
 	struct scene_obj *obj = &menu->obj;
 	struct scene_menitem *item;
 
-	outf(ctx, "Menu: pointer_id %d title_id %d manual %d\n",
+	outf(ctx, "Menu: pointer_id %x title_id %x manual %d\n",
 	     menu->pointer_id, menu->title_id,
 	     !!(obj->flags & SCENEOF_MANUAL));
 
 	ctx->indent += 2;
 	list_for_each_entry(item, &menu->item_head, sibling) {
-		outf(ctx, "Item %d: name '%s' label_id %d desc_id %d\n",
-		     item->id, item->name, item->label_id, item->desc_id);
+		outf(ctx, "Item %x: name '%s' key_id %x label_id %x desc_id %x preview_id %x\n",
+		     item->id, item->name, item->key_id, item->label_id,
+		     item->desc_id, item->preview_id);
 	}
 	ctx->indent -= 2;
 }
@@ -83,7 +84,7 @@ static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 {
 	const char *str = expo_get_str(ctx->scn->expo, txt->gen.str_id);
 
-	outf(ctx, "Text: str_id %d font_name '%s' font_size %d\n",
+	outf(ctx, "Text: str_id %x font_name '%s' font_size %x\n",
 	     txt->gen.str_id,
 	     txt->gen.font_name ? txt->gen.font_name : "(default)",
 	     txt->gen.font_size);
@@ -94,7 +95,7 @@ static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 
 static void dump_box(struct dump_ctx *ctx, struct scene_obj_box *box)
 {
-	outf(ctx, "Box: fill %d width %d\n", box->fill, box->width);
+	outf(ctx, "Box: fill %d width %x\n", box->fill, box->width);
 }
 
 static void dump_image(struct dump_ctx *ctx, struct scene_obj_img *img)
@@ -105,17 +106,17 @@ static void dump_image(struct dump_ctx *ctx, struct scene_obj_img *img)
 static void dump_textline(struct dump_ctx *ctx,
 			  struct scene_obj_textline *tline)
 {
-	outf(ctx, "Textline: label_id %d edit_id %d\n",
+	outf(ctx, "Textline: label_id %x edit_id %x\n",
 	     tline->label_id, tline->edit_id);
 	ctx->indent += 2;
-	outf(ctx, "max_chars %d pos %d\n", tline->max_chars, tline->pos);
+	outf(ctx, "max_chars %x pos %x\n", tline->max_chars, tline->pos);
 	ctx->indent -= 2;
 }
 
 static void dump_textedit(struct dump_ctx *ctx,
 			  struct scene_obj_txtedit *tedit)
 {
-	outf(ctx, "Textedit: str_id %d font_name '%s' font_size %d\n",
+	outf(ctx, "Textedit: str_id %x font_name '%s' font_size %x\n",
 	     tedit->gen.str_id,
 	     tedit->gen.font_name ? tedit->gen.font_name : "(default)",
 	     tedit->gen.font_size);
@@ -128,7 +129,7 @@ static void obj_dump_(struct dump_ctx *ctx, struct scene_obj *obj)
 	int bit;
 	int pos = 0;
 
-	outf(ctx, "Object %d (%s): type %s\n", obj->id, obj->name,
+	outf(ctx, "Object %x (%s): type %s\n", obj->id, obj->name,
 	     scene_obj_type_name(obj->type));
 	ctx->indent += 2;
 
@@ -144,9 +145,9 @@ static void obj_dump_(struct dump_ctx *ctx, struct scene_obj *obj)
 		}
 	}
 	outf(ctx, "flags %s\n", pos > 0 ? flags_buf : "");
-	outf(ctx, "bbox: (%d,%d)-(%d,%d)\n",
+	outf(ctx, "bbox: (%x,%x)-(%x,%x)\n",
 	     obj->bbox.x0, obj->bbox.y0, obj->bbox.x1, obj->bbox.y1);
-	outf(ctx, "dims: %dx%d\n", obj->dims.x, obj->dims.y);
+	outf(ctx, "dims: %xx%x\n", obj->dims.x, obj->dims.y);
 
 	switch (obj->type) {
 	case SCENEOBJT_NONE:
@@ -177,11 +178,11 @@ static void scene_dump_(struct dump_ctx *ctx)
 {
 	struct scene_obj *obj;
 
-	outf(ctx, "Scene %d: name '%s'\n", ctx->scn->id, ctx->scn->name);
+	outf(ctx, "Scene %x: name '%s'\n", ctx->scn->id, ctx->scn->name);
 	ctx->indent += 2;
-	outf(ctx, "title_id %d (%s)\n",
+	outf(ctx, "title_id %x (%s)\n",
 	     ctx->scn->title_id, obj_name(ctx, ctx->scn->title_id));
-	outf(ctx, "highlight_id %d (%s)\n",
+	outf(ctx, "highlight_id %x (%s)\n",
 	     ctx->scn->highlight_id, obj_name(ctx, ctx->scn->highlight_id));
 
 	list_for_each_entry(obj, &ctx->scn->obj_head, sibling) {
@@ -215,20 +216,20 @@ static void expo_dump_(struct dump_ctx *ctx, struct expo *exp)
 	     exp->display ? exp->display->name : "(null)");
 	outf(ctx, "cons %s\n", exp->cons ? exp->cons->name : "(none)");
 	outf(ctx, "mouse %s\n", exp->mouse ? exp->mouse->name : "(none)");
-	outf(ctx, "scene_id %d\n", exp->scene_id);
-	outf(ctx, "next_id %d\n", exp->next_id);
-	outf(ctx, "req_width %d\n", exp->req_width);
-	outf(ctx, "req_height %d\n", exp->req_height);
+	outf(ctx, "scene_id %x\n", exp->scene_id);
+	outf(ctx, "next_id %x\n", exp->next_id);
+	outf(ctx, "req_width %x\n", exp->req_width);
+	outf(ctx, "req_height %x\n", exp->req_height);
 	outf(ctx, "text_mode %d\n", exp->text_mode);
 	outf(ctx, "popup %d\n", exp->popup);
 	outf(ctx, "show_highlight %d\n", exp->show_highlight);
 	outf(ctx, "mouse_enabled %d\n", exp->mouse_enabled);
 	outf(ctx, "mouse_ptr %p\n", exp->mouse_ptr);
-	outf(ctx, "mouse_size %dx%d\n", exp->mouse_size.w,
+	outf(ctx, "mouse_size %xx%x\n", exp->mouse_size.w,
 	     exp->mouse_size.h);
-	outf(ctx, "mouse_pos (%d,%d)\n", exp->mouse_pos.x,
+	outf(ctx, "mouse_pos (%x,%x)\n", exp->mouse_pos.x,
 	     exp->mouse_pos.y);
-	outf(ctx, "damage (%d,%d)-(%d,%d)\n", exp->damage.x0, exp->damage.y0,
+	outf(ctx, "damage (%x,%x)-(%x,%x)\n", exp->damage.x0, exp->damage.y0,
 	     exp->damage.x1, exp->damage.y1);
 	outf(ctx, "done %d\n", exp->done);
 	outf(ctx, "save %d\n", exp->save);
@@ -237,17 +238,17 @@ static void expo_dump_(struct dump_ctx *ctx, struct expo *exp)
 	if (exp->display) {
 		struct video_priv *vid_priv = dev_get_uclass_priv(exp->display);
 
-		outf(ctx, "video: %dx%d white_on_black %d\n",
+		outf(ctx, "video: %xx%x white_on_black %d\n",
 		     vid_priv->xsize, vid_priv->ysize,
 		     vid_priv->white_on_black);
 	}
 
 	outf(ctx, "Theme:\n");
 	ctx->indent = 4;
-	outf(ctx, "font_size %d\n", theme->font_size);
+	outf(ctx, "font_size %x\n", theme->font_size);
 	outf(ctx, "white_on_black %d\n", theme->white_on_black);
-	outf(ctx, "menu_inset %d\n", theme->menu_inset);
-	outf(ctx, "menuitem_gap_y %d\n", theme->menuitem_gap_y);
+	outf(ctx, "menu_inset %x\n", theme->menu_inset);
+	outf(ctx, "menuitem_gap_y %x\n", theme->menuitem_gap_y);
 
 	ctx->indent = 0;
 	outf(ctx, "\nScenes:\n");
