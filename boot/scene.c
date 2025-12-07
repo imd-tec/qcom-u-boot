@@ -903,6 +903,24 @@ int scene_arrange(struct scene *scn)
 	return 0;
 }
 
+int scene_render_obj(struct scene *scn, uint id)
+{
+	struct scene_obj *obj;
+	int ret;
+
+	obj = scene_obj_find(scn, id, SCENEOBJT_NONE);
+	if (!obj)
+		return log_msg_ret("obj", -ENOENT);
+
+	if (!(obj->flags & SCENEOF_HIDE)) {
+		ret = scene_obj_render(obj, false);
+		if (ret && ret != -ENOTSUPP)
+			return log_msg_ret("ren", ret);
+	}
+
+	return 0;
+}
+
 int scene_render_deps(struct scene *scn, uint id)
 {
 	struct scene_obj *obj;
