@@ -71,7 +71,11 @@ obj-$(CONFIG_BOUNCE_BUFFER) += bouncebuf.o
 obj-$(CONFIG_$(PHASE_)SERIAL) += console.o
 
 obj-$(CONFIG_CROS_EC) += cros_ec.o
+ifdef CONFIG_SYS_MALLOC_LEGACY
+obj-y += dlmalloc_old.o
+else
 obj-y += dlmalloc.o
+endif
 obj-$(CONFIG_$(PHASE_)SYS_MALLOC_F) += malloc_simple.o
 
 obj-$(CONFIG_$(PHASE_)CYCLIC) += cyclic.o

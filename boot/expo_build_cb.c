@@ -14,6 +14,7 @@
 #include <expo.h>
 #include <log.h>
 #include <malloc.h>
+#include <string.h>
 #include <vsprintf.h>
 #include <asm/cb_sysinfo.h>
 

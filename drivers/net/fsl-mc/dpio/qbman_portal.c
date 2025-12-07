@@ -5,6 +5,7 @@
 
 #include <log.h>
 #include <malloc.h>
+#include <string.h>
 #include <asm/arch/clock.h>
 #include <linux/bug.h>
 #include "qbman_portal.h"

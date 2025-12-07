@@ -5,11 +5,12 @@
  * Copyright (C) 2012 Marek Vasut <marex@denx.de>
  */
 
+#include <bouncebuf.h>
 #include <cpu_func.h>
+#include <errno.h>
 #include <log.h>
 #include <malloc.h>
-#include <errno.h>
-#include <bouncebuf.h>
+#include <string.h>
 #include <asm/cache.h>
 #include <linux/dma-mapping.h>
 

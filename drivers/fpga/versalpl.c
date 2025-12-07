@@ -8,6 +8,7 @@
 #include <log.h>
 #include <asm/arch/sys_proto.h>
 #include <memalign.h>
+#include <string.h>
 #include <versalpl.h>
 #include <zynqmp_firmware.h>
 #include <asm/cache.h>

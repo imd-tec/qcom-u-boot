@@ -51,6 +51,7 @@ Implementation
    global_data
    logging
    makefiles
+   malloc
    menus
    printf
    smbios

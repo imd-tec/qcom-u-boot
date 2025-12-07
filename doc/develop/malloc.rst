@@ -1,0 +1,333 @@
+.. SPDX-License-Identifier: GPL-2.0-or-later
+
+Dynamic Memory Allocation
+=========================
+
+U-Boot uses Doug Lea's malloc implementation (dlmalloc) for dynamic memory
+allocation. This provides the standard C library functions malloc(), free(),
+realloc(), calloc(), and memalign().
+
+Overview
+--------
+
+U-Boot's malloc implementation has two phases:
+
+1. **Pre-relocation (simple malloc)**: Before U-Boot relocates itself to the
+   top of RAM, a simple malloc implementation is used. This allocates memory
+   from a small fixed-size pool and does not support free(). This is
+   controlled by CONFIG_SYS_MALLOC_F_LEN.
+
+2. **Post-relocation (full malloc)**: After relocation, the full dlmalloc
+   implementation is initialized with a larger heap. The heap size is
+   controlled by CONFIG_SYS_MALLOC_LEN.
+
+The transition between these phases is managed by the GD_FLG_FULL_MALLOC_INIT
+flag in global_data.
+
+dlmalloc Version
+----------------
+
+U-Boot uses dlmalloc version 2.8.6 (updated from 2.6.6 in 2025), which
+provides:
+
+- Efficient memory allocation with low fragmentation
+- Small bins for allocations up to 256 bytes (32 bins)
+- Tree bins for larger allocations (32 bins)
+- Best-fit allocation strategy
+- Boundary tags for coalescing free blocks
+
+Data Structures
+---------------
+
+The allocator uses two main static structures:
+
+**malloc_state** (~944 bytes on 64-bit systems):
+
+- ``smallbins``: 33 pairs of pointers for small allocations (528 bytes)
+- ``treebins``: 32 tree root pointers for large allocations (256 bytes)
+- ``top``: Pointer to the top chunk (wilderness)
+- ``dvsize``, ``topsize``: Sizes of designated victim and top chunks
+- Bookkeeping: footprint tracking, bitmaps, segment info
+
+**malloc_params** (48 bytes on 64-bit systems):
+
+- Page size, granularity, thresholds for mmap and trim
+
+For comparison, the older dlmalloc 2.6.6 used a single 2064-byte ``av_`` array
+on 64-bit systems. The 2.8.6 version uses about half the static data while
+providing better algorithms.
+
+Kconfig Options
+---------------
+
+Main U-Boot (post-relocation)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``CONFIG_SYS_MALLOC_LEN``
+    Hex value defining the size of the main malloc pool after relocation.
+    This is the heap available for driver model, file systems, and general
+    dynamic memory allocation. Default: 0x400000 (4 MB), varies by platform.
+
+``CONFIG_SYS_MALLOC_F``
+    Bool to enable malloc() pool before relocation. Required for driver model
+    and many boot features. Default: y if DM is enabled.
+
+``CONFIG_SYS_MALLOC_F_LEN``
+    Hex value for the size of pre-relocation malloc pool. This small pool is
+    used before DRAM is initialized. Default: 0x2000 (8 KB), varies by platform.
+
+``CONFIG_SYS_MALLOC_CLEAR_ON_INIT``
+    Bool to zero the malloc pool on initialization. This slows boot but ensures
+    malloc returns zeroed memory. Disable for faster boot when using large
+    heaps. Default: y
+
+``CONFIG_SYS_MALLOC_DEFAULT_TO_INIT``
+    Bool to call malloc_init() when mem_malloc_init() is called. Used when
+    moving malloc from one memory region to another. Default: n
+
+``CONFIG_SYS_MALLOC_BOOTPARAMS``
+    Bool to malloc a buffer for bi_boot_params instead of using a fixed
+    location. Default: n
+
+``CONFIG_VALGRIND``
+    Bool to annotate malloc operations for Valgrind memory debugging. Only
+    useful when running sandbox builds under Valgrind. See
+    :ref:`sandbox_valgrind` for details. Default: n
+
+``CONFIG_SYS_MALLOC_SMALL``
+    Bool to enable code-size optimisations for dlmalloc. This option combines
+    several optimisations:
+
+    - Disables tree bins for allocations >= 256 bytes, using simple linked-list
+      bins instead. This changes large-allocation performance from O(log n) to
+      O(n) but saves ~1.5-2KB.
+    - Simplifies memalign() by removing fallback retry logic. Saves ~100-150 bytes.
+    - Disables in-place realloc optimisation. Saves ~200 bytes.
+    - Uses static malloc parameters instead of runtime-configurable ones.
+    - Converts small chunk macros to functions to reduce code duplication.
+
+    These optimisations may increase fragmentation and reduce performance for
+    workloads with many large or aligned allocations, but are suitable for most
+    U-Boot use cases where code size is more important. Default: n
+
+``CONFIG_SYS_MALLOC_LEGACY``
+    Bool to use the legacy dlmalloc 2.6.6 implementation instead of the modern
+    dlmalloc 2.8.6. The legacy allocator has smaller code size (~450 bytes less)
+    but uses more static data (~500 bytes more on 64-bit). Provided for
+    compatibility and testing. New boards should use the modern allocator.
+    Default: n
+
+xPL Boot Phases
+~~~~~~~~~~~~~~~
+
+The SPL (Secondary Program Loader), TPL (Tertiary Program Loader), and VPL
+(Verification Program Loader) boot phases each have their own malloc
+configuration options. These are prefixed with ``SPL_``, ``TPL_``, or ``VPL_``
+and typically mirror the main U-Boot options.
+
+Similar to U-Boot proper, xPL phases can use simple malloc (``malloc_simple``)
+for pre-DRAM allocation. However, unlike U-Boot proper which transitions from
+simple malloc to full dlmalloc after relocation, xPL phases that enable
+``CONFIG_SPL_SYS_MALLOC_SIMPLE`` (or equivalent) cannot transition to full
+malloc within that phase, since the dlmalloc code is not included in the
+binary.
+
+Note: When building with ``CONFIG_XPL_BUILD``, the code uses
+``CONFIG_IS_ENABLED()`` macros to automatically select the appropriate
+phase-specific option (e.g., ``CONFIG_IS_ENABLED(SYS_MALLOC_F)`` expands to
+``CONFIG_SPL_SYS_MALLOC_F`` when building SPL).
+
+SPL (Secondary Program Loader)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``CONFIG_SPL_SYS_MALLOC_F``
+    Bool to enable malloc() pool in SPL before DRAM is initialized. Required
+    for driver model in SPL. Default: y if SPL_FRAMEWORK and SYS_MALLOC_F.
+
+``CONFIG_SPL_SYS_MALLOC_F_LEN``
+    Hex value for SPL pre-DRAM malloc pool size. Default: inherits from
+    CONFIG_SYS_MALLOC_F_LEN.
+
+``CONFIG_SPL_SYS_MALLOC_SIMPLE``
+    Bool to use only malloc_simple functions in SPL instead of full dlmalloc.
+    The simple allocator is smaller (saves ~600 bytes) but cannot free()
+    memory. Default: n
+
+``CONFIG_SPL_SYS_MALLOC``
+    Bool to enable a full malloc pool in SPL after DRAM is initialized.
+    Used with CONFIG_SPL_CUSTOM_SYS_MALLOC_ADDR. Default: n
+
+``CONFIG_SPL_HAS_CUSTOM_MALLOC_START``
+    Bool to use a custom address for SPL malloc pool instead of the default
+    location. Requires CONFIG_SPL_CUSTOM_SYS_MALLOC_ADDR. Default: n
+
+``CONFIG_SPL_CUSTOM_SYS_MALLOC_ADDR``
+    Hex address for SPL malloc pool when using custom location.
+
+``CONFIG_SPL_SYS_MALLOC_SIZE``
+    Hex value for SPL malloc pool size when using CONFIG_SPL_SYS_MALLOC.
+    Default: 0x100000 (1 MB).
+
+``CONFIG_SPL_SYS_MALLOC_CLEAR_ON_INIT``
+    Bool to zero SPL malloc pool on initialization. Useful when malloc pool
+    is in a region that must be zeroed before first use. Default: inherits
+    from CONFIG_SYS_MALLOC_CLEAR_ON_INIT.
+
+``CONFIG_SPL_SYS_MALLOC_SMALL``
+    Bool to enable code-size optimisations for dlmalloc in SPL. Enables the
+    same optimisations as CONFIG_SYS_MALLOC_SMALL (disables tree bins,
+    simplifies memalign, disables in-place realloc, uses static parameters,
+    converts small chunk macros to functions). SPL typically has predictable
+    memory usage where these optimisations have minimal impact, making the
+    code size savings worthwhile. Default: y
+
+``CONFIG_SPL_STACK_R_MALLOC_SIMPLE_LEN``
+    Hex value for malloc_simple heap size after switching to DRAM stack in SPL.
+    Only used when CONFIG_SPL_STACK_R and CONFIG_SPL_SYS_MALLOC_SIMPLE are
+    enabled. Provides a larger heap than the initial SRAM pool. Default:
+    0x100000 (1 MB).
+
+TPL (Tertiary Program Loader)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``CONFIG_TPL_SYS_MALLOC_F``
+    Bool to enable malloc() pool in TPL. Default: y if TPL and SYS_MALLOC_F.
+
+``CONFIG_TPL_SYS_MALLOC_F_LEN``
+    Hex value for TPL malloc pool size. Default: inherits from
+    CONFIG_SPL_SYS_MALLOC_F_LEN.
+
+``CONFIG_TPL_SYS_MALLOC_SIMPLE``
+    Bool to use only malloc_simple in TPL instead of full dlmalloc. Saves
+    code size at the cost of no free() support. Default: n
+
+VPL (Verification Program Loader)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``CONFIG_VPL_SYS_MALLOC_F``
+    Bool to enable malloc() pool in VPL. Default: y if VPL and SYS_MALLOC_F.
+
+``CONFIG_VPL_SYS_MALLOC_F_LEN``
+    Hex value for VPL malloc pool size. Default: inherits from
+    CONFIG_SPL_SYS_MALLOC_F_LEN.
+
+``CONFIG_VPL_SYS_MALLOC_SIMPLE``
+    Bool to use only malloc_simple in VPL. Default: y
+
+dlmalloc Compile-Time Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These options are set in the U-Boot section of ``common/dlmalloc.c``:
+
+``NO_MALLOC_STATS``
+    Disable malloc_stats() function. Default: 1 (disabled)
+
+``NO_MALLINFO``
+    Disable mallinfo() function. Default: 1 for non-sandbox builds
+
+``INSECURE``
+    Disable runtime heap validation checks. This reduces code size but removes
+    detection of heap corruption. Default: 1 for non-sandbox builds
+
+``NO_REALLOC_IN_PLACE``
+    Disable in-place realloc optimisation. Enabled by CONFIG_SYS_MALLOC_SMALL.
+    Saves ~200 bytes of code. Default: 0
+
+``NO_TREE_BINS``
+    Disable tree bins for large allocations (>= 256 bytes), using simple
+    linked-list bins instead. Enabled by CONFIG_SYS_MALLOC_SMALL. Saves
+    ~1.5-2KB but changes performance from O(log n) to O(n). Default: 0
+
+``SIMPLE_MEMALIGN``
+    Simplify memalign() by removing fallback retry logic. Enabled by
+    CONFIG_SYS_MALLOC_SMALL. Saves ~100-150 bytes. Default: 0
+
+``STATIC_MALLOC_PARAMS``
+    Use static malloc parameters instead of runtime-configurable ones.
+    Enabled by CONFIG_SYS_MALLOC_SMALL. Default: 0
+
+``SMALLCHUNKS_AS_FUNCS``
+    Convert small chunk macros (insert_small_chunk, unlink_first_small_chunk)
+    to functions to reduce code duplication. Enabled by CONFIG_SYS_MALLOC_SMALL.
+    Default: 0
+
+``SIMPLE_SYSALLOC``
+    Use simplified sys_alloc() that only supports contiguous sbrk() extension.
+    Enabled automatically for non-sandbox builds. Saves code by removing mmap
+    and multi-segment support. Default: 1 for non-sandbox, 0 for sandbox
+
+``MORECORE_CONTIGUOUS``
+    Assume sbrk() returns contiguous memory. Default: 1
+
+``MORECORE_CANNOT_TRIM``
+    Disable releasing memory back to the system. Default: 1
+
+``HAVE_MMAP``
+    Enable mmap() for large allocations. Default: 0 (U-Boot uses sbrk only)
+
+Code Size
+---------
+
+The dlmalloc 2.8.6 implementation is larger than the older 2.6.6 version due
+to its more sophisticated algorithms. To minimise code size for
+resource-constrained systems, U-Boot provides several optimisation levels:
+
+**Default optimisations** (always enabled for non-sandbox builds):
+
+- INSECURE=1 (saves ~1100 bytes)
+- NO_MALLINFO=1 (saves ~200 bytes)
+- SIMPLE_SYSALLOC=1 (saves code by simplifying sys_alloc)
+
+**CONFIG_SYS_MALLOC_SMALL** (additional optimisations, default y for SPL):
+
+- NO_TREE_BINS=1 (saves ~1.5-2KB)
+- NO_REALLOC_IN_PLACE=1 (saves ~200 bytes)
+- SIMPLE_MEMALIGN=1 (saves ~100-150 bytes)
+- STATIC_MALLOC_PARAMS=1
+- SMALLCHUNKS_AS_FUNCS=1 (reduces code duplication)
+
+With default optimisations only, the code-size increase over dlmalloc 2.6.6
+is about 450 bytes, while data usage decreases by about 500 bytes.
+
+With CONFIG_SYS_MALLOC_SMALL enabled, significant additional code savings
+are achieved, making it suitable for size-constrained SPL builds.
+
+Sandbox builds retain full functionality for testing, including mallinfo()
+for memory-leak detection.
+
+Debugging
+---------
+
+For debugging heap issues, consider:
+
+1. **mcheck**: U-Boot includes mcheck support for detecting buffer overruns.
+   Enable CONFIG_MCHECK to use mcheck(), mcheck_pedantic(), and
+   mcheck_check_all().
+
+2. **Valgrind**: When running sandbox with Valgrind, the allocator includes
+   annotations to help detect memory errors. See :ref:`sandbox_valgrind`.
+
+3. **malloc testing**: Unit tests can use malloc_enable_testing() to simulate
+   allocation failures.
+
+API Reference
+-------------
+
+Standard C functions:
+
+- ``void *malloc(size_t size)`` - Allocate memory
+- ``void free(void *ptr)`` - Free allocated memory
+- ``void *realloc(void *ptr, size_t size)`` - Resize allocation
+- ``void *calloc(size_t nmemb, size_t size)`` - Allocate zeroed memory
+- ``void *memalign(size_t alignment, size_t size)`` - Aligned allocation
+
+Pre-relocation simple malloc (from malloc_simple.c):
+
+- ``void *malloc_simple(size_t size)`` - Simple bump allocator
+- ``void *memalign_simple(size_t alignment, size_t size)`` - Aligned version
+
+See Also
+--------
+
+- :doc:`memory` - Memory management overview
+- :doc:`global_data` - Global data and the GD_FLG_FULL_MALLOC_INIT flag

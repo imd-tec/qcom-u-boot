@@ -9,6 +9,7 @@
 
 #include <log.h>
 #include <malloc.h>
+#include <string.h>
 #include <vsprintf.h>
 #include "desc.h"
 #include "jr.h"

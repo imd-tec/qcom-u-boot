@@ -7,6 +7,7 @@
 #include <ansi.h>
 #include <cli.h>
 #include <malloc.h>
+#include <string.h>
 #include <errno.h>
 #include <linux/delay.h>
 #include <linux/list.h>

@@ -11,6 +11,7 @@
 
 #include <errno.h>
 #include <malloc.h>
+#include <string.h>
 #include <vsprintf.h>
 #include <linux/ctype.h>
 

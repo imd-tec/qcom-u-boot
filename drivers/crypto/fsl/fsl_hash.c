@@ -8,6 +8,7 @@
 #include <log.h>
 #include <malloc.h>
 #include <memalign.h>
+#include <string.h>
 #include "jobdesc.h"
 #include "desc.h"
 #include "jr.h"

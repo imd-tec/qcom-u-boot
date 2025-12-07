@@ -16,6 +16,7 @@
 #include <linux/list.h>
 
 #include <malloc.h>
+#include <string.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>

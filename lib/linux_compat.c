@@ -1,6 +1,7 @@
 
 #include <malloc.h>
 #include <memalign.h>
+#include <string.h>
 #include <asm/cache.h>
 #include <linux/compat.h>
 

@@ -5,6 +5,7 @@
  */
 
 #include <abuf.h>
+#include <env_internal.h>
 #include <mapmem.h>
 #include <test/lib.h>
 #include <test/test.h>
@@ -244,7 +245,7 @@ static int lib_test_abuf_large(struct unit_test_state *uts)
 
 	/* Try an impossible size */
 	abuf_init(&buf);
-	ut_asserteq(false, abuf_realloc(&buf, CONFIG_SYS_MALLOC_LEN));
+	ut_asserteq(false, abuf_realloc(&buf, TOTAL_MALLOC_LEN));
 	ut_assertnull(buf.data);
 	ut_asserteq(0, buf.size);
 	ut_asserteq(false, buf.alloced);
@@ -264,7 +265,7 @@ static int lib_test_abuf_large(struct unit_test_state *uts)
 	ut_assert(delta > 0);
 
 	/* try to increase it */
-	ut_asserteq(false, abuf_realloc(&buf, CONFIG_SYS_MALLOC_LEN));
+	ut_asserteq(false, abuf_realloc(&buf, TOTAL_MALLOC_LEN));
 	ut_asserteq_ptr(ptr, buf.data);
 	ut_asserteq(TEST_DATA_LEN, buf.size);
 	ut_asserteq(true, buf.alloced);
