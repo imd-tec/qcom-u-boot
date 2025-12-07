@@ -352,11 +352,11 @@ static int cedit_render(struct unit_test_state *uts)
 	 * vidconsole state, outputs the character and then saves the state
 	 * again. If the character is never output, then the state won't be
 	 * updated and the textline will be inconsistent.
+	 *
+	 * This is why this test enables UTF_NO_SILENT
 	 */
-	ut_unsilence_console(uts);
 	for (i = 'a'; i < 'd'; i++)
 		ut_assertok(scene_send_key(scn, i, &evt));
-	ut_silence_console(uts);
 	ut_assertok(cedit_arange(exp, vid_priv, scn->id));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(5076, video_compress_fb(uts, dev, false));
@@ -366,7 +366,7 @@ static int cedit_render(struct unit_test_state *uts)
 
 	return 0;
 }
-BOOTSTD_TEST(cedit_render, UTF_DM | UTF_SCAN_FDT);
+BOOTSTD_TEST(cedit_render, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);
 
 /* Check the cedit displays textlines correctly */
 static int cedit_render_textline(struct unit_test_state *uts)
