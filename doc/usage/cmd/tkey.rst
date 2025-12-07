@@ -260,4 +260,6 @@ requires a TKey driver to be configured (USB or serial).
 See also
 --------
 
+* :doc:`../tkey-fde` - TKey full disk encryption guide
+* :doc:`luks` - LUKS command reference
 * `Tillitis TKey documentation <https://tillitis.se/>`_

@@ -321,3 +321,5 @@ See Also
 --------
 
 * :doc:`../blkmap` - Blkmap device documentation and examples
+* :doc:`../luks` - LUKS encryption support (uses blkmap for decrypted access)
+* :doc:`../tkey-fde` - TKey full disk encryption

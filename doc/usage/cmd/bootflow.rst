@@ -751,4 +751,29 @@ else 1.
 For other subcommands, the return value $? is always 0 (true).
 
 
+Encrypted Partitions
+--------------------
+
+Bootflow scanning automatically detects and handles LUKS-encrypted partitions.
+When an encrypted partition is detected during scanning, U-Boot will:
+
+1. Detect the LUKS encryption and display an indicator in the bootflow list
+2. Prompt the user for a password when attempting to boot
+3. Attempt to unlock the partition using the provided password
+4. If a TKey device is present, use hardware-backed key derivation for enhanced
+   security
+
+For detailed information on LUKS encryption and TKey-based full disk encryption,
+see :doc:`../luks` and :doc:`../tkey-fde`.
+
+
+See also
+--------
+
+* :doc:`../luks` - LUKS encryption support
+* :doc:`../tkey-fde` - TKey full disk encryption
+* :doc:`bootdev` - Boot device documentation
+* :doc:`/develop/bootstd/index` - Standard boot documentation
+
+
 .. BootflowStates_:
