@@ -59,7 +59,9 @@ pyt <test_name>
 - Always run `make mrproper` if you encounter build issues
 - The sandbox build creates a test environment for U-Boot that runs on the host system
 - When using `git diff`, add `--no-ext-diff` to avoid external diff tools that may not work in this environment
-- crosfw shows now output if everything was ok!
+- crosfw shows no output if everything was ok!
+- Remember not to cd into the build directory; run U-Boot directly in the source dir
+- Do not run in-tree builds; always use the crosfw script or 'make O=/tmp/...'
 
 ## Coding Conventions
 
@@ -69,5 +71,4 @@ pyt <test_name>
 - This follows U-Boot's established naming convention for output parameters
 - Keep commit messages concise - focus on the key change and essential details only
 - Code should be formatted to 80 columns and not have trailing spaces
-- Remember to use Co-developed-by in commits
-- Remember not to cd into the build directory; run U-Boot directly in the source dir
+- Remember to use Co-developed-by instead of Co-Authored-By in commits
