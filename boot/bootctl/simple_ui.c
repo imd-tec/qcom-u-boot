@@ -156,10 +156,6 @@ static int simple_ui_add(struct udevice *dev, struct osinfo *info)
 	if (ret)
 		return log_msg_ret("asn", ret);
 
-	ret = expo_calc_dims(upriv->expo);
-	if (ret)
-		return log_msg_ret("ecd", ret);
-
 	if (lpriv->default_os &&
 	    !strcmp(lpriv->default_os, info->bflow.os_name))
 		scene_menu_select_item(scn, OBJ_MENU, ITEM + seq);

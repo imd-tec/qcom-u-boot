@@ -426,10 +426,6 @@ static int multiboot_ui_add(struct udevice *dev, struct osinfo *info)
 
 	multiboot_set_item_props(scn, seq, &info->bflow);
 
-	ret = expo_calc_dims(upriv->expo);
-	if (ret)
-		return log_msg_ret("ecd", ret);
-
 	if (lpriv->default_os &&
 	    !strcmp(lpriv->default_os, info->bflow.os_name))
 		scene_menu_select_item(scn, OBJ_MENU, ITEM + seq);
@@ -497,11 +493,6 @@ static int multiboot_ui_switch_layout(struct udevice *dev)
 		if (ret)
 			return log_msg_ret("props", ret);
 	}
-
-	/* Calculate dimensions then re-arrange */
-	ret = expo_calc_dims(upriv->expo);
-	if (ret)
-		return log_msg_ret("ecd", ret);
 
 	ret = scene_arrange(scn);
 	if (ret)
