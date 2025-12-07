@@ -373,6 +373,8 @@ existing suite or creating a new one.
 An example SPL test is spl_test_load().
 
 
+.. _tests_writing_assertions:
+
 Assertions
 ----------
 
