@@ -90,20 +90,21 @@ enum ut_flags {
 	UTF_FLAT_TREE	= BIT(3),	/* test needs flat DT */
 	UTF_LIVE_TREE	= BIT(4),	/* needs live device tree */
 	UTF_CONSOLE	= BIT(5),	/* needs console recording */
+	UTF_NO_SILENT	= BIT(6),	/* console cannot be silent */
 	/* do extra driver model init and uninit */
-	UTF_DM		= BIT(6),
-	UTF_OTHER_FDT	= BIT(7),	/* read in other device tree */
+	UTF_DM		= BIT(7),
+	UTF_OTHER_FDT	= BIT(8),	/* read in other device tree */
 	/*
 	 * Only run if explicitly requested with 'ut -f <suite> <test>'. The
 	 * test name must end in "_norun" so that pytest detects this also,
 	 * since it cannot access the flags.
 	 */
-	UTF_MANUAL	= BIT(8),
-	UTF_ETH_BOOTDEV	= BIT(9),	/* enable Ethernet bootdevs */
-	UTF_SF_BOOTDEV	= BIT(10),	/* enable SPI flash bootdevs */
-	UFT_BLOBLIST	= BIT(11),	/* test changes gd->bloblist */
-	UTF_INIT	= BIT(12),	/* test inits a suite */
-	UTF_UNINIT	= BIT(13),	/* test uninits a suite */
+	UTF_MANUAL	= BIT(9),
+	UTF_ETH_BOOTDEV	= BIT(10),	/* enable Ethernet bootdevs */
+	UTF_SF_BOOTDEV	= BIT(11),	/* enable SPI flash bootdevs */
+	UFT_BLOBLIST	= BIT(12),	/* test changes gd->bloblist */
+	UTF_INIT	= BIT(13),	/* test inits a suite */
+	UTF_UNINIT	= BIT(14),	/* test uninits a suite */
 };
 
 /**

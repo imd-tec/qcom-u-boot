@@ -33,6 +33,7 @@ enum {
 	OBJ_MENU_TITLE,
 	OBJ_BOX,
 	OBJ_BOX2,
+	OBJ_TEXTLINE,
 	OBJ_TEXTED,
 	OBJ_OVERLAP,
 
@@ -888,7 +889,7 @@ static int expo_test_build(struct unit_test_state *uts)
 	ut_assertnonnull(txt);
 	obj = &txt->obj;
 	ut_asserteq_ptr(scn, obj->scene);
-	ut_asserteq_str("title", obj->name);
+	ut_asserteq_str("main.title", obj->name);
 	ut_asserteq(scn->title_id, obj->id);
 	ut_asserteq(SCENEOBJT_TEXT, obj->type);
 	ut_asserteq(0, obj->flags);
@@ -913,7 +914,7 @@ static int expo_test_build(struct unit_test_state *uts)
 	/* check the items */
 	item = list_first_entry(&menu->item_head, struct scene_menitem,
 				sibling);
-	ut_asserteq_str("00", item->name);
+	ut_asserteq_str("cpu-speed.item-0", item->name);
 	ut_asserteq(ID_CPU_SPEED_1, item->id);
 	ut_asserteq(0, item->key_id);
 	ut_asserteq(0, item->desc_id);
@@ -1392,3 +1393,118 @@ static int expo_dump_test(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(expo_dump_test, UTF_DM | UTF_SCAN_FDT);
+
+/* Check behaviour of textlines in a non-popup expo */
+static int expo_render_textline(struct unit_test_state *uts)
+{
+	struct scene_obj_textline *tline;
+	struct scene_obj_menu *menu;
+	struct abuf buf, logo_copy;
+	struct expo_action act;
+	struct scene *scn;
+	struct udevice *dev;
+	struct expo *exp;
+	int id;
+
+	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
+	dev = exp->display;
+
+	id = scene_textline(scn, "textline", OBJ_TEXTLINE, 20, &tline);
+	ut_assert(id > 0);
+	ut_assertok(scene_obj_set_pos(scn, OBJ_TEXTLINE, 500, 500));
+	strcpy(abuf_data(&tline->buf), "sample hopwind");
+
+	/* create the label text object */
+	id = scene_txt_str(scn, "tline-label", 0, 0, "Label:", NULL);
+	ut_assert(id > 0);
+	tline->label_id = id;
+
+	/* create the edit text object pointing to the textline buffer */
+	id = scene_txt_str(scn, "tline-edit", 0, 0, abuf_data(&tline->buf),
+			   NULL);
+	ut_assert(id > 0);
+	tline->edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, tline->edit_id,
+				       "nimbus_sans_l_regular", 40));
+
+	expo_set_scene_id(exp, SCENE1);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21007, video_compress_fb(uts, dev, false));
+
+	/* highlight the textline and re-render */
+	scene_set_highlight_id(scn, OBJ_TEXTLINE);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22693, video_compress_fb(uts, dev, false));
+
+	/* open the textline and re-render */
+	ut_assertok(scene_set_open(scn, OBJ_TEXTLINE, true));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+
+	/* the cursor should be at the end */
+	ut_asserteq(22695, video_compress_fb(uts, dev, false));
+
+	/* send a keypress to add a character */
+	ut_assertok(expo_send_key(exp, 'a'));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22818, video_compress_fb(uts, dev, false));
+
+	/* move cursor left 3 times */
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+
+	/* check cursor moved back one position, before 'a' */
+	ut_asserteq(14, scn->cls.num);
+	ut_asserteq(15, scn->cls.eol_num);
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22884, video_compress_fb(uts, dev, false));
+
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+
+	/* check cursor moved back three more positions, before 'i' */
+	ut_asserteq(11, scn->cls.num);
+	ut_asserteq(15, scn->cls.eol_num);
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22915, video_compress_fb(uts, dev, false));
+
+	/* delete a character at the cursor */
+	ut_assertok(expo_send_key(exp, CTL_CH('d')));
+
+	/* check character deleted at cursor position */
+	ut_asserteq(11, scn->cls.num);
+	ut_asserteq(14, scn->cls.eol_num);
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22856, video_compress_fb(uts, dev, false));
+
+	/* close the textline with Enter (BKEY_SELECT) */
+	ut_assertok(expo_send_key(exp, BKEY_SELECT));
+	ut_assertok(expo_action_get(exp, &act));
+	ut_asserteq(EXPOACT_CLOSE, act.type);
+	ut_asserteq(OBJ_TEXTLINE, act.select.id);
+	ut_assertok(scene_set_open(scn, act.select.id, false));
+
+	/* check the textline is closed and text was saved */
+	ut_asserteq(0, tline->obj.flags & SCENEOF_OPEN);
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(22839, video_compress_fb(uts, dev, false));
+
+	abuf_uninit(&buf);
+	abuf_uninit(&logo_copy);
+
+	expo_destroy(exp);
+
+	return 0;
+}
+BOOTSTD_TEST(expo_render_textline, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);

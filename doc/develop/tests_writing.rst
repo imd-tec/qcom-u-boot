@@ -373,6 +373,112 @@ existing suite or creating a new one.
 An example SPL test is spl_test_load().
 
 
+.. _tests_writing_assertions:
+
+Assertions
+----------
+
+The test framework provides various assertion macros, defined in
+``include/test/ut.h``. All of these return from the test function on failure,
+unless ``uts->soft_fail`` is set.
+
+Basic assertions
+~~~~~~~~~~~~~~~~
+
+ut_assert(cond)
+    Assert that a condition is non-zero (true)
+
+ut_assertf(cond, fmt, args...)
+    Assert that a condition is non-zero, with a printf() message on failure
+
+ut_assertok(cond)
+    Assert that an operation succeeds (returns 0)
+
+ut_reportf(fmt, args...)
+    Report a failure with a printf() message (always fails)
+
+Value comparisons
+~~~~~~~~~~~~~~~~~
+
+ut_asserteq(expr1, expr2)
+    Assert that two int expressions are equal
+
+ut_asserteq_64(expr1, expr2)
+    Assert that two 64-bit expressions are equal
+
+ut_asserteq_str(expr1, expr2)
+    Assert that two strings are equal
+
+ut_asserteq_strn(expr1, expr2)
+    Assert that two strings are equal, up to the length of the first
+
+ut_asserteq_mem(expr1, expr2, len)
+    Assert that two memory areas are equal
+
+ut_asserteq_ptr(expr1, expr2)
+    Assert that two pointers are equal
+
+ut_asserteq_addr(expr1, expr2)
+    Assert that two addresses (converted from pointers via map_to_sysmem())
+    are equal
+
+Pointer assertions
+~~~~~~~~~~~~~~~~~~
+
+ut_assertnull(expr)
+    Assert that a pointer is NULL
+
+ut_assertnonnull(expr)
+    Assert that a pointer is not NULL
+
+ut_assertok_ptr(expr)
+    Assert that a pointer is not an error pointer (checked with IS_ERR())
+
+Console output assertions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These are used to check console output when ``UTF_CONSOLE`` flag is set.
+
+ut_assert_nextline(fmt, args...)
+    Assert that the next console output line matches the format string
+
+ut_assert_nextlinen(fmt, args...)
+    Assert that the next console output line matches up to the format
+    string length
+
+ut_assert_nextline_empty()
+    Assert that the next console output line is empty
+
+ut_assert_skipline()
+    Assert that there is a next console output line, and skip it
+
+ut_assert_skip_to_line(fmt, args...)
+    Skip console output until a matching line is found
+
+ut_assert_skip_to_linen(fmt, args...)
+    Skip console output until a partial match is found (compares up to the
+    format-string length)
+
+ut_assert_console_end()
+    Assert that there is no more console output
+
+ut_assert_nextlines_are_dump(total_bytes)
+    Assert that the next lines are a print_buffer() hex dump of the specified
+    size
+
+Memory helpers
+~~~~~~~~~~~~~~
+
+These help check for memory leaks:
+
+ut_check_free()
+    Return the number of bytes free in the malloc() pool
+
+ut_check_delta(last)
+    Return the change in free memory since ``last`` was obtained from
+    ``ut_check_free()``. A positive value means more memory has been allocated.
+
+
 Writing Python tests
 --------------------
 

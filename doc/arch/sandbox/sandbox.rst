@@ -253,7 +253,10 @@ available options. Some of these are described below:
   Show console output from tests. Normally this is suppressed.
 
 --video_frames <dir>
-  Write video frames to the specified directory for debugging purposes.
+  Write video frames to the specified directory for debugging purposes. Each
+  time video_compress_fb() is called, this writes a file called 'frame%d.bmp'
+  to the given directory where %d is the sequence number starting from 0. Note
+  that sandbox removes all 'frame%d.bmp' files in that directory on startup.
 
 -V, --video_test <ms>
   Enable video test mode with a delay (in milliseconds) between assertions. This

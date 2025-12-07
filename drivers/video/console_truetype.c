@@ -1097,9 +1097,13 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	 * figure out where to place the cursor. This driver ignores the
 	 * passed-in values, since an entry_restore() must have been done before
 	 * calling this function.
+	 *
+	 * A current quirk is that the cursor is always at xcur_frac, since we
+	 * output characters directly to the console as they are typed by the
+	 * user. So we never bother with priv->pos[index] for now.
 	 */
 	index = priv->pos_ptr;
-	if (index < priv->pos_ptr)
+	if (0 && index < priv->pos_count)
 		x = VID_TO_PIXEL(priv->pos[index].xpos_frac);
 	else
 		x = VID_TO_PIXEL(vc_priv->xcur_frac);

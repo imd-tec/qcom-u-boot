@@ -38,12 +38,13 @@ struct build_info {
  * @info: Build information
  * @node: Node describing scene
  * @scn: Scene to add to
- * @find_name: Name to look for (e.g. "title"). This will find a property called
- * "title" if it exists, else will look up the string for "title-id"
+ * @find_name: Property to look for (e.g. "title"). This will find a property
+ * called "title" if it exists, else will look up the string for "title-id"
+ * @obj_name: Name for the object (e.g. "cpu-speed.title")
  * Return: ID of added string, or -ve on error
  */
 int add_txt_str(struct build_info *info, ofnode node, struct scene *scn,
-		const char *find_name, uint obj_id)
+		const char *find_name, const char *obj_name, uint obj_id)
 {
 	const char *text;
 	int ret;
@@ -66,7 +67,7 @@ int add_txt_str(struct build_info *info, ofnode node, struct scene *scn,
 			return log_msg_ret("id", -EINVAL);
 	}
 
-	ret = scene_txt_str(scn, find_name, obj_id, 0, text, NULL);
+	ret = scene_txt_str(scn, obj_name, obj_id, 0, text, NULL);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
 
@@ -79,13 +80,15 @@ int add_txt_str(struct build_info *info, ofnode node, struct scene *scn,
  * @info: Build information
  * @node: Node describing scene
  * @scn: Scene to add to
- * @find_name: Name to look for (e.g. "title"). This will find a string-list
+ * @find_name: Property to look for (e.g. "title"). This will find a string-list
  * property called "title" if it exists, else will look up the string in the
  * "title-id" string list.
+ * @obj_name: Name for the object (e.g. "cpu-speed.title")
  * Return: ID of added string, or -ve on error
  */
 int add_txt_str_list(struct build_info *info, ofnode node, struct scene *scn,
-		     const char *find_name, int index, uint obj_id)
+		     const char *find_name, const char *obj_name, int index,
+		     uint obj_id)
 {
 	const char *text;
 	int ret;
@@ -107,7 +110,7 @@ int add_txt_str_list(struct build_info *info, ofnode node, struct scene *scn,
 			return log_msg_ret("id", -EINVAL);
 	}
 
-	ret = scene_txt_str(scn, find_name, obj_id, 0, text, NULL);
+	ret = scene_txt_str(scn, obj_name, obj_id, 0, text, NULL);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
 
@@ -220,6 +223,7 @@ static int menu_build(struct build_info *info, ofnode node, struct scene *scn,
 	int ret, size, i, num_items;
 	uint title_id, menu_id;
 	const char *name;
+	char buf[80];
 
 	name = ofnode_get_name(node);
 
@@ -229,7 +233,8 @@ static int menu_build(struct build_info *info, ofnode node, struct scene *scn,
 	menu_id = ret;
 
 	/* Set the title */
-	ret = add_txt_str(info, node, scn, "title", 0);
+	snprintf(buf, sizeof(buf), "%s.title", name);
+	ret = add_txt_str(info, node, scn, "title", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("tit", ret);
 	title_id = ret;
@@ -254,22 +259,28 @@ static int menu_build(struct build_info *info, ofnode node, struct scene *scn,
 		struct scene_menitem *item;
 		uint label, key, desc;
 
-		ret = add_txt_str_list(info, node, scn, "item-label", i, 0);
+		snprintf(buf, sizeof(buf), "%s.item-%x.label", name, i);
+		ret = add_txt_str_list(info, node, scn, "item-label", buf, i,
+				       0);
 		if (ret < 0 && ret != -ENOENT)
 			return log_msg_ret("lab", ret);
 		label = max(0, ret);
 
-		ret = add_txt_str_list(info, node, scn, "key-label", i, 0);
+		snprintf(buf, sizeof(buf), "%s.item-%x.key", name, i);
+		ret = add_txt_str_list(info, node, scn, "key-label", buf, i, 0);
 		if (ret < 0 && ret != -ENOENT)
 			return log_msg_ret("key", ret);
 		key = max(0, ret);
 
-		ret = add_txt_str_list(info, node, scn, "desc-label", i, 0);
+		snprintf(buf, sizeof(buf), "%s.item-%x.desc", name, i);
+		ret = add_txt_str_list(info, node, scn, "desc-label", buf, i,
+				       0);
 		if (ret < 0  && ret != -ENOENT)
 			return log_msg_ret("lab", ret);
 		desc = max(0, ret);
 
-		ret = scene_menuitem(scn, menu_id, simple_xtoa(i),
+		snprintf(buf, sizeof(buf), "%s.item-%x", name, i);
+		ret = scene_menuitem(scn, menu_id, buf,
 				     fdt32_to_cpu(item_ids[i]), key, label,
 				     desc, 0, 0, &item);
 		if (ret < 0)
@@ -316,6 +327,7 @@ static int textline_build(struct build_info *info, ofnode node,
 	struct scene_obj_textline *ted;
 	uint edit_id;
 	const char *name;
+	char buf[80];
 	u32 max_chars;
 	int ret;
 
@@ -330,8 +342,9 @@ static int textline_build(struct build_info *info, ofnode node,
 	if (ret < 0)
 		return log_msg_ret("ted", ret);
 
-	/* Set the title */
-	ret = add_txt_str(info, node, scn, "title", 0);
+	/* Set the label */
+	snprintf(buf, sizeof(buf), "%s.label", name);
+	ret = add_txt_str(info, node, scn, "title", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("tit", ret);
 	ted->label_id = ret;
@@ -342,7 +355,8 @@ static int textline_build(struct build_info *info, ofnode node,
 	if (ret)
 		return log_msg_ret("id", -ENOENT);
 
-	ret = scene_txt_str(scn, "edit", edit_id, 0, abuf_data(&ted->buf),
+	snprintf(buf, sizeof(buf), "%s.edit", name);
+	ret = scene_txt_str(scn, buf, edit_id, 0, abuf_data(&ted->buf),
 			    NULL);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
@@ -414,6 +428,7 @@ static int scene_build(struct build_info *info, ofnode scn_node,
 	const char *name;
 	struct scene *scn;
 	uint id, title_id;
+	char buf[80];
 	ofnode node;
 	int ret;
 
@@ -428,15 +443,18 @@ static int scene_build(struct build_info *info, ofnode scn_node,
 	if (ret < 0)
 		return log_msg_ret("scn", ret);
 
-	ret = add_txt_str(info, scn_node, scn, "title", 0);
+	snprintf(buf, sizeof(buf), "%s.title", name);
+	ret = add_txt_str(info, scn_node, scn, "title", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("tit", ret);
 	title_id = ret;
 	scn->title_id = title_id;
 
-	ret = add_txt_str(info, scn_node, scn, "prompt", 0);
+	snprintf(buf, sizeof(buf), "%s.prompt", name);
+	ret = add_txt_str(info, scn_node, scn, "prompt", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("pr", ret);
+	scn->prompt_id = ret;
 
 	ofnode_for_each_subnode(node, scn_node) {
 		info->err_node = node;

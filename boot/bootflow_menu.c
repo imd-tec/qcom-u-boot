@@ -238,6 +238,7 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 	uint preview_id;
 	uint scene_id;
 	bool add_gap;
+	char name[40];
 	int ret;
 
 	ret = expo_first_scene_id(exp);
@@ -259,23 +260,30 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 	priv->last_bootdev = bflow->dev;
 
 	ret = expo_str(exp, "prompt", STR_POINTER, ">");
-	ret |= scene_txt_str(scn, "label", ITEM_LABEL + seq,
+	snprintf(name, sizeof(name), "item%d.label", seq);
+	ret |= scene_txt_str(scn, name, ITEM_LABEL + seq,
 			      STR_LABEL + seq, "", NULL);
-	ret |= scene_txt_str(scn, "desc", ITEM_DESC + seq, STR_DESC + seq,
+	snprintf(name, sizeof(name), "item%d.desc", seq);
+	ret |= scene_txt_str(scn, name, ITEM_DESC + seq, STR_DESC + seq,
 			     "", NULL);
-	ret |= scene_txt_str(scn, "key", ITEM_KEY + seq, STR_KEY + seq, key,
+	snprintf(name, sizeof(name), "item%d.key", seq);
+	ret |= scene_txt_str(scn, name, ITEM_KEY + seq, STR_KEY + seq, key,
 			      NULL);
-	ret |= scene_box(scn, "item-box", ITEM_BOX + seq, 1, false, NULL);
-	ret |= scene_txt_str(scn, "version", ITEM_VERSION_NAME + seq,
+	snprintf(name, sizeof(name), "item%d.box", seq);
+	ret |= scene_box(scn, name, ITEM_BOX + seq, 1, false, NULL);
+	snprintf(name, sizeof(name), "item%d.version", seq);
+	ret |= scene_txt_str(scn, name, ITEM_VERSION_NAME + seq,
 			     STR_VERSION_NAME + seq, "", NULL);
 
 	preview_id = 0;
 	if (bflow->logo) {
 		preview_id = ITEM_PREVIEW + seq;
-		ret |= scene_img(scn, "preview", preview_id,
+		snprintf(name, sizeof(name), "item%d.preview", seq);
+		ret |= scene_img(scn, name, preview_id,
 				     bflow->logo, NULL);
 	}
-	ret |= scene_menuitem(scn, OBJ_MENU, "item", ITEM + seq,
+	snprintf(name, sizeof(name), "item%d", seq);
+	ret |= scene_menuitem(scn, OBJ_MENU, name, ITEM + seq,
 				  ITEM_KEY + seq, ITEM_LABEL + seq,
 				  ITEM_DESC + seq, preview_id,
 				  add_gap ? SCENEMIF_GAP_BEFORE : 0,
@@ -287,24 +295,27 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 	 * Create passphrase textline with label and edit field (12 chars). Show
 	 * characters as asterisks
 	 */
-	ret = scene_textline(scn, "passphrase", ITEM_PASS + seq, 12, &tline);
+	snprintf(name, sizeof(name), "item%d.pass", seq);
+	ret = scene_textline(scn, name, ITEM_PASS + seq, 12, &tline);
 	if (ret < 0)
 		return log_msg_ret("itp", -EINVAL);
-	tline->obj.flags |= SCENEOF_PASSWORD;
-	ret = scene_txt_str(scn, "pass_label", ITEM_PASS_LABEL + seq, 0,
+	snprintf(name, sizeof(name), "item%d.pass.label", seq);
+	ret = scene_txt_str(scn, name, ITEM_PASS_LABEL + seq, 0,
 			    "Passphrase:", NULL);
 	if (ret < 0)
 		return log_msg_ret("itl", -EINVAL);
 	tline->label_id = ret;
 
-	ret = scene_txt_str(scn, "pass_edit", ITEM_PASS_EDIT + seq, 0,
-			    "", NULL);
+	snprintf(name, sizeof(name), "item%d.pass.edit", seq);
+	ret = scene_txt_str(scn, name, ITEM_PASS_EDIT + seq, 0,
+			    abuf_data(&tline->buf), NULL);
 	if (ret < 0)
 		return log_msg_ret("ite", -EINVAL);
 	tline->edit_id = ret;
 
 	/* Create message text (hidden by default) for success/error feedback */
-	ret = scene_txt_str(scn, "pass_msg", ITEM_PASS_MSG + seq,
+	snprintf(name, sizeof(name), "item%d.pass_msg", seq);
+	ret = scene_txt_str(scn, name, ITEM_PASS_MSG + seq,
 			    STR_PASS_MSG + seq, "", NULL);
 	if (ret < 0)
 		return log_msg_ret("ipm", -EINVAL);
@@ -446,6 +457,13 @@ int bootflow_menu_poll(struct expo *exp, int *seqp)
 	}
 	case EXPOACT_QUIT:
 		return -EPIPE;
+	case EXPOACT_CLOSE:
+		/*
+		 * Password textline closed (Enter pressed) - treat as
+		 * selection
+		 */
+		*seqp = act.select.id - ITEM_PASS;
+		break;
 	case EXPOACT_CLICK:
 		if (act.select.id == OBJ_SETTINGS)
 			return -ECOMM;  /* layout change request */

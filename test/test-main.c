@@ -410,7 +410,8 @@ static int test_pre_run(struct unit_test_state *uts, struct unit_test *test)
 		gd_set_bloblist(NULL);
 	}
 
-	ut_silence_console(uts);
+	if (!(test->flags & UTF_NO_SILENT))
+		ut_silence_console(uts);
 
 	return 0;
 }

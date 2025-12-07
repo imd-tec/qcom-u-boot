@@ -569,14 +569,6 @@ strings are provided inline in the nodes where they are used.
     };
 
 
-API documentation
------------------
-
-.. kernel-doc:: include/expo.h
-
-Future ideas
-------------
-
 Test Mode
 ~~~~~~~~~
 
@@ -612,6 +604,209 @@ Timing information
 These metrics help identify performance bottlenecks and verify that expo is
 operating efficiently. The timing information is particularly useful when
 optimizing display drivers or debugging slow rendering issues.
+
+Writing expo tests
+------------------
+
+Expo has extensive tests in ``test/boot/expo.c`` and ``test/boot/cedit.c``.
+These can be run under sandbox like any other test (see :doc:`testing`).
+
+Test structure
+~~~~~~~~~~~~~~
+
+Each test function follows a standard pattern::
+
+    static int expo_my_test(struct unit_test_state *uts)
+    {
+        struct expo *exp;
+
+        /* Create expo and perform tests */
+
+        ut_assertok(expo_new("test", NULL, &exp));
+
+        /* ... test code ... */
+
+        expo_destroy(exp);
+
+        return 0;
+    }
+    BOOTSTD_TEST(expo_my_test, UTF_DM | UTF_SCAN_FDT);
+
+The ``BOOTSTD_TEST()`` macro registers the test with the test framework.
+Common flags include:
+
+UTF_DM
+    Requires driver model to be enabled (most expo tests need this)
+
+UTF_SCAN_FDT
+    Scans the device tree for devices (needed for video display)
+
+UTF_CONSOLE
+    Test needs to record console output (needed for commands)
+
+UTF_NO_SILENT
+    Don't silence console output (needed for tests that check rendering output
+    with user input)
+
+Memory checking
+~~~~~~~~~~~~~~~
+
+Tests should verify that no memory is leaked::
+
+    ulong start_mem;
+
+    start_mem = ut_check_free();
+
+    /* ... create expo, test, destroy ... */
+
+    ut_assertok(ut_check_delta(start_mem));
+
+For assertions, see :ref:`tests_writing_assertions`.
+
+Creating test expos
+~~~~~~~~~~~~~~~~~~~
+
+A common pattern is to create a helper function that sets up an expo with
+scenes and objects for testing. See ``create_test_expo()`` in
+``test/boot/expo.c`` for an example::
+
+    static int create_test_expo(struct unit_test_state *uts, struct expo **expp,
+                                struct scene **scnp, struct scene_obj_menu **menup,
+                                ...)
+    {
+        struct expo *exp;
+        struct scene *scn;
+        int id;
+
+        ut_assertok(uclass_first_device_err(UCLASS_VIDEO, &dev));
+        ut_assertok(expo_new(EXPO_NAME, NULL, &exp));
+
+        id = scene_new(exp, SCENE_NAME1, SCENE1, &scn);
+        ut_assert(id > 0);
+
+        ut_assertok(expo_set_display(exp, dev));
+
+        /* Add objects to the scene */
+        id = scene_txt_str(scn, "text", OBJ_TEXT, STR_TEXT, "my string", NULL);
+        ut_assert(id > 0);
+
+        /* Return pointers */
+        *expp = exp;
+        *scnp = scn;
+
+        return 0;
+    }
+
+Testing rendering
+~~~~~~~~~~~~~~~~~
+
+For graphical rendering tests, use ``video_compress_fb()`` to get a checksum
+of the framebuffer::
+
+    ut_assertok(expo_render(exp));
+    ut_asserteq(expected_checksum, video_compress_fb(uts, dev, false));
+
+For text-mode rendering, check console output lines::
+
+    expo_set_text_mode(exp, true);
+    ut_assertok(expo_render(exp));
+    ut_assert_nextline("Expected line");
+    ut_assert_console_end();
+
+Testing input
+~~~~~~~~~~~~~
+
+To test keyboard input handling, use ``expo_send_key()``::
+
+    ut_assertok(expo_send_key(exp, BKEY_DOWN));
+    ut_assertok(expo_action_get(exp, &act));
+    ut_asserteq(EXPOACT_POINT_ITEM, act.type);
+    ut_asserteq(ITEM2, act.select.id);
+
+To test mouse clicks, use ``scene_send_click()``::
+
+    ut_assertok(scene_send_click(scn, x, y, &act));
+    ut_asserteq(EXPOACT_SELECT, act.type);
+
+Building from devicetree
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+To test building an expo from a devicetree description::
+
+    ofnode node;
+
+    node = ofnode_path("/cedit");
+    ut_assert(ofnode_valid(node));
+    ut_assertok(expo_build(node, &exp));
+
+The test devicetree is in ``test/boot/files/expo_layout.dts`` with IDs
+defined in ``test/boot/files/expo_ids.h``. See ``setup_cedit_file()`` in
+``test/py/img/cedit.py`` for how this is set up.
+
+Using IDs
+~~~~~~~~~
+
+Define an enum for all object IDs at the top of the test file::
+
+    enum {
+        /* scenes */
+        SCENE1 = 7,
+
+        /* objects */
+        OBJ_LOGO,
+        OBJ_TEXT,
+        OBJ_MENU,
+
+        /* strings */
+        STR_TEXT,
+        STR_MENU_TITLE,
+
+        /* menu items */
+        ITEM1,
+        ITEM2,
+    };
+
+Starting IDs from a value higher than ``EXPOID_BASE_ID`` avoids conflicts
+with reserved expo IDs.
+
+Debugging tests
+~~~~~~~~~~~~~~~
+
+Running tests directly (without pytest) makes debugging easier. See
+:doc:`tests_sandbox` for details on running sandbox tests with gdb.
+
+For example, to run a single expo test::
+
+    ./u-boot -T -c "ut bootstd expo_render_image"
+
+To debug with gdb::
+
+    gdb --args ./u-boot -T -c "ut bootstd expo_render_image"
+    (gdb) break expo_render_image
+    (gdb) run
+
+IDEs such as Visual Studio Code can also be used.
+
+Sandbox provides command-line options useful for debugging expo and video
+tests, including ``-l`` (show LCD), ``-K`` (double LCD size), ``-V`` (video
+test mode with delay), ``--video_frames`` (capture frames), ``-f`` (continue
+after failure), and ``-F`` (skip flat-tree tests). See
+:doc:`../arch/sandbox/sandbox` for full details.
+
+For example, to watch an expo test render with a visible display::
+
+    ./u-boot -T -l -V 500 --video_frames /tmp/good -c "ut bootstd expo_render_image"
+
+This will write each asserted expo frame to ``/tmp/good/frame0.bmp``,
+``/tmp/good/frame1.bmp``, etc.
+
+API documentation
+-----------------
+
+.. kernel-doc:: include/expo.h
+
+Future ideas
+------------
 
 Some ideas for future work:
 

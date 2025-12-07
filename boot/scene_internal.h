@@ -315,6 +315,15 @@ bool scene_textline_within(const struct scene *scn,
 int scene_send_click(struct scene *scn, int x, int y, struct expo_action *event);
 
 /**
+ * scene_render_obj() - Render an object
+ *
+ * @scn: Scene containing the object
+ * @id: Object ID to render
+ * Returns: 0 if OK, -ENOENT if object not found, -ve on other error
+ */
+int scene_render_obj(struct scene *scn, uint id);
+
+/**
  * scene_render_deps() - Render an object and its dependencies
  *
  * @scn: Scene to render

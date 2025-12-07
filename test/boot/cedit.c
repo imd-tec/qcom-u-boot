@@ -348,15 +348,15 @@ static int cedit_render(struct unit_test_state *uts)
 	/*
 	 * Send some keypresses. Note that the console must be enabled so that
 	 * the characters actually reach the putc_xy() in console_truetype,
-	 * since in scene_textline_send_key(), the lineedit restores the
+	 * since in scene_textline_send_key(), the textline restores the
 	 * vidconsole state, outputs the character and then saves the state
 	 * again. If the character is never output, then the state won't be
-	 * updated and the lineedit will be inconsistent.
+	 * updated and the textline will be inconsistent.
+	 *
+	 * This is why this test enables UTF_NO_SILENT
 	 */
-	ut_unsilence_console(uts);
 	for (i = 'a'; i < 'd'; i++)
 		ut_assertok(scene_send_key(scn, i, &evt));
-	ut_silence_console(uts);
 	ut_assertok(cedit_arange(exp, vid_priv, scn->id));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(5076, video_compress_fb(uts, dev, false));
@@ -366,10 +366,10 @@ static int cedit_render(struct unit_test_state *uts)
 
 	return 0;
 }
-BOOTSTD_TEST(cedit_render, UTF_DM | UTF_SCAN_FDT);
+BOOTSTD_TEST(cedit_render, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);
 
-/* Check the cedit displays lineedits correctly */
-static int cedit_render_lineedit(struct unit_test_state *uts)
+/* Check the cedit displays textlines correctly */
+static int cedit_render_textline(struct unit_test_state *uts)
 {
 	struct scene_obj_textline *tline;
 	struct video_priv *vid_priv;
@@ -446,7 +446,7 @@ static int cedit_render_lineedit(struct unit_test_state *uts)
 
 	return 0;
 }
-BOOTSTD_TEST(cedit_render_lineedit, UTF_DM | UTF_SCAN_FDT);
+BOOTSTD_TEST(cedit_render_textline, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);
 
 /* Check the cedit is arranged correctly */
 static int cedit_position(struct unit_test_state *uts)
@@ -654,7 +654,7 @@ static int cedit_mouse(struct unit_test_state *uts)
 	ut_asserteq(SCENEOF_OPEN | SCENEOF_SIZE_VALID | SCENEOF_DIRTY,
 		    speed->obj.flags);
 
-	/* click on the lineedit */
+	/* click on the textline */
 	ut_assertok(click_check(uts, scn, mach->edit_id,
 				EXPOACT_REPOINT_OPEN, &act));
 	ut_asserteq(ID_MACHINE_NAME, act.select.id);
