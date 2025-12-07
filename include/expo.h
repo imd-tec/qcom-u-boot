@@ -204,6 +204,7 @@ struct expo_string {
  * @name: Name of the scene (allocated)
  * @id: ID number of the scene
  * @title_id: String ID of title of the scene (allocated)
+ * @prompt_id: String ID of prompt of the scene (allocated)
  * @highlight_id: ID of highlighted object, if any
  * @cls: cread state to use for input
  * @buf: Buffer for input
@@ -216,6 +217,7 @@ struct scene {
 	char *name;
 	uint id;
 	uint title_id;
+	uint prompt_id;
 	uint highlight_id;
 	struct cli_line_state cls;
 	struct abuf buf;

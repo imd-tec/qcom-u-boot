@@ -54,7 +54,6 @@ int cedit_arange(struct expo *exp, struct video_priv *vpriv, uint scene_id)
 {
 	struct expo_theme *theme = &exp->theme;
 	struct expo_arrange_info arr;
-	struct scene_obj_txt *txt;
 	struct scene_obj *obj;
 	struct scene *scn;
 	int y, ret;
@@ -63,13 +62,11 @@ int cedit_arange(struct expo *exp, struct video_priv *vpriv, uint scene_id)
 	if (!scn)
 		return log_msg_ret("scn", -ENOENT);
 
-	txt = scene_obj_find_by_name(scn, "prompt");
-	if (txt)
-		scene_obj_set_pos(scn, txt->obj.id, 0, vpriv->ysize - 50);
+	if (scn->prompt_id)
+		scene_obj_set_pos(scn, scn->prompt_id, 0, vpriv->ysize - 50);
 
-	txt = scene_obj_find_by_name(scn, "title");
-	if (txt)
-		scene_obj_set_pos(scn, txt->obj.id, 200, 10);
+	if (scn->title_id)
+		scene_obj_set_pos(scn, scn->title_id, 200, 10);
 
 	memset(&arr, '\0', sizeof(arr));
 	ret = scene_calc_arrange(scn, &arr);
