@@ -45,6 +45,7 @@ static int bootflow_menu_set_item_props(struct scene *scn,
 	scene_obj_set_hide(scn, ITEM_VERIFIED + i, true);
 	ret |= scene_obj_set_hide(scn, ITEM_KEY + i, false);
 	scene_obj_set_hide(scn, ITEM_LOCKED + i, true);
+	scene_obj_set_hide(scn, ITEM_PASS + i, true);
 	scene_obj_set_hide(scn, ITEM_PASS_LABEL + i, true);
 	scene_obj_set_hide(scn, ITEM_PASS_EDIT + i, true);
 	if (ret)
@@ -233,6 +234,7 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 {
 	struct menu_priv *priv = exp->priv;
 	struct scene_obj_textline *tline;
+	struct scene_obj_txt *txt;
 	char str[2], *key;
 	struct scene *scn;
 	uint preview_id;
@@ -308,10 +310,11 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 
 	snprintf(name, sizeof(name), "item%d.pass.edit", seq);
 	ret = scene_txt_str(scn, name, ITEM_PASS_EDIT + seq, 0,
-			    abuf_data(&tline->buf), NULL);
+			    abuf_data(&tline->buf), &txt);
 	if (ret < 0)
 		return log_msg_ret("ite", -EINVAL);
 	tline->edit_id = ret;
+	txt->obj.flags |= SCENEOF_PASSWORD;
 
 	/* Create message text (hidden by default) for success/error feedback */
 	snprintf(name, sizeof(name), "item%d.pass_msg", seq);
