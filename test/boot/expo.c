@@ -888,7 +888,7 @@ static int expo_test_build(struct unit_test_state *uts)
 	ut_assertnonnull(txt);
 	obj = &txt->obj;
 	ut_asserteq_ptr(scn, obj->scene);
-	ut_asserteq_str("title", obj->name);
+	ut_asserteq_str("main.title", obj->name);
 	ut_asserteq(scn->title_id, obj->id);
 	ut_asserteq(SCENEOBJT_TEXT, obj->type);
 	ut_asserteq(0, obj->flags);
@@ -913,7 +913,7 @@ static int expo_test_build(struct unit_test_state *uts)
 	/* check the items */
 	item = list_first_entry(&menu->item_head, struct scene_menitem,
 				sibling);
-	ut_asserteq_str("00", item->name);
+	ut_asserteq_str("cpu-speed.item-0", item->name);
 	ut_asserteq(ID_CPU_SPEED_1, item->id);
 	ut_asserteq(0, item->key_id);
 	ut_asserteq(0, item->desc_id);
