@@ -45,10 +45,16 @@ struct bootmenu_data {
 	struct bootmenu_entry *first;	/* first menu entry */
 };
 
-/** enum bootmenu_key - keys that can be returned by the bootmenu */
+/**
+ * enum bootmenu_key - keys that can be returned by the bootmenu
+ *
+ * These values start at 0x100 to avoid colliding with ASCII control characters
+ * (0x01-0x1f) which are used for editing operations in textlines. BKEY_NONE is
+ * kept at 0 as a sentinel value.
+ */
 enum bootmenu_key {
 	BKEY_NONE = 0,
-	BKEY_UP,
+	BKEY_UP = 0x100,
 	BKEY_DOWN,
 	BKEY_SELECT,
 	BKEY_QUIT,
