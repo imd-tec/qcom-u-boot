@@ -308,7 +308,7 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 
 	snprintf(name, sizeof(name), "item%d.pass.edit", seq);
 	ret = scene_txt_str(scn, name, ITEM_PASS_EDIT + seq, 0,
-			    "", NULL);
+			    abuf_data(&tline->buf), NULL);
 	if (ret < 0)
 		return log_msg_ret("ite", -EINVAL);
 	tline->edit_id = ret;
