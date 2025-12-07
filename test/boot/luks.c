@@ -299,3 +299,55 @@ static int bootstd_test_luks2_unlock(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(bootstd_test_luks2_unlock, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Setup mmc14 device */
+static int setup_mmc14(struct unit_test_state *uts, struct udevice **mmcp)
+{
+	ut_assertok(setup_mmc_device(uts, "mmc14", mmcp));
+
+	return 0;
+}
+
+/* Test LUKS2 unlock with pre-derived master key on mmc14 */
+static int bootstd_test_luks2_unlock_prederived(struct unit_test_state *uts)
+{
+	struct blk_desc *desc;
+	struct udevice *mmc;
+	loff_t file_size;
+
+	/*
+	 * mmc14 is encrypted with a known master key:
+	 * bytes([0x20 + (i & 0x3f) for i in range(64)])
+	 * This tests the pre_derived=true path in luks_unlock()
+	 */
+	ut_assertok(setup_mmc14(uts, &mmc));
+
+	/* Test unlocking partition 2 with pre-derived master key (-p flag) */
+	ut_assertok(run_command("luks unlock -p mmc e:2 "
+		"202122232425262728292a2b2c2d2e2f"
+		"303132333435363738393a3b3c3d3e3f"
+		"404142434445464748494a4b4c4d4e4f"
+		"505152535455565758595a5b5c5d5e5f", 0));
+	ut_assert_nextline("Unlocking LUKS2 partition...");
+	ut_assert_nextline("Unlocked LUKS partition as blkmap device 'luks-mmc-e:2'");
+	ut_assert_console_end();
+
+	/* Verify that a file can be read from the decrypted filesystem */
+	desc = blk_get_devnum_by_uclass_idname("blkmap", 0);
+	ut_assertnonnull(desc);
+
+	ut_assertok(fs_set_blk_dev_with_part(desc, 0));
+	ut_assertok(fs_size("/bin/bash", &file_size));
+	ut_asserteq(5, file_size);
+
+	/* Test unlocking with wrong pre-derived key */
+	ut_asserteq(1, run_command("luks unlock -p mmc e:2 "
+		"0000000000000000000000000000000000000000000000000000000000000000"
+		"0000000000000000000000000000000000000000000000000000000000000000", 0));
+	ut_assert_nextline("Unlocking LUKS2 partition...");
+	ut_assert_skip_to_line("Failed to unlock LUKS partition (err -13: Permission denied)");
+
+	return 0;
+}
+BOOTSTD_TEST(bootstd_test_luks2_unlock_prederived,
+	     UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
