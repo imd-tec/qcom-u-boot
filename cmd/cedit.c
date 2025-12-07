@@ -292,7 +292,7 @@ static int do_cedit_run(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
-#ifdef CONFIG_CMD_EDIT_DUMP
+#ifdef CONFIG_CMD_CEDIT_DUMP
 static int do_cedit_dump(struct cmd_tbl *cmdtp, int flag, int argc,
 			 char *const argv[])
 {
@@ -321,7 +321,7 @@ static int do_cedit_dump(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	return 0;
 }
-#endif /* CONFIG_CMD_EDIT_DUMP */
+#endif /* CONFIG_CMD_CEDIT_DUMP */
 
 U_BOOT_LONGHELP(cedit,
 	"load <interface> <dev[:part]> <filename>   - load config editor\n"
@@ -334,7 +334,7 @@ U_BOOT_LONGHELP(cedit,
 	"cedit write_env [-v]                             - write settings to env vars\n"
 	"cedit read_cmos [-v] [dev]                       - read settings from CMOS RAM\n"
 	"cedit write_cmos [-v] [dev]                      - write settings to CMOS RAM\n"
-#ifdef CONFIG_CMD_EDIT_DUMP
+#ifdef CONFIG_CMD_CEDIT_DUMP
 	"cedit dump                                       - dump expo structure\n"
 #endif
 	"cedit run                                        - run config editor");
@@ -350,7 +350,7 @@ U_BOOT_CMD_WITH_SUBCMDS(cedit, "Configuration editor", cedit_help_text,
 	U_BOOT_SUBCMD_MKENT(write_env, 2, 1, do_cedit_write_env),
 	U_BOOT_SUBCMD_MKENT(read_cmos, 2, 1, do_cedit_read_cmos),
 	U_BOOT_SUBCMD_MKENT(write_cmos, 2, 1, do_cedit_write_cmos),
-#ifdef CONFIG_CMD_EDIT_DUMP
+#ifdef CONFIG_CMD_CEDIT_DUMP
 	U_BOOT_SUBCMD_MKENT(dump, 1, 1, do_cedit_dump),
 #endif
 	U_BOOT_SUBCMD_MKENT(run, 1, 1, do_cedit_run),
