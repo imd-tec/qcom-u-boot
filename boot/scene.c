@@ -1152,21 +1152,22 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 		return 0;
 	}
 
+	if (cur && cur->type == SCENEOBJT_TEXTLINE) {
+		struct scene_obj_textline *tline;
+
+		tline = (struct scene_obj_textline *)cur;
+		ret = scene_textline_send_key(scn, tline, key, event);
+		if (ret)
+			return log_msg_ret("key", ret);
+		return 0;
+	}
+
 	list_for_each_entry(obj, &scn->obj_head, sibling) {
 		if (obj->type == SCENEOBJT_MENU) {
 			struct scene_obj_menu *menu;
 
 			menu = (struct scene_obj_menu *)obj,
 			ret = scene_menu_send_key(scn, menu, key, event);
-			if (ret)
-				return log_msg_ret("key", ret);
-			break;
-		} else if (!(obj->flags & SCENEOF_OPEN) &&
-			   obj->type == SCENEOBJT_TEXTLINE) {
-			struct scene_obj_textline *tline;
-
-			tline = (struct scene_obj_textline *)obj;
-			ret = scene_textline_send_key(scn, tline, key, event);
 			if (ret)
 				return log_msg_ret("key", ret);
 			break;
