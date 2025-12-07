@@ -569,14 +569,6 @@ strings are provided inline in the nodes where they are used.
     };
 
 
-API documentation
------------------
-
-.. kernel-doc:: include/expo.h
-
-Future ideas
-------------
-
 Test Mode
 ~~~~~~~~~
 
@@ -612,6 +604,14 @@ Timing information
 These metrics help identify performance bottlenecks and verify that expo is
 operating efficiently. The timing information is particularly useful when
 optimizing display drivers or debugging slow rendering issues.
+
+API documentation
+-----------------
+
+.. kernel-doc:: include/expo.h
+
+Future ideas
+------------
 
 Some ideas for future work:
 
