@@ -256,10 +256,21 @@ static int wdt_pre_probe(struct udevice *dev)
 	return 0;
 }
 
+static int wdt_pre_remove(struct udevice *dev)
+{
+	struct wdt_priv *priv = dev_get_uclass_priv(dev);
+
+	if (IS_ENABLED(CONFIG_WATCHDOG) && priv->running)
+		cyclic_unregister(&priv->cyclic);
+
+	return 0;
+}
+
 UCLASS_DRIVER(wdt) = {
 	.id			= UCLASS_WDT,
 	.name			= "watchdog",
 	.flags			= DM_UC_FLAG_SEQ_ALIAS,
 	.pre_probe		= wdt_pre_probe,
+	.pre_remove		= wdt_pre_remove,
 	.per_device_auto	= sizeof(struct wdt_priv),
 };
