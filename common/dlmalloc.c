@@ -7021,6 +7021,53 @@ void malloc_disable_testing(void)
 	malloc_testing = false;
 }
 
+/**
+ * find_mcheck_hdr_in_chunk() - find mcheck header within a chunk
+ *
+ * For memalign allocations, the mcheck header may be at an offset from
+ * the chunk start to maintain alignment. Look up the header in the
+ * mcheck registry, which stores pointers to all active headers.
+ *
+ * @mem: chunk memory pointer (from chunk2mem)
+ * @sz: chunk size
+ * Return: pointer to mcheck header if found, NULL otherwise
+ */
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+static struct mcheck_hdr *find_mcheck_hdr_in_chunk(void *mem, size_t sz)
+{
+	struct mcheck_hdr *hdr;
+	char *start = (char *)mem;
+	char *end = start + sz;
+	int i, j;
+
+	for (i = 0; i < REGISTRY_SZ; i++) {
+		hdr = mcheck_registry[i];
+		if (!hdr)
+			continue;
+
+		/* Check if this header falls within our chunk */
+		if ((char *)hdr < start || (char *)hdr >= end)
+			continue;
+
+		/* Validate the aln_skip is consistent with position */
+		if ((char *)hdr != start + hdr->aln_skip)
+			continue;
+
+		/* Verify canary is valid (not freed) */
+		for (j = 0; j < CANARY_DEPTH; j++) {
+			if (hdr->canary.elems[j] != MAGICWORD)
+				goto next;
+		}
+
+		return hdr;
+next:
+		continue;
+	}
+
+	return NULL;
+}
+#endif
+
 void malloc_dump(void)
 {
 	mchunkptr q;
@@ -7052,9 +7099,10 @@ void malloc_dump(void)
 
 			if (is_inuse(q)) {
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
-				struct mcheck_hdr *hdr = (struct mcheck_hdr *)mem;
+				struct mcheck_hdr *hdr;
 
-				if (hdr->caller[0])
+				hdr = find_mcheck_hdr_in_chunk(mem, sz);
+				if (hdr && hdr->caller[0])
 					printf("%12lx  %10zx        %s\n",
 					       (ulong)mem, sz, hdr->caller);
 				else
