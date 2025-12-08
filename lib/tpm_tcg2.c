@@ -688,6 +688,7 @@ __weak int tcg2_platform_get_log(struct udevice *dev, void **ptrp, u32 *sizep)
 		ulong addr = map_to_sysmem(ptr);
 
 		*ptrp = map_physmem(addr, size, MAP_NOCACHE);
+		*sizep = size;
 		return 0;
 	}
 
