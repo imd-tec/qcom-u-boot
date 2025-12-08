@@ -4,6 +4,7 @@
  */
 
 #include <asm/global_data.h>
+#include <malloc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -13,6 +14,11 @@ void __stack_chk_fail(void)
 {
 	void *ra;
 
+	/*
+	 * When the stack is corrupted, backtrace collection will crash.
+	 * Skip it before calling panic().
+	 */
+	malloc_backtrace_skip(true);
 	ra = __builtin_extract_return_addr(__builtin_return_address(0));
 	panic("Stack smashing detected in function:\n%p relocated from %p",
 	      ra, ra - gd->reloc_off);
