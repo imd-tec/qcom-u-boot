@@ -462,10 +462,31 @@ static int scmi_bind_protocols(struct udevice *dev)
 	return ret;
 }
 
+static int scmi_remove(struct udevice *dev)
+{
+	struct scmi_agent_priv *priv = dev_get_uclass_plat(dev);
+
+	free(priv->vendor);
+	free(priv->protocols);
+
+	/*
+	 * Note: sub_vendor and agent_name may point to string literals "NA"
+	 * when the corresponding SCMI calls are not supported; only free if
+	 * they were allocated (i.e., not pointing to "NA")
+	 */
+	if (strcmp(priv->sub_vendor, "NA"))
+		free(priv->sub_vendor);
+	if (strcmp(priv->agent_name, "NA"))
+		free(priv->agent_name);
+
+	return 0;
+}
+
 UCLASS_DRIVER(scmi_agent) = {
 	.id		= UCLASS_SCMI_AGENT,
 	.name		= "scmi_agent",
 	.post_bind	= scmi_bind_protocols,
+	.pre_remove	= scmi_remove,
 	.per_device_plat_auto = sizeof(struct scmi_agent_priv),
 	.per_child_auto	= sizeof(struct scmi_agent_proto_priv),
 };
