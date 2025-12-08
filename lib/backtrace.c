@@ -26,8 +26,7 @@ static void print_sym(const char *sym)
 
 int backtrace_show(void)
 {
-	char buf[BACKTRACE_BUFSZ];
-	struct backtrace_ctx ctx;
+	static struct backtrace_ctx ctx;
 	uint i;
 	int ret;
 
@@ -35,7 +34,7 @@ int backtrace_show(void)
 	if (ret < 0)
 		return ret;
 
-	ret = backtrace_get_syms(&ctx, buf, sizeof(buf));
+	ret = backtrace_get_syms(&ctx, NULL, 0);
 	if (ret) {
 		backtrace_uninit(&ctx);
 		return ret;
@@ -43,10 +42,12 @@ int backtrace_show(void)
 
 	printf("backtrace: %d addresses\n", ctx.count);
 	for (i = 0; i < ctx.count; i++) {
-		if (ctx.syms[i])
-			print_sym(ctx.syms[i]);
+		const struct backtrace_frame *frame = &ctx.frame[i];
+
+		if (frame->sym)
+			print_sym(frame->sym);
 		else
-			printf("  %p\n", ctx.addrs[i]);
+			printf("  %p\n", frame->addr);
 	}
 
 	backtrace_uninit(&ctx);

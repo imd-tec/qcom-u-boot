@@ -9,21 +9,46 @@
 #ifndef __BACKTRACE_H
 #define __BACKTRACE_H
 
-#define BACKTRACE_MAX		100
-#define BACKTRACE_SYM_SIZE	128
-#define BACKTRACE_BUFSZ		(BACKTRACE_MAX * BACKTRACE_SYM_SIZE)
+/* Maximum number of stack frames that can be collected */
+#define BACKTRACE_MAX_FRAMES	100
+
+/* Size of buffer for all symbol strings combined */
+#define BACKTRACE_SYM_BUFSZ	(4 * 1024)
+
+/**
+ * struct backtrace_frame - a single stack frame in a backtrace
+ *
+ * @addr: return address for this frame
+ * @sym: pointer to symbol string in backtrace_ctx->sym_buf, or NULL if not
+ *	yet resolved or if sym_buf ran out of space
+ */
+struct backtrace_frame {
+	void *addr;
+	char *sym;
+};
 
 /**
  * struct backtrace_ctx - context for backtrace operations
  *
- * @addrs: array of return addresses
- * @syms: array of symbol strings (NULL until backtrace_get_syms() called)
- * @count: number of entries in addrs/syms arrays
+ * This structure holds all state for collecting and symbolising a backtrace.
+ * It should be declared static to avoid consuming stack space (~5KB).
+ *
+ * Lifecycle:
+ *   1. Call backtrace_init() - fills @frame[].addr with return addresses and
+ *      sets @count. The @frame[].sym pointers are initialised to NULL.
+ *   2. Call backtrace_get_syms() - resolves addresses to symbol strings,
+ *      writing them into @sym_buf and setting @frame[].sym pointers.
+ *   3. Access @frame[0..count-1] to read addresses and symbol strings.
+ *   4. Call backtrace_uninit() to release resources (currently a no-op).
+ *
+ * @frame: array of stack frames
+ * @count: number of valid entries in @frame
+ * @sym_buf: buffer holding NUL-terminated symbol strings packed consecutively
  */
 struct backtrace_ctx {
-	void *addrs[BACKTRACE_MAX];
-	char *syms[BACKTRACE_MAX];
+	struct backtrace_frame frame[BACKTRACE_MAX_FRAMES];
 	unsigned int count;
+	char sym_buf[BACKTRACE_SYM_BUFSZ];
 };
 
 /**

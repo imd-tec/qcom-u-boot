@@ -588,27 +588,17 @@ void os_signal_action(int sig, unsigned long pc);
  */
 uint os_backtrace(void **buffer, uint size, uint skip);
 
+struct backtrace_ctx;
+
 /**
  * os_backtrace_symbols() - convert addresses to symbol strings
  *
- * Convert backtrace addresses to human-readable symbol strings. The returned
- * array and strings are allocated with malloc() and must be freed with
- * os_backtrace_symbols_free().
+ * Convert backtrace addresses to human-readable symbol strings. The symbol
+ * strings are written into ctx->sym_buf and ctx->syms pointers are set up.
  *
- * @buffer: array of addresses from os_backtrace()
- * @count: number of addresses in buffer
- * Return: array of symbol strings, or NULL on error
+ * @ctx: backtrace context with addrs and count already filled in
  */
-char **os_backtrace_symbols(void *const *buffer, uint count);
-
-/**
- * os_backtrace_symbols_free() - free symbol strings
- *
- * Free the array returned by os_backtrace_symbols().
- *
- * @strings: array to free (may be NULL)
- */
-void os_backtrace_symbols_free(char **strings);
+void os_backtrace_symbols(struct backtrace_ctx *ctx);
 
 /**
  * os_get_time_offset() - get time offset

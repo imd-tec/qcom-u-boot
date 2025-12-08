@@ -15,24 +15,25 @@
 /* Test backtrace_init() and backtrace_get_syms() */
 static int lib_test_backtrace(struct unit_test_state *uts)
 {
-	char buf[BACKTRACE_BUFSZ];
-	struct backtrace_ctx ctx;
+	static struct backtrace_ctx ctx;
 	bool found_self = false;
 	bool found_ut_run_list = false;
 	uint i;
 
 	ut_assert(backtrace_init(&ctx, 0) > 2);
-	ut_assertok(backtrace_get_syms(&ctx, buf, sizeof(buf)));
+	ut_assertok(backtrace_get_syms(&ctx, NULL, 0));
 
 	/*
 	 * Check for known functions in the call stack. With libbacktrace
 	 * we can find static functions too, so check for this test function.
 	 */
 	for (i = 0; i < ctx.count; i++) {
-		if (ctx.syms[i]) {
-			if (strstr(ctx.syms[i], "lib_test_backtrace"))
+		const struct backtrace_frame *frame = &ctx.frame[i];
+
+		if (frame->sym) {
+			if (strstr(frame->sym, "lib_test_backtrace"))
 				found_self = true;
-			if (strstr(ctx.syms[i], "ut_run_list"))
+			if (strstr(frame->sym, "ut_run_list"))
 				found_ut_run_list = true;
 		}
 	}
