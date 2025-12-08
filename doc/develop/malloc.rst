@@ -117,6 +117,19 @@ Main U-Boot (post-relocation)
     compatibility and testing. New boards should use the modern allocator.
     Default: n
 
+``CONFIG_MALLOC_DEBUG``
+    Bool to enable malloc debugging features. This enables the
+    ``malloc_get_info()`` function to retrieve memory statistics and supports
+    the ``malloc`` command. Default: y if UNIT_TEST is enabled.
+
+``CONFIG_MCHECK_HEAP_PROTECTION``
+    Bool to enable heap protection using the mcheck library. This adds canary
+    values before and after each allocation to detect buffer overflows,
+    underflows, double-frees, and memory corruption. When enabled, caller
+    backtraces are recorded for each allocation and displayed by
+    ``malloc dump``. This significantly increases memory overhead and should
+    only be used for debugging. Default: n
+
 xPL Boot Phases
 ~~~~~~~~~~~~~~~
 
@@ -298,17 +311,90 @@ for memory-leak detection.
 Debugging
 ---------
 
-For debugging heap issues, consider:
+U-Boot provides several features to help debug memory-allocation issues:
 
-1. **mcheck**: U-Boot includes mcheck support for detecting buffer overruns.
-   Enable CONFIG_MCHECK to use mcheck(), mcheck_pedantic(), and
-   mcheck_check_all().
+CONFIG_MALLOC_DEBUG
+~~~~~~~~~~~~~~~~~~~
 
-2. **Valgrind**: When running sandbox with Valgrind, the allocator includes
-   annotations to help detect memory errors. See :ref:`sandbox_valgrind`.
+Enable ``CONFIG_MALLOC_DEBUG`` to activate malloc debugging features. This is
+enabled by default when ``CONFIG_UNIT_TEST`` is set. It provides:
 
-3. **malloc testing**: Unit tests can use malloc_enable_testing() to simulate
-   allocation failures.
+- The ``malloc_get_info()`` function to retrieve memory statistics
+- Allocation call counters (malloc, free, realloc counts)
+- Support for the ``malloc`` command (see :doc:`/usage/cmd/malloc`)
+
+The :doc:`/usage/cmd/malloc` command provides two subcommands:
+
+``malloc info``
+    Shows memory-allocation statistics including total heap size, memory in use,
+    and call counts::
+
+        => malloc info
+        total bytes   = 96 MiB
+        in use bytes  = 700.9 KiB
+        malloc count  = 1234
+        free count    = 567
+        realloc count = 89
+
+``malloc dump``
+    Walks the entire heap and prints each chunk's address, size, and status
+    (used, free, or top). This is useful for understanding heap layout and
+    finding memory leaks::
+
+        => malloc dump
+        Heap dump: 19a0e000 - 1fa10000
+             Address        Size  Status
+        ----------------------------------
+            19a0e000          10  (chunk header)
+            19a0e010          a0
+            19a0e0b0        6070
+            19adfc30          60  <free>
+            19adff90     5f3f030  top
+            1fa10000              end
+        ----------------------------------
+        Used: c2ef0 bytes in 931 chunks
+        Free: 5f3f0c0 bytes in 2 chunks + top
+
+CONFIG_MCHECK_HEAP_PROTECTION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enable ``CONFIG_MCHECK_HEAP_PROTECTION`` for heap protection using the mcheck
+library. This adds canary values before and after each allocation to detect:
+
+- Buffer overflows and underflows
+- Double-frees
+- Memory corruption
+
+This significantly increases memory overhead and should only be used for
+debugging. U-Boot includes mcheck support via mcheck(), mcheck_pedantic(), and
+mcheck_check_all().
+
+When mcheck is enabled, the ``malloc dump`` command also shows caller
+information for each allocation, including a backtrace showing where the
+allocation was made::
+
+    => malloc dump
+    Heap dump: 18a1d000 - 1ea1f000
+         Address        Size  Status
+    ----------------------------------
+        18a1d000          10  (chunk header)
+        18a1d010          90  used  log_init:453 <-board_init_r:774
+        18a1d0a0        6060  used  membuf_new:420 <-console_record
+        18a3b840          90  used  of_alias_scan:911 <-board_init_
+
+This caller information makes it easy to track down memory leaks by showing
+exactly where each allocation originated.
+
+Valgrind
+~~~~~~~~
+
+When running sandbox with Valgrind, the allocator includes annotations to help
+detect memory errors. See :ref:`sandbox_valgrind`.
+
+malloc testing
+~~~~~~~~~~~~~~
+
+Unit tests can use malloc_enable_testing() to simulate allocation failures.
 
 API Reference
 -------------
@@ -331,3 +417,4 @@ See Also
 
 - :doc:`memory` - Memory management overview
 - :doc:`global_data` - Global data and the GD_FLG_FULL_MALLOC_INIT flag
+- :doc:`/usage/cmd/malloc` - malloc command reference
