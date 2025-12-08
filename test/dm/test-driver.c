@@ -135,12 +135,15 @@ static int test_manual_probe(struct udevice *dev)
 static int test_manual_remove(struct udevice *dev)
 {
 	dm_testdrv_op_count[DM_TEST_OP_REMOVE]++;
+	free(dev_get_priv(dev));
+
 	return 0;
 }
 
 static int test_manual_unbind(struct udevice *dev)
 {
 	dm_testdrv_op_count[DM_TEST_OP_UNBIND]++;
+
 	return 0;
 }
 
