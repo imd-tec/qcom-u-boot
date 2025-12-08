@@ -16,18 +16,26 @@
 #include <bootstd.h>
 #include <dm.h>
 #include <expo.h>
+#include <menu.h>
+#include <mouse.h>
 #include <os.h>
+#include <tkey.h>
 #include "bootctl_common.h"
 #include <bootctl/logic.h>
 #include <bootctl/measure.h>
 #include <bootctl/oslist.h>
 #include <bootctl/state.h>
 #include <bootctl/ui.h>
+#include <dm/device-internal.h>
 #include <dm/lists.h>
 #include <test/ut.h>
 #include <test/video.h>
 #include "../bootstd_common.h"
-
+#include "../../../boot/bootflow_internal.h"
+#include "../../../boot/scene_internal.h"
+#include "../bootstd_common.h"
+#include "../expo_common.h"
+//
 /* test that expected devices are available and can be probed */
 static int bootctl_base(struct unit_test_state *uts)
 {
@@ -333,6 +341,97 @@ static int bootctl_simple_measure(struct unit_test_state *uts)
 }
 BOOTCTL_TEST(bootctl_simple_measure, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
 
+/**
+ * check_passphrase() - Test passphrase functionality for an encrypted item
+ *
+ * @uts: Test state
+ * @ui_dev: UI device to test
+ * @seq: Sequence number of the encrypted bootflow item
+ * Return: 0 if OK, -ve on error
+ */
+static int check_passphrase(struct unit_test_state *uts,
+			    struct udevice *ui_dev, int seq)
+{
+	struct bc_ui_priv *uc_priv = dev_get_uclass_priv(ui_dev);
+	const char *retrieved_passphrase = NULL;
+	struct scene_obj *label_obj, *edit_obj;
+	struct scene_obj_textline *tline;
+	struct scene *scn = uc_priv->scn;
+	bool selected;
+	int seq_out;
+
+	/* Show passphrase for the specified item (this also opens it) */
+	ut_assertok(bc_ui_show_pass(ui_dev, seq, true));
+	ut_assertok(bc_ui_render(ui_dev));
+
+	/* Verify passphrase textline and its child objects are now visible */
+	tline = scene_obj_find(scn, ITEM_PASS + seq, SCENEOBJT_TEXTLINE);
+	ut_assertnonnull(tline);
+	ut_asserteq(false, tline->obj.flags & SCENEOF_HIDE);
+	ut_assert(tline->obj.flags & SCENEOF_OPEN);
+
+	/* Verify the scene's highlight is set to the passphrase textline */
+	ut_asserteq(ITEM_PASS + seq, scn->highlight_id);
+
+	label_obj = scene_obj_find(scn, ITEM_PASS_LABEL + seq, SCENEOBJT_NONE);
+	ut_assertnonnull(label_obj);
+	ut_asserteq(false, label_obj->flags & SCENEOF_HIDE);
+
+	edit_obj = scene_obj_find(scn, ITEM_PASS_EDIT + seq, SCENEOBJT_NONE);
+	ut_assertnonnull(edit_obj);
+	ut_asserteq(false, edit_obj->flags & SCENEOF_HIDE);
+
+	/* Type 't', 'e', 's', 't' - each poll processes one character */
+	ut_asserteq(4, console_in_puts("test"));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("t", abuf_data(&tline->buf));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("te", abuf_data(&tline->buf));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("tes", abuf_data(&tline->buf));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("test", abuf_data(&tline->buf));
+
+	/* Send backspace to remove one character */
+	ut_asserteq(1, console_in_puts("\b"));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("tes", abuf_data(&tline->buf));
+
+	/* Re-add the 't' and verify */
+	ut_asserteq(1, console_in_puts("t"));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_asserteq_str("test", abuf_data(&tline->buf));
+
+	/* Send return key to submit - should close textline and select */
+	ut_asserteq(1, console_in_puts("\n"));
+	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
+	ut_assert(selected);
+	ut_asserteq(seq, seq_out);
+
+	/* Verify we can retrieve the passphrase */
+	ut_assertok(bc_ui_get_pass(ui_dev, seq, &retrieved_passphrase));
+	ut_assertnonnull(retrieved_passphrase);
+	ut_asserteq_str("test", retrieved_passphrase);
+
+	/*
+	 * Verify the LUKS partition unlock would be attempted. In a real
+	 * scenario, this would call luks_unlock(), but for the test we just
+	 * verify the passphrase was correctly captured and the UI state
+	 * indicates selection was made (which triggers the unlock logic)
+	 */
+
+	/* Test hiding the passphrase field */
+	ut_assertok(bc_ui_show_pass(ui_dev, seq, false));
+	ut_assertok(bc_ui_render(ui_dev));
+
+	/* Verify all three objects are now hidden */
+	ut_asserteq(true, tline->obj.flags & SCENEOF_HIDE);
+	ut_asserteq(true, label_obj->flags & SCENEOF_HIDE);
+	ut_asserteq(true, edit_obj->flags & SCENEOF_HIDE);
+
+	return 0;
+}
+
 static int check_multiboot_ui(struct unit_test_state *uts,
 			      struct bootstd_priv *std)
 {
@@ -457,6 +556,11 @@ static int check_multiboot_ui(struct unit_test_state *uts,
 		}
 	}
 
+	/*
+	 * Test passphrase functionality for mmc11 (item 0, which is encrypted)
+	 */
+	ut_assertok(check_passphrase(uts, ui_dev, 0));
+
 	membuf_dispose(&buf1);
 	membuf_dispose(&buf2);
 	membuf_dispose(&buf3);
@@ -497,4 +601,329 @@ static int bootctl_multiboot_ui(struct unit_test_state *uts)
 
 	return 0;
 }
-BOOTCTL_TEST(bootctl_multiboot_ui, UTF_DM | UTF_SCAN_FDT);
+BOOTCTL_TEST(bootctl_multiboot_ui, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/**
+ * click_os() - Click on an OS in the bootctl UI
+ *
+ * @uts: Unit test state
+ * @lpriv: Logic private data
+ * @seq: Sequence number of the OS to click
+ * Return: 0 if OK, -ve on error
+ */
+static int click_os(struct unit_test_state *uts, struct logic_priv *lpriv,
+		    int seq)
+{
+	struct bc_ui_priv *uc_priv;
+	struct scene_obj *obj;
+	struct scene *scn;
+	struct expo *exp;
+
+	uc_priv = dev_get_uclass_priv(lpriv->ui);
+	scn = uc_priv->scn;
+	exp = uc_priv->expo;
+
+	/* Get the position of ITEM_DESC + seq and queue a click there */
+	obj = scene_obj_find(scn, ITEM_DESC + seq, SCENEOBJT_NONE);
+	ut_assertnonnull(obj);
+	/* Click halfway along the object, 5 pixels from the top */
+	ut_assertok(mouse_queue_click_for_test(exp->mouse,
+					       obj->bbox.x0 + (obj->bbox.x1 -
+						       obj->bbox.x0) / 2,
+					       obj->bbox.y0 + 5));
+
+	return 0;
+}
+
+/**
+ * prepare_tkey_test() - Prepare bootctl logic for TKey unlock testing
+ *
+ * This helper sets up the complete test environment including:
+ * - Preparing the logic and finding bootflows
+ * - Configuring TKey emulator with test pubkey
+ * - Setting TKey to app mode to test replugging
+ * - Starting the logic and polling to find OSes
+ * - Verifying encrypted bootflows were found
+ *
+ * @uts: Unit test state
+ * @logic: Bootctl logic device
+ * @emul_out: Returns the TKey emulator device
+ * @test_pubkey: Public key to configure in emulator
+ * Return: 0 on success, -ve on error
+ */
+static int prepare_tkey_test(struct unit_test_state *uts,
+			     struct udevice *logic,
+			     struct udevice **emul_out,
+			     const u8 *test_pubkey)
+{
+	struct logic_priv *lpriv = dev_get_priv(logic);
+	struct udevice *emul;
+
+	/*
+	 * Prepare the logic. TKey device will be found automatically in
+	 * tkey_poll() when needed (uses first device, which is tkey-emul)
+	 */
+	ut_assertok(bc_logic_prepare(logic));
+	ut_assertnonnull(lpriv->ui);
+	ut_assertnonnull(lpriv->oslist);
+
+	/*
+	 * Configure the emulator to return a pubkey that matches the test
+	 * LUKS image. The test image was created with this specific TKey.
+	 * Get the emulator device to configure it.
+	 */
+	ut_assertok(uclass_get_device_by_name(UCLASS_TKEY, "tkey-emul",
+					      &emul));
+	ut_assertok(tkey_emul_set_pubkey_for_test(emul, test_pubkey));
+
+	/*
+	 * Put TKey into app mode. This will force the unlock logic to
+	 * request replugging the TKey.
+	 */
+	ut_assertok(tkey_emul_set_app_mode_for_test(emul, true));
+
+	/* Start the logic */
+	ut_assertok(bc_logic_start(logic));
+
+	/*
+	 * Override the TKey device to use the emulator. logic_start() finds
+	 * the first device, but we want to use tkey-emul for testing.
+	 */
+	lpriv->tkey = emul;
+
+	/* Poll twice to find both OSes (no delays, so completes quickly) */
+	ut_assertok(bc_logic_poll(logic));
+	ut_assertok(bc_logic_poll(logic));
+
+	/* Verify both OSes were found */
+	ut_asserteq(2, lpriv->osinfo.count);
+
+	/* First OS should be mmc13 and should be marked as encrypted */
+	ut_asserteq_str("mmc13.bootdev.part_1",
+			alist_getw(&lpriv->osinfo, 0,
+				   struct osinfo)->bflow.name);
+	ut_assert(alist_getw(&lpriv->osinfo, 0, struct osinfo)->bflow.flags &
+		  BOOTFLOWF_ENCRYPTED);
+
+	/* Verify TKey is enabled (device will be found later in tkey_poll) */
+	ut_assert(lpriv->opt_tkey);
+
+	*emul_out = emul;
+	return 0;
+}
+
+/**
+ * try_tkey_unlock() - Try to unlock with TKey using a passphrase
+ *
+ * @uts: Unit test state
+ * @logic: Logic device
+ * @emul: TKey emulator device
+ * @test_pubkey: Expected public key (or NULL to keep wrong key for failure
+ * test)
+ * @passphrase: Passphrase to enter
+ * @load_iterations_out: Pointer to store load iteration count
+ * Return: 0 if OK, -ve on error
+ */
+static int try_tkey_unlock(struct unit_test_state *uts, struct udevice *logic,
+			   struct udevice *emul, const u8 *test_pubkey,
+			   const char *passphrase, int *load_iterations_out)
+{
+	struct logic_priv *lpriv = dev_get_priv(logic);
+	int load_iterations;
+	int i;
+
+	/* Verify passphrase is being requested */
+	ut_asserteq(UNS_WAITING_PASS, lpriv->ustate);
+	ut_asserteq(0, lpriv->selected_seq);
+
+	/* Type the passphrase - each poll processes one character */
+	ut_asserteq(strlen(passphrase), console_in_puts(passphrase));
+	for (i = 0; i < strlen(passphrase); i++)
+		ut_assertok(bc_logic_poll(logic));
+
+	/* Press return to submit the passphrase */
+	ut_asserteq(1, console_in_puts("\n"));
+
+	/* Poll to process return - should transition to UNS_TKEY_START */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_START, lpriv->ustate);
+
+	/* Poll - should transition to UNS_TKEY_WAIT_INSERT */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_WAIT_INSERT, lpriv->ustate);
+
+	/* Poll - TKey should be detected, transition to UNS_TKEY_INSERTED */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_INSERTED, lpriv->ustate);
+
+	/*
+	 * Poll - TKey is in app mode, should request removal
+	 * Transition to UNS_TKEY_WAIT_REMOVE
+	 */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_WAIT_REMOVE, lpriv->ustate);
+
+	/* Simulate TKey removal by disconnecting the emulator */
+	ut_assertok(tkey_emul_set_connected_for_test(emul, false));
+
+	/* Poll - should detect removal, transition to UNS_TKEY_WAIT_INSERT */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_WAIT_INSERT, lpriv->ustate);
+
+	/* Simulate TKey reinsertion (reconnect the device) */
+	ut_assertok(tkey_emul_set_connected_for_test(emul, true));
+
+	/*
+	 * Poll - TKey should be detected again, transition to
+	 * UNS_TKEY_INSERTED
+	 */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_INSERTED, lpriv->ustate);
+
+	/*
+	 * After reprobe, the emulator gets new priv data.
+	 * Set the pubkey if provided (for success), or skip it (for failure)
+	 */
+	if (test_pubkey)
+		ut_assertok(tkey_emul_set_pubkey_for_test(emul, test_pubkey));
+
+	/* Poll - should start loading, transition to UNS_TKEY_LOADING */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_LOADING, lpriv->ustate);
+
+	/* Poll while TKey app is loading */
+	load_iterations = 0;
+	while (lpriv->ustate == UNS_TKEY_LOADING) {
+		ut_assertok(bc_logic_poll(logic));
+		load_iterations++;
+		/* Exact count: 28KB / 127 bytes */
+		ut_assert(load_iterations <= 221);
+	}
+
+	/* Verify loading completed - should be in UNS_TKEY_READY */
+	ut_asserteq(UNS_TKEY_READY, lpriv->ustate);
+	ut_asserteq(221, load_iterations);
+
+	if (load_iterations_out)
+		*load_iterations_out = load_iterations;
+
+	/* Poll - should derive key and transition to UNS_TKEY_UNLOCK */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_TKEY_UNLOCK, lpriv->ustate);
+
+	/* Poll - should perform unlock and transition to UNS_UNLOCK_RESULT */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_UNLOCK_RESULT, lpriv->ustate);
+
+	/* Poll - should process result */
+	ut_assertok(bc_logic_poll(logic));
+
+	return 0;
+}
+
+/* test TKey unlock with logic device - wrong then correct passphrase */
+static int bootctl_logic_tkey(struct unit_test_state *uts)
+{
+	/* Correct pubkey matching emulator default - produces valid disk key */
+	const u8 test_pubkey[32] = {
+		0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+		0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+		0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,
+		0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f
+	};
+	/*
+	 * Wrong pubkey - produces an invalid disk key for testing unlock
+	 * failure
+	 */
+	const u8 wrong_pubkey[32] = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+	};
+	struct udevice *emul, *logic, *dev;
+	struct logic_priv *lpriv;
+	ofnode root, node;
+
+	test_set_skip_delays(true);
+	bootstd_reset_usb();
+
+	/* Enable mmc13 device which has the TKey-encrypted partition */
+	root = oftree_root(oftree_default());
+	node = ofnode_find_subnode(root, "mmc13");
+	ut_assert(ofnode_valid(node));
+	ut_assertok(lists_bind_fdt(gd->dm_root, node, &dev, NULL, false));
+
+	/* Get the logic device */
+	ut_assertok(bootctl_get_dev(UCLASS_BOOTCTL, &logic));
+	lpriv = dev_get_priv(logic);
+
+	/* Enable TKey support and disable autoboot */
+	lpriv->opt_tkey = true;
+	lpriv->opt_autoboot = false;
+
+	/* Set boot order to include mmc13 before prepare */
+	lpriv->opt_labels = "mmc13 usb3";
+
+	/* Prepare the test environment and verify encrypted bootflows found */
+	ut_assertok(prepare_tkey_test(uts, logic, &emul, test_pubkey));
+
+	/* Queue a click on the first OS (seq 0) to select it */
+	ut_assertok(click_os(uts, lpriv, 0));
+
+	/* Poll the logic - should process the click and ask for passphrase */
+	ut_assertok(bc_logic_poll(logic));
+
+	/*
+	 * First, test wrong passphrase to verify UNS_BAD_PASS state.
+	 * Use wrong_pubkey to simulate a TKey producing an invalid disk key.
+	 */
+	ut_assertok(try_tkey_unlock(uts, logic, emul, wrong_pubkey, "wrongpw",
+				    NULL));
+
+	/* Unlock should fail, transition to UNS_BAD_PASS */
+	ut_asserteq(UNS_BAD_PASS, lpriv->ustate);
+
+	/*
+	 * Poll while in error display state - should remain in UNS_BAD_PASS
+	 * Error timeout is checked but we skip delays in tests
+	 */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_BAD_PASS, lpriv->ustate);
+
+	/*
+	 * Advance time past the error timeout (5 seconds) to trigger
+	 * transition back to UNS_IDLE
+	 */
+	timer_test_add_offset(6000);  /* 6 seconds */
+
+	/* Poll - error timeout should expire, transition to UNS_IDLE */
+	ut_assertok(bc_logic_poll(logic));
+	ut_asserteq(UNS_IDLE, lpriv->ustate);
+
+	/* Click on the OS again to re-select it */
+	ut_assertok(click_os(uts, lpriv, 0));
+
+	/* Poll - should process click and ask for passphrase again */
+	ut_assertok(bc_logic_poll(logic));
+
+	/*
+	 * Now type the correct passphrase. The test image was created with
+	 * USS "test" which produces the pubkey configured in the emulator
+	 * above.
+	 */
+	ut_assertok(try_tkey_unlock(uts, logic, emul, test_pubkey, "test",
+				    NULL));
+
+	/* Unlock should succeed, transition to UNS_OK */
+	ut_asserteq(UNS_OK, lpriv->ustate);
+
+	/* Verify TKey device was found and used */
+	ut_assertnonnull(lpriv->tkey);
+	ut_assert(lpriv->tkey_present);
+
+	test_set_skip_delays(false);
+
+	return 0;
+}
+BOOTCTL_TEST(bootctl_logic_tkey, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);

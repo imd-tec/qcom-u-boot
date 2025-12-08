@@ -903,7 +903,7 @@ static int logic_poll(struct udevice *dev)
 			return log_msg_ret("gos", -ENOENT);
 
 		/* If encrypted, handle pass entry and unlock */
-		if (IS_ENABLED(CONFIG_LUKS) &&
+		if (IS_ENABLED(CONFIG_BLK_LUKS) &&
 		    (os->bflow.flags & BOOTFLOWF_ENCRYPTED)) {
 			ret = handle_encrypted(dev, os, seq);
 			if (ret)

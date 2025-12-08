@@ -7,7 +7,8 @@ from img.common import setup_extlinux_image
 
 
 def setup_ubuntu_image(config, log, devnum, basename, version='24.04.1 LTS',
-                       use_fde=0, luks_kdf='pbkdf2'):
+                       use_fde=0, luks_kdf='pbkdf2', encrypt_keyfile=None,
+                       master_keyfile=None):
     """Create a Ubuntu disk image with a FAT partition and ext4 partition
 
     This creates a FAT partition containing extlinux files, kernel, etc. and a
@@ -21,6 +22,11 @@ def setup_ubuntu_image(config, log, devnum, basename, version='24.04.1 LTS',
         use_fde (int): LUKS version for full-disk encryption (0=none, 1=LUKS1, 2=LUKS2)
         luks_kdf (str): Key derivation function for LUKS2: 'pbkdf2' or 'argon2id'.
             Defaults to 'pbkdf2'. Ignored for LUKS1.
+        encrypt_keyfile (str, optional): Path to key file for LUKS encryption.
+            If provided, takes precedence over passphrase.
+        master_keyfile (str, optional): Path to file containing the raw master
+            key. If provided, this exact key is used as the LUKS master key,
+            enabling pre_derived unlock mode.
     """
     vmlinux = 'vmlinuz-6.8.0-53-generic'
     initrd = 'initrd.img-6.8.0-53-generic'
@@ -52,4 +58,6 @@ label l0r
 ''' % ((version, vmlinux, initrd) * 2)
     setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
                          script, part2_size=60 if use_fde else 1,
-                         use_fde=use_fde, luks_kdf=luks_kdf)
+                         use_fde=use_fde, luks_kdf=luks_kdf,
+                         encrypt_keyfile=encrypt_keyfile,
+                         master_keyfile=master_keyfile)

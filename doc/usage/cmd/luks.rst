@@ -307,6 +307,8 @@ See also
 --------
 
 * :doc:`../luks` - Comprehensive LUKS feature documentation
+* :doc:`../tkey-fde` - TKey full disk encryption with hardware-backed keys
 * :doc:`blkmap` - Blkmap device documentation
+* :doc:`tkey` - TKey command reference
 * cryptsetup project: https://gitlab.com/cryptsetup/cryptsetup
 * LUKS on-disk format specifications: https://gitlab.com/cryptsetup/cryptsetup/-/wikis/home

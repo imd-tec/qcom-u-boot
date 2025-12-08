@@ -110,7 +110,31 @@ Now we can access the filesystem:
    blkmap get sq dev devnum
    load blkmap ${devnum} ${loadaddr} /etc/version
 
+
+Example: Accessing LUKS-encrypted partitions
+---------------------------------------------
+
+When LUKS-encrypted partitions are unlocked, U-Boot automatically creates
+blkmap devices that provide on-the-fly decryption. This allows transparent
+access to encrypted filesystems.
+
+For example, after unlocking a LUKS partition::
+
+   luks unlock mmc 0:2 mypassword
+
+A blkmap device is created (e.g., ``blkmap 0``) that can be used like any
+other block device::
+
+   ls blkmap 0 /
+   load blkmap 0 ${kernel_addr_r} /boot/vmlinuz
+
+For more information on LUKS encryption, including hardware-backed key
+derivation with TKey devices, see :doc:`luks` and :doc:`tkey-fde`.
+
+
 See also
 --------
 
 * :doc:`/usage/cmd/blkmap`
+* :doc:`luks` - LUKS encryption support
+* :doc:`tkey-fde` - TKey full disk encryption

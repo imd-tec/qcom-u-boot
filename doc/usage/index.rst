@@ -12,6 +12,7 @@ Use U-Boot
    fdt_overlays
    fit/index
    luks
+   tkey-fde
    netconsole
    partitions
    cmdline

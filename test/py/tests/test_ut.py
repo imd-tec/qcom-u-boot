@@ -9,6 +9,7 @@ test one at a time, as well setting up some files needed by the tests.
 """
 import collections
 import gzip
+import hashlib
 import os
 import os.path
 import pytest
@@ -83,9 +84,40 @@ def test_ut_dm_init_bootstd(u_boot_config, u_boot_log):
     setup_ubuntu_image(u_boot_config, u_boot_log, 3, 'flash', '25.04')
     setup_localboot_image(u_boot_config, u_boot_log)
     setup_vbe_image(u_boot_config, u_boot_log)
+
+    # Generate TKey emulator disk key for LUKS encryption
+    # The emulator generates pubkey as 0x50 + (i & 0xf) for i in range(32)
+    # Disk key = SHA256(hex_string_of_pubkey), matching tkey_derive_disk_key()
+    # Allow override via external key file for testing with real keys
+    override_keyfile = os.path.join(u_boot_config.source_dir, 'override.bin')
+    if os.path.exists(override_keyfile):
+        keyfile = override_keyfile
+        u_boot_log.action(f'Using override TKey key: {keyfile}')
+    else:
+        pubkey = bytes([0x50 + (i & 0xf) for i in range(32)])
+        disk_key = hashlib.sha256(pubkey.hex().encode()).digest()
+        keyfile = os.path.join(u_boot_config.persistent_data_dir, 'tkey_emul.key')
+        with open(keyfile, 'wb') as f:
+            f.write(disk_key)
+        u_boot_log.action(f'Generated TKey emulator disk key: {keyfile}')
+
     setup_ubuntu_image(u_boot_config, u_boot_log, 11, 'mmc', use_fde=1)
     setup_ubuntu_image(u_boot_config, u_boot_log, 12, 'mmc', use_fde=2,
                        luks_kdf='argon2id')
+    setup_ubuntu_image(u_boot_config, u_boot_log, 13, 'mmc', use_fde=2,
+                       luks_kdf='argon2id', encrypt_keyfile=keyfile)
+
+    # Create mmc14 with a known master key for pre_derived unlock testing
+    # For LUKS2 with aes-xts-plain64, we need a 64-byte (512-bit) master key
+    master_key = bytes([0x20 + (i & 0x3f) for i in range(64)])
+    master_keyfile = os.path.join(u_boot_config.persistent_data_dir,
+                                  'luks_master.key')
+    with open(master_keyfile, 'wb') as f:
+        f.write(master_key)
+    u_boot_log.action(f'Generated LUKS master key: {master_keyfile}')
+    setup_ubuntu_image(u_boot_config, u_boot_log, 14, 'mmc', use_fde=2,
+                       luks_kdf='argon2id', encrypt_keyfile=keyfile,
+                       master_keyfile=master_keyfile)
 
 def test_ut(ubman, ut_subtest):
     """Execute a "ut" subtest.

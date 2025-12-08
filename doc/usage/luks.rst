@@ -422,8 +422,7 @@ See ``test/py/tests/fs_helper.py`` for the ``FsHelper`` class:
 
     # Create LUKS2 encrypted filesystem with Argon2id
     with FsHelper(config, 'ext4', 30, 'test',
-                  part_mb=60,
-                  encrypt_passphrase='mypassword',
+                  part_mb=60, passphrase='mypassword',
                   luks_kdf='argon2id') as fsh:
         # Add files to fsh.srcdir
         with open(os.path.join(fsh.srcdir, 'hello.txt'), 'w') as f:
@@ -434,8 +433,7 @@ See ``test/py/tests/fs_helper.py`` for the ``FsHelper`` class:
 
     # Create LUKS1 encrypted filesystem
     with FsHelper(config, 'ext4', 30, 'test',
-                  part_mb=60,
-                  encrypt_passphrase='mypassword',
+                  part_mb=60, passphrase='mypassword',
                   luks_version=1) as fsh:
         # Add files to fsh.srcdir
         with open(os.path.join(fsh.srcdir, 'hello.txt'), 'w') as f:
@@ -471,6 +469,16 @@ CONFIG_SHA512
 
 CONFIG_ARGON2
     Enable Argon2 key derivation support (optional, for modern LUKS2)
+
+Hardware-Backed Key Derivation
+-------------------------------
+
+For enhanced security, LUKS partitions can be unlocked using hardware security
+tokens like the Tillitis TKey. Instead of relying solely on a password, the
+encryption key is derived from both the password and the device's unique
+hardware identifier.
+
+See :doc:`tkey-fde` for complete details on using TKey for full disk encryption.
 
 Limitations
 -----------
@@ -551,8 +559,11 @@ See ``test/boot/luks.c`` for tests:
 See Also
 --------
 
+* :doc:`tkey-fde` - TKey full disk encryption documentation
 * :doc:`cmd/luks` - LUKS command reference
 * :doc:`cmd/blkmap` - Blkmap command reference
+* :doc:`cmd/tkey` - TKey command reference
 * :doc:`blkmap` - Blkmap device documentation
 * ``test/py/tests/fs_helper.py`` - Filesystem helper for creating test images
+* ``scripts/tkey_fde_key.py`` - TKey key derivation tool
 * Linux ``cryptsetup`` documentation for LUKS disk format specification

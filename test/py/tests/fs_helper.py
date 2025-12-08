@@ -62,12 +62,21 @@ class FsHelper:
                 fsh.mk_fs()  # Creates and encrypts the FS with LUKS2+Argon2
                 ...
 
+        To create an encrypted LUKS2 partition with a key file:
+
+            with FsHelper(ubman.config, 'ext4', 10, 'mmc1',
+                          encrypt_keyfile='/path/to/keyfile') as fsh:
+                # create files in the fsh.srcdir directory
+                fsh.mk_fs()  # Creates and encrypts the filesystem with key file
+                ...
+
     Properties:
         fs_img (str): Filename for the filesystem image; this is set to a
             default value but can be overwritten
     """
     def __init__(self, config, fs_type, size_mb, prefix, part_mb=None,
-                 passphrase=None, luks_version=2, luks_kdf='pbkdf2'):
+                 passphrase=None, encrypt_keyfile=None, luks_version=2,
+                 luks_kdf='pbkdf2', master_keyfile=None):
         """Set up a new object
 
         Args:
@@ -81,9 +90,14 @@ class FsHelper:
                 the filesystem, to create space for disk-encryption metadata
             passphrase (str, optional): If provided, encrypt the
                 filesystem with LUKS using this passphrase
+            encrypt_keyfile (str, optional): Path to key file for LUKS
+                encryption. If provided, takes precedence over passphrase.
             luks_version (int): LUKS version to use (1 or 2). Defaults to 2.
             luks_kdf (str): Key derivation function for LUKS2: 'pbkdf2' or
                 'argon2id'. Defaults to 'pbkdf2'. Ignored for LUKS1.
+            master_keyfile (str, optional): Path to file containing the raw
+                master key. If provided, this exact key is used as the LUKS
+                master key (via --master-key-file), enabling pre_derived unlock.
         """
         if ('fat' not in fs_type and 'ext' not in fs_type and
              fs_type not in ['exfat', 'fs_generic']):
@@ -96,8 +110,10 @@ class FsHelper:
         self.prefix = prefix
         self.quiet = True
         self.passphrase = passphrase
+        self.encrypt_keyfile = encrypt_keyfile
         self.luks_version = luks_version
         self.luks_kdf = luks_kdf
+        self.master_keyfile = master_keyfile
 
         # Use a default filename; the caller can adjust it
         leaf = f'{prefix}.{fs_type}.img'
@@ -170,8 +186,8 @@ class FsHelper:
                     shell=True)
 
         # Encrypt the filesystem if requested
-        if self.passphrase:
-            self.encrypt_luks(self.passphrase)
+        if self.passphrase or self.encrypt_keyfile:
+            self.encrypt_luks()
 
     def setup(self):
         """Set up the srcdir ready to receive files"""
@@ -186,22 +202,29 @@ class FsHelper:
                 self.tmpdir = tempfile.TemporaryDirectory('fs_helper')
                 self.srcdir = self.tmpdir.name
 
-    def encrypt_luks(self, passphrase):
+    def encrypt_luks(self):
         """Encrypt the filesystem image with LUKS
 
         This replaces the filesystem image with a LUKS-encrypted version.
         The LUKS version is determined by self.luks_version.
-
-        Args:
-            passphrase (str): Passphrase for the LUKS container
+        Uses either passphrase or keyfile for encryption.
 
         Returns:
             str: Path to the encrypted image
 
         Raises:
             CalledProcessError: If cryptsetup is not available or fails
-            ValueError: If an unsupported LUKS version is specified
+            ValueError: If an unsupported LUKS version is specified or if neither
+                passphrase nor keyfile is provided
+            Exception: If anything else goes wrong
         """
+        # Validate that we have either passphrase or keyfile
+        if not self.passphrase and not self.encrypt_keyfile:
+            raise ValueError('Either encrypt_passphrase or encrypt_keyfile must be provided')
+
+        # If both are provided, keyfile takes precedence
+        use_keyfile = self.encrypt_keyfile is not None
+        use_master_key = self.master_keyfile is not None
         # LUKS encryption parameters
         if self.luks_version == 1:
             # LUKS1 parameters
@@ -216,7 +239,7 @@ class FsHelper:
             hash_alg = 'sha256'
             luks_type = 'luks2'
         else:
-            raise ValueError(f"Unsupported LUKS version: {self.luks_version}")
+            raise ValueError(f'Unsupported LUKS version: {self.luks_version}')
 
         key_size_str = str(key_size)
 
@@ -236,7 +259,7 @@ class FsHelper:
             result = run(['sudo', 'modprobe', 'dm_mod'],
                         stdout=DEVNULL, stderr=DEVNULL, check=False)
             if result.returncode != 0:
-                raise RuntimeError(
+                raise ValueError(
                     'Device-mapper is not available. Please ensure the dm_mod '
                     'kernel module is loaded and you have permission to use '
                     'device-mapper. This is required for LUKS encryption tests.')
@@ -262,22 +285,33 @@ class FsHelper:
                 # For Argon2, use low memory/time settings suitable for testing
                 if self.luks_kdf == 'argon2id':
                     cmd.extend([
-                        '--pbkdf-memory', '65536',  # 64MB
-                        '--pbkdf-parallel', '4',
+                        '--pbkdf-memory', '8192',  # 8MB (reduced for U-Boot)
+                        '--pbkdf-parallel', '1',    # Single thread for simplicity
                     ])
+
+            # Add master key file option if provided
+            if use_master_key:
+                cmd.extend(['--master-key-file', self.master_keyfile])
+
+            # Add key file or passphrase option
+            if use_keyfile:
+                cmd.extend(['--key-file', self.encrypt_keyfile])
 
             cmd.append(luks_img)
 
+            # When using passphrase, provide it via stdin; otherwise set input=None
             run(cmd,
-                input=f'{passphrase}\n'.encode(),
+                input=f'{self.passphrase}\n'.encode() if not use_keyfile else None,
                 stdout=DEVNULL if self.quiet else None,
                 stderr=DEVNULL if self.quiet else None,
                 check=True)
 
             # Open the LUKS device (requires sudo)
-            # Use --key-file=- to read passphrase from stdin
-            result = run(['sudo', 'cryptsetup', 'open', '--key-file=-',
-                          luks_img, device_name], input=passphrase.encode(),
+            # Use --key-file with file path or '-' for stdin
+            result = run(['sudo', 'cryptsetup', 'open',
+                          '--key-file', self.encrypt_keyfile if use_keyfile else '-',
+                          luks_img, device_name],
+                          input=self.passphrase.encode() if not use_keyfile else None,
                           stdout=DEVNULL if self.quiet else None, stderr=None,
                           check=True)
             # Copy the filesystem data into the LUKS container
