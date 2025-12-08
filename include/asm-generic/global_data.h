@@ -348,6 +348,12 @@ struct global_data {
 	 */
 	struct membuf console_out;
 	/**
+	 * @console_out_ovf: overflow byte count for console recording
+	 *
+	 * Number of bytes that could not be written due to buffer overflow.
+	 */
+	int console_out_ovf;
+	/**
 	 * @console_in: input buffer for console recording
 	 *
 	 * If console recording is activated, this buffer can be used to
@@ -583,6 +589,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_malloc_ptr()		gd->malloc_ptr
 #else
 #define gd_malloc_ptr()		0L
+#endif
+
+#ifdef CONFIG_CONSOLE_RECORD
+#define gd_console_out()		(&gd->console_out)
+#define gd_console_out_ovf()		gd->console_out_ovf
+#else
+#define gd_console_out()		NULL
+#define gd_console_out_ovf()		0
 #endif
 
 #if CONFIG_IS_ENABLED(UPL)

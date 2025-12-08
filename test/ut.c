@@ -8,6 +8,7 @@
 #include <console.h>
 #include <errno.h>
 #include <malloc.h>
+#include <membuf.h>
 #include <slre.h>
 #include <vsprintf.h>
 #ifdef CONFIG_SANDBOX
@@ -86,8 +87,18 @@ static int readline_check(struct unit_test_state *uts)
 
 	ret = console_record_readline(uts->actual_str, sizeof(uts->actual_str));
 	if (ret == -ENOSPC) {
-		ut_fail(uts, __FILE__, __LINE__, __func__,
-			"Console record buffer too small - increase CONFIG_CONSOLE_RECORD_OUT_SIZE");
+		if (IS_ENABLED(CONFIG_CONSOLE_RECORD)) {
+			int cur_size = membuf_size(gd_console_out());
+
+			ut_failf(uts, __FILE__, __LINE__, __func__,
+				 "Console record buffer too small",
+				 "CONFIG_CONSOLE_RECORD_OUT_SIZE=%#x, need %#x",
+				 cur_size, cur_size + gd_console_out_ovf());
+		} else {
+			ut_fail(uts, __FILE__, __LINE__, __func__,
+				"Console record buffer too small - increase "
+				"CONFIG_CONSOLE_RECORD_OUT_SIZE");
+		}
 		return ret;
 	} else if (ret == -ENOENT) {
 		strcpy(uts->actual_str, "<no-more-output>");

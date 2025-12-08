@@ -36,21 +36,26 @@ static void console_record_putc(const char c)
 {
 	if (!(gd->flags & GD_FLG_RECORD))
 		return;
-	if  (gd->console_out.start &&
-	     !membuf_putbyte((struct membuf *)&gd->console_out, c))
+	if (gd->console_out.start &&
+	    !membuf_putbyte((struct membuf *)&gd->console_out, c)) {
 		gd->flags |= GD_FLG_RECORD_OVF;
+		gd->console_out_ovf++;
+	}
 }
 
 static void console_record_puts(const char *s)
 {
 	if (!(gd->flags & GD_FLG_RECORD))
 		return;
-	if  (gd->console_out.start) {
+	if (gd->console_out.start) {
 		int len = strlen(s);
+		int written;
 
-		if (membuf_put((struct membuf *)&gd->console_out, s, len) !=
-		    len)
+		written = membuf_put((struct membuf *)&gd->console_out, s, len);
+		if (written != len) {
 			gd->flags |= GD_FLG_RECORD_OVF;
+			gd->console_out_ovf += len - written;
+		}
 	}
 }
 
@@ -893,6 +898,7 @@ void console_record_reset(void)
 	membuf_purge((struct membuf *)&gd->console_out);
 	membuf_purge((struct membuf *)&gd->console_in);
 	gd->flags &= ~GD_FLG_RECORD_OVF;
+	gd->console_out_ovf = 0;
 }
 
 int console_record_reset_enable(void)
