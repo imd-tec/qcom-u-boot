@@ -365,6 +365,12 @@ struct global_data {
 	 */
 	ulong video_bottom;
 #endif
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+	/**
+	 * @glyph_count: number of glyphs rendered
+	 */
+	uint glyph_count;
+#endif
 #ifdef CONFIG_BOOTSTAGE
 	/**
 	 * @bootstage: boot stage information
@@ -635,6 +641,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_pager()		NULL
 #define gd_pagerp()		NULL
 #define gd_pager_page_len()	0
+#endif
+
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+#define gd_glyph_count()		gd->glyph_count
+#define gd_inc_glyph_count()		gd->glyph_count++
+#else
+#define gd_glyph_count()		0
+#define gd_inc_glyph_count()
 #endif
 
 /**
