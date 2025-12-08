@@ -4096,7 +4096,7 @@ static void unlink_large_chunk(mstate M, tchunkptr X) {
  * When mcheck is enabled, internal calls must use the _impl functions
  * to avoid going through the mcheck wrappers which expect user pointers.
  */
-#ifdef CONFIG_MCHECK_HEAP_PROTECTION
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #define internal_malloc(m, b) dlmalloc_impl(b)
 #define internal_free(m, mem) dlfree_impl(mem)
 #else
@@ -5827,39 +5827,32 @@ void* dlmemalign_impl(size_t alignment, size_t bytes) {
 
 int dlposix_memalign(void** pp, size_t alignment, size_t bytes) {
   void* mem = 0;
-  if (alignment == MALLOC_ALIGNMENT)
-    mem = dlmalloc_impl(bytes);
-  else {
-    size_t d = alignment / sizeof(void*);
-    size_t r = alignment % sizeof(void*);
-    if (r != 0 || d == 0 || (d & (d-SIZE_T_ONE)) != 0)
-      return EINVAL;
-    else if (bytes <= MAX_REQUEST - alignment) {
-      if (alignment <  MIN_CHUNK_SIZE)
-        alignment = MIN_CHUNK_SIZE;
-      mem = internal_memalign(gm, alignment, bytes);
-    }
-  }
+  size_t d = alignment / sizeof(void*);
+  size_t r = alignment % sizeof(void*);
+
+  if (r != 0 || d == 0 || (d & (d-SIZE_T_ONE)) != 0)
+    return EINVAL;
+  if (bytes > MAX_REQUEST - alignment)
+    return ENOMEM;
+  mem = dlmemalign(alignment, bytes);
   if (mem == 0)
     return ENOMEM;
-  else {
-    *pp = mem;
-    return 0;
-  }
+  *pp = mem;
+  return 0;
 }
 
 void* dlvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign_impl(pagesz, bytes);
+  return dlmemalign(pagesz, bytes);
 }
 
 void* dlpvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign_impl(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
+  return dlmemalign(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
 }
 
 void** dlindependent_calloc(size_t n_elements, size_t elem_size,
