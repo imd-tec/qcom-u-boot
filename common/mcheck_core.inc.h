@@ -201,6 +201,7 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 				     size_t alignment, int clean_content,
 				     const char *caller)
 {
+	static bool overflow_msg_shown;
 	const size_t slop = alignment ?
 		mcheck_evaluate_memalign_prefix_size(alignment) - sizeof(struct mcheck_hdr) : 0;
 	struct mcheck_hdr *hdr = (struct mcheck_hdr *)((char *)altoghether_ptr + slop);
@@ -239,10 +240,10 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 			return payload; // normal end
 		}
 
-	static char *overflow_msg = "\n\n\nERROR: mcheck registry overflow, pedantic check would be incomplete!!\n\n\n\n";
-
-	printf("%s", overflow_msg);
-	overflow_msg = "(mcheck registry full)";
+	if (!overflow_msg_shown) {
+		overflow_msg_shown = true;
+		printf("\n\nERROR: mcheck registry overflow, pedantic check would be incomplete!\n\n");
+	}
 	return payload;
 }
 
