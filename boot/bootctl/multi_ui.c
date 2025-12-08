@@ -140,11 +140,24 @@ static int multiboot_set_item_props(struct scene *scn, int i,
 			  IMAGES_Y + 5);
 	scene_obj_set_pos(scn, ITEM_VERIFIED + i,
 			  x + BOX_MARGIN + 40 + 32, IMAGES_Y + 80 + 21);
+	scene_obj_set_pos(scn, ITEM_LOCKED + i,
+			  x + BOX_W - BOX_MARGIN - 24, IMAGES_Y + BOX_MARGIN);
+
+	/* Position passphrase textline at bottom of box, hidden by default */
+	scene_obj_set_pos(scn, ITEM_PASS + i, x + BOX_MARGIN,
+			  IMAGES_Y + BOX_H - 60);
+
+	/* Position message below passphrase, hidden by default */
+	scene_obj_set_pos(scn, ITEM_PASS_MSG + i, x + BOX_MARGIN,
+			  IMAGES_Y + BOX_H - 35);
 
 	ret |= scene_obj_set_hide(scn, ITEM_PREVIEW + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_BOX + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERSION_NAME + i, false);
 	ret |= scene_obj_set_hide(scn, ITEM_VERIFIED + i, false);
+	ret |= scene_obj_set_hide(scn, ITEM_LOCKED + i,
+				  !(bflow->flags & BOOTFLOWF_ENCRYPTED));
+	ret |= scene_obj_set_hide(scn, ITEM_PASS + i, false);
 
 	/* Hide key in multiboot mode (not used with mouse) */
 	ret |= scene_obj_set_hide(scn, ITEM_KEY + i, true);
@@ -212,9 +225,17 @@ static int multiboot_ui_set_props(struct udevice *dev, struct scene *scn,
 	scene_obj_set_pos(scn, OBJ_PROMPT2, MAIN_X, 180);
 	scene_obj_set_halign(scn, OBJ_PROMPT2, SCENEOA_LEFT);
 
+	/* Position passphrase input at bottom and hide by default */
+	scene_obj_set_pos(scn, ITEM_PASS, MAIN_X, 750);
+	scene_obj_set_hide(scn, ITEM_PASS, true);
+
 	scene_obj_set_hide(scn, OBJ_AUTOBOOT, !lpriv->opt_autoboot);
 
 	if (upriv->logo) {
+		ret = scene_img_set_data(scn, OBJ_U_BOOT_LOGO, upriv->logo,
+					 upriv->logo_size);
+		if (ret)
+			return log_msg_ret("log", ret);
 		ret = scene_obj_set_pos(scn, OBJ_U_BOOT_LOGO, 1045, 10);
 		if (ret)
 			return log_msg_ret("lop", ret);
@@ -418,6 +439,10 @@ static int multiboot_ui_add(struct udevice *dev, struct osinfo *info)
 		logo = video_image_getptr(tick);
 		ret |= scene_img(scn, "verified", ITEM_VERIFIED + seq, logo,
 				 NULL);
+
+		logo = video_image_getptr(lock);
+		ret |= scene_img(scn, "locked", ITEM_LOCKED + seq, logo,
+				 NULL);
 	}
 
 	ret = bootstd_get_priv(&std);
@@ -425,10 +450,6 @@ static int multiboot_ui_add(struct udevice *dev, struct osinfo *info)
 		return log_msg_ret("sup", ret);
 
 	multiboot_set_item_props(scn, seq, &info->bflow);
-
-	ret = expo_calc_dims(upriv->expo);
-	if (ret)
-		return log_msg_ret("ecd", ret);
 
 	if (lpriv->default_os &&
 	    !strcmp(lpriv->default_os, info->bflow.os_name))
@@ -498,11 +519,6 @@ static int multiboot_ui_switch_layout(struct udevice *dev)
 			return log_msg_ret("props", ret);
 	}
 
-	/* Calculate dimensions then re-arrange */
-	ret = expo_calc_dims(upriv->expo);
-	if (ret)
-		return log_msg_ret("ecd", ret);
-
 	ret = scene_arrange(scn);
 	if (ret)
 		return log_msg_ret("arr", ret);
@@ -561,6 +577,86 @@ static int multiboot_ui_of_to_plat(struct udevice *dev)
 	return 0;
 }
 
+static int multiboot_ui_show_pass(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+	int ret;
+
+	scene_obj_set_hide(scn, ITEM_PASS + seq, !show);
+	scene_obj_set_hide(scn, ITEM_PASS_LABEL + seq, !show);
+	scene_obj_set_hide(scn, ITEM_PASS_EDIT + seq, !show);
+
+	if (show) {
+		struct scene_obj_textline *tline;
+		char *buf;
+
+		/* Clear the passphrase buffer for retry */
+		tline = scene_obj_find(scn, ITEM_PASS + seq,
+				       SCENEOBJT_TEXTLINE);
+		if (!tline)
+			return log_msg_ret("tln", -ENOENT);
+		buf = abuf_data(&tline->buf);
+		*buf = '\0';
+
+		/* Set highlight and open the textline for editing */
+		scene_set_highlight_id(scn, ITEM_PASS + seq);
+		ret = scene_set_open(scn, ITEM_PASS + seq, true);
+		if (ret)
+			return log_msg_ret("sop", ret);
+	} else {
+		/* Close the textline */
+		ret = scene_set_open(scn, ITEM_PASS + seq, false);
+		if (ret)
+			return log_msg_ret("sop", ret);
+	}
+
+	return 0;
+}
+
+static int multiboot_ui_get_pass(struct udevice *dev, int seq,
+				 const char **passp)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+	struct scene_obj_textline *tline;
+
+	tline = scene_obj_find(scn, ITEM_PASS + seq, SCENEOBJT_TEXTLINE);
+	if (!tline)
+		return log_msg_ret("tln", -ENOENT);
+
+	*passp = abuf_data(&tline->buf);
+
+	return 0;
+}
+
+static int multiboot_ui_show_pass_msg(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct scene *scn = upriv->scn;
+
+	scene_obj_set_hide(scn, ITEM_PASS_MSG + seq, !show);
+
+	return 0;
+}
+
+static int multiboot_ui_set_pass_msg(struct udevice *dev, int seq,
+				     const char *msg)
+{
+	struct bc_ui_priv *upriv = dev_get_uclass_priv(dev);
+	struct expo *exp = upriv->expo;
+	struct abuf *buf;
+	int ret;
+
+	ret = expo_edit_str(exp, STR_PASS_MSG + seq, NULL, &buf);
+	if (ret)
+		return log_msg_ret("spm", ret);
+
+	abuf_set(buf, (void *)msg, strlen(msg) + 1);
+
+	return 0;
+}
+
 static struct bc_ui_ops ops = {
 	.print	= multiboot_ui_print,
 	.show	= multiboot_ui_show,
@@ -568,6 +664,10 @@ static struct bc_ui_ops ops = {
 	.render	= multiboot_ui_render,
 	.poll	= multiboot_ui_poll,
 	.switch_layout = multiboot_ui_switch_layout,
+	.show_pass = multiboot_ui_show_pass,
+	.get_pass = multiboot_ui_get_pass,
+	.show_pass_msg = multiboot_ui_show_pass_msg,
+	.set_pass_msg = multiboot_ui_set_pass_msg,
 };
 
 static const struct udevice_id multiboot_ui_ids[] = {

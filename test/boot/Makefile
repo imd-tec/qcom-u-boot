@@ -10,6 +10,7 @@ obj-$(CONFIG_BLK_LUKS) += luks.o
 
 obj-$(CONFIG_EXPO) += expo.o expo_common.o
 obj-$(CONFIG_CEDIT) += cedit.o expo_common.o
+obj-$(CONFIG_UT_BOOTCTL) += bootctl/
 endif
 
 ifdef CONFIG_SANDBOX

@@ -110,6 +110,66 @@ int bc_ui_switch_layout(struct udevice *dev)
 	return 0;
 }
 
+int bc_ui_show_pass(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_ops *ops = bc_ui_get_ops(dev);
+	int ret;
+
+	if (!ops->show_pass)
+		return -ENOSYS;
+
+	ret = ops->show_pass(dev, seq, show);
+	if (ret)
+		return log_msg_ret("bsp", ret);
+
+	return 0;
+}
+
+int bc_ui_get_pass(struct udevice *dev, int seq, const char **passp)
+{
+	struct bc_ui_ops *ops = bc_ui_get_ops(dev);
+	int ret;
+
+	if (!ops->get_pass)
+		return -ENOSYS;
+
+	ret = ops->get_pass(dev, seq, passp);
+	if (ret)
+		return log_msg_ret("bgp", ret);
+
+	return 0;
+}
+
+int bc_ui_show_pass_msg(struct udevice *dev, int seq, bool show)
+{
+	struct bc_ui_ops *ops = bc_ui_get_ops(dev);
+	int ret;
+
+	if (!ops->show_pass_msg)
+		return -ENOSYS;
+
+	ret = ops->show_pass_msg(dev, seq, show);
+	if (ret)
+		return log_msg_ret("bse", ret);
+
+	return 0;
+}
+
+int bc_ui_set_pass_msg(struct udevice *dev, int seq, const char *msg)
+{
+	struct bc_ui_ops *ops = bc_ui_get_ops(dev);
+	int ret;
+
+	if (!ops->set_pass_msg)
+		return -ENOSYS;
+
+	ret = ops->set_pass_msg(dev, seq, msg);
+	if (ret)
+		return log_msg_ret("bsm", ret);
+
+	return 0;
+}
+
 void bc_oslist_setup_iter(struct oslist_iter *iter)
 {
 	memset(iter, '\0', sizeof(struct oslist_iter));

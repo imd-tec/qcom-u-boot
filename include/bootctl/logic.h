@@ -10,8 +10,42 @@
 #define __bootctl_logic_h
 
 #include <bootctl/oslist.h>
+#include <tkey.h>
 
 struct udevice;
+
+/**
+ * enum unlock_state - State of the disk unlock process
+ *
+ * @UNS_IDLE: No unlock in progress
+ * @UNS_WAITING_PASS: Waiting for user to enter passphrase
+ * @UNS_UNLOCK_NORMAL: Unlocking with direct passphrase
+ * @UNS_TKEY_START: Unlocking with TKey
+ * @UNS_TKEY_WAIT_REMOVE: Waiting for TKey to be removed (after wrong passphrase)
+ * @UNS_TKEY_WAIT_INSERT: Waiting for TKey to be inserted (after removal)
+ * @UNS_TKEY_INSERTED: TKey inserted, starting app load
+ * @UNS_TKEY_LOADING: Loading TKey app
+ * @UNS_TKEY_READY: TKey key derived, ready to unlock
+ * @UNS_TKEY_UNLOCK: Unlocking LUKS partition
+ * @UNS_UNLOCK_RESULT: Processing unlock result (success or failure)
+ * @UNS_BAD_PASS: Unlock failed, showing error message
+ * @UNS_OK: Unlock succeeded, showing success message
+ */
+enum unlock_state {
+	UNS_IDLE,
+	UNS_WAITING_PASS,
+	UNS_UNLOCK_NORMAL,
+	UNS_TKEY_START,
+	UNS_TKEY_WAIT_REMOVE,
+	UNS_TKEY_WAIT_INSERT,
+	UNS_TKEY_INSERTED,
+	UNS_TKEY_LOADING,
+	UNS_TKEY_READY,
+	UNS_TKEY_UNLOCK,
+	UNS_UNLOCK_RESULT,
+	UNS_BAD_PASS,
+	UNS_OK,
+};
 
 /**
  * struct logic_priv - Information maintained by the boot logic as it works
@@ -27,6 +61,7 @@ struct udevice;
  * @opt_autoboot: true to autoboot the default OS after a timeout
  * @opt_measure: true to measure loaded images, etc.
  * @opt_slow_refresh: refresh the UI only when needed
+ * @opt_tkey: true to use TKey for unlocking encrypted volumes
  *
  * @state_loaded: true if the state information has been loaded
  * @scanning: true if scanning for new OSes
@@ -37,10 +72,18 @@ struct udevice;
  * @default_os: name of the default OS to boot
  * @osinfo: List of OSes to show
  * @refresh: true if we need to refresh the UI because something has changed
+ * @selected_seq: sequence number of OS waiting for passphrase, or -1 if none
+ * @ready_to_boot: true if success message shown, ready to boot on next poll
+ *
+ * @tkey: TKey device (pointer never changes once set)
+ * @tkey_present: true if TKey is physically present and accessible
+ * @tkey_load_ctx: TKey app loading context for iterative loading
+ * @tkey_disk_key: Buffer to store derived disk key from TKey
+ * @ustate: Current state of the disk unlock process
+ * @unlock_result: Result of disk unlock (0 = OK, -ve on error)
+ * @time_error: monotonic time when error message display started
  *
  * @iter: oslist iterator, used to find new OSes
- * @selected: index of selected OS in osinfo alist, or -1 if none has been
- *	selected yet
  * @meas: TPM-measurement device
  * @oslist: provides OSes to boot; we iterate through each osinfo driver to find
  * all OSes
@@ -57,6 +100,7 @@ struct logic_priv {
 	bool opt_autoboot;
 	bool opt_measure;
 	bool opt_slow_refresh;
+	bool opt_tkey;
 
 	bool state_loaded;
 	bool state_saved;
@@ -68,6 +112,16 @@ struct logic_priv {
 	const char *default_os;
 	struct alist osinfo;
 	bool refresh;
+	int selected_seq;
+	bool ready_to_boot;
+
+	struct udevice *tkey;
+	bool tkey_present;
+	struct tkey_load_ctx tkey_load_ctx;
+	u8 tkey_disk_key[TKEY_DISK_KEY_SIZE];
+	enum unlock_state ustate;
+	int unlock_result;
+	ulong time_error;
 
 	struct oslist_iter iter;
 	struct udevice *meas;

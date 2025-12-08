@@ -15,3 +15,4 @@ obj-$(CONFIG_BOOTCTL) += canonical.o
 obj-$(CONFIG_BOOTCTL) += tick.o
 obj-$(CONFIG_BOOTCTL) += multipass.o settings.o
 obj-$(CONFIG_BOOTCTL) += help.o
+obj-$(CONFIG_BOOTCTL) += lock.o

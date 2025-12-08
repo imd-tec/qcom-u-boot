@@ -85,10 +85,10 @@ static int unlock_with_tkey(struct blk_desc *dev_desc,
 	printf("Using TKey for disk encryption key\n");
 
 	/* Find TKey device */
-	ret = uclass_first_device_err(UCLASS_TKEY, &tkey_dev);
-	if (ret) {
-		printf("Failed to find TKey device (err %dE)\n", ret);
-		return ret;
+	tkey_dev = tkey_get_device();
+	if (!tkey_dev) {
+		printf("Failed to find TKey device\n");
+		return -ENOENT;
 	}
 
 	/* Derive disk key using TKey with passphrase as USS */
@@ -113,7 +113,7 @@ static int unlock_with_tkey(struct blk_desc *dev_desc,
 		       TKEY_DISK_KEY_SIZE, false);
 
 	ret = luks_unlock(dev_desc->bdev, info, tkey_disk_key,
-			  TKEY_DISK_KEY_SIZE, true, master_key, key_size);
+			  TKEY_DISK_KEY_SIZE, false, master_key, key_size);
 
 	/* Wipe TKey disk key */
 	memset(tkey_disk_key, '\0', sizeof(tkey_disk_key));
@@ -129,14 +129,21 @@ static int do_luks_unlock(struct cmd_tbl *cmdtp, int flag, int argc,
 	struct udevice *blkmap_dev;
 	const char *passphrase = NULL;
 	bool use_tkey = false;
+	bool pre_derived = false;
 	int part, ret, version;
 	u8 master_key[128];
 	char label[64];
 	u32 key_size;
 
-	/* Check for -t flag */
-	if (!strcmp(argv[1], "-t")) {
-		use_tkey = true;
+	/* Check for flags */
+	while (argc > 1 && argv[1][0] == '-') {
+		if (!strcmp(argv[1], "-t")) {
+			use_tkey = true;
+		} else if (!strcmp(argv[1], "-p")) {
+			pre_derived = true;
+		} else {
+			return CMD_RET_USAGE;
+		}
 		argc--;
 		argv++;
 	}
@@ -165,9 +172,21 @@ static int do_luks_unlock(struct cmd_tbl *cmdtp, int flag, int argc,
 	if (use_tkey) {
 		ret = unlock_with_tkey(dev_desc, &info, passphrase, master_key,
 				       &key_size);
+	} else if (pre_derived) {
+		/* Pre-derived key: passphrase is hex-encoded master key */
+		u8 key_buf[64];
+		size_t key_len = strlen(passphrase) / 2;
+
+		if (key_len > sizeof(key_buf) || hex2bin(key_buf, passphrase,
+							 key_len)) {
+			printf("Invalid hex key\n");
+			return CMD_RET_FAILURE;
+		}
+		ret = luks_unlock(dev_desc->bdev, &info, key_buf, key_len,
+				  true, master_key, &key_size);
 	} else {
 		/* Unlock with passphrase */
-		ret = luks_unlock(dev_desc->bdev, &info,(const u8 *)passphrase,
+		ret = luks_unlock(dev_desc->bdev, &info, (const u8 *)passphrase,
 				  strlen(passphrase), false, master_key,
 				  &key_size);
 	}
@@ -202,8 +221,9 @@ cleanup:
 static char luks_help_text[] =
 	"detect <interface> <dev[:part]> - detect if partition is LUKS encrypted\n"
 	"luks info <interface> <dev[:part]> - show LUKS header information\n"
-	"luks unlock [-t] <interface> <dev[:part]> <passphrase> - unlock LUKS partition\n"
-	"  -t: Use TKey hardware security token with passphrase as USS\n";
+	"luks unlock [-t] [-p] <interface> <dev[:part]> <passphrase> - unlock LUKS partition\n"
+	"  -t: Use TKey hardware security token with passphrase as USS\n"
+	"  -p: Treat passphrase as hex-encoded pre-derived master key (skip KDF)\n";
 
 U_BOOT_CMD_WITH_SUBCMDS(luks, "LUKS (Linux Unified Key Setup) operations",
 			luks_help_text,

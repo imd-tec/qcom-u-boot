@@ -182,8 +182,13 @@ static int handle_firmware_cmd(struct udevice *dev, u8 cmd, const u8 *data)
 
 static int handle_app_get_pubkey(struct tkey_emul_priv *priv)
 {
-	memcpy(priv->resp, priv->pubkey, 32);
-	priv->resp_len = 32;
+	/*
+	 * Response format: 1-byte response code (0x02) + 32-byte pubkey
+	 * tkey_get_pubkey() expects this format and skips the response code
+	 */
+	priv->resp[0] = 0x02;  /* Response code for GET_PUBKEY */
+	memcpy(priv->resp + 1, priv->pubkey, 32);
+	priv->resp_len = 33;
 	log_debug("GET_PUBKEY\n");
 
 	return 0;
