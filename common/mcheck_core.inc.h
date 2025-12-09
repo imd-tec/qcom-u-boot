@@ -70,8 +70,8 @@
 #define FREEFLOOD	((char)0xf5)
 #define PADDINGFLOOD	((char)0x58)
 
-// my normal run demands 4427-6449 chunks:
-#define REGISTRY_SZ	6608
+// Full test suite can exceed 10000 concurrent allocations
+#define REGISTRY_SZ	12000
 #define CANARY_DEPTH	2
 
 // avoid problems with BSS at early stage:
