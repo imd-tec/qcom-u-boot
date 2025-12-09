@@ -5923,11 +5923,13 @@ void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
 void *dlrealloc(void *oldmem, size_t bytes)
 {
 	mcheck_pedantic_prehook();
+#ifdef REALLOC_ZERO_BYTES_FREES
 	if (bytes == 0) {
 		if (oldmem)
 			dlfree(oldmem);
 		return NULL;
 	}
+#endif
 
 	if (oldmem == NULL)
 		return dlmalloc(bytes);
