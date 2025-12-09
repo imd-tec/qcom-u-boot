@@ -388,6 +388,10 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                 sorted_files = sorted(stats.files, key=lambda x: x['path'])
 
             for info in sorted_files:
+                # Skip files with 0 active lines unless show_empty is set
+                if not show_empty and info['active'] == 0:
+                    continue
+
                 filename = os.path.basename(info['path'])
                 if len(filename) > 35:
                     filename = filename[:32] + '...'
