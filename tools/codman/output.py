@@ -403,6 +403,9 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                     # Show file-level only
                     print(f"  {filename:<38} {info['total']:>7} lines")
 
+            # Add blank line after file list
+            print()
+
 
 def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
                        by_subdirs, show_files, show_empty):
