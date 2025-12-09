@@ -397,7 +397,7 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                     # Align with directory format: skip Files/Used columns,
                     # show %code, then lines in kLOC column, active in Used column
                     print(f"  {filename:<38} {'':>7} {'':>7} {'':>6} "
-                          f"{pct_active:>6.1f} {klocs(info['total']):>8} "
+                          f"{pct_active:>6.0f} {klocs(info['total']):>8} "
                           f"{klocs(info['active']):>7}")
                 else:
                     # Show file-level only
