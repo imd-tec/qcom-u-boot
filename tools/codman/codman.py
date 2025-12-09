@@ -484,6 +484,8 @@ def parse_args(argv=None):
                       help='Show individual files within directories')
     dirs.add_argument('-e', '--show-empty', action='store_true',
                       help='Show directories with 0 lines used')
+    dirs.add_argument('-k', '--kloc', action='store_true',
+                      help='Show line counts in kilolines (kLOC) instead of lines')
 
     # detail command
     detail = subparsers.add_parser('detail',
@@ -604,7 +606,7 @@ def do_output(args, all_srcs, used, skipped, results, srcdir):
     elif args.cmd == 'dirs':
         ok = output.show_dir_breakdown(all_srcs, used, results, srcdir,
                                         args.subdirs, args.show_files,
-                                        args.show_empty)
+                                        args.show_empty, getattr(args, 'kloc', False))
     else:
         # stats (default)
         ok = output.show_statistics(all_srcs, used, skipped, results, srcdir,

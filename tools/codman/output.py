@@ -347,7 +347,7 @@ def collect_dir_stats(all_sources, used_sources, file_results, srcdir,
 
 
 def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
-                    show_empty):
+                    show_empty, use_kloc=False):
     """Print directory statistics table.
 
     Args:
@@ -358,6 +358,7 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
             top-level only
         show_files (bool): If True, show individual files within directories
         show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC; otherwise show lines
     """
     # Sort alphabetically by directory name
     sorted_dirs = sorted(dir_stats.items(), key=lambda x: x[0])
@@ -373,9 +374,18 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
         display_path = dir_path
         if len(display_path) > 37:
             display_path = '...' + display_path[-34:]
+
+        # Format line counts based on use_kloc flag
+        if use_kloc:
+            lines_total_str = f'{klocs(stats.lines_total):>8}'
+            lines_used_str = f'{klocs(stats.lines_used):>7}'
+        else:
+            lines_total_str = f'{stats.lines_total:>8}'
+            lines_used_str = f'{stats.lines_used:>7}'
+
         print(f'{display_path:<40} {stats.total:>7} {stats.used:>7} '
               f'{pct_used:>6.0f} {pct_code:>6.0f} '
-              f'{klocs(stats.lines_total):>8} {klocs(stats.lines_used):>7}')
+              f'{lines_total_str} {lines_used_str}')
 
         # Show individual files if requested
         if show_files and stats.files:
@@ -394,11 +404,18 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                 if file_results:
                     # Show line-level details
                     pct_active = percent(info['active'], info['total'])
+                    # Format line counts based on use_kloc flag
+                    if use_kloc:
+                        total_str = f'{klocs(info["total"]):>8}'
+                        active_str = f'{klocs(info["active"]):>7}'
+                    else:
+                        total_str = f'{info["total"]:>8}'
+                        active_str = f'{info["active"]:>7}'
+
                     # Align with directory format: skip Files/Used columns,
-                    # show %code, then lines in kLOC column, active in Used column
+                    # show %code, then lines column, active in Used column
                     print(f"  {filename:<38} {'':>7} {'':>7} {'':>6} "
-                          f"{pct_active:>6.0f} {klocs(info['total']):>8} "
-                          f"{klocs(info['active']):>7}")
+                          f"{pct_active:>6.0f} {total_str} {active_str}")
                 else:
                     # Show file-level only
                     print(f"  {filename:<38} {info['total']:>7} lines")
@@ -408,7 +425,7 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
 
 
 def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
-                       by_subdirs, show_files, show_empty):
+                       by_subdirs, show_files, show_empty, use_kloc=False):
     """Show breakdown by directory (top-level or subdirectories).
 
     Args:
@@ -421,6 +438,7 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
              top-level only
         show_files (bool): If True, show individual files within each directory
         show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC; otherwise show lines
 
     Returns:
         bool: True on success
@@ -430,8 +448,10 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
 
     print_heading('BREAKDOWN BY TOP-LEVEL DIRECTORY' if by_subdirs else '',
                   width=table_width)
+    # Column header changes based on use_kloc
+    lines_header = 'kLOC' if use_kloc else 'Lines'
     print(f"{'Directory':<40} {'Files':>7} {'Used':>7} {'%Used':>6} " +
-          f"{'%Code':>6} {'kLOC':>8} {'Used':>7}")
+          f"{'%Code':>6} {lines_header:>8} {'Used':>7}")
     print('-' * table_width)
 
     # Collect directory statistics
@@ -439,7 +459,8 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
                                   srcdir, by_subdirs, show_files)
 
     # Print directory statistics
-    print_dir_stats(dir_stats, file_results, by_subdirs, show_files, show_empty)
+    print_dir_stats(dir_stats, file_results, by_subdirs, show_files, show_empty,
+                    use_kloc)
 
     print('-' * table_width)
     total_lines_all = sum(count_lines(f) for f in all_sources)
@@ -451,9 +472,18 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
         total_lines_used = sum(count_lines(f) for f in used_sources)
     pct_files = percent(len(used_sources), len(all_sources))
     pct_code = percent(total_lines_used, total_lines_all)
+
+    # Format totals based on use_kloc flag
+    if use_kloc:
+        total_str = f'{klocs(total_lines_all):>8}'
+        used_str = f'{klocs(total_lines_used):>7}'
+    else:
+        total_str = f'{total_lines_all:>8}'
+        used_str = f'{total_lines_used:>7}'
+
     print(f"{'TOTAL':<40} {len(all_sources):>7} {len(used_sources):>7} "
           f"{pct_files:>6.0f} {pct_code:>6.0f} "
-          f"{klocs(total_lines_all):>8} {klocs(total_lines_used):>7}")
+          f"{total_str} {used_str}")
     print_heading('', width=table_width)
     print()
 
