@@ -347,7 +347,7 @@ def collect_dir_stats(all_sources, used_sources, file_results, srcdir,
 
 
 def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
-                    show_empty):
+                    show_empty, use_kloc=False):
     """Print directory statistics table.
 
     Args:
@@ -358,6 +358,7 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
             top-level only
         show_files (bool): If True, show individual files within directories
         show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC; otherwise show lines
     """
     # Sort alphabetically by directory name
     sorted_dirs = sorted(dir_stats.items(), key=lambda x: x[0])
@@ -373,21 +374,29 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
         display_path = dir_path
         if len(display_path) > 37:
             display_path = '...' + display_path[-34:]
+
+        # Format line counts based on use_kloc flag
+        if use_kloc:
+            lines_total_str = f'{klocs(stats.lines_total):>8}'
+            lines_used_str = f'{klocs(stats.lines_used):>7}'
+        else:
+            lines_total_str = f'{stats.lines_total:>8}'
+            lines_used_str = f'{stats.lines_used:>7}'
+
         print(f'{display_path:<40} {stats.total:>7} {stats.used:>7} '
               f'{pct_used:>6.0f} {pct_code:>6.0f} '
-              f'{klocs(stats.lines_total):>8} {klocs(stats.lines_used):>7}')
+              f'{lines_total_str} {lines_used_str}')
 
         # Show individual files if requested
         if show_files and stats.files:
-            # Sort files by inactive lines (descending) for line-level, or
-            # alphabetically otherwise
-            if file_results:
-                sorted_files = sorted(stats.files, key=lambda x: x['inactive'],
-                                      reverse=True)
-            else:
-                sorted_files = sorted(stats.files, key=lambda x: x['path'])
+            # Sort files alphabetically by filename
+            sorted_files = sorted(stats.files, key=lambda x: os.path.basename(x['path']))
 
             for info in sorted_files:
+                # Skip files with 0 active lines unless show_empty is set
+                if not show_empty and info['active'] == 0:
+                    continue
+
                 filename = os.path.basename(info['path'])
                 if len(filename) > 35:
                     filename = filename[:32] + '...'
@@ -395,16 +404,28 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                 if file_results:
                     # Show line-level details
                     pct_active = percent(info['active'], info['total'])
-                    print(f"  {filename:<38} {info['total']:>7} "
-                          f"{info['active']:>7} {pct_active:>6.1f} "
-                          f"{info['inactive']:>7}")
+                    # Format line counts based on use_kloc flag
+                    if use_kloc:
+                        total_str = f'{klocs(info["total"]):>8}'
+                        active_str = f'{klocs(info["active"]):>7}'
+                    else:
+                        total_str = f'{info["total"]:>8}'
+                        active_str = f'{info["active"]:>7}'
+
+                    # Align with directory format: skip Files/Used columns,
+                    # show %code, then lines column, active in Used column
+                    print(f"  {filename:<38} {'':>7} {'':>7} {'':>6} "
+                          f"{pct_active:>6.0f} {total_str} {active_str}")
                 else:
                     # Show file-level only
                     print(f"  {filename:<38} {info['total']:>7} lines")
 
+            # Add blank line after file list
+            print()
+
 
 def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
-                       by_subdirs, show_files, show_empty):
+                       by_subdirs, show_files, show_empty, use_kloc=False):
     """Show breakdown by directory (top-level or subdirectories).
 
     Args:
@@ -417,6 +438,7 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
              top-level only
         show_files (bool): If True, show individual files within each directory
         show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC; otherwise show lines
 
     Returns:
         bool: True on success
@@ -426,8 +448,10 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
 
     print_heading('BREAKDOWN BY TOP-LEVEL DIRECTORY' if by_subdirs else '',
                   width=table_width)
+    # Column header changes based on use_kloc
+    lines_header = 'kLOC' if use_kloc else 'Lines'
     print(f"{'Directory':<40} {'Files':>7} {'Used':>7} {'%Used':>6} " +
-          f"{'%Code':>6} {'kLOC':>8} {'Used':>7}")
+          f"{'%Code':>6} {lines_header:>8} {'Used':>7}")
     print('-' * table_width)
 
     # Collect directory statistics
@@ -435,7 +459,8 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
                                   srcdir, by_subdirs, show_files)
 
     # Print directory statistics
-    print_dir_stats(dir_stats, file_results, by_subdirs, show_files, show_empty)
+    print_dir_stats(dir_stats, file_results, by_subdirs, show_files, show_empty,
+                    use_kloc)
 
     print('-' * table_width)
     total_lines_all = sum(count_lines(f) for f in all_sources)
@@ -447,13 +472,439 @@ def show_dir_breakdown(all_sources, used_sources, file_results, srcdir,
         total_lines_used = sum(count_lines(f) for f in used_sources)
     pct_files = percent(len(used_sources), len(all_sources))
     pct_code = percent(total_lines_used, total_lines_all)
+
+    # Format totals based on use_kloc flag
+    if use_kloc:
+        total_str = f'{klocs(total_lines_all):>8}'
+        used_str = f'{klocs(total_lines_used):>7}'
+    else:
+        total_str = f'{total_lines_all:>8}'
+        used_str = f'{total_lines_used:>7}'
+
     print(f"{'TOTAL':<40} {len(all_sources):>7} {len(used_sources):>7} "
           f"{pct_files:>6.0f} {pct_code:>6.0f} "
-          f"{klocs(total_lines_all):>8} {klocs(total_lines_used):>7}")
+          f"{total_str} {used_str}")
     print_heading('', width=table_width)
     print()
 
     return True
+
+
+def generate_html_breakdown(all_sources, used_sources, file_results, srcdir,
+                            by_subdirs, show_files, show_empty, use_kloc,
+                            html_file, board=None, analysis_method=None):
+    """Generate HTML output with colored directory breakdown.
+
+    Args:
+        all_sources (set): Set of all source file paths
+        used_sources (set): Set of used source file paths
+        file_results (dict): Optional dict mapping file paths to line analysis
+            results (or None)
+        srcdir (str): Root directory of the source tree
+        by_subdirs (bool): If True, show full subdirectory breakdown
+        show_files (bool): If True, show individual files within directories
+        show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC
+        html_file (str): Path to output HTML file
+        board (str): Board name (optional)
+        analysis_method (str): Analysis method used ('unifdef', 'lsp', or 'dwarf')
+
+    Returns:
+        bool: True on success
+    """
+    # Get git information
+    import subprocess
+    import datetime
+
+    try:
+        # Get short commit hash
+        git_hash = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=srcdir, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        git_hash = 'unknown'
+
+    try:
+        # Get commit date
+        git_date = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%cd', '--date=short'],
+            cwd=srcdir, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        git_date = datetime.date.today().strftime('%Y-%m-%d')
+
+    # Collect directory statistics
+    dir_stats = collect_dir_stats(all_sources, used_sources, file_results,
+                                  srcdir, by_subdirs, show_files)
+
+    # Calculate totals
+    total_lines_all = sum(count_lines(f) for f in all_sources)
+    if file_results:
+        total_lines_used = sum(r.active_lines for r in file_results.values())
+    else:
+        total_lines_used = sum(count_lines(f) for f in used_sources)
+
+    # Generate HTML
+    lines_header = 'kLOC' if use_kloc else 'Lines'
+    board_name = board if board else 'unknown'
+
+    html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Code Analysis Report</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }}
+        h1 {{
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }}
+        .build-info {{
+            background-color: #e8f5e9;
+            padding: 10px 15px;
+            margin: 10px 0 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            font-size: 0.95em;
+        }}
+        .build-info span {{
+            margin-right: 20px;
+            color: #555;
+        }}
+        .build-info .label {{
+            font-weight: bold;
+            color: #333;
+        }}
+        .summary {{
+            background-color: #fff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .summary-stat {{
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+        }}
+        .summary-stat .label {{
+            font-weight: bold;
+            color: #666;
+        }}
+        .summary-stat .value {{
+            font-size: 1.2em;
+            color: #4CAF50;
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }}
+        th {{
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px;
+            text-align: right;
+            position: sticky;
+            top: 0;
+        }}
+        th:first-child {{
+            text-align: left;
+        }}
+        td {{
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: right;
+        }}
+        td:first-child {{
+            text-align: left;
+            font-weight: 500;
+        }}
+        tr.directory {{
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }}
+        tr.directory:hover {{
+            background-color: #e8f5e9;
+        }}
+        tr.directory td:first-child::before {{
+            content: '▼ ';
+            color: #4CAF50;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }}
+        tr.directory.collapsed td:first-child::before {{
+            content: '▶ ';
+        }}
+        tr.directory.hidden {{
+            display: none;
+        }}
+        tr.file {{
+            background-color: #ffffff;
+            font-size: 0.9em;
+        }}
+        tr.file.hidden {{
+            display: none;
+        }}
+        tr.file td:first-child {{
+            padding-left: 40px;
+            font-weight: normal;
+            color: #555;
+        }}
+        tr.file:hover {{
+            background-color: #f5f5f5;
+        }}
+        .pct-high {{
+            color: #4CAF50;
+            font-weight: bold;
+        }}
+        .pct-med {{
+            color: #FF9800;
+            font-weight: bold;
+        }}
+        .pct-low {{
+            color: #f44336;
+            font-weight: bold;
+        }}
+        .spacer {{
+            height: 10px;
+        }}
+        tr.total {{
+            background-color: #e8f5e9;
+            font-weight: bold;
+            border-top: 2px solid #4CAF50;
+        }}
+    </style>
+</head>
+<body>
+    <h1>Code Analysis Report</h1>
+    <div class="build-info">
+        <span><span class="label">Board:</span> {board_name}</span>
+        <span><span class="label">Commit:</span> {git_hash}</span>
+        <span><span class="label">Date:</span> {git_date}</span>
+        <span><span class="label">Analysis:</span> {analysis_method or 'unknown'}</span>
+    </div>
+    <div class="summary">
+        <div class="summary-stat">
+            <span class="label">Total Files:</span>
+            <span class="value">{len(all_sources)}</span>
+        </div>
+        <div class="summary-stat">
+            <span class="label">Used Files:</span>
+            <span class="value">{len(used_sources)}</span>
+        </div>
+        <div class="summary-stat">
+            <span class="label">Usage:</span>
+            <span class="value">{percent(len(used_sources), len(all_sources)):.0f}%</span>
+        </div>
+        <div class="summary-stat">
+            <span class="label">Total Lines:</span>
+            <span class="value">{total_lines_all:,}</span>
+        </div>
+        <div class="summary-stat">
+            <span class="label">Used Lines:</span>
+            <span class="value">{total_lines_used:,}</span>
+        </div>
+        <div class="summary-stat">
+            <span class="label">Code Usage:</span>
+            <span class="value">{percent(total_lines_used, total_lines_all):.0f}%</span>
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Directory</th>
+                <th>Files</th>
+                <th>Used</th>
+                <th>%Used</th>
+                <th>%Code</th>
+                <th>{lines_header}</th>
+                <th>Used</th>
+            </tr>
+        </thead>
+        <tbody>
+'''
+
+    # Build hierarchical structure - only show top-level directories initially
+    # Group all directories by their top-level component
+    top_level_groups = {}
+    sorted_dirs = sorted(dir_stats.items(), key=lambda x: x[0])
+
+    for dir_path, stats in sorted_dirs:
+        # Skip directories with 0 lines used unless show_empty is set
+        if not show_empty and stats.lines_used == 0:
+            continue
+
+        # Get top-level directory name
+        parts = dir_path.split('/')
+        top_level = parts[0]
+
+        if top_level not in top_level_groups:
+            top_level_groups[top_level] = []
+
+        top_level_groups[top_level].append((dir_path, stats))
+
+    # Generate HTML for hierarchical structure
+    dir_counter = [0]  # Use list to allow modification in nested function
+
+    def render_directory(dir_path, stats, parent_id=None, indent_level=0):
+        """Render a directory row and its children."""
+        nonlocal html
+        dir_id = f'dir-{dir_counter[0]}'
+        dir_counter[0] += 1
+
+        pct_used = percent(stats.used, stats.total)
+        pct_code = percent(stats.lines_used, stats.lines_total)
+        pct_code_class = 'pct-high' if pct_code >= 75 else ('pct-med' if pct_code >= 50 else 'pct-low')
+
+        if use_kloc:
+            lines_total_str = f'{klocs(stats.lines_total)}'
+            lines_used_str = f'{klocs(stats.lines_used)}'
+        else:
+            lines_total_str = f'{stats.lines_total:,}'
+            lines_used_str = f'{stats.lines_used:,}'
+
+        # Add indentation to directory name
+        indent = '&nbsp;&nbsp;' * indent_level
+        display_name = f'{indent}{dir_path}' if indent_level > 0 else dir_path
+
+        # Start collapsed
+        collapsed_class = ' collapsed'
+        hidden_class = ' hidden' if parent_id else ''
+        parent_attr = f' data-parent-dir="{parent_id}"' if parent_id else ''
+
+        html += f'''            <tr class="directory{collapsed_class}{hidden_class}" data-dir-id="{dir_id}"{parent_attr}>
+                <td>{display_name}</td>
+                <td>{stats.total}</td>
+                <td>{stats.used}</td>
+                <td>{pct_used:.0f}</td>
+                <td class="{pct_code_class}">{pct_code:.0f}</td>
+                <td>{lines_total_str}</td>
+                <td>{lines_used_str}</td>
+            </tr>
+'''
+        return dir_id
+
+    # Render top-level directories and their hierarchies
+    for top_level in sorted(top_level_groups.keys()):
+        subdirs_list = top_level_groups[top_level]
+
+        # Aggregate stats for top-level directory
+        from collections import namedtuple
+        DirStats = namedtuple('DirStats', ['total', 'used', 'unused', 'lines_total', 'lines_used', 'files'])
+        total_files = sum(s.total for _, s in subdirs_list)
+        used_files = sum(s.used for _, s in subdirs_list)
+        total_lines = sum(s.lines_total for _, s in subdirs_list)
+        used_lines = sum(s.lines_used for _, s in subdirs_list)
+
+        top_stats = DirStats(total=total_files, used=used_files, unused=0,
+                            lines_total=total_lines, lines_used=used_lines, files=[])
+
+        # Render top-level directory with aggregated stats
+        top_dir_id = render_directory(top_level, top_stats, None, 0)
+
+        # Render all subdirectories under this top-level directory
+        for subdir_path, subdir_stats in sorted(subdirs_list):
+            subdir_id = render_directory(subdir_path, subdir_stats, top_dir_id, 1)
+
+            # Render files for this subdirectory
+            if show_files and subdir_stats.files:
+                sorted_files = sorted(subdir_stats.files,
+                                    key=lambda x: os.path.basename(x['path']))
+
+                for info in sorted_files:
+                    if not show_empty and info['active'] == 0:
+                        continue
+
+                    filename = os.path.basename(info['path'])
+
+                    if file_results:
+                        pct_active = percent(info['active'], info['total'])
+                        pct_active_class = ('pct-high' if pct_active >= 75
+                                          else ('pct-med' if pct_active >= 50 else 'pct-low'))
+
+                        if use_kloc:
+                            total_str = f'{klocs(info["total"])}'
+                            active_str = f'{klocs(info["active"])}'
+                        else:
+                            total_str = f'{info["total"]:,}'
+                            active_str = f'{info["active"]:,}'
+
+                        html += f'''            <tr class="file hidden" data-parent-dir="{subdir_id}">
+                <td>&nbsp;&nbsp;&nbsp;&nbsp;{filename}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="{pct_active_class}">{pct_active:.0f}</td>
+                <td>{total_str}</td>
+                <td>{active_str}</td>
+            </tr>
+'''
+
+    # Add total row
+    pct_files = percent(len(used_sources), len(all_sources))
+    pct_code_total = percent(total_lines_used, total_lines_all)
+
+    if use_kloc:
+        total_str = f'{klocs(total_lines_all)}'
+        used_str = f'{klocs(total_lines_used)}'
+    else:
+        total_str = f'{total_lines_all:,}'
+        used_str = f'{total_lines_used:,}'
+
+    html += f'''            <tr class="total">
+                <td>TOTAL</td>
+                <td>{len(all_sources)}</td>
+                <td>{len(used_sources)}</td>
+                <td>{pct_files:.0f}</td>
+                <td>{pct_code_total:.0f}</td>
+                <td>{total_str}</td>
+                <td>{used_str}</td>
+            </tr>
+        </tbody>
+    </table>
+    <script>
+        // Toggle file and subdirectory visibility when clicking on directory rows
+        document.addEventListener('DOMContentLoaded', function() {{
+            const dirRows = document.querySelectorAll('tr.directory');
+
+            dirRows.forEach(function(dirRow) {{
+                dirRow.addEventListener('click', function() {{
+                    const dirId = this.getAttribute('data-dir-id');
+                    const childRows = document.querySelectorAll('[data-parent-dir="' + dirId + '"]');
+
+                    // Toggle collapsed class on directory
+                    this.classList.toggle('collapsed');
+
+                    // Toggle hidden class on child rows (both files and subdirectories)
+                    childRows.forEach(function(childRow) {{
+                        childRow.classList.toggle('hidden');
+                    }});
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>
+'''
+
+    # Write HTML to file
+    try:
+        with open(html_file, 'w', encoding='utf-8') as f:
+            f.write(html)
+        tout.info(f'HTML report written to: {html_file}')
+        return True
+    except IOError as e:
+        tout.error(f'Failed to write HTML file: {e}')
+        return False
 
 
 def show_statistics(all_sources, used_sources, skipped_sources, file_results,

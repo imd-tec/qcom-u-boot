@@ -484,6 +484,10 @@ def parse_args(argv=None):
                       help='Show individual files within directories')
     dirs.add_argument('-e', '--show-empty', action='store_true',
                       help='Show directories with 0 lines used')
+    dirs.add_argument('-k', '--kloc', action='store_true',
+                      help='Show line counts in kilolines (kLOC) instead of lines')
+    dirs.add_argument('--html', type=str, metavar='FILE',
+                      help='Output results as HTML to the specified file')
 
     # detail command
     detail = subparsers.add_parser('detail',
@@ -546,21 +550,25 @@ def do_analysis(used, build_dir, srcdir, unifdef_path, include_headers, jobs,
         keep_temps (bool): If True, keep temporary files for debugging
 
     Returns:
-        dict: Line-level analysis results, or None if not requested/failed
+        tuple: (analysis_results, analysis_method) where analysis_method is
+            'unifdef', 'lsp', or 'dwarf'
     """
     if unifdef_path:
         config_file = os.path.join(build_dir, '.config')
         analyser = unifdef.UnifdefAnalyser(config_file, srcdir, used,
                                             unifdef_path, include_headers,
                                             keep_temps)
+        method = 'unifdef'
     elif use_lsp:
         analyser = lsp.LspAnalyser(build_dir, srcdir, used, keep_temps)
+        method = 'lsp'
     else:
         analyser = dwarf.DwarfAnalyser(build_dir, srcdir, used, keep_temps)
-    return analyser.process(jobs)
+        method = 'dwarf'
+    return analyser.process(jobs), method
 
 
-def do_output(args, all_srcs, used, skipped, results, srcdir):
+def do_output(args, all_srcs, used, skipped, results, srcdir, analysis_method):
     """Perform output operation based on command.
 
     Args:
@@ -570,6 +578,7 @@ def do_output(args, all_srcs, used, skipped, results, srcdir):
         skipped (set): Unused source files
         results (dict): Line-level analysis results (or None)
         srcdir (str): Source directory path
+        analysis_method (str): Analysis method used ('unifdef', 'lsp', or 'dwarf')
 
     Returns:
         bool: True on success, False on failure
@@ -602,9 +611,20 @@ def do_output(args, all_srcs, used, skipped, results, srcdir):
     elif args.cmd == 'copy-used':
         ok = output.copy_used_files(used, srcdir, args.copy_used)
     elif args.cmd == 'dirs':
-        ok = output.show_dir_breakdown(all_srcs, used, results, srcdir,
-                                        args.subdirs, args.show_files,
-                                        args.show_empty)
+        # Check if HTML output is requested
+        html_file = getattr(args, 'html', None)
+        if html_file:
+            ok = output.generate_html_breakdown(all_srcs, used, results, srcdir,
+                                                args.subdirs, args.show_files,
+                                                args.show_empty,
+                                                getattr(args, 'kloc', False),
+                                                html_file, args.board,
+                                                analysis_method)
+        else:
+            ok = output.show_dir_breakdown(all_srcs, used, results, srcdir,
+                                            args.subdirs, args.show_files,
+                                            args.show_empty,
+                                            getattr(args, 'kloc', False))
     else:
         # stats (default)
         ok = output.show_statistics(all_srcs, used, skipped, results, srcdir,
@@ -648,13 +668,14 @@ def main(argv=None):
     # Perform line-level analysis
     unifdef_path = None if (args.use_dwarf or args.use_lsp) else args.unifdef
     keep_temps = args.debug
-    results = do_analysis(files_to_analyse, build_dir, srcdir, unifdef_path,
-                          args.include_headers, args.jobs, args.use_lsp,
-                          keep_temps)
+    results, analysis_method = do_analysis(files_to_analyse, build_dir, srcdir,
+                                            unifdef_path, args.include_headers,
+                                            args.jobs, args.use_lsp, keep_temps)
     if results is None:
         return 1
 
-    if not do_output(args, all_srcs, used, skipped, results, srcdir):
+    if not do_output(args, all_srcs, used, skipped, results, srcdir,
+                     analysis_method):
         return 1
 
     return 0

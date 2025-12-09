@@ -355,13 +355,14 @@ CONFIG_VIDEO_LOGO=y
 
         # Run unifdef analysis
         unifdef_path = shutil.which('unifdef') or '/usr/bin/unifdef'
-        results = codman.do_analysis(used, self.build_dir, self.src_dir,
-                                     unifdef_path, include_headers=False,
-                                     jobs=1, use_lsp=False)
+        results, method = codman.do_analysis(used, self.build_dir, self.src_dir,
+                                             unifdef_path, include_headers=False,
+                                             jobs=1, use_lsp=False)
 
         # Should get results
         self.assertIsNotNone(results)
         self.assertGreater(len(results), 0)
+        self.assertEqual(method, 'unifdef')
 
         # Check that results have the expected structure
         for _file_path, result in results.items():
@@ -380,13 +381,15 @@ CONFIG_VIDEO_LOGO=y
             self.src_dir, self.build_dir, None)
 
         # Run DWARF analysis (unifdef_path=None)
-        results = codman.do_analysis(used, self.build_dir, self.src_dir,
-                                     unifdef_path=None, include_headers=False,
-                                     jobs=1, use_lsp=False)
+        results, method = codman.do_analysis(used, self.build_dir, self.src_dir,
+                                             unifdef_path=None,
+                                             include_headers=False,
+                                             jobs=1, use_lsp=False)
 
         # Should get results
         self.assertIsNotNone(results)
         self.assertGreater(len(results), 0)
+        self.assertEqual(method, 'dwarf')
 
         # Check that results have the expected structure
         for _file_path, result in results.items():
@@ -410,15 +413,16 @@ CONFIG_VIDEO_LOGO=y
 
         # Capture terminal output
         with terminal.capture() as (_stdout, stderr):
-            # Run unifdef analysis - should return None
+            # Run unifdef analysis - should return None results
             unifdef_path = shutil.which('unifdef') or '/usr/bin/unifdef'
-            results = codman.do_analysis(used, self.build_dir, self.src_dir,
-                                         unifdef_path,
-                                         include_headers=False, jobs=1,
-                                         use_lsp=False)
+            results, method = codman.do_analysis(used, self.build_dir,
+                                                 self.src_dir, unifdef_path,
+                                                 include_headers=False, jobs=1,
+                                                 use_lsp=False)
 
-        # Should return None when config is missing
+        # Should return None results when config is missing
         self.assertIsNone(results)
+        self.assertEqual(method, 'unifdef')
 
         # Check that error message was printed to stderr
         error_text = stderr.getvalue()
@@ -440,13 +444,15 @@ CONFIG_VIDEO_LOGO=y
             self.src_dir, self.build_dir, None)
 
         # Run LSP analysis (unifdef_path=None, use_lsp=True)
-        results = codman.do_analysis(used, self.build_dir, self.src_dir,
-                                     unifdef_path=None, include_headers=False,
-                                     jobs=1, use_lsp=True)
+        results, method = codman.do_analysis(used, self.build_dir, self.src_dir,
+                                             unifdef_path=None,
+                                             include_headers=False,
+                                             jobs=1, use_lsp=True)
 
         # Should get results
         self.assertIsNotNone(results)
         self.assertGreater(len(results), 0)
+        self.assertEqual(method, 'lsp')
 
         # Check that results have the expected structure
         for _file_path, result in results.items():

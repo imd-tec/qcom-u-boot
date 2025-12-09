@@ -135,7 +135,9 @@ The ``dirs command`` has a few extra options:
 
 * ``-s, --subdirs`` - Show a breakdown by subdirectory
 * ``-f, --show-files`` - Show individual files within directories (with ``-s``)
-* ``-e, --show-empty`` - Show directories with 0 lines used
+* ``-e, --show-empty`` - Show directories/files with 0 lines used
+* ``-k, --kloc`` - Show line counts in kilolines (kLOC) instead of raw lines
+* ``--html <file>`` - Generate an HTML report with collapsible drill-down
 
 Other:
 
@@ -156,27 +158,27 @@ Show overall statistics for sandbox build::
     ======================================================================
     FILE-LEVEL STATISTICS
     ======================================================================
-    Total source files:    14114
-    Used source files:      1046 (7.4%)
-    Unused source files:   13083 (92.7%)
+    Total source files:    15158
+    Used source files:      1172 (7.7%)
+    Unused source files:   14105 (93.1%)
 
-    Total lines of code:  3646331
-    Used lines of code:   192543 (5.3%)
-    Unused lines of code: 3453788 (94.7%)
+    Total lines of code:  3724057
+    Used lines of code:   243226 (6.5%)
+    Unused lines of code: 3480831 (93.5%)
     ======================================================================
 
     ======================================================================
     LINE-LEVEL STATISTICS (within compiled files)
     ======================================================================
-    Files analysed:              504
-    Total lines in used files:209915
-    Active lines:             192543 (91.7%)
-    Inactive lines:            17372 (8.3%)
+    Files analysed:              595
+    Total lines in used files:261490
+    Active lines:             243226 (93.0%)
+    Inactive lines:            18264 (7.0%)
     ======================================================================
 
     TOP 20 FILES WITH MOST INACTIVE CODE:
     ----------------------------------------------------------------------
-      2621 inactive lines (56.6%) - drivers/mtd/spi/spi-nor-core.c
+       2621 inactive lines (56.6%) - drivers/mtd/spi/spi-nor-core.c
         669 inactive lines (46.7%) - cmd/mem.c
         594 inactive lines (45.8%) - cmd/nvedit.c
         579 inactive lines (89.5%) - drivers/mtd/spi/spi-nor-ids.c
@@ -193,23 +195,29 @@ See which top-level directories contribute code::
 
 Output shows breakdown by directory::
 
-    BREAKDOWN BY TOP-LEVEL DIRECTORY
-    =================================================================================
-    Directory                                  Files    Used  %Used  %Code    kLOC   Used
-    ---------------------------------------------------------------------------------
-    arch                                         234     156     67     72    12.3   8.9
-    board                                        123      45     37     25     5.6   1.4
-    cmd                                           89      67     75     81     3.4   2.8
-    common                                       156     134     86     88     8.9   7.8
+    =======================================================================================
+    Directory                                  Files    Used  %Used  %Code    Lines    Used
+    ---------------------------------------------------------------------------------------
+    arch                                        3283     132      4      3   711047   19411
+    board                                       1373       1      0      0   443368      35
+    boot                                          81      45     56     67    35432   23748
+    cmd                                          243      76     31     29    65008   18714
+    common                                        94      37     39     47    54752   25463
     ...
 
 For detailed subdirectory breakdown::
 
     codman dirs --subdirs
 
-With ``--show-files``, also shows individual files within each directory::
+With ``--show-files`` (``-f``), also shows individual files within each
+directory. Files are sorted alphabetically and those with zero active lines
+are hidden by default (use ``-e`` to show them)::
 
     codman dirs --subdirs --show-files
+
+Use ``--kloc`` (``-k``) for a more compact display with kilolines::
+
+    codman dirs -sfk
 
 You can also specify a file filter::
 
@@ -217,26 +225,31 @@ You can also specify a file filter::
     =======================================================================================
     BREAKDOWN BY TOP-LEVEL DIRECTORY
     =======================================================================================
-    Directory                                  Files    Used  %Used  %Code     kLOC    Used
+    Directory                                  Files    Used  %Used  %Code    Lines    Used
     ---------------------------------------------------------------------------------------
-    arch/x86/include/asm                           5       2     40     36      0.6     0.2
-    arch/x86/lib                                   5       1     20      6      1.2     0.1
-    acpi.c                                      65      65  100.0       0
-    cmd                                            1       1    100    100      0.2     0.2
-    acpi.c                                     216     215   99.5       1
-    drivers/qfw                                    1       1    100     93      0.3     0.3
-    qfw_acpi.c                                 332     309   93.1      23
-    include/acpi                                   5       4     80     91      3.3     3.0
-    include/dm                                     1       1    100    100      0.4     0.4
-    include/power                                  1       1    100    100      0.2     0.2
-    lib/acpi                                      13       3     23     14      3.9     0.5
-    acpi_writer.c                              131      63   48.1      68
-    acpi_extra.c                               181     177   97.8       4
-    acpi.c                                     304     304  100.0       0
-    lib/efi_loader                                 1       1    100    100      0.1     0.1
-    efi_acpi.c                                  75      75  100.0       0
+    arch/x86/include/asm                           5       2     40     36      614     221
+    arch/x86/lib                                   5       1     20      6     1166      65
+      acpi.c                                                           100       65      65
+
+    cmd                                            1       1    100    100      216     215
+      acpi.c                                                           100      216     215
+
+    drivers/qfw                                    1       1    100     93      332     309
+      qfw_acpi.c                                                        93      332     309
+
+    include/acpi                                   5       4     80     91     3319    3032
+    include/dm                                     1       1    100    100      377     377
+    include/power                                  1       1    100    100      199     199
+    lib/acpi                                      13       3     23     14     3935     544
+      acpi.c                                                           100      304     304
+      acpi_extra.c                                                      98      181     177
+      acpi_writer.c                                                     48      131      63
+
+    lib/efi_loader                                 1       1    100    100       75      75
+      efi_acpi.c                                                       100       75      75
+
     ---------------------------------------------------------------------------------------
-    TOTAL                                         78      15     19      7     17.5     1.2
+    TOTAL                                         86      15     17      7    17547    1208
     =======================================================================================
 
 
@@ -282,42 +295,49 @@ See exactly which lines are active/inactive in a specific file::
 
 Lines with a ``-`` marker are not included in the build.
 
+HTML Reports (``dirs --html``)
+------------------------------
+
+Generate an interactive HTML report with collapsible directory structure::
+
+    codman -b qemu-x86 dirs -sf --html report.html
+
+The HTML report includes:
+
+* Color-coded metrics (green for high usage, red for low)
+* Collapsible hierarchical directory structure for drill-down navigation
+* Build information in the header (board name, analysis method)
+* File-level details within each directory
+
+This is useful for sharing reports or exploring large codebases interactively
+in a web browser.
+
 Unused Files (``unused``)
 -------------------------
 
 Find all source files that weren't compiled::
 
-    $ codman -b qemu-x86 unused  |head -15
-    Finding all source files......
-    Found 1043 used source files...
-    Loading configuration......
-    Loaded 8913 Kconfig symbols...
-    Loaded 8913 config symbols...
-    Analysing preprocessor conditionals......
-    Excluding 539 header files (use -i to include them)...
-    Running unifdef on 504 files......
-    Unused source files (13083):
-    arch/arc/cpu/arcv1/ivt.S
-    arch/arc/cpu/arcv2/ivt.S
-    arch/arc/include/asm/arc-bcr.h
+    $ codman -b qemu-x86 unused  |head -12
+    Unused source files (14105):
+      arch/arc/cpu/arcv1/ivt.S
+      arch/arc/cpu/arcv2/ivt.S
+      arch/arc/include/asm/arc-bcr.h
+      arch/arc/include/asm/arcregs.h
+      arch/arc/include/asm/bitops.h
+    ...
 
 Used Files (``used``)
 ---------------------
 
 List all source files that were included in a build::
 
-    $ codman -b qemu-x86 used  |head -15
-    Finding all source files......
-    Found 1046 used source files...
-    Loading configuration......
-    Loaded 8913 Kconfig symbols...
-    Loaded 8913 config symbols...
-    Analysing preprocessor conditionals......
-    Excluding 542 header files (use -i to include them)...
-    Running unifdef on 504 files......
-    Used source files (1046):
-    arch/x86/cpu/call32.S
-    arch/x86/cpu/cpu.c
+    $ codman -b qemu-x86 used  |head -12
+    Used source files (1172):
+      arch/x86/cpu/call32.S
+      arch/x86/cpu/cpu.c
+      arch/x86/cpu/cpu_x86.c
+      arch/x86/cpu/i386/call64.S
+      arch/x86/cpu/i386/cpu.c
     ...
 
 
