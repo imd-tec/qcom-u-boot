@@ -379,13 +379,8 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
 
         # Show individual files if requested
         if show_files and stats.files:
-            # Sort files by inactive lines (descending) for line-level, or
-            # alphabetically otherwise
-            if file_results:
-                sorted_files = sorted(stats.files, key=lambda x: x['inactive'],
-                                      reverse=True)
-            else:
-                sorted_files = sorted(stats.files, key=lambda x: x['path'])
+            # Sort files alphabetically by filename
+            sorted_files = sorted(stats.files, key=lambda x: os.path.basename(x['path']))
 
             for info in sorted_files:
                 # Skip files with 0 active lines unless show_empty is set
@@ -400,8 +395,7 @@ def print_dir_stats(dir_stats, file_results, by_subdirs, show_files,
                     # Show line-level details
                     pct_active = percent(info['active'], info['total'])
                     print(f"  {filename:<38} {info['total']:>7} "
-                          f"{info['active']:>7} {pct_active:>6.1f} "
-                          f"{info['inactive']:>7}")
+                          f"{info['active']:>7} {pct_active:>6.1f}")
                 else:
                     # Show file-level only
                     print(f"  {filename:<38} {info['total']:>7} lines")
