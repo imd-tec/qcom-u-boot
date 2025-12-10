@@ -16,6 +16,8 @@
 #include <string.h>
 
 #include <os.h>
+/* For BACKTRACE_MAX_FRAMES - include U-Boot's header after system headers */
+#include "../../../include/backtrace.h"
 
 /* libbacktrace state - created once and cached */
 static struct backtrace_state *bt_state;
@@ -77,46 +79,41 @@ static int bt_full_callback(void *data, uintptr_t pc, const char *fname,
 	return 0;  /* continue to get innermost frame for inlined functions */
 }
 
-char **os_backtrace_symbols(void *const *buffer, uint count)
+void os_backtrace_symbols(struct backtrace_ctx *ctx)
 {
+	char *end = ctx->sym_buf + BACKTRACE_SYM_BUFSZ;
 	struct backtrace_state *state;
-	char *str_storage;
-	char **strings;
-	uint i;
+	char *p = ctx->sym_buf;
+	int remaining, i;
 
 	state = get_bt_state();
 
-	/* Allocate array of string pointers plus space for strings */
-	strings = malloc(count * sizeof(char *) + count * 256);
-	if (!strings)
-		return NULL;
+	for (i = 0; i < ctx->count; i++) {
+		struct backtrace_frame *frame = &ctx->frame[i];
+		struct bt_sym_ctx sym_ctx;
 
-	/* String storage starts after the pointer array */
-	str_storage = (char *)(strings + count);
+		remaining = end - p;
+		if (remaining <= 1) {
+			/* No more space, leave remaining syms as NULL */
+			frame->sym = NULL;
+			continue;
+		}
 
-	for (i = 0; i < count; i++) {
-		struct bt_sym_ctx ctx;
-
-		strings[i] = str_storage + i * 256;
-		ctx.buf = strings[i];
-		ctx.size = 256;
-		ctx.found = 0;
+		frame->sym = p;
+		sym_ctx.buf = p;
+		sym_ctx.size = remaining;
+		sym_ctx.found = 0;
 
 		if (state) {
-			backtrace_pcinfo(state, (uintptr_t)buffer[i],
+			backtrace_pcinfo(state, (uintptr_t)frame->addr,
 					 bt_full_callback, bt_error_callback,
-					 &ctx);
+					 &sym_ctx);
 		}
 
 		/* Fall back to address if no symbol found */
-		if (!ctx.found)
-			snprintf(strings[i], 256, "%p", buffer[i]);
+		if (!sym_ctx.found)
+			snprintf(p, remaining, "%p", frame->addr);
+
+		p += strlen(p) + 1;
 	}
-
-	return strings;
-}
-
-void os_backtrace_symbols_free(char **strings)
-{
-	free(strings);
 }

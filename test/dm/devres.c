@@ -44,23 +44,21 @@ DM_TEST(dm_test_devres_alloc, UTF_SCAN_PDATA);
 /* Test devm_kfree() can be used to free memory too */
 static int dm_test_devres_free(struct unit_test_state *uts)
 {
-	ulong mem_start, mem_dev, mem_kmalloc;
+	ulong mem_start, mem_alloc;
 	struct udevice *dev;
 	void *ptr;
 
 	mem_start = ut_check_delta(0);
 	ut_assertok(uclass_first_device_err(UCLASS_TEST, &dev));
-	mem_dev = ut_check_delta(mem_start);
-	ut_assert(mem_dev > 0);
+	ut_assert(ut_check_delta(mem_start) > 0);
 
 	ptr = devm_kmalloc(dev, TEST_DEVRES_SIZE, 0);
 	ut_assert(ptr != NULL);
-	mem_kmalloc = ut_check_delta(mem_dev);
-	ut_assert(mem_kmalloc > 0);
 
 	/* Free the ptr and check that memory usage goes down */
+	mem_alloc = ut_check_delta(0);
 	devm_kfree(dev, ptr);
-	ut_assert(ut_check_delta(mem_kmalloc) < 0);
+	ut_assert(ut_check_delta(mem_alloc) < 0);
 
 	device_remove(dev, DM_REMOVE_NORMAL);
 	ut_asserteq(0, ut_check_delta(mem_start));

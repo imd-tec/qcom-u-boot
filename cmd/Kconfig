@@ -3018,6 +3018,15 @@ config CMD_LOG
 	  maximum log level for emitting of records). It also provides access
 	  to a command used for testing the log system.
 
+config CMD_MALLOC
+	bool "malloc - Show malloc statistics"
+	depends on MALLOC_DEBUG
+	default y
+	help
+	  This provides access to malloc information. It shows statistics
+	  about memory allocation, such as total memory allocated and
+	  currently in use.
+
 config CMD_MOUSE
 	bool "mouse - Show mouse input"
 	default y if MOUSE

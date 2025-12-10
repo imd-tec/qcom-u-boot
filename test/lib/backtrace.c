@@ -15,24 +15,25 @@
 /* Test backtrace_init() and backtrace_get_syms() */
 static int lib_test_backtrace(struct unit_test_state *uts)
 {
-	char buf[BACKTRACE_BUFSZ];
-	struct backtrace_ctx ctx;
+	static struct backtrace_ctx ctx;
 	bool found_self = false;
 	bool found_ut_run_list = false;
 	uint i;
 
 	ut_assert(backtrace_init(&ctx, 0) > 2);
-	ut_assertok(backtrace_get_syms(&ctx, buf, sizeof(buf)));
+	ut_assertok(backtrace_get_syms(&ctx, NULL, 0));
 
 	/*
 	 * Check for known functions in the call stack. With libbacktrace
 	 * we can find static functions too, so check for this test function.
 	 */
 	for (i = 0; i < ctx.count; i++) {
-		if (ctx.syms[i]) {
-			if (strstr(ctx.syms[i], "lib_test_backtrace"))
+		const struct backtrace_frame *frame = &ctx.frame[i];
+
+		if (frame->sym) {
+			if (strstr(frame->sym, "lib_test_backtrace"))
 				found_self = true;
-			if (strstr(ctx.syms[i], "ut_run_list"))
+			if (strstr(frame->sym, "ut_run_list"))
 				found_ut_run_list = true;
 		}
 	}
@@ -45,3 +46,40 @@ static int lib_test_backtrace(struct unit_test_state *uts)
 	return 0;
 }
 LIB_TEST(lib_test_backtrace, 0);
+
+/* Test backtrace_strf() and backtrace_str() */
+static int lib_test_backtrace_str(struct unit_test_state *uts)
+{
+	char pattern[128];
+	char buf[256];
+	const char *cstr;
+	char *str;
+	int line;
+
+	/* Test backtrace_strf() with skip=1 to skip backtrace_strf() itself */
+	line = __LINE__ + 1;
+	str = backtrace_strf(1, buf, sizeof(buf));
+	ut_assertnonnull(str);
+	ut_asserteq_ptr(buf, str);
+
+	printf("backtrace_strf: %s\n", str);
+	snprintf(pattern, sizeof(pattern),
+		 "lib_test_backtrace_str:%d <-ut_run_test:\\d+ <-ut_run_test_live_flat:\\d+",
+		 line);
+	ut_asserteq_regex(pattern, str);
+
+	/* Test backtrace_str() - copy result before printf since it may recurse */
+	line = __LINE__ + 1;
+	cstr = backtrace_str(0);
+	ut_assertnonnull(cstr);
+	strlcpy(buf, cstr, sizeof(buf));
+
+	printf("backtrace_str: %s\n", buf);
+	snprintf(pattern, sizeof(pattern),
+		 "lib_test_backtrace_str:%d <-ut_run_test:\\d+ <-ut_run_test_live_flat:\\d+",
+		 line);
+	ut_asserteq_regex(pattern, buf);
+
+	return 0;
+}
+LIB_TEST(lib_test_backtrace_str, 0);

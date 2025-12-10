@@ -568,23 +568,15 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 
 #ifdef __UBOOT__
 
-#if CONFIG_IS_ENABLED(UNIT_TEST)
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
 #define DEBUG 1
-#endif
-
-#ifdef MCHECK_HEAP_PROTECTION
-#define STATIC_IF_MCHECK static
-#undef MALLOC_COPY
-#undef MALLOC_ZERO
-static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
-static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
+#define CALLER_PARAM , const char *caller
+#define CALLER_ARG , caller
+#define CALLER_NULL , NULL
 #else
-#define STATIC_IF_MCHECK
-#define dlmalloc_impl dlmalloc
-#define dlfree_impl dlfree
-#define dlrealloc_impl dlrealloc
-#define dlmemalign_impl dlmemalign
-#define dlcalloc_impl dlcalloc
+#define CALLER_PARAM
+#define CALLER_ARG
+#define CALLER_NULL
 #endif
 
 #define LACKS_FCNTL_H
@@ -599,12 +591,12 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define MORECORE_CONTIGUOUS 1
 #define MORECORE_CANNOT_TRIM 1
 #define MORECORE_CLEARS 1
-#define NO_MALLOC_STATS 1
 #define USE_LOCKS 0
 #define USE_SPIN_LOCKS 0
 
-#if !CONFIG_IS_ENABLED(UNIT_TEST)
+#if !CONFIG_IS_ENABLED(UNIT_TEST) && !IS_ENABLED(CONFIG_MALLOC_DEBUG)
 #define NO_MALLINFO 1
+#define NO_MALLOC_STATS 1
 #endif
 #if !CONFIG_IS_ENABLED(SANDBOX)
 #define INSECURE 1
@@ -633,11 +625,30 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <string.h>
 #include <vsprintf.h>
 #include <asm/global_data.h>
+#include <linux/types.h>
 #include <valgrind/memcheck.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION) || CONFIG_IS_ENABLED(MALLOC_DEBUG)
+#define STATIC_IF_MCHECK static
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#undef MALLOC_COPY
+#undef MALLOC_ZERO
+static inline void MALLOC_ZERO(void *p, size_t sz) { memset(p, 0, sz); }
+static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(dest, src, sz); }
+#endif
+#else
+#define STATIC_IF_MCHECK
+#define dlmalloc_impl dlmalloc
+#define dlfree_impl dlfree
+#define dlrealloc_impl dlrealloc
+#define dlmemalign_impl dlmemalign
+#define dlcalloc_impl dlcalloc
+#endif
 
 static bool malloc_testing;	/* enable test mode */
 static int malloc_max_allocs;	/* return NULL after this many calls to malloc() */
@@ -645,6 +656,12 @@ static int malloc_max_allocs;	/* return NULL after this many calls to malloc() *
 ulong mem_malloc_start;
 ulong mem_malloc_end;
 ulong mem_malloc_brk;
+
+#ifndef NO_MALLOC_STATS
+static ulong malloc_count;
+static ulong free_count;
+static ulong realloc_count;
+#endif /* !NO_MALLOC_STATS */
 
 #endif /* __UBOOT__ */
 
@@ -3689,7 +3706,23 @@ static struct mallinfo internal_mallinfo(mstate m) {
   }
   return nm;
 }
+
 #endif /* !NO_MALLINFO */
+
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
+int malloc_get_info(struct malloc_info *info)
+{
+  struct mallinfo mi = internal_mallinfo(gm);
+
+  info->total_bytes = mem_malloc_end - mem_malloc_start;
+  info->in_use_bytes = mi.uordblks;
+  info->malloc_count = malloc_count;
+  info->free_count = free_count;
+  info->realloc_count = realloc_count;
+
+  return 0;
+}
+#endif
 
 #if !NO_MALLOC_STATS
 static void internal_malloc_stats(mstate m) {
@@ -4068,8 +4101,17 @@ static void unlink_large_chunk(mstate M, tchunkptr X) {
 #define internal_free(m, mem)\
    if (m == gm) dlfree(mem); else mspace_free(m,mem);
 #else /* MSPACES */
+/*
+ * When mcheck is enabled, internal calls must use the _impl functions
+ * to avoid going through the mcheck wrappers which expect user pointers.
+ */
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#define internal_malloc(m, b) dlmalloc_impl(b CALLER_NULL)
+#define internal_free(m, mem) dlfree_impl(mem)
+#else
 #define internal_malloc(m, b) dlmalloc(b)
 #define internal_free(m, mem) dlfree(mem)
+#endif
 #endif /* MSPACES */
 #endif /* ONLY_MSPACES */
 
@@ -4907,11 +4949,14 @@ static void* tmalloc_small(mstate m, size_t nb) {
 #if !ONLY_MSPACES
 
 STATIC_IF_MCHECK
-void* dlmalloc_impl(size_t bytes) {
+void *dlmalloc_impl(size_t bytes CALLER_PARAM) {
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT))
     return malloc_simple(bytes);
+#endif
+#if !NO_MALLOC_STATS
+  malloc_count++;
 #endif
 
   /* Return NULL if not initialized yet */
@@ -5079,6 +5124,9 @@ void* dlmalloc_impl(size_t bytes) {
 STATIC_IF_MCHECK
 void dlfree_impl(void* mem) {
 #ifdef __UBOOT__
+#if !NO_MALLOC_STATS
+  free_count++;
+#endif
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* free() is a no-op - all the memory will be freed on relocation */
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
@@ -5208,7 +5256,7 @@ void* dlcalloc_impl(size_t n_elements, size_t elem_size) {
         (req / n_elements != elem_size))
       req = MAX_SIZE_T; /* force downstream failure on overflow */
   }
-  mem = dlmalloc_impl(req);
+  mem = dlmalloc_impl(req CALLER_NULL);
 #ifdef __UBOOT__
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   /* For pre-reloc simple malloc, just zero the memory directly */
@@ -5647,6 +5695,9 @@ static void internal_inspect_all(mstate m,
 STATIC_IF_MCHECK
 void* dlrealloc_impl(void* oldmem, size_t bytes) {
 #ifdef __UBOOT__
+#if !NO_MALLOC_STATS
+  realloc_count++;
+#endif
 #if CONFIG_IS_ENABLED(SYS_MALLOC_F)
   if (!(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
     /* This is harder to support and should not be needed */
@@ -5660,7 +5711,7 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
 #endif
   void* mem = 0;
   if (oldmem == 0) {
-    mem = dlmalloc_impl(bytes);
+    mem = dlmalloc_impl(bytes CALLER_NULL);
   }
   else if (bytes >= MAX_REQUEST) {
     MALLOC_FAILURE_ACTION;
@@ -5713,7 +5764,7 @@ void* dlrealloc_impl(void* oldmem, size_t bytes) {
       }
     }
 #else /* defined(__UBOOT__) && NO_REALLOC_IN_PLACE */
-    mem = dlmalloc_impl(bytes);
+    mem = dlmalloc_impl(bytes CALLER_NULL);
     if (mem != 0) {
       size_t oc = chunksize(oldp) - overhead_for(oldp);
       memcpy(mem, oldmem, (oc < bytes)? oc : bytes);
@@ -5773,47 +5824,44 @@ void* dlmemalign_impl(size_t alignment, size_t bytes) {
     return memalign_simple(alignment, bytes);
 #endif
 #endif
-  if (alignment <= MALLOC_ALIGNMENT) {
-    return dlmalloc_impl(bytes);
-  }
+  /*
+   * With mcheck, the wrapper handles alignment via mcheck_memalign_prehook()
+   * which adds space for the header aligned to the requested alignment.
+   * The base pointer must still be properly aligned for this to work.
+   */
+  if (alignment <= MALLOC_ALIGNMENT)
+    return dlmalloc_impl(bytes CALLER_NULL);
   return internal_memalign(gm, alignment, bytes);
 }
 
 int dlposix_memalign(void** pp, size_t alignment, size_t bytes) {
   void* mem = 0;
-  if (alignment == MALLOC_ALIGNMENT)
-    mem = dlmalloc_impl(bytes);
-  else {
-    size_t d = alignment / sizeof(void*);
-    size_t r = alignment % sizeof(void*);
-    if (r != 0 || d == 0 || (d & (d-SIZE_T_ONE)) != 0)
-      return EINVAL;
-    else if (bytes <= MAX_REQUEST - alignment) {
-      if (alignment <  MIN_CHUNK_SIZE)
-        alignment = MIN_CHUNK_SIZE;
-      mem = internal_memalign(gm, alignment, bytes);
-    }
-  }
+  size_t d = alignment / sizeof(void*);
+  size_t r = alignment % sizeof(void*);
+
+  if (r != 0 || d == 0 || (d & (d-SIZE_T_ONE)) != 0)
+    return EINVAL;
+  if (bytes > MAX_REQUEST - alignment)
+    return ENOMEM;
+  mem = dlmemalign(alignment, bytes);
   if (mem == 0)
     return ENOMEM;
-  else {
-    *pp = mem;
-    return 0;
-  }
+  *pp = mem;
+  return 0;
 }
 
 void* dlvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign_impl(pagesz, bytes);
+  return dlmemalign(pagesz, bytes);
 }
 
 void* dlpvalloc(size_t bytes) {
   size_t pagesz;
   ensure_initialization();
   pagesz = mparams.page_size;
-  return dlmemalign_impl(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
+  return dlmemalign(pagesz, (bytes + pagesz - SIZE_T_ONE) & ~(pagesz - SIZE_T_ONE));
 }
 
 void** dlindependent_calloc(size_t n_elements, size_t elem_size,
@@ -5904,18 +5952,45 @@ size_t dlmalloc_usable_size(const void* mem) {
   return 0;
 }
 
-#ifdef MCHECK_HEAP_PROTECTION
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+#include <backtrace.h>
 #include "mcheck_core.inc.h"
+
+/* Guard against recursive backtrace calls during malloc */
+static bool in_backtrace __section(".data");
+
+/*
+ * Flag to disable backtrace collection when the stack is known to be corrupt.
+ * Set via malloc_backtrace_skip() before calling panic().
+ */
+static bool mcheck_skip_backtrace __section(".data");
+
+void malloc_backtrace_skip(bool skip)
+{
+	mcheck_skip_backtrace = skip;
+}
+
+static const char *mcheck_caller(void)
+{
+	const char *caller = NULL;
+
+	if (!in_backtrace && !mcheck_skip_backtrace) {
+		in_backtrace = true;
+		caller = backtrace_str(2);
+		in_backtrace = false;
+	}
+	return caller;
+}
 
 void *dlmalloc(size_t bytes)
 {
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
-	void *p = dlmalloc_impl(fullsz);
+	void *p = dlmalloc_impl(fullsz CALLER_NULL);
 
 	if (!p)
 		return p;
-	return mcheck_alloc_posthook(p, bytes);
+	return mcheck_alloc_posthook(p, bytes, mcheck_caller());
 }
 
 void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
@@ -5923,11 +5998,13 @@ void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
 void *dlrealloc(void *oldmem, size_t bytes)
 {
 	mcheck_pedantic_prehook();
+#ifdef REALLOC_ZERO_BYTES_FREES
 	if (bytes == 0) {
 		if (oldmem)
 			dlfree(oldmem);
 		return NULL;
 	}
+#endif
 
 	if (oldmem == NULL)
 		return dlmalloc(bytes);
@@ -5938,7 +6015,7 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	p = dlrealloc_impl(p, newsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, bytes);
+	return mcheck_alloc_noclean_posthook(p, bytes, mcheck_caller());
 }
 
 void *dlmemalign(size_t alignment, size_t bytes)
@@ -5949,7 +6026,7 @@ void *dlmemalign(size_t alignment, size_t bytes)
 
 	if (!p)
 		return p;
-	return mcheck_memalign_posthook(alignment, p, bytes);
+	return mcheck_memalign_posthook(alignment, p, bytes, mcheck_caller());
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
@@ -5963,7 +6040,7 @@ void *dlcalloc(size_t n, size_t elem_size)
 
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, n * elem_size);
+	return mcheck_alloc_noclean_posthook(p, n * elem_size, mcheck_caller());
 }
 
 /* mcheck API */
@@ -5982,6 +6059,35 @@ int mcheck(mcheck_abortfunc_t f)
 void mcheck_check_all(void) { mcheck_pedantic_check(); }
 
 enum mcheck_status mprobe(void *__ptr) { return mcheck_mprobe(__ptr); }
+#elif CONFIG_IS_ENABLED(MALLOC_DEBUG)
+/*
+ * Simple wrappers when MALLOC_DEBUG is enabled but not MCHECK.
+ * These just forward to the _impl functions.
+ */
+void *dlmalloc(size_t bytes)
+{
+	return dlmalloc_impl(bytes CALLER_NULL);
+}
+
+void dlfree(void *mem)
+{
+	dlfree_impl(mem);
+}
+
+void *dlrealloc(void *oldmem, size_t bytes)
+{
+	return dlrealloc_impl(oldmem, bytes);
+}
+
+void *dlmemalign(size_t alignment, size_t bytes)
+{
+	return dlmemalign_impl(alignment, bytes);
+}
+
+void *dlcalloc(size_t n, size_t elem_size)
+{
+	return dlcalloc_impl(n, elem_size);
+}
 #endif /* MCHECK_HEAP_PROTECTION */
 
 #endif /* !ONLY_MSPACES */
@@ -6940,6 +7046,168 @@ void malloc_enable_testing(int max_allocs)
 void malloc_disable_testing(void)
 {
 	malloc_testing = false;
+}
+
+/**
+ * find_mcheck_hdr_in_chunk() - find mcheck header within a chunk
+ *
+ * For memalign allocations, the mcheck header may be at an offset from
+ * the chunk start to maintain alignment. Look up the header in the
+ * mcheck registry, which stores pointers to all active headers.
+ *
+ * @mem: chunk memory pointer (from chunk2mem)
+ * @sz: chunk size
+ * Return: pointer to mcheck header if found, NULL otherwise
+ */
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+static struct mcheck_hdr *find_mcheck_hdr_in_chunk(void *mem, size_t sz)
+{
+	struct mcheck_hdr *hdr;
+	char *start = (char *)mem;
+	char *end = start + sz;
+	int i, j;
+
+	for (i = 0; i < REGISTRY_SZ; i++) {
+		hdr = mcheck_registry[i];
+		if (!hdr)
+			continue;
+
+		/* Check if this header falls within our chunk */
+		if ((char *)hdr < start || (char *)hdr >= end)
+			continue;
+
+		/* Validate the aln_skip is consistent with position */
+		if ((char *)hdr != start + hdr->aln_skip)
+			continue;
+
+		/* Verify canary is valid (not freed) */
+		for (j = 0; j < CANARY_DEPTH; j++) {
+			if (hdr->canary.elems[j] != MAGICWORD)
+				goto next;
+		}
+
+		return hdr;
+next:
+		continue;
+	}
+
+	return NULL;
+}
+
+/**
+ * find_freed_mcheck_hdr() - find a freed mcheck header in a free chunk
+ *
+ * For freed chunks, the mcheck header remains with MAGICFREE canaries.
+ * Since freed entries are removed from the registry, scan the chunk
+ * for the MAGICFREE pattern. Only check offset 0 since free chunks
+ * may have been coalesced and we want the first (original) allocation.
+ *
+ * Note: dlmalloc overwrites the first 16 bytes (size, aln_skip) with
+ * free list pointers (fd, bk), but the canary and caller remain intact.
+ *
+ * @mem: chunk memory pointer (from chunk2mem)
+ * @sz: chunk size
+ * Return: pointer to mcheck header if found, NULL otherwise
+ */
+static struct mcheck_hdr *find_freed_mcheck_hdr(void *mem, size_t sz)
+{
+	struct mcheck_hdr *hdr = (struct mcheck_hdr *)mem;
+	int i;
+
+	/* Only check at offset 0 - coalesced chunks lose alignment info */
+	if (sz < sizeof(struct mcheck_hdr))
+		return NULL;
+
+	/* Check for MAGICFREE canary pattern */
+	for (i = 0; i < CANARY_DEPTH; i++) {
+		if (hdr->canary.elems[i] != MAGICFREE)
+			return NULL;
+	}
+
+	return hdr;
+}
+#endif
+
+void malloc_dump(void)
+{
+	mchunkptr q;
+	msegmentptr s;
+	size_t used = 0, free_space = 0;
+	int used_count = 0, free_count = 0;
+
+	if (!is_initialized(gm)) {
+		printf("dlmalloc not initialized\n");
+		return;
+	}
+
+	printf("Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
+	printf("%12s  %10s  %s\n", "Address", "Size", "Status");
+	printf("----------------------------------\n");
+
+	s = &gm->seg;
+	while (s != 0) {
+		q = align_as_chunk(s->base);
+
+		/* Show chunk header before first allocation */
+		printf("%12lx  %10zx  (chunk header)\n", (ulong)s->base,
+		       (size_t)((char *)chunk2mem(q) - (char *)s->base));
+
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			size_t sz = chunksize(q);
+			void *mem = chunk2mem(q);
+
+			if (is_inuse(q)) {
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+				struct mcheck_hdr *hdr;
+
+				hdr = find_mcheck_hdr_in_chunk(mem, sz);
+				if (hdr && hdr->caller[0])
+					printf("%12lx  %10zx        %s\n",
+					       (ulong)mem, sz, hdr->caller);
+				else
+					printf("%12lx  %10zx\n",
+					       (ulong)mem, sz);
+#else
+				printf("%12lx  %10zx\n",
+				       (ulong)mem, sz);
+#endif
+				used += sz;
+				used_count++;
+			} else {
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+				struct mcheck_hdr *hdr;
+
+				hdr = find_freed_mcheck_hdr(mem, sz);
+				if (hdr && hdr->caller[0])
+					printf("%12lx  %10zx  free  %s\n",
+					       (ulong)mem, sz, hdr->caller);
+				else
+					printf("%12lx  %10zx  free\n",
+					       (ulong)mem, sz);
+#else
+				printf("%12lx  %10zx  free\n",
+				       (ulong)mem, sz);
+#endif
+				free_space += sz;
+				free_count++;
+			}
+			q = next_chunk(q);
+		}
+		s = s->next;
+	}
+
+	/* Print top chunk (wilderness) */
+	if (gm->top && gm->topsize > 0) {
+		printf("%12lx  %10zx  top\n",
+		       (ulong)chunk2mem(gm->top), gm->topsize);
+		free_space += gm->topsize;
+	}
+
+	printf("%12lx  %10s  end\n", mem_malloc_end, "");
+	printf("----------------------------------\n");
+	printf("Used: %zx bytes in %d chunks\n", used, used_count);
+	printf("Free: %zx bytes in %d chunks + top\n", free_space, free_count);
 }
 
 int initf_malloc(void)

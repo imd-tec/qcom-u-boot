@@ -665,7 +665,27 @@ void mspace_inspect_all(mspace msp,
 /* --------------------- U-Boot additions --------------------- */
 
 #ifdef __UBOOT__
+#include <linux/errno.h>
 #include <linux/types.h>
+
+/**
+ * struct malloc_info - Memory allocation statistics
+ *
+ * This is filled in by malloc_get_info().
+ *
+ * @total_bytes: Total bytes available in the heap
+ * @in_use_bytes: Current bytes allocated (in use by application)
+ * @malloc_count: Number of calls to malloc()
+ * @free_count: Number of calls to free()
+ * @realloc_count: Number of calls to realloc()
+ */
+struct malloc_info {
+	ulong total_bytes;
+	ulong in_use_bytes;
+	ulong malloc_count;
+	ulong free_count;
+	ulong realloc_count;
+};
 
 /* Memory pool boundaries */
 extern ulong mem_malloc_start;
@@ -683,6 +703,29 @@ void malloc_enable_testing(int max_allocs);
  * malloc_disable_testing() - Disable malloc failure testing
  */
 void malloc_disable_testing(void);
+
+/**
+ * malloc_dump() - Print a dump of all heap chunks
+ *
+ * Walks the dlmalloc heap from start to end, printing each chunk's
+ * address, size, and status (used/free/top).
+ */
+void malloc_dump(void);
+
+/**
+ * malloc_backtrace_skip() - Control backtrace collection in malloc
+ *
+ * When the stack is corrupted (e.g., by a stack overflow), collecting
+ * a backtrace during malloc can crash. Use this function to disable
+ * backtrace collection before corrupting the stack.
+ *
+ * @skip: true to skip backtrace collection, false to enable it
+ */
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+void malloc_backtrace_skip(bool skip);
+#else
+static inline void malloc_backtrace_skip(bool skip) {}
+#endif
 
 /**
  * mem_malloc_init() - Initialize the malloc() heap
@@ -734,6 +777,21 @@ void *memalign_simple(size_t alignment, size_t bytes);
  * Return: 0 (always succeeds)
  */
 int initf_malloc(void);
+
+/**
+ * malloc_get_info() - Get memory allocation statistics
+ *
+ * @info: Place to put the statistics
+ * Return: 0 on success, -ENOSYS if not available (MALLOC_DEBUG not enabled)
+ */
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG)
+int malloc_get_info(struct malloc_info *info);
+#else
+static inline int malloc_get_info(struct malloc_info *info)
+{
+	return -ENOSYS;
+}
+#endif
 
 #endif /* __UBOOT__ */
 

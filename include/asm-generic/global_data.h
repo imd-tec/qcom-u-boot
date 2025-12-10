@@ -348,6 +348,12 @@ struct global_data {
 	 */
 	struct membuf console_out;
 	/**
+	 * @console_out_ovf: overflow byte count for console recording
+	 *
+	 * Number of bytes that could not be written due to buffer overflow.
+	 */
+	int console_out_ovf;
+	/**
 	 * @console_in: input buffer for console recording
 	 *
 	 * If console recording is activated, this buffer can be used to
@@ -364,6 +370,12 @@ struct global_data {
 	 * @video_bottom: bottom of video frame buffer area
 	 */
 	ulong video_bottom;
+#endif
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+	/**
+	 * @glyph_count: number of glyphs rendered
+	 */
+	uint glyph_count;
 #endif
 #ifdef CONFIG_BOOTSTAGE
 	/**
@@ -579,6 +591,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_malloc_ptr()		0L
 #endif
 
+#ifdef CONFIG_CONSOLE_RECORD
+#define gd_console_out()		(&gd->console_out)
+#define gd_console_out_ovf()		gd->console_out_ovf
+#else
+#define gd_console_out()		NULL
+#define gd_console_out_ovf()		0
+#endif
+
 #if CONFIG_IS_ENABLED(UPL)
 #define gd_upl()		gd->upl
 #define gd_set_upl(_val)	gd->upl = (_val)
@@ -635,6 +655,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_pager()		NULL
 #define gd_pagerp()		NULL
 #define gd_pager_page_len()	0
+#endif
+
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+#define gd_glyph_count()		gd->glyph_count
+#define gd_inc_glyph_count()		gd->glyph_count++
+#else
+#define gd_glyph_count()		0
+#define gd_inc_glyph_count()
 #endif
 
 /**

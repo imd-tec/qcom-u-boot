@@ -190,7 +190,16 @@ static int sandbox_mmc_probe(struct udevice *dev)
 		}
 	}
 
-	return mmc_init(&plat->mmc);
+	ret = mmc_init(&plat->mmc);
+	if (ret) {
+		if (plat->fname)
+			os_unmap(priv->buf, priv->size);
+		else
+			free(priv->buf);
+		return ret;
+	}
+
+	return 0;
 }
 
 static int sandbox_mmc_remove(struct udevice *dev)

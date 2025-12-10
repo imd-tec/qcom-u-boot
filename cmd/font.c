@@ -11,6 +11,16 @@
 #include <video.h>
 #include <video_console.h>
 
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+static int do_font_info(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
+{
+	printf("glyphs rendered: %u\n", gd->glyph_count);
+
+	return 0;
+}
+#endif
+
 static int do_font_list(struct cmd_tbl *cmdtp, int flag, int argc,
 			char *const argv[])
 {
@@ -75,12 +85,22 @@ static int do_font_size(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
+#if CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS)
+#define FONT_INFO_HELP	"\nfont info - show glyph rendering statistics"
+#define FONT_INFO_SUB	, U_BOOT_SUBCMD_MKENT(info, 1, 1, do_font_info)
+#else
+#define FONT_INFO_HELP
+#define FONT_INFO_SUB
+#endif
+
 U_BOOT_LONGHELP(font,
 	"list       - list available fonts\n"
 	"font select <name> [<size>] - select font to use\n"
-	"font size <size> - select font size to");
+	"font size <size> - select font size to"
+	FONT_INFO_HELP);
 
 U_BOOT_CMD_WITH_SUBCMDS(font, "Fonts", font_help_text,
 	U_BOOT_SUBCMD_MKENT(list, 1, 1, do_font_list),
 	U_BOOT_SUBCMD_MKENT(select, 3, 1, do_font_select),
-	U_BOOT_SUBCMD_MKENT(size, 2, 1, do_font_size));
+	U_BOOT_SUBCMD_MKENT(size, 2, 1, do_font_size)
+	FONT_INFO_SUB);

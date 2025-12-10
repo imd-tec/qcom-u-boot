@@ -178,7 +178,7 @@ COMMON_TEST(common_test_realloc_null, 0);
 /*
  * Test realloc() with zero size
  *
- * Standard dlmalloc behavior (without REALLOC_ZERO_BYTES_FREES or mcheck):
+ * Standard dlmalloc behavior (without REALLOC_ZERO_BYTES_FREES):
  * realloc(ptr, 0) returns a minimum-sized allocation.
  */
 static int common_test_realloc_zero(struct unit_test_state *uts)

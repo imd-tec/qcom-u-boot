@@ -45,8 +45,8 @@
  *       an array, for index(+1/-1) errors.
  *
  * U-Boot is a BL, not an OS with a lib. Activity of the library is set not in runtime,
- * rather in compile-time, by MCHECK_HEAP_PROTECTION macro. That guarantees that
- * we haven't missed first malloc.
+ * rather in compile-time, by CONFIG_MCHECK_HEAP_PROTECTION macro. That
+ * guarantees that we haven't missed first malloc.
  */
 
 /*
@@ -59,7 +59,7 @@
 #define _MCHECKCORE_INC_H      1
 #include "mcheck.h"
 
-#if defined(MCHECK_HEAP_PROTECTION)
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #define mcheck_flood memset
 
 // these are from /dev/random:
@@ -70,9 +70,10 @@
 #define FREEFLOOD	((char)0xf5)
 #define PADDINGFLOOD	((char)0x58)
 
-// my normal run demands 4427-6449 chunks:
-#define REGISTRY_SZ	6608
+// Full test suite can exceed 10000 concurrent allocations
+#define REGISTRY_SZ	12000
 #define CANARY_DEPTH	2
+#define MCHECK_CALLER_LEN	48
 
 // avoid problems with BSS at early stage:
 static char mcheck_pedantic_flag __section(".data") = 0;
@@ -88,6 +89,7 @@ struct mcheck_hdr {
 	size_t size; /* Exact size requested by user.  */
 	size_t aln_skip; /* Ignored bytes, before the mcheck_hdr, to fulfill alignment */
 	mcheck_canary canary; /* Magic number to check header integrity.  */
+	char caller[MCHECK_CALLER_LEN]; /* caller info for debugging */
 };
 
 static void mcheck_default_abort(enum mcheck_status status, const void *p)
@@ -196,8 +198,10 @@ static size_t mcheck_alloc_prehook(size_t sz)
 }
 
 static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
-				     size_t alignment, int clean_content)
+				     size_t alignment, int clean_content,
+				     const char *caller)
 {
+	static bool overflow_msg_shown;
 	const size_t slop = alignment ?
 		mcheck_evaluate_memalign_prefix_size(alignment) - sizeof(struct mcheck_hdr) : 0;
 	struct mcheck_hdr *hdr = (struct mcheck_hdr *)((char *)altoghether_ptr + slop);
@@ -207,6 +211,10 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 	hdr->aln_skip = slop;
 	for (i = 0; i < CANARY_DEPTH; ++i)
 		hdr->canary.elems[i] = MAGICWORD;
+	if (caller)
+		strlcpy(hdr->caller, caller, MCHECK_CALLER_LEN);
+	else
+		hdr->caller[0] = '\0';
 
 	char *payload = (char *)&hdr[1];
 
@@ -232,21 +240,26 @@ static void *mcheck_allocated_helper(void *altoghether_ptr, size_t customer_sz,
 			return payload; // normal end
 		}
 
-	static char *overflow_msg = "\n\n\nERROR: mcheck registry overflow, pedantic check would be incomplete!!\n\n\n\n";
-
-	printf("%s", overflow_msg);
-	overflow_msg = "(mcheck registry full)";
+	if (!overflow_msg_shown) {
+		overflow_msg_shown = true;
+		printf("\n\nERROR: mcheck registry overflow, pedantic check would be incomplete!\n\n");
+	}
 	return payload;
 }
 
-static void *mcheck_alloc_posthook(void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_alloc_posthook(void *altoghether_ptr, size_t customer_sz,
+				   const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, ANY_ALIGNMENT, CLEAN_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz,
+				       ANY_ALIGNMENT, CLEAN_CONTENT, caller);
 }
 
-static void *mcheck_alloc_noclean_posthook(void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_alloc_noclean_posthook(void *altoghether_ptr,
+					   size_t customer_sz,
+					   const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, ANY_ALIGNMENT, KEEP_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz,
+				       ANY_ALIGNMENT, KEEP_CONTENT, caller);
 }
 
 static size_t mcheck_memalign_prehook(size_t alig, size_t sz)
@@ -254,9 +267,11 @@ static size_t mcheck_memalign_prehook(size_t alig, size_t sz)
 	return mcheck_evaluate_memalign_prefix_size(alig) + sz + sizeof(mcheck_canary);
 }
 
-static void *mcheck_memalign_posthook(size_t alignment, void *altoghether_ptr, size_t customer_sz)
+static void *mcheck_memalign_posthook(size_t alignment, void *altoghether_ptr,
+				      size_t customer_sz, const char *caller)
 {
-	return mcheck_allocated_helper(altoghether_ptr, customer_sz, alignment, CLEAN_CONTENT);
+	return mcheck_allocated_helper(altoghether_ptr, customer_sz, alignment,
+				       CLEAN_CONTENT, caller);
 }
 
 static enum mcheck_status mcheck_mprobe(void *ptr)
@@ -289,14 +304,14 @@ static void mcheck_initialize(mcheck_abortfunc_t new_func, char pedantic_flag)
 
 void mcheck_on_ramrelocation(size_t offset)
 {
-	char *p;
 	int i;
-	// Simple, but inaccurate strategy: drop the pre-reloc heap
+
+	/*
+	 * Pre-relocation heap allocations are no longer valid after
+	 * relocation. Clear the registry since we can't track them.
+	 */
 	for (i = 0; i < REGISTRY_SZ; ++i)
-		if ((p = mcheck_registry[i]) != NULL ) {
-			printf("mcheck, WRN: forgetting %p chunk\n", p);
-			mcheck_registry[i] = 0;
-		}
+		mcheck_registry[i] = 0;
 
 	mcheck_chunk_count = 0;
 }

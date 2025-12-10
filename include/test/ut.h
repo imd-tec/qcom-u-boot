@@ -13,6 +13,9 @@
 #include <linux/err.h>
 #include <test/test.h>
 
+/* Size of error buffer for ut_check_regex() */
+#define UT_REGEX_ERR_SIZE	256
+
 struct unit_test_state;
 
 /**
@@ -40,6 +43,16 @@ void ut_fail(struct unit_test_state *uts, const char *fname, int line,
 void ut_failf(struct unit_test_state *uts, const char *fname, int line,
 	      const char *func, const char *cond, const char *fmt, ...)
 			__attribute__ ((format (__printf__, 6, 7)));
+
+/**
+ * ut_check_regex() - Check if a string matches a regex pattern
+ *
+ * @pattern: Regular expression pattern
+ * @str: String to match against
+ * @err: Buffer to hold error message on failure (UT_REGEX_ERR_SIZE bytes)
+ * Return: 0 if match, -EINVAL if pattern is invalid, -ENOENT if no match
+ */
+int ut_check_regex(const char *pattern, const char *str, char *err);
 
 /**
  * ut_check_console_line() - Check the next console line against expectations
@@ -250,6 +263,22 @@ int ut_check_console_dump(struct unit_test_state *uts, int total_bytes);
 			if (!uts->soft_fail)				\
 				return CMD_RET_FAILURE;			\
 		}							\
+	}								\
+	__ret;								\
+})
+
+/* Assert that a string matches a regex pattern */
+#define ut_asserteq_regex(pattern, str) ({				\
+	const char *_pattern = (pattern), *_str = (str);		\
+	char _err[UT_REGEX_ERR_SIZE];					\
+	int __ret = 0;							\
+									\
+	__ret = ut_check_regex(_pattern, _str, _err);			\
+	if (__ret) {							\
+		ut_failf(uts, __FILE__, __LINE__, __func__,		\
+			 #pattern " matches " #str, "%s", _err);	\
+		if (!uts->soft_fail)					\
+			return CMD_RET_FAILURE;				\
 	}								\
 	__ret;								\
 })

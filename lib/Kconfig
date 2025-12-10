@@ -36,6 +36,22 @@ config BACKTRACE
 	  stack. This is currently only available on sandbox. The backtrace
 	  command can be used to print the backtrace.
 
+config BACKTRACE_SUMMARY_FRAMES
+	int "Number of frames in condensed backtrace"
+	depends on BACKTRACE
+	default 3
+	help
+	  Number of stack frames to include in the condensed backtrace
+	  string returned by backtrace_str(). This affects BSS usage
+	  since space must be allocated for the string.
+
+config LIB_FORMAT_SIZE
+	bool
+	default y
+	help
+	  Enables the format_size() helper which formats a size as a
+	  human-readable string.
+
 config BCH
 	bool "Enable Software based BCH ECC"
 	help

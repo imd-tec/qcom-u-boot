@@ -606,6 +606,7 @@ static int create_children(struct unit_test_state *uts, struct udevice *parent,
 		pdata = calloc(1, sizeof(*pdata));
 		pdata->ping_add = key + i;
 		dev_set_plat(dev, pdata);
+		dev_or_flags(dev, DM_FLAG_ALLOC_PDATA);
 		if (child)
 			child[i] = dev;
 	}

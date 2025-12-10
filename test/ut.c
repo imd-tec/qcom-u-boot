@@ -6,7 +6,11 @@
  */
 
 #include <console.h>
+#include <errno.h>
 #include <malloc.h>
+#include <membuf.h>
+#include <slre.h>
+#include <vsprintf.h>
 #ifdef CONFIG_SANDBOX
 #include <asm/state.h>
 #endif
@@ -38,6 +42,33 @@ void ut_failf(struct unit_test_state *uts, const char *fname, int line,
 	uts->cur.fail_count++;
 }
 
+int ut_check_regex(const char *pattern, const char *str, char *err)
+{
+	struct slre slre;
+
+	if (!pattern || !str) {
+		snprintf(err, UT_REGEX_ERR_SIZE,
+			 "NULL value: pattern=%s, str=%s",
+			 pattern ? pattern : "(null)",
+			 str ? str : "(null)");
+		return -EINVAL;
+	}
+
+	if (!slre_compile(&slre, pattern)) {
+		snprintf(err, UT_REGEX_ERR_SIZE,
+			 "Invalid regex '%s': %s", pattern, slre.err_str);
+		return -EINVAL;
+	}
+
+	if (!slre_match(&slre, str, strlen(str), NULL)) {
+		snprintf(err, UT_REGEX_ERR_SIZE,
+			 "No match: pattern '%s', str '%s'", pattern, str);
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
 ulong ut_check_free(void)
 {
 	struct mallinfo info = mallinfo();
@@ -56,8 +87,18 @@ static int readline_check(struct unit_test_state *uts)
 
 	ret = console_record_readline(uts->actual_str, sizeof(uts->actual_str));
 	if (ret == -ENOSPC) {
-		ut_fail(uts, __FILE__, __LINE__, __func__,
-			"Console record buffer too small - increase CONFIG_CONSOLE_RECORD_OUT_SIZE");
+		if (IS_ENABLED(CONFIG_CONSOLE_RECORD)) {
+			int cur_size = membuf_size(gd_console_out());
+
+			ut_failf(uts, __FILE__, __LINE__, __func__,
+				 "Console record buffer too small",
+				 "CONFIG_CONSOLE_RECORD_OUT_SIZE=%#x, need %#x",
+				 cur_size, cur_size + gd_console_out_ovf());
+		} else {
+			ut_fail(uts, __FILE__, __LINE__, __func__,
+				"Console record buffer too small - increase "
+				"CONFIG_CONSOLE_RECORD_OUT_SIZE");
+		}
 		return ret;
 	} else if (ret == -ENOENT) {
 		strcpy(uts->actual_str, "<no-more-output>");

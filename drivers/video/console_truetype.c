@@ -180,6 +180,10 @@ struct console_tt_metrics {
  * @pos_start:	Value of pos_ptr when the cursor is at the start of the text
  *	being entered by the user
  * @pos_count:	Maximum value reached by pos_ptr (initially zero)
+ * @glyph_buf:	Pre-allocated buffer for rendering glyphs. If a glyph fits,
+ *	this avoids malloc/free per character. Allocated lazily after
+ *	relocation to avoid using early malloc space.
+ * @glyph_buf_size: Current size of glyph_buf in bytes
  */
 struct console_tt_priv {
 	struct console_tt_metrics *cur_met;
@@ -190,6 +194,8 @@ struct console_tt_priv {
 	struct video_fontdata *cur_fontdata;
 	int pos_start;
 	int pos_count;
+	u8 *glyph_buf;
+	int glyph_buf_size;
 };
 
 /**
@@ -365,6 +371,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	int advance;
 	void *start, *end, *line;
 	int row, kern;
+	bool use_buf;
 
 	/* Use fixed font if selected */
 	if (priv->cur_fontdata)
@@ -440,12 +447,60 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	 * information into the render, which will return a 8-bit-per-pixel
 	 * image of the character. For empty characters, like ' ', data will
 	 * return NULL;
+	 *
+	 * Use the pre-allocated glyph buffer if large enough, falling back to
+	 * malloc for oversized glyphs. This avoids alloc/free traffic for
+	 * normal characters.
 	 */
-	data = stbtt_GetCodepointBitmapSubpixel(font, met->scale, met->scale,
-						x_shift, 0, cp, &width, &height,
-						&xoff, &yoff);
-	if (!data)
+	{
+		int ix0, iy0, ix1, iy1;
+
+		stbtt_GetCodepointBitmapBoxSubpixel(font, cp, met->scale,
+						    met->scale, x_shift, 0,
+						    &ix0, &iy0, &ix1, &iy1);
+		width = ix1 - ix0;
+		height = iy1 - iy0;
+		xoff = ix0;
+		yoff = iy0;
+	}
+	if (!width || !height)
 		return width_frac;
+
+	/*
+	 * Use the pre-allocated buffer if available and large enough. Allocate
+	 * it lazily, but only after relocation to avoid using early malloc.
+	 * Use realloc() to grow the buffer as needed.
+	 */
+	use_buf = false;
+	if (IS_ENABLED(CONFIG_CONSOLE_TRUETYPE_GLYPH_BUF) &&
+	    xpl_phase() >= PHASE_BOARD_R) {
+		int need_size = width * height;
+
+		if (need_size > priv->glyph_buf_size) {
+			int new_size = SZ_4K;
+
+			/* use the next power of 2 */
+			while (new_size < need_size)
+				new_size <<= 1;
+			priv->glyph_buf = realloc(priv->glyph_buf, new_size);
+			if (priv->glyph_buf)
+				priv->glyph_buf_size = new_size;
+		}
+		if (priv->glyph_buf) {
+			data = priv->glyph_buf;
+			use_buf = true;
+		}
+	}
+	if (!use_buf) {
+		data = malloc(width * height);
+		if (!data)
+			return width_frac;
+	}
+	gd_inc_glyph_count();
+
+	stbtt_MakeCodepointBitmapSubpixel(font, data, width, height, width,
+					  met->scale, met->scale, x_shift, 0,
+					  cp);
 
 	/* Figure out where to write the character in the frame buffer */
 	bits = data;
@@ -534,7 +589,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 			break;
 		}
 		default:
-			free(data);
+			if (!use_buf)
+				free(data);
 			return -ENOSYS;
 		}
 
@@ -547,7 +603,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 		     width,
 		     height);
 
-	free(data);
+	if (!use_buf)
+		free(data);
 
 	return width_frac;
 }

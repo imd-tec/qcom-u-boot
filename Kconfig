@@ -337,6 +337,24 @@ config SYS_MALLOC_LEN
 	  This defines memory to be allocated for Dynamic allocation
 	  TODO: Use for other architectures
 
+config MALLOC_DEBUG
+	bool "Enable malloc debugging"
+	default y if UNIT_TEST && !CPU_RISCV
+	help
+	  Enable debugging features in the malloc implementation. This
+	  enables additional assertions and the malloc_get_info() function
+	  to retrieve memory-allocation statistics.
+
+config MCHECK_HEAP_PROTECTION
+	bool "Enable mcheck heap protection"
+	depends on !TRACE
+	help
+	  Enable heap protection using the mcheck library. This adds canary
+	  values before and after each allocation to detect buffer overflows
+	  and underflows, double-frees, and memory corruption. This
+	  significantly increases memory overhead and should only be used for
+	  debugging.
+
 config SPL_SYS_MALLOC_F
 	bool "Enable malloc() pool in SPL"
 	depends on SPL_FRAMEWORK && SYS_MALLOC_F && SPL

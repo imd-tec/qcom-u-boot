@@ -48,4 +48,7 @@ void mcheck_check_all(void);
  */
 enum mcheck_status mprobe(void *__ptr);
 
+/* Called during RAM relocation to reset the heap registry */
+void mcheck_on_ramrelocation(size_t offset);
+
 #endif

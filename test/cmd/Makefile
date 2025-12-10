@@ -26,6 +26,7 @@ endif
 obj-$(CONFIG_CMD_HASH) += hash.o
 obj-$(CONFIG_CMD_HISTORY) += history.o
 obj-$(CONFIG_CMD_LOADM) += loadm.o
+obj-$(CONFIG_CMD_MALLOC) += malloc.o
 ifdef CONFIG_SANDBOX
 obj-$(CONFIG_CMD_MEMINFO) += meminfo.o
 endif

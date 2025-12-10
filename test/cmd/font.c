@@ -98,3 +98,20 @@ static int font_test_base(struct unit_test_state *uts)
 }
 FONT_TEST(font_test_base, UTF_SCAN_PDATA | UTF_SCAN_FDT | UTF_CONSOLE |
 	  UTF_DM);
+
+/* Test 'font info' command */
+static int font_test_info(struct unit_test_state *uts)
+{
+	int count;
+
+	if (!CONFIG_IS_ENABLED(VIDEO_GLYPH_STATS))
+		return -EAGAIN;
+
+	count = gd_glyph_count();
+	ut_assertok(run_command("font info", 0));
+	ut_assert_nextline("glyphs rendered: %u", count);
+	ut_assert_console_end();
+
+	return 0;
+}
+FONT_TEST(font_test_info, UTF_CONSOLE);
