@@ -3553,6 +3553,22 @@ int ext4_feature_set_ok(struct super_block *sb, int readonly)
 		return 0;
 	}
 
+	if (!IS_ENABLED(CONFIG_EXT4_INLINE_DATA) &&
+	    ext4_has_feature_inline_data(sb)) {
+		ext4_msg(sb, KERN_ERR,
+			 "Filesystem with inline_data feature cannot be "
+			 "mounted without CONFIG_EXT4_INLINE_DATA");
+		return 0;
+	}
+
+	if (!IS_ENABLED(CONFIG_EXT4_INDIRECT) &&
+	    !ext4_has_feature_extents(sb)) {
+		ext4_msg(sb, KERN_ERR,
+			 "Filesystem without extents feature requires "
+			 "CONFIG_EXT4_INDIRECT for indirect block support");
+		return 0;
+	}
+
 	if (readonly)
 		return 1;
 

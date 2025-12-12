@@ -88,3 +88,25 @@ config EXT4_XATTR
 	  and user-defined attributes.
 
 	  This adds about 14K to the image size. If unsure, say N.
+
+config EXT4_INLINE_DATA
+	bool "Enable ext4 inline data support"
+	depends on FS_EXT4L && EXT4_XATTR
+	help
+	  Enable support for inline data, which stores small files
+	  directly in the inode. This is an uncommon feature that
+	  requires creating the filesystem with -O inline_data.
+
+	  Filesystems with inline_data feature will be rejected if
+	  this is disabled. Adds about 8K. If unsure, say N.
+
+config EXT4_INDIRECT
+	bool "Enable ext4 indirect block support (ext2/3 compatibility)"
+	depends on FS_EXT4L
+	default y
+	help
+	  Enable support for indirect block mapping used by ext2/ext3
+	  filesystems. Modern ext4 filesystems use extents instead.
+
+	  Filesystems without the extents feature will be rejected if
+	  this is disabled. Adds about 5K. If unsure, say N.

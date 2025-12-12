@@ -3132,12 +3132,30 @@ static inline bool is_special_ino(struct super_block *sb, unsigned long ino)
 }
 
 /* indirect.c */
+#ifdef CONFIG_EXT4_INDIRECT
 extern int ext4_ind_map_blocks(handle_t *handle, struct inode *inode,
 				struct ext4_map_blocks *map, int flags);
 extern int ext4_ind_trans_blocks(struct inode *inode, int nrblocks);
 extern void ext4_ind_truncate(handle_t *, struct inode *inode);
 extern int ext4_ind_remove_space(handle_t *handle, struct inode *inode,
 				 ext4_lblk_t start, ext4_lblk_t end);
+#else
+static inline int ext4_ind_map_blocks(handle_t *handle, struct inode *inode,
+				      struct ext4_map_blocks *map, int flags)
+{
+	return -EOPNOTSUPP;
+}
+static inline int ext4_ind_trans_blocks(struct inode *inode, int nrblocks)
+{
+	return 0;
+}
+static inline void ext4_ind_truncate(handle_t *h, struct inode *inode) {}
+static inline int ext4_ind_remove_space(handle_t *handle, struct inode *inode,
+					ext4_lblk_t start, ext4_lblk_t end)
+{
+	return -EOPNOTSUPP;
+}
+#endif
 
 /* ioctl.c */
 extern long ext4_ioctl(struct file *, unsigned int, unsigned long);
@@ -3675,6 +3693,7 @@ extern const struct file_operations ext4_file_operations;
 extern loff_t ext4_llseek(struct file *file, loff_t offset, int origin);
 
 /* inline.c */
+#ifdef CONFIG_EXT4_INLINE_DATA
 extern int ext4_get_max_inline_size(struct inode *inode);
 extern int ext4_find_inline_data_nolock(struct inode *inode);
 extern int ext4_destroy_inline_data(handle_t *handle, struct inode *inode);
@@ -3733,6 +3752,105 @@ static inline int ext4_has_inline_data(struct inode *inode)
 	return ext4_test_inode_flag(inode, EXT4_INODE_INLINE_DATA) &&
 	       EXT4_I(inode)->i_inline_off;
 }
+#else /* !CONFIG_EXT4_INLINE_DATA */
+static inline int ext4_get_max_inline_size(struct inode *inode) { return 0; }
+static inline int ext4_find_inline_data_nolock(struct inode *inode) { return 0; }
+static inline int ext4_destroy_inline_data(handle_t *h, struct inode *i)
+{
+	return 0;
+}
+static inline void ext4_update_final_de(void *de_buf, int old_size,
+					int new_size) {}
+static inline int ext4_readpage_inline(struct inode *inode, struct folio *folio)
+{
+	return -EOPNOTSUPP;
+}
+static inline int ext4_try_to_write_inline_data(struct address_space *mapping,
+						struct inode *inode,
+						loff_t pos, unsigned len,
+						struct folio **foliop)
+{
+	return 0;
+}
+static inline int ext4_write_inline_data_end(struct inode *inode, loff_t pos,
+					     unsigned len, unsigned copied,
+					     struct folio *folio)
+{
+	return 0;
+}
+static inline int ext4_generic_write_inline_data(struct address_space *mapping,
+						 struct inode *inode,
+						 loff_t pos, unsigned len,
+						 struct folio **foliop,
+						 void **fsdata, bool da)
+{
+	return 0;
+}
+static inline int ext4_try_add_inline_entry(handle_t *handle,
+					    struct ext4_filename *fname,
+					    struct inode *dir,
+					    struct inode *inode)
+{
+	return 0;
+}
+static inline int ext4_try_create_inline_dir(handle_t *handle,
+					     struct inode *parent,
+					     struct inode *inode)
+{
+	return 0;
+}
+static inline int ext4_read_inline_dir(struct file *filp,
+				       struct dir_context *ctx,
+				       int *has_inline_data)
+{
+	return 0;
+}
+static inline int ext4_inlinedir_to_tree(struct file *dir_file,
+					 struct inode *dir, ext4_lblk_t block,
+					 struct dx_hash_info *hinfo,
+					 __u32 start_hash, __u32 start_minor_hash,
+					 int *has_inline_data)
+{
+	return 0;
+}
+static inline struct buffer_head *ext4_find_inline_entry(struct inode *dir,
+					struct ext4_filename *fname,
+					struct ext4_dir_entry_2 **res_dir,
+					int *has_inline_data)
+{
+	return NULL;
+}
+static inline int ext4_delete_inline_entry(handle_t *handle, struct inode *dir,
+					   struct ext4_dir_entry_2 *de_del,
+					   struct buffer_head *bh,
+					   int *has_inline_data)
+{
+	return 0;
+}
+static inline bool empty_inline_dir(struct inode *dir, int *has_inline_data)
+{
+	return true;
+}
+static inline struct buffer_head *ext4_get_first_inline_block(struct inode *in,
+					struct ext4_dir_entry_2 **parent_de,
+					int *retval)
+{
+	return NULL;
+}
+static inline void *ext4_read_inline_link(struct inode *inode) { return NULL; }
+struct iomap;
+static inline int ext4_inline_data_iomap(struct inode *inode, struct iomap *m)
+{
+	return 0;
+}
+static inline int ext4_inline_data_truncate(struct inode *inode,
+					    int *has_inline)
+{
+	return 0;
+}
+static inline int ext4_convert_inline_data(struct inode *inode) { return 0; }
+static inline int ext4_has_inline_data(struct inode *inode) { return 0; }
+#endif /* CONFIG_EXT4_INLINE_DATA */
 
 /* namei.c */
 extern const struct inode_operations ext4_dir_inode_operations;
