@@ -27,6 +27,40 @@ struct ut_stats {
 	ulong duration_ms;
 };
 
+/**
+ * enum ut_arg_type - Type of a unit test argument
+ *
+ * @UT_ARG_INT: Integer argument (hex with 0x prefix, or decimal) -> vint
+ * @UT_ARG_BOOL: Boolean argument (0 or 1) -> vbool
+ * @UT_ARG_STR: String argument -> vstr
+ */
+enum ut_arg_type {
+	UT_ARG_INT,
+	UT_ARG_BOOL,
+	UT_ARG_STR,
+};
+
+/**
+ * struct ut_arg - Parsed unit test argument value
+ *
+ * Holds the parsed value of an argument after command-line processing.
+ *
+ * @name: Name of the argument (points to ut_arg_def.name)
+ * @type: Type of the argument
+ * @vint: Integer value (when type is UT_ARG_INT)
+ * @vbool: Boolean value (when type is UT_ARG_BOOL)
+ * @vstr: String value (when type is UT_ARG_STR, points into argv)
+ */
+struct ut_arg {
+	const char *name;
+	enum ut_arg_type type;
+	union {
+		long vint;
+		bool vbool;
+		const char *vstr;
+	};
+};
+
 /*
  * struct unit_test_state - Entire state of test system
  *
@@ -105,6 +139,37 @@ enum ut_flags {
 	UFT_BLOBLIST	= BIT(12),	/* test changes gd->bloblist */
 	UTF_INIT	= BIT(13),	/* test inits a suite */
 	UTF_UNINIT	= BIT(14),	/* test uninits a suite */
+};
+
+/**
+ * enum ut_arg_flags - Flags for unit test arguments
+ *
+ * @UT_ARGF_OPTIONAL: Argument is optional; use default value if not provided
+ */
+enum ut_arg_flags {
+	UT_ARGF_OPTIONAL	= BIT(0),
+};
+
+/**
+ * struct ut_arg_def - Definition of a unit test argument
+ *
+ * Declares an expected argument for a test, including its name, type,
+ * whether it is optional, and its default value.
+ *
+ * @name: Name of the argument (used in key=value matching)
+ * @type: Type of the argument (int, bool, or string)
+ * @flags: Argument flags (e.g., UT_ARGF_OPTIONAL)
+ * @def: Default value (used when argument is optional and not provided)
+ */
+struct ut_arg_def {
+	const char *name;
+	enum ut_arg_type type;
+	int flags;
+	union {
+		long vint;
+		bool vbool;
+		const char *vstr;
+	} def;
 };
 
 /**
