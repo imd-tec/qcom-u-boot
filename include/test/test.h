@@ -47,6 +47,7 @@ enum ut_arg_type {
  *
  * @name: Name of the argument (points to ut_arg_def.name)
  * @type: Type of the argument
+ * @provided: true if value was provided on command line
  * @vint: Integer value (when type is UT_ARG_INT)
  * @vbool: Boolean value (when type is UT_ARG_BOOL)
  * @vstr: String value (when type is UT_ARG_STR, points into argv)
@@ -54,6 +55,7 @@ enum ut_arg_type {
 struct ut_arg {
 	const char *name;
 	enum ut_arg_type type;
+	bool provided;
 	union {
 		long vint;
 		bool vbool;
@@ -178,12 +180,14 @@ struct ut_arg_def {
  * @name: Name of test
  * @func: Function to call to perform test
  * @flags: Flags indicated pre-conditions for test
+ * @arg_defs: Argument definitions (NULL-terminated array), or NULL
  */
 struct unit_test {
 	const char *file;
 	const char *name;
 	int (*func)(struct unit_test_state *state);
 	int flags;
+	const struct ut_arg_def *arg_defs;
 };
 
 /**
@@ -233,6 +237,33 @@ struct unit_test {
 		.name = #_name,						\
 		.flags = (_flags) | UTF_UNINIT,				\
 		.func = _name,						\
+	}
+
+/**
+ * UNIT_TEST_ARGS() - create unit test entry with inline argument definitions
+ *
+ * Like UNIT_TEST() but allows specifying argument definitions inline.
+ * The variadic arguments are struct ut_arg_def initializers. The NULL
+ * terminator is added automatically by the macro.
+ *
+ * Example:
+ *   UNIT_TEST_ARGS(my_test, UTF_CONSOLE, my_suite,
+ *       { "path", UT_ARG_STR },
+ *       { "count", UT_ARG_INT, UT_ARGF_OPTIONAL, { .vint = 10 } });
+ *
+ * @_name:	Test function name
+ * @_flags:	Test flags (see enum ut_flags)
+ * @_suite:	Test suite name
+ * @...:	Argument definitions (struct ut_arg_def initializers)
+ */
+#define UNIT_TEST_ARGS(_name, _flags, _suite, ...)			\
+	static const struct ut_arg_def _name##_args[] = { __VA_ARGS__, { NULL } }; \
+	ll_entry_declare(struct unit_test, _name, ut_ ## _suite) = {	\
+		.file = __FILE__,					\
+		.name = #_name,						\
+		.flags = _flags,					\
+		.func = _name,						\
+		.arg_defs = _name##_args,				\
 	}
 
 /* Get the start of a list of unit tests for a particular suite */
