@@ -61,6 +61,7 @@ SUITE_DECL(exit);
 SUITE_DECL(fdt);
 SUITE_DECL(fdt_overlay);
 SUITE_DECL(font);
+SUITE_DECL(fs);
 SUITE_DECL(hush);
 SUITE_DECL(lib);
 SUITE_DECL(loadm);
@@ -89,6 +90,7 @@ static struct suite suites[] = {
 	SUITE(fdt, "fdt command"),
 	SUITE(fdt_overlay, "device tree overlays"),
 	SUITE(font, "font command"),
+	SUITE(fs, "filesystem tests"),
 	SUITE(hush, "hush behaviour"),
 	SUITE(lib, "library functions"),
 	SUITE(loadm, "loadm command parameters and loading memory blob"),
