@@ -198,8 +198,6 @@ def fs_obj_basic(request, u_boot_config):
         volume file name and  a list of MD5 hashes.
     """
     fs_type = request.param
-    fs_cmd_prefix = fstype_to_prefix(fs_type)
-    fs_cmd_write = 'save' if fs_type == 'fs_generic' or fs_type == 'exfat' else 'write'
     fs_img = ''
 
     fs_ubtype = fstype_to_ubname(fs_type)
@@ -289,7 +287,7 @@ def fs_obj_basic(request, u_boot_config):
         pytest.skip('Setup failed for filesystem: ' + fs_type + '. {}'.format(err))
         return
     else:
-        yield [fs_ubtype, fs_cmd_prefix, fs_cmd_write, fs_img, md5val]
+        yield [fs_ubtype, fs_img, md5val]
     finally:
         call('rm -rf %s' % scratch_dir, shell=True)
         call('rm -f %s' % fs_img, shell=True)
