@@ -152,7 +152,8 @@ void spl_board_init(void)
 
 		ut_init_state(&uts);
 		ret = ut_run_list(&uts, "spl", NULL, tests, count,
-				  state->select_unittests, 1, false, NULL);
+				  state->select_unittests, 1, false, NULL,
+				  0, NULL);
 		ut_report(&uts.cur, 1);
 		ut_uninit_state(&uts);
 		/* continue execution into U-Boot */

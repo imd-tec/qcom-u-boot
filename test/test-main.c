@@ -90,6 +90,154 @@ void ut_uninit_state(struct unit_test_state *uts)
 }
 
 /**
+ * ut_count_args() - Count the number of arguments in a NULL-terminated array
+ *
+ * @defs: Argument definitions array (NULL-terminated)
+ * Return: Number of arguments
+ */
+static int ut_count_args(const struct ut_arg_def *defs)
+{
+	int count = 0;
+
+	if (defs) {
+		while (defs[count].name)
+			count++;
+	}
+
+	return count;
+}
+
+/**
+ * ut_set_arg() - Find and set an argument value
+ *
+ * Search through argument definitions to find a matching key and set its value.
+ *
+ * @defs: Argument definitions array
+ * @args: Argument values array to update
+ * @count: Number of argument definitions
+ * @key: Key name to search for
+ * @key_len: Length of key name
+ * @val: Value string to parse
+ * Return: true if argument was found and set, false otherwise
+ */
+static bool ut_set_arg(const struct ut_arg_def *defs, struct ut_arg *args,
+		       int count, const char *key, int key_len, const char *val)
+{
+	int j;
+
+	for (j = 0; j < count; j++) {
+		if (strlen(defs[j].name) == key_len &&
+		    !strncmp(defs[j].name, key, key_len)) {
+			switch (defs[j].type) {
+			case UT_ARG_INT:
+				args[j].vint = simple_strtol(val, NULL, 0);
+				break;
+			case UT_ARG_BOOL:
+				args[j].vbool = *val == '1';
+				break;
+			case UT_ARG_STR:
+				args[j].vstr = val;
+				break;
+			}
+			args[j].provided = true;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * ut_parse_args() - Parse command-line arguments for a test
+ *
+ * Parse key=value arguments from the command line and set up uts->args based on
+ * the test's argument definitions.
+ *
+ * @uts: Unit test state (args and arg_count will be set)
+ * @test: Test being run (provides arg_defs)
+ * @argc: Number of arguments
+ * @argv: Argument array (key=value strings)
+ * Return: 0 on success, -EINVAL on parse error
+ */
+static int ut_parse_args(struct unit_test_state *uts, struct unit_test *test,
+			 int argc, char *const argv[])
+{
+	const struct ut_arg_def *defs = test->arg_defs;
+	struct ut_arg *args = uts->args;
+	int count = ut_count_args(defs);
+	int i;
+
+	uts->arg_count = 0;
+
+	/* No arguments expected */
+	if (!count) {
+		if (argc > 0) {
+			printf("Test '%s' does not accept arguments\n",
+			       test->name);
+			return -EINVAL;
+		}
+		return 0;
+	}
+
+	if (count > UT_MAX_ARGS) {
+		printf("Test '%s' has too many arguments (%d > %d)\n",
+		       test->name, count, UT_MAX_ARGS);
+		return -EINVAL;
+	}
+
+	/* Initialise from defaults */
+	for (i = 0; i < count; i++) {
+		args[i].name = defs[i].name;
+		args[i].type = defs[i].type;
+		args[i].provided = false;
+		switch (defs[i].type) {
+		case UT_ARG_INT:
+			args[i].vint = defs[i].def.vint;
+			break;
+		case UT_ARG_BOOL:
+			args[i].vbool = defs[i].def.vbool;
+			break;
+		case UT_ARG_STR:
+			args[i].vstr = defs[i].def.vstr;
+			break;
+		}
+	}
+
+	/* Parse command-line key=value pairs */
+	for (i = 0; i < argc; i++) {
+		const char *arg = argv[i];
+		const char *eq = strchr(arg, '=');
+		int key_len;
+
+		if (!eq) {
+			printf("Invalid argument '%s' (expected key=value)\n",
+			       arg);
+			return -EINVAL;
+		}
+		key_len = eq - arg;
+
+		if (!ut_set_arg(defs, args, count, arg, key_len, eq + 1)) {
+			printf("Unknown argument '%.*s' for test '%s'\n",
+			       key_len, arg, test->name);
+			return -EINVAL;
+		}
+	}
+
+	/* Check required arguments are provided */
+	for (i = 0; i < count; i++) {
+		if (!args[i].provided && !(defs[i].flags & UT_ARGF_OPTIONAL)) {
+			printf("Missing required argument '%s' for test '%s'\n",
+			       defs[i].name, test->name);
+			return -EINVAL;
+		}
+	}
+
+	uts->arg_count = count;
+
+	return 0;
+}
+
+/**
  * dm_test_pre_run() - Get ready to run a driver model test
  *
  * This clears out the driver model data structures. For sandbox it resets the
@@ -593,12 +741,15 @@ static int ut_run_test_live_flat(struct unit_test_state *uts,
  * @test_insert: String describing a test to run after n other tests run, in the
  * format n:name where n is the number of tests to run before this one and
  * name is the name of the test to run
+ * @argc: Number of test arguments (key=value pairs)
+ * @argv: Test argument array
  * Return: 0 if all tests passed, -ENOENT if test @select_name was not found,
  *	-EBADF if any failed
  */
 static int ut_run_tests(struct unit_test_state *uts, const char *prefix,
 			struct unit_test *tests, int count,
-			const char *select_name, const char *test_insert)
+			const char *select_name, const char *test_insert,
+			int argc, char *const argv[])
 {
 	int prefix_len = prefix ? strlen(prefix) : 0;
 	struct unit_test *test, *one;
@@ -654,6 +805,11 @@ static int ut_run_tests(struct unit_test_state *uts, const char *prefix,
 
 		uts->cur.test_count++;
 		if (one && upto == pos) {
+			ret = ut_parse_args(uts, one, argc, argv);
+			if (ret) {
+				uts->cur.fail_count++;
+				return ret;
+			}
 			ret = ut_run_test_live_flat(uts, one, NULL);
 			if (uts->cur.fail_count != old_fail_count) {
 				printf("Test '%s' failed %d times (position %d)\n",
@@ -667,6 +823,12 @@ static int ut_run_tests(struct unit_test_state *uts, const char *prefix,
 		if (prefix_len && !strncmp(test_name, prefix, prefix_len))
 			test_name = test_name + prefix_len;
 
+		ret = ut_parse_args(uts, test, argc, argv);
+		if (ret) {
+			found++;
+			uts->cur.fail_count++;
+			continue;
+		}
 		for (i = 0; i < uts->runs_per_test; i++)
 			ret = ut_run_test_live_flat(uts, test, test_name);
 		if (uts->cur.fail_count != old_fail_count) {
@@ -706,9 +868,8 @@ void ut_report(struct ut_stats *stats, int run_count)
 int ut_run_list(struct unit_test_state *uts, const char *category,
 		const char *prefix, struct unit_test *tests, int count,
 		const char *select_name, int runs_per_test, bool force_run,
-		const char *test_insert)
+		const char *test_insert, int argc, char *const argv[])
 {
-	;
 	bool was_bypassed, has_dm_tests = false;
 	ulong start_offset = 0;
 	ulong test_offset = 0;
@@ -751,7 +912,7 @@ int ut_run_list(struct unit_test_state *uts, const char *category,
 	uts->force_run = force_run;
 	was_bypassed = pager_set_test_bypass(gd_pager(), true);
 	ret = ut_run_tests(uts, prefix, tests, count, select_name,
-			   test_insert);
+			   test_insert, argc, argv);
 	pager_set_test_bypass(gd_pager(), was_bypassed);
 
 	/* Best efforts only...ignore errors */

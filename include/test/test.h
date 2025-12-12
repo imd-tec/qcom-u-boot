@@ -9,6 +9,8 @@
 #include <malloc.h>
 #include <linux/bitops.h>
 
+#define UT_MAX_ARGS	8
+
 /**
  * struct ut_stats - Statistics about tests run
  *
@@ -90,6 +92,8 @@ struct ut_arg {
  * @soft_fail: continue execution of the test even after it fails
  * @expect_str: Temporary string used to hold expected string value
  * @actual_str: Temporary string used to hold actual string value
+ * @args: Parsed argument values for current test
+ * @arg_count: Number of parsed arguments
  */
 struct unit_test_state {
 	struct ut_stats cur;
@@ -116,6 +120,8 @@ struct unit_test_state {
 	bool soft_fail;
 	char expect_str[1024];
 	char actual_str[1024];
+	struct ut_arg args[UT_MAX_ARGS];
+	int arg_count;
 };
 
 /* Test flags for each test */

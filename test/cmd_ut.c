@@ -132,7 +132,8 @@ static int run_suite(struct unit_test_state *uts, struct suite *ste,
 	snprintf(prefix, sizeof(prefix), "%s_test_", ste->name);
 
 	ret = ut_run_list(uts, ste->name, prefix, ste->start, n_ents,
-			  select_name, runs_per_test, force_run, test_insert);
+			  select_name, runs_per_test, force_run, test_insert,
+			  0, NULL);
 
 	return ret;
 }

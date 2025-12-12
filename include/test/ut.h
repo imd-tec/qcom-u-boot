@@ -618,12 +618,14 @@ void ut_uninit_state(struct unit_test_state *uts);
  * name is the name of the test to run. This is used to find which test causes
  * another test to fail. If the one test fails, testing stops immediately.
  * Pass NULL to disable this
+ * @argc: Number of test arguments (key=value pairs), 0 if none
+ * @argv: Test argument array, NULL if none
  * Return: 0 if all tests passed, -1 if any failed
  */
 int ut_run_list(struct unit_test_state *uts, const char *category,
 		const char *prefix, struct unit_test *tests, int count,
 		const char *select_name, int runs_per_test, bool force_run,
-		const char *test_insert);
+		const char *test_insert, int argc, char *const argv[]);
 
 /**
  * ut_report() - Report stats on a test run
