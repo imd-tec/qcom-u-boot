@@ -486,6 +486,20 @@ ut_check_delta(last)
     Return the change in free memory since ``last`` was obtained from
     ``ut_check_free()``. A positive value means more memory has been allocated.
 
+Private buffer
+~~~~~~~~~~~~~~
+
+Each test has access to a private buffer ``uts->priv`` (256 bytes) for temporary
+data. This avoids the need to allocate memory or use global variables::
+
+   static int my_test(struct unit_test_state *uts)
+   {
+      snprintf(uts->priv, sizeof(uts->priv), "/%s", filename);
+      /* use uts->priv as a path string */
+
+      return 0;
+   }
+
 
 Writing Python tests
 --------------------

@@ -10,6 +10,7 @@
 #include <linux/bitops.h>
 
 #define UT_MAX_ARGS	8
+#define UT_PRIV_SIZE	256
 
 /**
  * struct ut_stats - Statistics about tests run
@@ -95,6 +96,7 @@ struct ut_arg {
  * @args: Parsed argument values for current test
  * @arg_count: Number of parsed arguments
  * @arg_error: Set if ut_str/int/bool() detects a type mismatch
+ * @priv: Private data for tests to use as needed
  */
 struct unit_test_state {
 	struct ut_stats cur;
@@ -124,6 +126,7 @@ struct unit_test_state {
 	struct ut_arg args[UT_MAX_ARGS];
 	int arg_count;
 	bool arg_error;
+	char priv[UT_PRIV_SIZE];
 };
 
 /* Test flags for each test */
