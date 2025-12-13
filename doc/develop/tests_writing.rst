@@ -101,6 +101,47 @@ constructs, in this case to check that the expected things happened in the
 Python test.
 
 
+Passing arguments to C tests
+----------------------------
+
+Sometimes a C test needs parameters from Python, such as filenames or expected
+values that are generated at runtime. The test-argument feature allows this.
+
+Use the `UNIT_TEST_ARGS` macro to declare a test with arguments::
+
+   static int my_test_norun(struct unit_test_state *uts)
+   {
+      const char *filename = ut_str(0);
+      int count = ut_int(1);
+
+      /* test code using filename and count */
+
+      return 0;
+   }
+   UNIT_TEST_ARGS(my_test_norun, UTF_CONSOLE | UTF_MANUAL, my_suite,
+                  { "filename", UT_ARG_STR },
+                  { "count", UT_ARG_INT });
+
+Each argument definition specifies a name and type:
+
+- `UT_ARG_STR` - string argument, accessed via `ut_str(n)`
+- `UT_ARG_INT` - integer argument, accessed via `ut_int(n)`
+- `UT_ARG_BOOL` - boolean argument, accessed via `ut_bool(n)`
+  (use `1` for true, any other value for false)
+
+Arguments are passed on the command line in `name=value` format::
+
+   ut -f my_suite my_test_norun filename=/path/to/file count=42
+
+From Python, you can call the test like this::
+
+   cmd = f'ut -f my_suite my_test_norun filename={filepath} count={count}'
+   ubman.run_command(cmd)
+
+This approach combines Python's flexibility for setup (creating files,
+generating values) with C's speed and debuggability for the actual test logic.
+
+
 How slow are Python tests?
 --------------------------
 
