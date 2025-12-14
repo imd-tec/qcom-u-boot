@@ -110,3 +110,18 @@ config EXT4_INDIRECT
 
 	  Filesystems without the extents feature will be rejected if
 	  this is disabled. Adds about 5K. If unsure, say N.
+
+config EXT4_MBALLOC_PREFETCH
+	bool "Enable ext4 block bitmap prefetch support"
+	depends on FS_EXT4L
+	help
+	  Enable prefetching of block allocation bitmaps to improve
+	  allocation performance. When enabled, the multiblock allocator
+	  will read ahead block bitmaps during allocation and lazy
+	  initialization.
+
+	  Disabling this saves space by allowing the multiblock allocator
+	  prefetch code to be removed. Read performance may be slightly
+	  reduced during lazy initialization.
+
+	  If unsure, say Y.

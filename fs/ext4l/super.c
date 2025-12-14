@@ -3663,7 +3663,8 @@ static int ext4_run_li_request(struct ext4_li_request *elr)
 	int nr = EXT4_SB(sb)->s_mb_prefetch;
 	u64 start_time;
 
-	if (elr->lr_mode == EXT4_LI_MODE_PREFETCH_BBITMAP) {
+	if (IS_ENABLED(CONFIG_EXT4_MBALLOC_PREFETCH) &&
+	    elr->lr_mode == EXT4_LI_MODE_PREFETCH_BBITMAP) {
 		elr->lr_next_group = ext4_mb_prefetch(sb, group, nr, &prefetch_ios);
 		ext4_mb_prefetch_fini(sb, elr->lr_next_group, nr);
 		trace_ext4_prefetch_bitmaps(sb, group, elr->lr_next_group, nr);
