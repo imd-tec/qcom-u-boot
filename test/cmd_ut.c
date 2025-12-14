@@ -252,6 +252,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	struct unit_test_state uts;
 	bool show_suites = false;
 	bool force_run = false;
+	bool keep_record = false;
 	int runs_per_text = 1;
 	struct suite *ste;
 	char *name;
@@ -276,6 +277,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			if (!strchr(test_insert, ':'))
 				return CMD_RET_USAGE;
 			break;
+		case 'R':
+			keep_record = true;
+			break;
 		case 's':
 			show_suites = true;
 			break;
@@ -288,6 +292,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_USAGE;
 
 	ut_init_state(&uts);
+	uts.keep_record = keep_record;
 	name = argv[0];
 	select_name = cmd_arg1(argc, argv);
 
@@ -333,10 +338,11 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-rs] [-f] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"[-rs] [-f] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
 	"   -r<runs>   Number of times to run each test\n"
 	"   -f         Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"
+	"   -R         Preserve console recording on test failure\n"
 	"   -s         Show all suites with ut info\n"
 	"   <suite>    Test suite to run (or comma-separated list)\n"
 	"   <test>     Specific test to run (optional)\n"

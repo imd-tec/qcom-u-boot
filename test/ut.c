@@ -23,7 +23,7 @@ DECLARE_GLOBAL_DATA_PTR;
 void ut_fail(struct unit_test_state *uts, const char *fname, int line,
 	     const char *func, const char *cond)
 {
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	ut_unsilence_console(uts);
 	printf("%s:%d, %s(): %s\n", fname, line, func, cond);
 	uts->cur.fail_count++;
 }
@@ -33,7 +33,7 @@ void ut_failf(struct unit_test_state *uts, const char *fname, int line,
 {
 	va_list args;
 
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	ut_unsilence_console(uts);
 	printf("%s:%d, %s(): %s: ", fname, line, func, cond);
 	va_start(args, fmt);
 	vprintf(fmt, args);
@@ -286,7 +286,8 @@ void ut_silence_console(struct unit_test_state *uts)
 
 void ut_unsilence_console(struct unit_test_state *uts)
 {
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	if (!uts->keep_record)
+		gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
 }
 
 void ut_set_skip_delays(struct unit_test_state *uts, bool skip_delays)
