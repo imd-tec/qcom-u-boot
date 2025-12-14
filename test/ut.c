@@ -295,3 +295,69 @@ void ut_set_skip_delays(struct unit_test_state *uts, bool skip_delays)
 	state_set_skip_delays(skip_delays);
 #endif
 }
+
+const char *ut_get_str(struct unit_test_state *uts, int n, const char *file,
+		       int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_str() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return NULL;
+	}
+	if (uts->args[n].type != UT_ARG_STR) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_str() type check",
+				 "arg %d is not a string", n);
+		uts->arg_error = true;
+		return NULL;
+	}
+
+	return uts->args[n].vstr;
+}
+
+long ut_get_int(struct unit_test_state *uts, int n, const char *file,
+		int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_int() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return 0;
+	}
+	if (uts->args[n].type != UT_ARG_INT) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_int() type check",
+				 "arg %d is not an int", n);
+		uts->arg_error = true;
+		return 0;
+	}
+
+	return uts->args[n].vint;
+}
+
+bool ut_get_bool(struct unit_test_state *uts, int n, const char *file,
+		 int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_bool() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return false;
+	}
+	if (uts->args[n].type != UT_ARG_BOOL) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_bool() type check",
+				 "arg %d is not a bool", n);
+		uts->arg_error = true;
+		return false;
+	}
+
+	return uts->args[n].vbool;
+}

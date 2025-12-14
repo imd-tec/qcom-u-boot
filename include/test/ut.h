@@ -635,4 +635,54 @@ int ut_run_list(struct unit_test_state *uts, const char *category,
  */
 void ut_report(struct ut_stats *stats, int run_count);
 
+/**
+ * ut_get_str() - Get a string test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_STR.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: String value, or NULL if type mismatch
+ */
+const char *ut_get_str(struct unit_test_state *uts, int n, const char *file,
+		       int line, const char *func);
+
+/**
+ * ut_get_int() - Get an integer test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_INT.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: Integer value, or 0 if type mismatch
+ */
+long ut_get_int(struct unit_test_state *uts, int n, const char *file,
+		int line, const char *func);
+
+/**
+ * ut_get_bool() - Get a boolean test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_BOOL.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: Boolean value, or false if type mismatch
+ */
+bool ut_get_bool(struct unit_test_state *uts, int n, const char *file,
+		 int line, const char *func);
+
+/* Helpers for accessing test arguments with type checking */
+#define ut_str(n)	ut_get_str(uts, n, __FILE__, __LINE__, __func__)
+#define ut_int(n)	ut_get_int(uts, n, __FILE__, __LINE__, __func__)
+#define ut_bool(n)	ut_get_bool(uts, n, __FILE__, __LINE__, __func__)
+
 #endif

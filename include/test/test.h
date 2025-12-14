@@ -94,6 +94,7 @@ struct ut_arg {
  * @actual_str: Temporary string used to hold actual string value
  * @args: Parsed argument values for current test
  * @arg_count: Number of parsed arguments
+ * @arg_error: Set if ut_str/int/bool() detects a type mismatch
  */
 struct unit_test_state {
 	struct ut_stats cur;
@@ -122,6 +123,7 @@ struct unit_test_state {
 	char actual_str[1024];
 	struct ut_arg args[UT_MAX_ARGS];
 	int arg_count;
+	bool arg_error;
 };
 
 /* Test flags for each test */

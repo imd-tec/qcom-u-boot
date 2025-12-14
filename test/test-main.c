@@ -639,6 +639,7 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 	if (ret)
 		return ret;
 
+	uts->arg_error = false;
 	ret = test->func(uts);
 	if (ret == -EAGAIN)
 		skip_test(uts);
