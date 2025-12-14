@@ -125,3 +125,20 @@ config EXT4_MBALLOC_PREFETCH
 	  reduced during lazy initialization.
 
 	  If unsure, say Y.
+
+config EXT4_FAST_COMMIT_REPLAY
+	bool "Enable ext4 fast commit replay support"
+	depends on FS_EXT4L
+	default y
+	help
+	  Enable support for replaying fast commit records during mount.
+	  Fast commit is a journal optimization that records fine-grained
+	  changes. If a filesystem was not cleanly unmounted and has
+	  pending fast commit records, this option is needed to recover.
+
+	  Disabling this saves space (~8K) but means filesystems with
+	  pending fast commits cannot be recovered. Only disable if you're
+	  certain your filesystems won't have fast commit records (e.g.,
+	  created with -O ^fast_commit).
+
+	  If unsure, say Y.
