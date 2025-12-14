@@ -150,6 +150,27 @@ int ut_check_console_linen(struct unit_test_state *uts, const char *fmt, ...)
 		       strlen(uts->expect_str));
 }
 
+int ut_check_console_line_regex(struct unit_test_state *uts, const char *regex)
+{
+	char err[UT_REGEX_ERR_SIZE];
+	int len;
+	int ret;
+
+	len = strlcpy(uts->expect_str, regex, sizeof(uts->expect_str));
+	if (len >= sizeof(uts->expect_str)) {
+		ut_fail(uts, __FILE__, __LINE__, __func__,
+			"unit_test_state->expect_str too small");
+		return -EOVERFLOW;
+	}
+	ret = readline_check(uts);
+	if (ret == -ENOENT)
+		return 1;
+
+	ret = ut_check_regex(regex, uts->actual_str, err);
+
+	return ret;
+}
+
 int ut_check_skipline(struct unit_test_state *uts)
 {
 	int ret;

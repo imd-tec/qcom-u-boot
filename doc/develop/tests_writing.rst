@@ -451,6 +451,9 @@ ut_assert_nextlinen(fmt, args...)
     Assert that the next console output line matches up to the format
     string length
 
+ut_assert_nextline_regex(pattern)
+    Assert that the next console output line matches a regex pattern
+
 ut_assert_nextline_empty()
     Assert that the next console output line is empty
 

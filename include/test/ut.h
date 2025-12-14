@@ -88,6 +88,20 @@ int ut_check_console_linen(struct unit_test_state *uts, const char *fmt, ...)
 			__attribute__ ((format (__printf__, 2, 3)));
 
 /**
+ * ut_check_console_line_regex() - Check the next console line against a regex
+ *
+ * This checks the next line of console output against a regex pattern.
+ *
+ * After the function returns, uts->expect_str holds the regex pattern and
+ * uts->actual_str holds the actual string read from the console.
+ *
+ * @uts: Test state
+ * @regex: Regular expression pattern to match against
+ * Return: 0 if OK, other value on error
+ */
+int ut_check_console_line_regex(struct unit_test_state *uts, const char *regex);
+
+/**
  * ut_check_skipline() - Check that the next console line exists and skip it
  *
  * @uts: Test state
@@ -405,6 +419,21 @@ int ut_check_console_dump(struct unit_test_state *uts, int total_bytes);
 	if (ut_check_console_linen(uts, fmt, ##args)) {			\
 		ut_failf(uts, __FILE__, __LINE__, __func__,		\
 			 "console", "\nExpected '%s',\n     got '%s'",	\
+			 uts->expect_str, uts->actual_str);		\
+		if (!uts->soft_fail)					\
+			return CMD_RET_FAILURE;				\
+	}								\
+	__ret;								\
+})
+
+/* Assert that the next console output line matches a regex pattern */
+#define ut_assert_nextline_regex(pattern) ({				\
+	int __ret = 0;							\
+									\
+	if (ut_check_console_line_regex(uts, pattern)) {		\
+		ut_failf(uts, __FILE__, __LINE__, __func__,		\
+			 "console regex",				\
+			 "\nExpected regex '%s',\n         got '%s'",	\
 			 uts->expect_str, uts->actual_str);		\
 		if (!uts->soft_fail)					\
 			return CMD_RET_FAILURE;				\
