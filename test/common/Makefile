@@ -16,3 +16,4 @@ obj-y += cread.o
 obj-y += malloc.o
 obj-$(CONFIG_CONSOLE_PAGER) += pager.o
 obj-$(CONFIG_$(PHASE_)CMDLINE) += print.o
+obj-$(CONFIG_$(PHASE_)CMDLINE) += test_args.o
