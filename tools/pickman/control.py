@@ -8,12 +8,14 @@
 from collections import namedtuple
 import os
 import sys
+import unittest
 
 # Allow 'from pickman import xxx' to work via symlink
 our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
 
 # pylint: disable=wrong-import-position,import-error
+from pickman import ftest
 from u_boot_pylib import command
 from u_boot_pylib import tout
 
@@ -54,14 +56,12 @@ def compare_branches(master, source):
     return count, Commit(full_hash, short_hash, subject, date)
 
 
-def do_pickman():
-    """Main entry point for pickman.
+def do_compare(args):  # pylint: disable=unused-argument
+    """Compare branches and print results.
 
-    Returns:
-        int: 0 on success
+    Args:
+        args (Namespace): Parsed arguments
     """
-    tout.init(tout.INFO)
-
     count, base = compare_branches(BRANCH_MASTER, BRANCH_SOURCE)
 
     tout.info(f'Commits in {BRANCH_SOURCE} not in {BRANCH_MASTER}: {count}')
@@ -72,3 +72,39 @@ def do_pickman():
     tout.info(f'  Date:    {base.date}')
 
     return 0
+
+
+def do_test(args):  # pylint: disable=unused-argument
+    """Run tests for this module.
+
+    Args:
+        args (Namespace): Parsed arguments
+
+    Returns:
+        int: 0 if tests passed, 1 otherwise
+    """
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromModule(ftest)
+    runner = unittest.TextTestRunner()
+    result = runner.run(suite)
+
+    return 0 if result.wasSuccessful() else 1
+
+
+def do_pickman(args):
+    """Main entry point for pickman commands.
+
+    Args:
+        args (Namespace): Parsed arguments
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    tout.init(tout.INFO)
+
+    if args.cmd == 'compare':
+        return do_compare(args)
+    if args.cmd == 'test':
+        return do_test(args)
+
+    return 1

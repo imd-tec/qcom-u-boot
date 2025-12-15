@@ -4,8 +4,9 @@
 # Copyright 2025 Canonical Ltd.
 # Written by Simon Glass <simon.glass@canonical.com>
 #
-"""Entry point for pickman - dispatches to control module."""
+"""Entry point for pickman - parses arguments and dispatches to control."""
 
+import argparse
 import os
 import sys
 
@@ -17,9 +18,32 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 from pickman import control
 
 
-def main():
-    """Main function."""
-    return control.do_pickman()
+def parse_args(argv):
+    """Parse command line arguments.
+
+    Args:
+        argv (list): Command line arguments
+
+    Returns:
+        Namespace: Parsed arguments
+    """
+    parser = argparse.ArgumentParser(description='Check commit differences')
+    subparsers = parser.add_subparsers(dest='cmd', required=True)
+
+    subparsers.add_parser('compare', help='Compare branches')
+    subparsers.add_parser('test', help='Run tests')
+
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    """Main function to parse args and run commands.
+
+    Args:
+        argv (list): Command line arguments (None for sys.argv[1:])
+    """
+    args = parse_args(argv)
+    return control.do_pickman(args)
 
 
 if __name__ == '__main__':

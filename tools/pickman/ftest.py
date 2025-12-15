@@ -13,9 +13,11 @@ import unittest
 our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
 
-# pylint: disable=wrong-import-position,import-error
+# pylint: disable=wrong-import-position,import-error,cyclic-import
 from u_boot_pylib import command
+from u_boot_pylib import terminal
 
+from pickman import __main__ as pickman
 from pickman import control
 
 
@@ -93,6 +95,59 @@ class TestCompareBranches(unittest.TestCase):
 
             self.assertEqual(count, 0)
             self.assertEqual(commit.short_hash, 'def456a')
+        finally:
+            command.TEST_RESULT = None
+
+
+class TestParseArgs(unittest.TestCase):
+    """Tests for parse_args function."""
+
+    def test_parse_compare(self):
+        """Test parsing compare command."""
+        args = pickman.parse_args(['compare'])
+        self.assertEqual(args.cmd, 'compare')
+
+    def test_parse_test(self):
+        """Test parsing test command."""
+        args = pickman.parse_args(['test'])
+        self.assertEqual(args.cmd, 'test')
+
+    def test_parse_no_command(self):
+        """Test parsing with no command raises error."""
+        with terminal.capture():
+            with self.assertRaises(SystemExit):
+                pickman.parse_args([])
+
+
+class TestMain(unittest.TestCase):
+    """Tests for main function."""
+
+    def test_main_compare(self):
+        """Test main with compare command."""
+        results = iter([
+            '10',
+            'abc123',
+            'abc123\nabc\nSubject\n2024-01-01 00:00:00 -0000',
+        ])
+
+        def handle_command(**_):
+            return command.CommandResult(stdout=next(results))
+
+        command.TEST_RESULT = handle_command
+        try:
+            with terminal.capture() as (stdout, _):
+                ret = pickman.main(['compare'])
+            self.assertEqual(ret, 0)
+            lines = iter(stdout.getvalue().splitlines())
+            self.assertEqual('Commits in us/next not in ci/master: 10',
+                             next(lines))
+            self.assertEqual('', next(lines))
+            self.assertEqual('Last common commit:', next(lines))
+            self.assertEqual('  Hash:    abc', next(lines))
+            self.assertEqual('  Subject: Subject', next(lines))
+            self.assertEqual('  Date:    2024-01-01 00:00:00 -0000',
+                             next(lines))
+            self.assertRaises(StopIteration, next, lines)
         finally:
             command.TEST_RESULT = None
 
