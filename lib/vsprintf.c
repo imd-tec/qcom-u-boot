@@ -25,6 +25,7 @@
 #include <linux/err.h>
 #include <linux/types.h>
 #include <linux/string.h>
+#include <linux/printk.h>
 
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
@@ -508,6 +509,17 @@ static char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 		return uuid_string(buf, end, ptr, field_width, precision,
 				   flags, fmt);
 #endif
+	case 'V':
+		{
+			const struct va_format *vaf = ptr;
+			va_list va;
+
+			va_copy(va, *vaf->va);
+			buf += vsnprintf(buf, end > buf ? end - buf : 0,
+					 vaf->fmt, va);
+			va_end(va);
+			return buf;
+		}
 	default:
 		break;
 	}

@@ -22,6 +22,7 @@ obj-y += boot/
 obj-$(CONFIG_UNIT_TEST) += common/
 obj-$(CONFIG_UT_ENV) += env/
 obj-$(CONFIG_UT_FDT_OVERLAY) += fdt_overlay/
+obj-$(CONFIG_SANDBOX) += fs/
 obj-y += log/
 else
 obj-$(CONFIG_SPL_UT_LOAD) += image/

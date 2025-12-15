@@ -9,8 +9,10 @@
 #include <log.h>
 #include <mapmem.h>
 #include <version_string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <vsprintf.h>
+#include <linux/printk.h>
 #include <test/common.h>
 #include <test/test.h>
 #include <test/ut.h>
@@ -376,3 +378,49 @@ static int snprint(struct unit_test_state *uts)
 	return 0;
 }
 COMMON_TEST(snprint, 0);
+
+/* Helper function to test %pV format specifier */
+static int print_with_va_format(char *buf, size_t size, const char *fmt, ...)
+{
+	struct va_format vaf;
+	va_list args;
+	int ret;
+
+	va_start(args, fmt);
+	vaf.fmt = fmt;
+	vaf.va = &args;
+	ret = snprintf(buf, size, "prefix: %pV :suffix", &vaf);
+	va_end(args);
+
+	return ret;
+}
+
+/* Test printing with %pV (struct va_format) */
+static int print_va_format(struct unit_test_state *uts)
+{
+	char str[64];
+	int ret;
+
+	/* Basic string */
+	ret = print_with_va_format(str, sizeof(str), "hello");
+	ut_asserteq_str("prefix: hello :suffix", str);
+	ut_asserteq(21, ret);
+
+	/* String with arguments */
+	ret = print_with_va_format(str, sizeof(str), "value=%d", 42);
+	ut_asserteq_str("prefix: value=42 :suffix", str);
+	ut_asserteq(24, ret);
+
+	/* Multiple arguments */
+	ret = print_with_va_format(str, sizeof(str), "%s: %d/%d", "test", 1, 2);
+	ut_asserteq_str("prefix: test: 1/2 :suffix", str);
+	ut_asserteq(25, ret);
+
+	/* Truncation */
+	ret = print_with_va_format(str, 15, "hello world");
+	ut_asserteq_str("prefix: hello ", str);
+	ut_asserteq(27, ret);
+
+	return 0;
+}
+COMMON_TEST(print_va_format, 0);

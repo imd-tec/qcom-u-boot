@@ -30,7 +30,7 @@ struct suite {
 
 static int do_ut_all(struct unit_test_state *uts, const char *select_name,
 		     int runs_per_test, bool force_run,
-		     const char *test_insert);
+		     const char *test_insert, int argc, char *const argv[]);
 
 static int do_ut_info(bool show_suites);
 
@@ -61,6 +61,7 @@ SUITE_DECL(exit);
 SUITE_DECL(fdt);
 SUITE_DECL(fdt_overlay);
 SUITE_DECL(font);
+SUITE_DECL(fs);
 SUITE_DECL(hush);
 SUITE_DECL(lib);
 SUITE_DECL(loadm);
@@ -89,6 +90,7 @@ static struct suite suites[] = {
 	SUITE(fdt, "fdt command"),
 	SUITE(fdt_overlay, "device tree overlays"),
 	SUITE(font, "font command"),
+	SUITE(fs, "filesystem tests"),
 	SUITE(hush, "hush behaviour"),
 	SUITE(lib, "library functions"),
 	SUITE(loadm, "loadm command parameters and loading memory blob"),
@@ -122,7 +124,7 @@ static bool has_tests(struct suite *ste)
 /** run_suite() - Run a suite of tests */
 static int run_suite(struct unit_test_state *uts, struct suite *ste,
 		     const char *select_name, int runs_per_test, bool force_run,
-		     const char *test_insert)
+		     const char *test_insert, int argc, char *const argv[])
 {
 	int n_ents = ste->end - ste->start;
 	char prefix[30];
@@ -132,7 +134,8 @@ static int run_suite(struct unit_test_state *uts, struct suite *ste,
 	snprintf(prefix, sizeof(prefix), "%s_test_", ste->name);
 
 	ret = ut_run_list(uts, ste->name, prefix, ste->start, n_ents,
-			  select_name, runs_per_test, force_run, test_insert);
+			  select_name, runs_per_test, force_run, test_insert,
+			  argc, argv);
 
 	return ret;
 }
@@ -168,7 +171,8 @@ static void update_stats(struct unit_test_state *uts, const struct suite *ste)
 }
 
 static int do_ut_all(struct unit_test_state *uts, const char *select_name,
-		     int runs_per_test, bool force_run, const char *test_insert)
+		     int runs_per_test, bool force_run, const char *test_insert,
+		     int argc, char *const argv[])
 {
 	int i;
 	int retval;
@@ -180,7 +184,7 @@ static int do_ut_all(struct unit_test_state *uts, const char *select_name,
 		if (has_tests(ste)) {
 			printf("----Running %s tests----\n", ste->name);
 			retval = run_suite(uts, ste, select_name, runs_per_test,
-					   force_run, test_insert);
+					   force_run, test_insert, argc, argv);
 			if (!any_fail)
 				any_fail = retval;
 			update_stats(uts, ste);
@@ -245,9 +249,12 @@ static struct suite *find_suite(const char *name)
 static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
 	const char *test_insert = NULL, *select_name;
+	int test_argc;
+	char *const *test_argv;
 	struct unit_test_state uts;
 	bool show_suites = false;
 	bool force_run = false;
+	bool keep_record = false;
 	int runs_per_text = 1;
 	struct suite *ste;
 	char *name;
@@ -272,6 +279,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			if (!strchr(test_insert, ':'))
 				return CMD_RET_USAGE;
 			break;
+		case 'R':
+			keep_record = true;
+			break;
 		case 's':
 			show_suites = true;
 			break;
@@ -284,11 +294,17 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_USAGE;
 
 	ut_init_state(&uts);
+	uts.keep_record = keep_record;
 	name = argv[0];
 	select_name = cmd_arg1(argc, argv);
+
+	/* Test arguments are after suite name and test name */
+	test_argc = argc > 2 ? argc - 2 : 0;
+	test_argv = argc > 2 ? argv + 2 : NULL;
+
 	if (!strcmp(name, "all")) {
 		ret = do_ut_all(&uts, select_name, runs_per_text, force_run,
-				test_insert);
+				test_insert, test_argc, test_argv);
 	} else if (!strcmp(name, "info")) {
 		ret = do_ut_info(show_suites);
 	} else {
@@ -307,7 +323,8 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			}
 
 			ret = run_suite(&uts, ste, select_name, runs_per_text,
-					force_run, test_insert);
+					force_run, test_insert, test_argc,
+					test_argv);
 			if (!any_fail)
 				any_fail = ret;
 			update_stats(&uts, ste);
@@ -323,12 +340,15 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-rs] [-f] [-I<n>:<one_test>][<suites>] - run unit tests\n"
+	"[-rs] [-f] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
 	"   -r<runs>   Number of times to run each test\n"
 	"   -f         Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"
+	"   -R         Preserve console recording on test failure\n"
 	"   -s         Show all suites with ut info\n"
-	"   <suites>   Comma-separated list of suites to run\n"
+	"   <suite>    Test suite to run (or comma-separated list)\n"
+	"   <test>     Specific test to run (optional)\n"
+	"   <args>     Test arguments as key=value pairs (optional)\n"
 	"\n"
 	"Options for <suite>:\n"
 	"all       - execute all enabled tests\n"

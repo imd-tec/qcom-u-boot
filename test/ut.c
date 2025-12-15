@@ -23,7 +23,7 @@ DECLARE_GLOBAL_DATA_PTR;
 void ut_fail(struct unit_test_state *uts, const char *fname, int line,
 	     const char *func, const char *cond)
 {
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	ut_unsilence_console(uts);
 	printf("%s:%d, %s(): %s\n", fname, line, func, cond);
 	uts->cur.fail_count++;
 }
@@ -33,7 +33,7 @@ void ut_failf(struct unit_test_state *uts, const char *fname, int line,
 {
 	va_list args;
 
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	ut_unsilence_console(uts);
 	printf("%s:%d, %s(): %s: ", fname, line, func, cond);
 	va_start(args, fmt);
 	vprintf(fmt, args);
@@ -148,6 +148,27 @@ int ut_check_console_linen(struct unit_test_state *uts, const char *fmt, ...)
 
 	return strncmp(uts->expect_str, uts->actual_str,
 		       strlen(uts->expect_str));
+}
+
+int ut_check_console_line_regex(struct unit_test_state *uts, const char *regex)
+{
+	char err[UT_REGEX_ERR_SIZE];
+	int len;
+	int ret;
+
+	len = strlcpy(uts->expect_str, regex, sizeof(uts->expect_str));
+	if (len >= sizeof(uts->expect_str)) {
+		ut_fail(uts, __FILE__, __LINE__, __func__,
+			"unit_test_state->expect_str too small");
+		return -EOVERFLOW;
+	}
+	ret = readline_check(uts);
+	if (ret == -ENOENT)
+		return 1;
+
+	ret = ut_check_regex(regex, uts->actual_str, err);
+
+	return ret;
 }
 
 int ut_check_skipline(struct unit_test_state *uts)
@@ -265,7 +286,8 @@ void ut_silence_console(struct unit_test_state *uts)
 
 void ut_unsilence_console(struct unit_test_state *uts)
 {
-	gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
+	if (!uts->keep_record)
+		gd->flags &= ~(GD_FLG_SILENT | GD_FLG_RECORD);
 }
 
 void ut_set_skip_delays(struct unit_test_state *uts, bool skip_delays)
@@ -273,4 +295,70 @@ void ut_set_skip_delays(struct unit_test_state *uts, bool skip_delays)
 #ifdef CONFIG_SANDBOX
 	state_set_skip_delays(skip_delays);
 #endif
+}
+
+const char *ut_get_str(struct unit_test_state *uts, int n, const char *file,
+		       int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_str() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return NULL;
+	}
+	if (uts->args[n].type != UT_ARG_STR) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_str() type check",
+				 "arg %d is not a string", n);
+		uts->arg_error = true;
+		return NULL;
+	}
+
+	return uts->args[n].vstr;
+}
+
+long ut_get_int(struct unit_test_state *uts, int n, const char *file,
+		int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_int() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return 0;
+	}
+	if (uts->args[n].type != UT_ARG_INT) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_int() type check",
+				 "arg %d is not an int", n);
+		uts->arg_error = true;
+		return 0;
+	}
+
+	return uts->args[n].vint;
+}
+
+bool ut_get_bool(struct unit_test_state *uts, int n, const char *file,
+		 int line, const char *func)
+{
+	if (n < 0 || n >= uts->arg_count) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_bool() arg check",
+				 "arg %d is invalid (arg_count=%d)", n,
+				 uts->arg_count);
+		uts->arg_error = true;
+		return false;
+	}
+	if (uts->args[n].type != UT_ARG_BOOL) {
+		if (!uts->arg_error)
+			ut_failf(uts, file, line, func, "ut_bool() type check",
+				 "arg %d is not a bool", n);
+		uts->arg_error = true;
+		return false;
+	}
+
+	return uts->args[n].vbool;
 }

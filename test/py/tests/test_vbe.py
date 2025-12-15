@@ -87,7 +87,7 @@ bootm loados
 bootm prep
 fdt addr
 fdt print
-ut bootstd -f vbe_test_fixup_norun
+ut -f bootstd vbe_test_fixup_norun
 '''
 
 @pytest.mark.boardspec('sandbox')

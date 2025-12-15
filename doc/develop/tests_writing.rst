@@ -101,6 +101,47 @@ constructs, in this case to check that the expected things happened in the
 Python test.
 
 
+Passing arguments to C tests
+----------------------------
+
+Sometimes a C test needs parameters from Python, such as filenames or expected
+values that are generated at runtime. The test-argument feature allows this.
+
+Use the `UNIT_TEST_ARGS` macro to declare a test with arguments::
+
+   static int my_test_norun(struct unit_test_state *uts)
+   {
+      const char *filename = ut_str(0);
+      int count = ut_int(1);
+
+      /* test code using filename and count */
+
+      return 0;
+   }
+   UNIT_TEST_ARGS(my_test_norun, UTF_CONSOLE | UTF_MANUAL, my_suite,
+                  { "filename", UT_ARG_STR },
+                  { "count", UT_ARG_INT });
+
+Each argument definition specifies a name and type:
+
+- `UT_ARG_STR` - string argument, accessed via `ut_str(n)`
+- `UT_ARG_INT` - integer argument, accessed via `ut_int(n)`
+- `UT_ARG_BOOL` - boolean argument, accessed via `ut_bool(n)`
+  (use `1` for true, any other value for false)
+
+Arguments are passed on the command line in `name=value` format::
+
+   ut -f my_suite my_test_norun filename=/path/to/file count=42
+
+From Python, you can call the test like this::
+
+   cmd = f'ut -f my_suite my_test_norun filename={filepath} count={count}'
+   ubman.run_command(cmd)
+
+This approach combines Python's flexibility for setup (creating files,
+generating values) with C's speed and debuggability for the actual test logic.
+
+
 How slow are Python tests?
 --------------------------
 
@@ -451,6 +492,9 @@ ut_assert_nextlinen(fmt, args...)
     Assert that the next console output line matches up to the format
     string length
 
+ut_assert_nextline_regex(pattern)
+    Assert that the next console output line matches a regex pattern
+
 ut_assert_nextline_empty()
     Assert that the next console output line is empty
 
@@ -482,6 +526,20 @@ ut_check_free()
 ut_check_delta(last)
     Return the change in free memory since ``last`` was obtained from
     ``ut_check_free()``. A positive value means more memory has been allocated.
+
+Private buffer
+~~~~~~~~~~~~~~
+
+Each test has access to a private buffer ``uts->priv`` (256 bytes) for temporary
+data. This avoids the need to allocate memory or use global variables::
+
+   static int my_test(struct unit_test_state *uts)
+   {
+      snprintf(uts->priv, sizeof(uts->priv), "/%s", filename);
+      /* use uts->priv as a path string */
+
+      return 0;
+   }
 
 
 Writing Python tests

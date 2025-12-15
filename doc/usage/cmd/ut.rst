@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    ut [-r<runs>] [-f] [-I<n>:<one_test>] [-r<n>] [<suite> | 'all' [<test>]]
+    ut [-r<runs>] [-f] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
     ut [-s] info
 
 Description
@@ -36,6 +36,18 @@ test
     Test to run after <n> other tests have run.  This is used to find which test
     causes another test to fail. If the one test fails, testing stops
     immediately.
+
+-R
+    Preserve console recording on test failure. Normally when a test fails,
+    console recording is disabled so error messages go directly to output.
+    This flag keeps recording enabled, which is useful when testing the test
+    framework itself.
+
+args
+    Optional arguments to pass to the test, in `name=value` format. These are
+    used by tests declared with `UNIT_TEST_ARGS()` which define expected
+    argument names and types. See :ref:`develop/tests_writing:passing arguments
+    to c tests` for details.
 
 Typically the command is run on :ref:`arch/sandbox/sandbox:sandbox` since it
 includes a near-complete set of emulators, no code-size limits, many CONFIG
@@ -201,3 +213,7 @@ Run a selection of three suites::
     Tests run: 10, 12 ms, average: 1 ms, failures: 0
     Suites run: 3, total tests run: 37, 26 ms, average: 0 ms, failures: 0
     Average test time: 0 ms, worst case 'mem' took 1 ms
+
+Run a test with arguments (used by tests declared with UNIT_TEST_ARGS)::
+
+    => ut -f fs fs_test_ls_norun fs_type=ext4 fs_image=/tmp/img small=1MB.file

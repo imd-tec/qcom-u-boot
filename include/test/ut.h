@@ -88,6 +88,20 @@ int ut_check_console_linen(struct unit_test_state *uts, const char *fmt, ...)
 			__attribute__ ((format (__printf__, 2, 3)));
 
 /**
+ * ut_check_console_line_regex() - Check the next console line against a regex
+ *
+ * This checks the next line of console output against a regex pattern.
+ *
+ * After the function returns, uts->expect_str holds the regex pattern and
+ * uts->actual_str holds the actual string read from the console.
+ *
+ * @uts: Test state
+ * @regex: Regular expression pattern to match against
+ * Return: 0 if OK, other value on error
+ */
+int ut_check_console_line_regex(struct unit_test_state *uts, const char *regex);
+
+/**
  * ut_check_skipline() - Check that the next console line exists and skip it
  *
  * @uts: Test state
@@ -412,6 +426,21 @@ int ut_check_console_dump(struct unit_test_state *uts, int total_bytes);
 	__ret;								\
 })
 
+/* Assert that the next console output line matches a regex pattern */
+#define ut_assert_nextline_regex(pattern) ({				\
+	int __ret = 0;							\
+									\
+	if (ut_check_console_line_regex(uts, pattern)) {		\
+		ut_failf(uts, __FILE__, __LINE__, __func__,		\
+			 "console regex",				\
+			 "\nExpected regex '%s',\n         got '%s'",	\
+			 uts->expect_str, uts->actual_str);		\
+		if (!uts->soft_fail)					\
+			return CMD_RET_FAILURE;				\
+	}								\
+	__ret;								\
+})
+
 /* Assert that there is a 'next' console output line, and skip it */
 #define ut_assert_skipline() ({						\
 	int __ret = 0;							\
@@ -589,12 +618,14 @@ void ut_uninit_state(struct unit_test_state *uts);
  * name is the name of the test to run. This is used to find which test causes
  * another test to fail. If the one test fails, testing stops immediately.
  * Pass NULL to disable this
+ * @argc: Number of test arguments (key=value pairs), 0 if none
+ * @argv: Test argument array, NULL if none
  * Return: 0 if all tests passed, -1 if any failed
  */
 int ut_run_list(struct unit_test_state *uts, const char *category,
 		const char *prefix, struct unit_test *tests, int count,
 		const char *select_name, int runs_per_test, bool force_run,
-		const char *test_insert);
+		const char *test_insert, int argc, char *const argv[]);
 
 /**
  * ut_report() - Report stats on a test run
@@ -603,5 +634,55 @@ int ut_run_list(struct unit_test_state *uts, const char *category,
  * @run_count: Number of suites that were run
  */
 void ut_report(struct ut_stats *stats, int run_count);
+
+/**
+ * ut_get_str() - Get a string test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_STR.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: String value, or NULL if type mismatch
+ */
+const char *ut_get_str(struct unit_test_state *uts, int n, const char *file,
+		       int line, const char *func);
+
+/**
+ * ut_get_int() - Get an integer test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_INT.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: Integer value, or 0 if type mismatch
+ */
+long ut_get_int(struct unit_test_state *uts, int n, const char *file,
+		int line, const char *func);
+
+/**
+ * ut_get_bool() - Get a boolean test argument
+ *
+ * Fails the test if the argument type is not UT_ARG_BOOL.
+ *
+ * @uts: Test state
+ * @n: Argument index
+ * @file: Filename of caller
+ * @line: Line number of caller
+ * @func: Function name of caller
+ * Return: Boolean value, or false if type mismatch
+ */
+bool ut_get_bool(struct unit_test_state *uts, int n, const char *file,
+		 int line, const char *func);
+
+/* Helpers for accessing test arguments with type checking */
+#define ut_str(n)	ut_get_str(uts, n, __FILE__, __LINE__, __func__)
+#define ut_int(n)	ut_get_int(uts, n, __FILE__, __LINE__, __func__)
+#define ut_bool(n)	ut_get_bool(uts, n, __FILE__, __LINE__, __func__)
 
 #endif

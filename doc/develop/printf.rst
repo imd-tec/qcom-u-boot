@@ -1,7 +1,62 @@
 .. SPDX-License-Identifier: GPL-2.0+
 
-Printf() format codes
-=====================
+Printf-style Functions
+======================
+
+U-Boot provides a family of printf-style functions for formatted output.
+
+Functions
+---------
+
+printf()
+        Prints formatted output to the console.
+
+        .. code-block:: c
+
+            int printf(const char *fmt, ...);
+
+vprintf()
+        Like printf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vprintf(const char *fmt, va_list args);
+
+sprintf()
+        Prints formatted output to a string buffer. The buffer must be large
+        enough to hold the output.
+
+        .. code-block:: c
+
+            int sprintf(char *buf, const char *fmt, ...);
+
+vsprintf()
+        Like sprintf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vsprintf(char *buf, const char *fmt, va_list args);
+
+snprintf()
+        Prints formatted output to a string buffer with a size limit. At most
+        size-1 characters are written, and the buffer is always null-terminated.
+        Returns the number of characters that would have been written if the
+        buffer were large enough.
+
+        .. code-block:: c
+
+            int snprintf(char *buf, size_t size, const char *fmt, ...);
+
+vsnprintf()
+        Like snprintf() but takes a va_list argument.
+
+        .. code-block:: c
+
+            int vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
+
+
+Format Specification
+--------------------
 
 Each conversion specification consists of:
 
@@ -166,10 +221,15 @@ Pointers
 	* resource_size_t
 
 %pD
-        prints a UEFI device path
+        prints a UEFI device path (requires CONFIG_EFI_DEVICE_PATH_TO_TEXT)
 
 %pi4, %pI4
-        prints IPv4 address, e.g. '192.168.0.1'
+        prints IPv4 address, e.g. '192.168.0.1'. Lower case (%pi4) omits the
+        dot separators.
+
+%pi6, %pI6
+        prints IPv6 address (requires CONFIG_IPV6). Lower case (%pi6) omits the
+        colon separators.
 
 %pm
         prints MAC address without separators, e.g. '001122334455'
@@ -178,22 +238,116 @@ Pointers
         print MAC address colon separated, e.g. '00:01:02:03:04:05'
 
 %pUb
-        prints GUID big endian, lower case
+        prints GUID big endian, lower case (requires CONFIG_LIB_UUID)
         e.g. '00112233-4455-6677-8899-aabbccddeeff'
 
 %pUB
-        prints GUID big endian, upper case
+        prints GUID big endian, upper case (requires CONFIG_LIB_UUID)
         e.g. '00112233-4455-6677-8899-AABBCCDDEEFF'
 
 %pUl
-        prints GUID little endian, lower case
+        prints GUID little endian, lower case (requires CONFIG_LIB_UUID)
         e.g. '33221100-5544-7766-8899-aabbccddeeff'
 
 %pUL
-        prints GUID little endian, upper case
+        prints GUID little endian, upper case (requires CONFIG_LIB_UUID)
         e.g. '33221100-5544-7766-8899-AABBCCDDEEFF'
 
 %pUs
         prints text description of a GUID or if such is not known little endian,
-        lower case, e.g. 'system' for a GUID identifying an EFI system
-	partition.
+        lower case (requires CONFIG_LIB_UUID), e.g. 'system' for a GUID
+        identifying an EFI system partition.
+
+%pV
+        prints a struct va_format, which contains a format string and a va_list
+        pointer. This allows recursive printf formatting and is used for
+        implementing custom print functions that wrap printf.
+
+        .. code-block:: c
+
+            void my_print(const char *fmt, ...)
+            {
+                struct va_format vaf;
+                va_list args;
+
+                va_start(args, fmt);
+                vaf.fmt = fmt;
+                vaf.va = &args;
+                printf("prefix: %pV\n", &vaf);
+                va_end(args);
+            }
+
+
+Tiny printf
+-----------
+
+For space-constrained environments like SPL, U-Boot provides a minimal printf
+implementation enabled by CONFIG_SPL_USE_TINY_PRINTF (and corresponding
+CONFIG_TPL_USE_TINY_PRINTF, CONFIG_VPL_USE_TINY_PRINTF for TPL and VPL). This
+reduces code size by approximately 2.5KiB on armv7.
+
+The tiny printf supports only a limited set of format specifiers:
+
+Basic specifiers
+''''''''''''''''
+
+%c
+        prints a single character
+
+%s
+        prints a string
+
+%d, %i
+        signed decimal integer
+
+%u
+        unsigned decimal integer
+
+%x
+        unsigned hexadecimal (lowercase)
+
+%%
+        a literal '%' character
+
+Length modifiers
+''''''''''''''''
+
+%l
+        long (e.g., %ld, %lu, %lx)
+
+Width and padding
+'''''''''''''''''
+
+Field width and zero-padding are supported (e.g., %08x, %4d).
+
+Pointer specifiers (CONFIG_SPL_NET only)
+''''''''''''''''''''''''''''''''''''''''
+
+When CONFIG_SPL_NET is enabled, the following pointer formats are available:
+
+%pM
+        MAC address colon-separated, e.g. '00:11:22:33:44:55'
+
+%pm
+        MAC address without separators, e.g. '001122334455'
+
+%pI4
+        IPv4 address, e.g. '192.168.1.1'
+
+Limitations
+'''''''''''
+
+The tiny printf does NOT support:
+
+* Floating point (%f, %e, %g, etc.)
+* Long long (%ll)
+* Size/ptrdiff modifiers (%z, %t)
+* Precision (%.Nf, %.Ns)
+* Most pointer formats (%pU, %pD, %pV, etc.)
+* The snprintf() size parameter is ignored - no bounds checking is performed
+
+.. warning::
+
+   Because snprintf() ignores the size parameter in tiny printf, buffer
+   overflows are possible. Ensure buffers are large enough for the expected
+   output.

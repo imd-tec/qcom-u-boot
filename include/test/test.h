@@ -9,6 +9,9 @@
 #include <malloc.h>
 #include <linux/bitops.h>
 
+#define UT_MAX_ARGS	8
+#define UT_PRIV_SIZE	256
+
 /**
  * struct ut_stats - Statistics about tests run
  *
@@ -25,6 +28,42 @@ struct ut_stats {
 	int test_count;
 	ulong start;
 	ulong duration_ms;
+};
+
+/**
+ * enum ut_arg_type - Type of a unit test argument
+ *
+ * @UT_ARG_INT: Integer argument (hex with 0x prefix, or decimal) -> vint
+ * @UT_ARG_BOOL: Boolean argument (0 or 1) -> vbool
+ * @UT_ARG_STR: String argument -> vstr
+ */
+enum ut_arg_type {
+	UT_ARG_INT,
+	UT_ARG_BOOL,
+	UT_ARG_STR,
+};
+
+/**
+ * struct ut_arg - Parsed unit test argument value
+ *
+ * Holds the parsed value of an argument after command-line processing.
+ *
+ * @name: Name of the argument (points to ut_arg_def.name)
+ * @type: Type of the argument
+ * @provided: true if value was provided on command line
+ * @vint: Integer value (when type is UT_ARG_INT)
+ * @vbool: Boolean value (when type is UT_ARG_BOOL)
+ * @vstr: String value (when type is UT_ARG_STR, points into argv)
+ */
+struct ut_arg {
+	const char *name;
+	enum ut_arg_type type;
+	bool provided;
+	union {
+		long vint;
+		bool vbool;
+		const char *vstr;
+	};
 };
 
 /*
@@ -54,6 +93,11 @@ struct ut_stats {
  * @soft_fail: continue execution of the test even after it fails
  * @expect_str: Temporary string used to hold expected string value
  * @actual_str: Temporary string used to hold actual string value
+ * @args: Parsed argument values for current test
+ * @arg_count: Number of parsed arguments
+ * @arg_error: Set if ut_str/int/bool() detects a type mismatch
+ * @keep_record: Preserve console recording when ut_fail() is called
+ * @priv: Private data for tests to use as needed
  */
 struct unit_test_state {
 	struct ut_stats cur;
@@ -80,6 +124,11 @@ struct unit_test_state {
 	bool soft_fail;
 	char expect_str[1024];
 	char actual_str[1024];
+	struct ut_arg args[UT_MAX_ARGS];
+	int arg_count;
+	bool arg_error;
+	bool keep_record;
+	char priv[UT_PRIV_SIZE];
 };
 
 /* Test flags for each test */
@@ -108,17 +157,50 @@ enum ut_flags {
 };
 
 /**
+ * enum ut_arg_flags - Flags for unit test arguments
+ *
+ * @UT_ARGF_OPTIONAL: Argument is optional; use default value if not provided
+ */
+enum ut_arg_flags {
+	UT_ARGF_OPTIONAL	= BIT(0),
+};
+
+/**
+ * struct ut_arg_def - Definition of a unit test argument
+ *
+ * Declares an expected argument for a test, including its name, type,
+ * whether it is optional, and its default value.
+ *
+ * @name: Name of the argument (used in key=value matching)
+ * @type: Type of the argument (int, bool, or string)
+ * @flags: Argument flags (e.g., UT_ARGF_OPTIONAL)
+ * @def: Default value (used when argument is optional and not provided)
+ */
+struct ut_arg_def {
+	const char *name;
+	enum ut_arg_type type;
+	int flags;
+	union {
+		long vint;
+		bool vbool;
+		const char *vstr;
+	} def;
+};
+
+/**
  * struct unit_test - Information about a unit test
  *
  * @name: Name of test
  * @func: Function to call to perform test
  * @flags: Flags indicated pre-conditions for test
+ * @arg_defs: Argument definitions (NULL-terminated array), or NULL
  */
 struct unit_test {
 	const char *file;
 	const char *name;
 	int (*func)(struct unit_test_state *state);
 	int flags;
+	const struct ut_arg_def *arg_defs;
 };
 
 /**
@@ -168,6 +250,33 @@ struct unit_test {
 		.name = #_name,						\
 		.flags = (_flags) | UTF_UNINIT,				\
 		.func = _name,						\
+	}
+
+/**
+ * UNIT_TEST_ARGS() - create unit test entry with inline argument definitions
+ *
+ * Like UNIT_TEST() but allows specifying argument definitions inline.
+ * The variadic arguments are struct ut_arg_def initializers. The NULL
+ * terminator is added automatically by the macro.
+ *
+ * Example:
+ *   UNIT_TEST_ARGS(my_test, UTF_CONSOLE, my_suite,
+ *       { "path", UT_ARG_STR },
+ *       { "count", UT_ARG_INT, UT_ARGF_OPTIONAL, { .vint = 10 } });
+ *
+ * @_name:	Test function name
+ * @_flags:	Test flags (see enum ut_flags)
+ * @_suite:	Test suite name
+ * @...:	Argument definitions (struct ut_arg_def initializers)
+ */
+#define UNIT_TEST_ARGS(_name, _flags, _suite, ...)			\
+	static const struct ut_arg_def _name##_args[] = { __VA_ARGS__, { NULL } }; \
+	ll_entry_declare(struct unit_test, _name, ut_ ## _suite) = {	\
+		.file = __FILE__,					\
+		.name = #_name,						\
+		.flags = _flags,					\
+		.func = _name,						\
+		.arg_defs = _name##_args,				\
 	}
 
 /* Get the start of a list of unit tests for a particular suite */
