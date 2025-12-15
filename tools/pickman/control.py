@@ -30,6 +30,10 @@ BRANCH_SOURCE = 'us/next'
 # Named tuple for commit info
 Commit = namedtuple('Commit', ['hash', 'short_hash', 'subject', 'date'])
 
+# Named tuple for commit with author
+CommitInfo = namedtuple('CommitInfo',
+                        ['hash', 'short_hash', 'subject', 'author'])
+
 
 def run_git(args):
     """Run a git command and return output."""
@@ -133,6 +137,95 @@ def do_compare(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+def get_next_commits(dbs, source):
+    """Get the next set of commits to cherry-pick from a source
+
+    Finds commits between the last cherry-picked commit and the next merge
+    commit in the source branch.
+
+    Args:
+        dbs (Database): Database instance
+        source (str): Source branch name
+
+    Returns:
+        tuple: (commits, merge_found, error_msg) where:
+            commits: list of CommitInfo tuples
+            merge_found: bool, True if stopped at a merge commit
+            error_msg: str or None, error message if failed
+    """
+    # Get the last cherry-picked commit from database
+    last_commit = dbs.source_get(source)
+
+    if not last_commit:
+        return None, False, f"Source '{source}' not found in database"
+
+    # Get commits between last_commit and source HEAD (oldest first)
+    # Format: hash|short_hash|author|subject|parents
+    # Using | as separator since subject may contain colons
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'{last_commit}..{source}'
+    ])
+
+    if not log_output:
+        return [], False, None
+
+    commits = []
+    merge_found = False
+
+    for line in log_output.split('\n'):
+        if not line:
+            continue
+        parts = line.split('|')
+        commit_hash = parts[0]
+        short_hash = parts[1]
+        author = parts[2]
+        subject = '|'.join(parts[3:-1])  # Subject may contain separator
+        parents = parts[-1].split()
+
+        commits.append(CommitInfo(commit_hash, short_hash, subject, author))
+
+        # Check if this is a merge commit (has multiple parents)
+        if len(parents) > 1:
+            merge_found = True
+            break
+
+    return commits, merge_found, None
+
+
+def do_next_set(args, dbs):
+    """Show the next set of commits to cherry-pick from a source
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' attribute
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 if source not found
+    """
+    source = args.source
+    commits, merge_found, error = get_next_commits(dbs, source)
+
+    if error:
+        tout.error(error)
+        return 1
+
+    if not commits:
+        tout.info('No new commits to cherry-pick')
+        return 0
+
+    if merge_found:
+        tout.info(f'Next set from {source} ({len(commits)} commits):')
+    else:
+        tout.info(f'Remaining commits from {source} ({len(commits)} commits, '
+                  'no merge found):')
+
+    for commit in commits:
+        tout.info(f'  {commit.short_hash} {commit.subject}')
+
+    return 0
+
+
 def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
 
@@ -156,6 +249,7 @@ COMMANDS = {
     'add-source': do_add_source,
     'compare': do_compare,
     'list-sources': do_list_sources,
+    'next-set': do_next_set,
     'test': do_test,
 }
 

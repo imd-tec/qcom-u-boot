@@ -36,6 +36,11 @@ def parse_args(argv):
 
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('list-sources', help='List tracked source branches')
+
+    next_set = subparsers.add_parser('next-set',
+                                     help='Show next set of commits to cherry-pick')
+    next_set.add_argument('source', help='Source branch name')
+
     subparsers.add_parser('test', help='Run tests')
 
     return parser.parse_args(argv)

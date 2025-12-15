@@ -358,5 +358,126 @@ class TestListSources(unittest.TestCase):
         self.assertIn('us/next: abc123def456', output)
 
 
+class TestNextSet(unittest.TestCase):
+    """Tests for next-set command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_next_set_source_not_found(self):
+        """Test next-set with unknown source"""
+        # Create empty database first
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='next-set', source='unknown')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        # Error goes to stderr
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+    def test_next_set_no_commits(self):
+        """Test next-set with no new commits"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log returning empty
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='next-set', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('No new commits to cherry-pick', stdout.getvalue())
+
+    def test_next_set_with_merge(self):
+        """Test next-set finding commits up to merge"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with commits including a merge
+        log_output = (
+            'aaa111|aaa111a|Author 1|First commit|abc123\n'
+            'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            'ccc333|ccc333c|Author 3|Merge branch feature|bbb222 ddd444\n'
+            'eee555|eee555e|Author 4|After merge|ccc333\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-set', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Next set from us/next (3 commits):', output)
+        self.assertIn('aaa111a First commit', output)
+        self.assertIn('bbb222b Second commit', output)
+        self.assertIn('ccc333c Merge branch feature', output)
+        # Should not include commits after the merge
+        self.assertNotIn('eee555e', output)
+
+    def test_next_set_no_merge(self):
+        """Test next-set with no merge commit found"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log without merge commits
+        log_output = (
+            'aaa111|aaa111a|Author 1|First commit|abc123\n'
+            'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-set', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Remaining commits from us/next (2 commits, '
+                      'no merge found):', output)
+        self.assertIn('aaa111a First commit', output)
+        self.assertIn('bbb222b Second commit', output)
+
+
 if __name__ == '__main__':
     unittest.main()

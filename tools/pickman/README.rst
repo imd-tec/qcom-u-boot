@@ -33,6 +33,14 @@ This shows:
   master branch (ci/master)
 - The last common commit between the two branches
 
+To show the next set of commits to cherry-pick from a source branch::
+
+    ./tools/pickman/pickman next-set us/next
+
+This finds commits between the last cherry-picked commit and the next merge
+commit in the source branch. It stops at the merge commit since that typically
+represents a logical grouping of commits (e.g., a pull request).
+
 Database
 --------
 
