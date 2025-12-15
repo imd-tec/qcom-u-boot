@@ -73,6 +73,13 @@ On successful cherry-pick, an entry is appended to ``.pickman-history`` with:
 This file is committed automatically and included in the MR description when
 using ``-p``.
 
+After successfully applying commits, update the database to record progress::
+
+    ./tools/pickman/pickman commit-source us/next <commit-hash>
+
+This updates the last cherry-picked commit for the source branch, so subsequent
+``next-set`` and ``apply`` commands will start from the new position.
+
 Requirements
 ------------
 

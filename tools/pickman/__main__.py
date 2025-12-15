@@ -45,6 +45,11 @@ def parse_args(argv):
     apply_cmd.add_argument('-t', '--target', default='master',
                            help='Target branch for MR (default: master)')
 
+    commit_src = subparsers.add_parser('commit-source',
+                                        help='Update database with last commit')
+    commit_src.add_argument('source', help='Source branch name')
+    commit_src.add_argument('commit', help='Commit hash to record')
+
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('list-sources', help='List tracked source branches')
 

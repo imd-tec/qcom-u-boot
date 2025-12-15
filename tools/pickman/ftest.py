@@ -127,6 +127,13 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(args.source, 'us/next')
         self.assertEqual(args.branch, 'my-branch')
 
+    def test_parse_commit_source(self):
+        """Test parsing commit-source command."""
+        args = pickman.parse_args(['commit-source', 'us/next', 'abc123'])
+        self.assertEqual(args.cmd, 'commit-source')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.commit, 'abc123')
+
     def test_parse_compare(self):
         """Test parsing compare command."""
         args = pickman.parse_args(['compare'])
@@ -940,6 +947,64 @@ class TestApply(unittest.TestCase):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         self.assertIn('No new commits to cherry-pick', stdout.getvalue())
+
+
+class TestCommitSource(unittest.TestCase):
+    """Tests for commit-source command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_commit_source_not_found(self):
+        """Test commit-source with unknown source."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+        command.TEST_RESULT = command.CommandResult(stdout='fullhash123')
+
+        args = argparse.Namespace(cmd='commit-source', source='unknown',
+                                  commit='abc123')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+    def test_commit_source_success(self):
+        """Test commit-source updates database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'oldcommit12345')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+        command.TEST_RESULT = command.CommandResult(stdout='newcommit67890')
+
+        args = argparse.Namespace(cmd='commit-source', source='us/next',
+                                  commit='abc123')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('oldcommit123', stdout.getvalue())
+        self.assertIn('newcommit678', stdout.getvalue())
 
 
 class TestParseUrl(unittest.TestCase):

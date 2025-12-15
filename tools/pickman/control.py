@@ -401,6 +401,41 @@ def do_apply(args, dbs):  # pylint: disable=too-many-locals
     return 0 if success else 1
 
 
+def do_commit_source(args, dbs):
+    """Update the database with the last cherry-picked commit
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' and 'commit' attributes
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    source = args.source
+    commit = args.commit
+
+    # Resolve the commit to a full hash
+    try:
+        full_hash = run_git(['rev-parse', commit])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f"Could not resolve commit '{commit}'")
+        return 1
+
+    old_commit = dbs.source_get(source)
+    if not old_commit:
+        tout.error(f"Source '{source}' not found in database")
+        return 1
+
+    dbs.source_set(source, full_hash)
+    dbs.commit()
+
+    short_old = old_commit[:12]
+    short_new = full_hash[:12]
+    tout.info(f"Updated '{source}': {short_old} -> {short_new}")
+
+    return 0
+
+
 
 def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
@@ -424,6 +459,7 @@ def do_test(args, dbs):  # pylint: disable=unused-argument
 COMMANDS = {
     'add-source': do_add_source,
     'apply': do_apply,
+    'commit-source': do_commit_source,
     'compare': do_compare,
     'list-sources': do_list_sources,
     'next-set': do_next_set,
