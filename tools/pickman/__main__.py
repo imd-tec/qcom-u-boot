@@ -30,6 +30,10 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description='Check commit differences')
     subparsers = parser.add_subparsers(dest='cmd', required=True)
 
+    add_source = subparsers.add_parser('add-source',
+                                        help='Add a source branch to track')
+    add_source.add_argument('source', help='Source branch name')
+
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('test', help='Run tests')
 

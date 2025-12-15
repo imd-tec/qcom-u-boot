@@ -15,9 +15,13 @@ our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
 
 # pylint: disable=wrong-import-position,import-error
+from pickman import database
 from pickman import ftest
 from u_boot_pylib import command
 from u_boot_pylib import tout
+
+# Default database filename
+DB_FNAME = '.pickman.db'
 
 # Branch names to compare
 BRANCH_MASTER = 'ci/master'
@@ -56,11 +60,44 @@ def compare_branches(master, source):
     return count, Commit(full_hash, short_hash, subject, date)
 
 
-def do_compare(args):  # pylint: disable=unused-argument
+def do_add_source(args, dbs):
+    """Add a source branch to the database
+
+    Finds the merge-base commit between master and source and stores it.
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' attribute
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success
+    """
+    source = args.source
+
+    # Find the merge base commit
+    base_hash = run_git(['merge-base', BRANCH_MASTER, source])
+
+    # Get commit details for display
+    info = run_git(['log', '-1', '--format=%h%n%s', base_hash])
+    short_hash, subject = info.split('\n')
+
+    # Store in database
+    dbs.source_set(source, base_hash)
+    dbs.commit()
+
+    tout.info(f"Added source '{source}' with base commit:")
+    tout.info(f'  Hash:    {short_hash}')
+    tout.info(f'  Subject: {subject}')
+
+    return 0
+
+
+def do_compare(args, dbs):  # pylint: disable=unused-argument
     """Compare branches and print results.
 
     Args:
         args (Namespace): Parsed arguments
+        dbs (Database): Database instance
     """
     count, base = compare_branches(BRANCH_MASTER, BRANCH_SOURCE)
 
@@ -74,11 +111,12 @@ def do_compare(args):  # pylint: disable=unused-argument
     return 0
 
 
-def do_test(args):  # pylint: disable=unused-argument
+def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
 
     Args:
         args (Namespace): Parsed arguments
+        dbs (Database): Database instance
 
     Returns:
         int: 0 if tests passed, 1 otherwise
@@ -89,6 +127,14 @@ def do_test(args):  # pylint: disable=unused-argument
     result = runner.run(suite)
 
     return 0 if result.wasSuccessful() else 1
+
+
+# Command dispatch table
+COMMANDS = {
+    'add-source': do_add_source,
+    'compare': do_compare,
+    'test': do_test,
+}
 
 
 def do_pickman(args):
@@ -102,9 +148,12 @@ def do_pickman(args):
     """
     tout.init(tout.INFO)
 
-    if args.cmd == 'compare':
-        return do_compare(args)
-    if args.cmd == 'test':
-        return do_test(args)
-
+    handler = COMMANDS.get(args.cmd)
+    if handler:
+        dbs = database.Database(DB_FNAME)
+        dbs.start()
+        try:
+            return handler(args, dbs)
+        finally:
+            dbs.close()
     return 1

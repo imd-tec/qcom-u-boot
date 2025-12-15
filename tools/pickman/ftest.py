@@ -5,6 +5,7 @@
 #
 """Tests for pickman."""
 
+import argparse
 import os
 import sys
 import tempfile
@@ -104,6 +105,12 @@ class TestCompareBranches(unittest.TestCase):
 class TestParseArgs(unittest.TestCase):
     """Tests for parse_args function."""
 
+    def test_parse_add_source(self):
+        """Test parsing add-source command."""
+        args = pickman.parse_args(['add-source', 'us/next'])
+        self.assertEqual(args.cmd, 'add-source')
+        self.assertEqual(args.source, 'us/next')
+
     def test_parse_compare(self):
         """Test parsing compare command."""
         args = pickman.parse_args(['compare'])
@@ -124,6 +131,48 @@ class TestParseArgs(unittest.TestCase):
 class TestMain(unittest.TestCase):
     """Tests for main function."""
 
+    def test_add_source(self):
+        """Test add-source command"""
+        results = iter([
+            'abc123def456',  # merge-base
+            'abc123d\nTest subject',  # log
+        ])
+
+        def handle_command(**_):
+            return command.CommandResult(stdout=next(results))
+
+        # Use a temp database file
+        fd, db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(db_path)
+        old_db_fname = control.DB_FNAME
+        control.DB_FNAME = db_path
+        database.Database.instances.clear()
+
+        command.TEST_RESULT = handle_command
+        try:
+            args = argparse.Namespace(cmd='add-source', source='us/next')
+            with terminal.capture() as (stdout, _):
+                ret = control.do_pickman(args)
+            self.assertEqual(ret, 0)
+            output = stdout.getvalue()
+            self.assertIn("Added source 'us/next' with base commit:", output)
+            self.assertIn('Hash:    abc123d', output)
+            self.assertIn('Subject: Test subject', output)
+
+            # Verify database was updated
+            database.Database.instances.clear()
+            dbs = database.Database(db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'abc123def456')
+            dbs.close()
+        finally:
+            command.TEST_RESULT = None
+            control.DB_FNAME = old_db_fname
+            if os.path.exists(db_path):
+                os.unlink(db_path)
+            database.Database.instances.clear()
+
     def test_main_compare(self):
         """Test main with compare command."""
         results = iter([
@@ -135,12 +184,23 @@ class TestMain(unittest.TestCase):
         def handle_command(**_):
             return command.CommandResult(stdout=next(results))
 
+        # Use a temp database file
+        fd, db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(db_path)
+        old_db_fname = control.DB_FNAME
+        control.DB_FNAME = db_path
+        database.Database.instances.clear()
+
         command.TEST_RESULT = handle_command
         try:
             with terminal.capture() as (stdout, _):
                 ret = pickman.main(['compare'])
             self.assertEqual(ret, 0)
-            lines = iter(stdout.getvalue().splitlines())
+            # Filter out database migration messages
+            output_lines = [l for l in stdout.getvalue().splitlines()
+                            if not l.startswith(('Update database', 'Creating'))]
+            lines = iter(output_lines)
             self.assertEqual('Commits in us/next not in ci/master: 10',
                              next(lines))
             self.assertEqual('', next(lines))
@@ -152,6 +212,10 @@ class TestMain(unittest.TestCase):
             self.assertRaises(StopIteration, next, lines)
         finally:
             command.TEST_RESULT = None
+            control.DB_FNAME = old_db_fname
+            if os.path.exists(db_path):
+                os.unlink(db_path)
+            database.Database.instances.clear()
 
 
 class TestDatabase(unittest.TestCase):
