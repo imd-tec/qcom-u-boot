@@ -287,6 +287,76 @@ class TestDatabase(unittest.TestCase):
             self.assertIs(dbs1, dbs2)
             dbs1.close()
 
+    def test_source_get_all(self):
+        """Test getting all sources."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Empty initially
+            self.assertEqual(dbs.source_get_all(), [])
+
+            # Add some sources
+            dbs.source_set('branch-a', 'abc123')
+            dbs.source_set('branch-b', 'def456')
+            dbs.commit()
+
+            # Should be sorted by name
+            sources = dbs.source_get_all()
+            self.assertEqual(len(sources), 2)
+            self.assertEqual(sources[0], ('branch-a', 'abc123'))
+            self.assertEqual(sources[1], ('branch-b', 'def456'))
+            dbs.close()
+
+
+class TestListSources(unittest.TestCase):
+    """Tests for list-sources command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_list_sources_empty(self):
+        """Test list-sources with no sources"""
+        args = argparse.Namespace(cmd='list-sources')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('No source branches tracked', stdout.getvalue())
+
+    def test_list_sources(self):
+        """Test list-sources with sources"""
+        # Add some sources first
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123def456')
+            dbs.source_set('other/branch', 'def456abc789')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+        args = argparse.Namespace(cmd='list-sources')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Tracked source branches:', output)
+        self.assertIn('other/branch: def456abc789', output)
+        self.assertIn('us/next: abc123def456', output)
+
 
 if __name__ == '__main__':
     unittest.main()

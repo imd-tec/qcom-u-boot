@@ -178,6 +178,15 @@ class Database:
             return rec[0]
         return None
 
+    def source_get_all(self):
+        """Get all source branches and their last commits
+
+        Return:
+            list of tuple: (name, last_commit) pairs
+        """
+        res = self.execute('SELECT name, last_commit FROM source ORDER BY name')
+        return res.fetchall()
+
     def source_set(self, name, commit):
         """Set the last cherry-picked commit for a source branch
 

@@ -35,6 +35,7 @@ def parse_args(argv):
     add_source.add_argument('source', help='Source branch name')
 
     subparsers.add_parser('compare', help='Compare branches')
+    subparsers.add_parser('list-sources', help='List tracked source branches')
     subparsers.add_parser('test', help='Run tests')
 
     return parser.parse_args(argv)

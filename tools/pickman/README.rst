@@ -19,6 +19,10 @@ This finds the merge-base commit between the master branch (ci/master) and the
 source branch, and stores it in the database as the starting point for
 cherry-picking.
 
+To list all tracked source branches::
+
+    ./tools/pickman/pickman list-sources
+
 To compare branches and show commits that need to be cherry-picked::
 
     ./tools/pickman/pickman compare

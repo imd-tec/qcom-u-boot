@@ -92,6 +92,28 @@ def do_add_source(args, dbs):
     return 0
 
 
+def do_list_sources(args, dbs):  # pylint: disable=unused-argument
+    """List all tracked source branches
+
+    Args:
+        args (Namespace): Parsed arguments
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success
+    """
+    sources = dbs.source_get_all()
+
+    if not sources:
+        tout.info('No source branches tracked')
+    else:
+        tout.info('Tracked source branches:')
+        for name, last_commit in sources:
+            tout.info(f'  {name}: {last_commit[:12]}')
+
+    return 0
+
+
 def do_compare(args, dbs):  # pylint: disable=unused-argument
     """Compare branches and print results.
 
@@ -133,6 +155,7 @@ def do_test(args, dbs):  # pylint: disable=unused-argument
 COMMANDS = {
     'add-source': do_add_source,
     'compare': do_compare,
+    'list-sources': do_list_sources,
     'test': do_test,
 }
 
