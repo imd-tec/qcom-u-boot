@@ -38,6 +38,12 @@ def parse_args(argv):
                                        help='Apply next commits using Claude')
     apply_cmd.add_argument('source', help='Source branch name')
     apply_cmd.add_argument('-b', '--branch', help='Branch name to create')
+    apply_cmd.add_argument('-p', '--push', action='store_true',
+                           help='Push branch and create GitLab MR')
+    apply_cmd.add_argument('-r', '--remote', default='ci',
+                           help='Git remote for push (default: ci)')
+    apply_cmd.add_argument('-t', '--target', default='master',
+                           help='Target branch for MR (default: master)')
 
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('list-sources', help='List tracked source branches')

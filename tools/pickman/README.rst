@@ -52,7 +52,26 @@ will:
 - Cherry-pick each commit in order
 - Handle simple conflicts automatically
 - Report status after completion
-- Update the database with the last successfully applied commit
+
+To push the branch and create a GitLab merge request::
+
+    ./tools/pickman/pickman apply us/next -p
+
+Options for the apply command:
+
+- ``-b, --branch``: Branch name to create (default: cherry-<hash>)
+- ``-p, --push``: Push branch and create GitLab MR
+- ``-r, --remote``: Git remote for push (default: ci)
+- ``-t, --target``: Target branch for MR (default: master)
+
+On successful cherry-pick, an entry is appended to ``.pickman-history`` with:
+
+- Date and source branch
+- Branch name and list of commits
+- The agent's conversation log
+
+This file is committed automatically and included in the MR description when
+using ``-p``.
 
 Requirements
 ------------
@@ -63,6 +82,17 @@ To use the ``apply`` command, install the Claude Agent SDK::
 
 You will also need an Anthropic API key set in the ``ANTHROPIC_API_KEY``
 environment variable.
+
+To use the ``-p`` (push) option for GitLab integration, install python-gitlab::
+
+    pip install python-gitlab
+
+You will also need a GitLab API token set in the ``GITLAB_TOKEN`` environment
+variable. See `GitLab Personal Access Tokens`_ for instructions on creating one.
+The token needs ``api`` scope.
+
+.. _GitLab Personal Access Tokens:
+   https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html
 
 Database
 --------

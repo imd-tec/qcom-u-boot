@@ -1016,5 +1016,29 @@ class TestCheckAvailable(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestParseApplyWithPush(unittest.TestCase):
+    """Tests for apply command with push options."""
+
+    def test_parse_apply_with_push(self):
+        """Test parsing apply command with push option."""
+        args = pickman.parse_args(['apply', 'us/next', '-p'])
+        self.assertEqual(args.cmd, 'apply')
+        self.assertEqual(args.source, 'us/next')
+        self.assertTrue(args.push)
+        self.assertEqual(args.remote, 'ci')
+        self.assertEqual(args.target, 'master')
+
+    def test_parse_apply_with_push_options(self):
+        """Test parsing apply command with all push options."""
+        args = pickman.parse_args([
+            'apply', 'us/next', '-p',
+            '-r', 'origin', '-t', 'main'
+        ])
+        self.assertEqual(args.cmd, 'apply')
+        self.assertTrue(args.push)
+        self.assertEqual(args.remote, 'origin')
+        self.assertEqual(args.target, 'main')
+
+
 if __name__ == '__main__':
     unittest.main()

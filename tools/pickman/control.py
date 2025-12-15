@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 from pickman import agent
 from pickman import database
 from pickman import ftest
+from pickman import gitlab_api
 from u_boot_pylib import command
 from u_boot_pylib import tout
 
@@ -227,7 +228,80 @@ def do_next_set(args, dbs):
     return 0
 
 
-def do_apply(args, dbs):
+HISTORY_FILE = '.pickman-history'
+
+
+def format_history_summary(source, commits, branch_name):
+    """Format a summary of the cherry-pick operation
+
+    Args:
+        source (str): Source branch name
+        commits (list): list of CommitInfo tuples
+        branch_name (str): Name of the cherry-pick branch
+
+    Returns:
+        str: Formatted summary text
+    """
+    from datetime import date
+
+    commit_list = '\n'.join(
+        f'- {c.short_hash} {c.subject}'
+        for c in commits
+    )
+
+    return f"""## {date.today()}: {source}
+
+Branch: {branch_name}
+
+Commits:
+{commit_list}"""
+
+
+def write_history(source, commits, branch_name, conversation_log):
+    """Write an entry to the pickman history file
+
+    Args:
+        source (str): Source branch name
+        commits (list): list of CommitInfo tuples
+        branch_name (str): Name of the cherry-pick branch
+        conversation_log (str): The agent's conversation output
+    """
+    import os
+    import re
+
+    summary = format_history_summary(source, commits, branch_name)
+    entry = f"""{summary}
+
+### Conversation log
+{conversation_log}
+
+---
+
+"""
+
+    # Read existing content and remove any entry for this branch
+    existing = ''
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            existing = fhandle.read()
+        # Remove existing entry for this branch (from ## header to ---)
+        pattern = rf'## [^\n]+\n\nBranch: {re.escape(branch_name)}\n.*?---\n\n'
+        existing = re.sub(pattern, '', existing, flags=re.DOTALL)
+
+    # Write updated history file
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
+        fhandle.write(existing + entry)
+
+    # Commit the history file (use -f in case .gitignore patterns match)
+    run_git(['add', '-f', HISTORY_FILE])
+    msg = f'pickman: Record cherry-pick of {len(commits)} commits from {source}\n\n'
+    msg += '\n'.join(f'- {c.short_hash} {c.subject}' for c in commits)
+    run_git(['commit', '-m', msg])
+
+    tout.info(f'Updated {HISTORY_FILE}')
+
+
+def do_apply(args, dbs):  # pylint: disable=too-many-locals
     """Apply the next set of commits using Claude agent
 
     Args:
@@ -257,6 +331,14 @@ def do_apply(args, dbs):
         # Use first commit's short hash as part of branch name
         branch_name = f'cherry-{commits[0].short_hash}'
 
+    # Delete branch if it already exists
+    try:
+        run_git(['rev-parse', '--verify', branch_name])
+        tout.info(f'Deleting existing branch {branch_name}')
+        run_git(['branch', '-D', branch_name])
+    except Exception:  # pylint: disable=broad-except
+        pass  # Branch doesn't exist, which is fine
+
     if merge_found:
         tout.info(f'Applying next set from {source} ({len(commits)} commits):')
     else:
@@ -277,13 +359,18 @@ def do_apply(args, dbs):
 
     # Convert CommitInfo to tuple format expected by agent
     commit_tuples = [(c.hash, c.short_hash, c.subject) for c in commits]
-    success = agent.cherry_pick_commits(commit_tuples, source, branch_name)
+    success, conversation_log = agent.cherry_pick_commits(commit_tuples, source,
+                                                          branch_name)
 
     # Update commit status based on result
     status = 'applied' if success else 'conflict'
     for commit in commits:
         dbs.commit_set_status(commit.hash, status)
     dbs.commit()
+
+    # Write history file if successful
+    if success:
+        write_history(source, commits, branch_name, conversation_log)
 
     # Return to original branch
     current_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -292,8 +379,24 @@ def do_apply(args, dbs):
         run_git(['checkout', original_branch])
 
     if success:
-        tout.info(f"Use 'pickman commit-source {source} {commits[-1].short_hash}' "
-                  'to update the database')
+        # Push and create MR if requested
+        if args.push:
+            remote = args.remote
+            target = args.target
+            # Use merge commit subject as title (last commit is the merge)
+            title = f'[pickman] {commits[-1].subject}'
+            # Description matches .pickman-history entry (summary + conversation)
+            summary = format_history_summary(source, commits, branch_name)
+            description = f'{summary}\n\n### Conversation log\n{conversation_log}'
+
+            mr_url = gitlab_api.push_and_create_mr(
+                remote, branch_name, target, title, description
+            )
+            if not mr_url:
+                return 1
+        else:
+            tout.info(f"Use 'pickman commit-source {source} "
+                      f"{commits[-1].short_hash}' to update the database")
 
     return 0 if success else 1
 
