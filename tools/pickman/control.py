@@ -15,6 +15,7 @@ our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
 
 # pylint: disable=wrong-import-position,import-error
+from pickman import agent
 from pickman import database
 from pickman import ftest
 from u_boot_pylib import command
@@ -226,6 +227,78 @@ def do_next_set(args, dbs):
     return 0
 
 
+def do_apply(args, dbs):
+    """Apply the next set of commits using Claude agent
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' and 'branch' attributes
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    source = args.source
+    commits, merge_found, error = get_next_commits(dbs, source)
+
+    if error:
+        tout.error(error)
+        return 1
+
+    if not commits:
+        tout.info('No new commits to cherry-pick')
+        return 0
+
+    # Save current branch to return to later
+    original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+    # Generate branch name if not provided
+    branch_name = args.branch
+    if not branch_name:
+        # Use first commit's short hash as part of branch name
+        branch_name = f'cherry-{commits[0].short_hash}'
+
+    if merge_found:
+        tout.info(f'Applying next set from {source} ({len(commits)} commits):')
+    else:
+        tout.info(f'Applying remaining commits from {source} '
+                  f'({len(commits)} commits, no merge found):')
+
+    tout.info(f'  Branch: {branch_name}')
+    for commit in commits:
+        tout.info(f'  {commit.short_hash} {commit.subject}')
+    tout.info('')
+
+    # Add commits to database with 'pending' status
+    source_id = dbs.source_get_id(source)
+    for commit in commits:
+        dbs.commit_add(commit.hash, source_id, commit.subject, commit.author,
+                       status='pending')
+    dbs.commit()
+
+    # Convert CommitInfo to tuple format expected by agent
+    commit_tuples = [(c.hash, c.short_hash, c.subject) for c in commits]
+    success = agent.cherry_pick_commits(commit_tuples, source, branch_name)
+
+    # Update commit status based on result
+    status = 'applied' if success else 'conflict'
+    for commit in commits:
+        dbs.commit_set_status(commit.hash, status)
+    dbs.commit()
+
+    # Return to original branch
+    current_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+    if current_branch != original_branch:
+        tout.info(f'Returning to {original_branch}')
+        run_git(['checkout', original_branch])
+
+    if success:
+        tout.info(f"Use 'pickman commit-source {source} {commits[-1].short_hash}' "
+                  'to update the database')
+
+    return 0 if success else 1
+
+
+
 def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
 
@@ -247,6 +320,7 @@ def do_test(args, dbs):  # pylint: disable=unused-argument
 # Command dispatch table
 COMMANDS = {
     'add-source': do_add_source,
+    'apply': do_apply,
     'compare': do_compare,
     'list-sources': do_list_sources,
     'next-set': do_next_set,

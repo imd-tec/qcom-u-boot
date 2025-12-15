@@ -34,6 +34,11 @@ def parse_args(argv):
                                         help='Add a source branch to track')
     add_source.add_argument('source', help='Source branch name')
 
+    apply_cmd = subparsers.add_parser('apply',
+                                       help='Apply next commits using Claude')
+    apply_cmd.add_argument('source', help='Source branch name')
+    apply_cmd.add_argument('-b', '--branch', help='Branch name to create')
+
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('list-sources', help='List tracked source branches')
 

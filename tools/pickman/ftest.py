@@ -111,6 +111,20 @@ class TestParseArgs(unittest.TestCase):
         self.assertEqual(args.cmd, 'add-source')
         self.assertEqual(args.source, 'us/next')
 
+    def test_parse_apply(self):
+        """Test parsing apply command."""
+        args = pickman.parse_args(['apply', 'us/next'])
+        self.assertEqual(args.cmd, 'apply')
+        self.assertEqual(args.source, 'us/next')
+        self.assertIsNone(args.branch)
+
+    def test_parse_apply_with_branch(self):
+        """Test parsing apply command with branch."""
+        args = pickman.parse_args(['apply', 'us/next', '-b', 'my-branch'])
+        self.assertEqual(args.cmd, 'apply')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.branch, 'my-branch')
+
     def test_parse_compare(self):
         """Test parsing compare command."""
         args = pickman.parse_args(['compare'])
@@ -814,6 +828,116 @@ class TestNextSet(unittest.TestCase):
                       'no merge found):', output)
         self.assertIn('aaa111a First commit', output)
         self.assertIn('bbb222b Second commit', output)
+
+
+class TestGetNextCommits(unittest.TestCase):
+    """Tests for get_next_commits function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_get_next_commits_source_not_found(self):
+        """Test get_next_commits with unknown source"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'unknown')
+            self.assertIsNone(commits)
+            self.assertFalse(merge_found)
+            self.assertIn('not found', error)
+            dbs.close()
+
+    def test_get_next_commits_with_merge(self):
+        """Test get_next_commits finding commits up to merge"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Merge branch|aaa111 ccc333\n'
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertTrue(merge_found)
+            self.assertEqual(len(commits), 2)
+            self.assertEqual(commits[0].short_hash, 'aaa111a')
+            self.assertEqual(commits[1].short_hash, 'bbb222b')
+            dbs.close()
+
+
+class TestApply(unittest.TestCase):
+    """Tests for apply command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_apply_source_not_found(self):
+        """Test apply with unknown source"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='apply', source='unknown')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+    def test_apply_no_commits(self):
+        """Test apply with no new commits"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='apply', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('No new commits to cherry-pick', stdout.getvalue())
 
 
 if __name__ == '__main__':

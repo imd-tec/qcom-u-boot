@@ -41,6 +41,29 @@ This finds commits between the last cherry-picked commit and the next merge
 commit in the source branch. It stops at the merge commit since that typically
 represents a logical grouping of commits (e.g., a pull request).
 
+To apply the next set of commits using a Claude agent::
+
+    ./tools/pickman/pickman apply us/next
+
+This uses the Claude Agent SDK to automate the cherry-pick process. The agent
+will:
+
+- Run git status to check the repository state
+- Cherry-pick each commit in order
+- Handle simple conflicts automatically
+- Report status after completion
+- Update the database with the last successfully applied commit
+
+Requirements
+------------
+
+To use the ``apply`` command, install the Claude Agent SDK::
+
+    pip install claude-agent-sdk
+
+You will also need an Anthropic API key set in the ``ANTHROPIC_API_KEY``
+environment variable.
+
 Database
 --------
 
