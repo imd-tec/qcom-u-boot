@@ -132,3 +132,90 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
     """
     return asyncio.run(run(commits, source, branch_name,
                                              repo_path))
+
+
+async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None):
+    """Run the Claude agent to handle MR comments
+
+    Args:
+        mr_iid (int): Merge request IID
+        branch_name (str): Source branch name
+        comments (list): List of comment dicts with 'author', 'body' keys
+        remote (str): Git remote name
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        bool: True on success, False on failure
+    """
+    if not check_available():
+        return False
+
+    if repo_path is None:
+        repo_path = os.getcwd()
+
+    # Format comments for the prompt
+    comment_text = '\n'.join(
+        f"- [{c['author']}]: {c['body']}"
+        for c in comments
+    )
+
+    prompt = f"""Review comments on merge request !{mr_iid} (branch: {branch_name}):
+
+{comment_text}
+
+Steps to follow:
+1. Checkout the branch: git checkout {branch_name}
+2. Read and understand each comment
+3. For each actionable comment:
+   - Make the requested changes to the code
+   - Amend the relevant commit or create a fixup commit
+4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
+5. Create a new branch with suffix '-v2' (or increment existing version)
+6. Push the new branch: git push {remote} <new-branch-name>
+7. Report what changes were made and what reply should be posted to the MR
+
+Important:
+- Keep changes minimal and focused on addressing the comments
+- If a comment is unclear or cannot be addressed, note this in your report
+- Do not force push to the original branch
+- The new branch name should be: {branch_name}-v2 (or -v3, -v4 etc if needed)
+"""
+
+    options = ClaudeAgentOptions(
+        allowed_tools=['Bash', 'Read', 'Grep', 'Edit', 'Write'],
+        cwd=repo_path,
+    )
+
+    tout.info(f'Starting Claude agent to handle {len(comments)} comment(s)...')
+    tout.info('')
+
+    conversation_log = []
+    try:
+        async for message in query(prompt=prompt, options=options):
+            if hasattr(message, 'content'):
+                for block in message.content:
+                    if hasattr(block, 'text'):
+                        print(block.text)
+                        conversation_log.append(block.text)
+        return True, '\n\n'.join(conversation_log)
+    except (RuntimeError, ValueError, OSError) as exc:
+        tout.error(f'Agent failed: {exc}')
+        return False, '\n\n'.join(conversation_log)
+
+
+def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
+    """Synchronous wrapper for running the review agent
+
+    Args:
+        mr_iid (int): Merge request IID
+        branch_name (str): Source branch name
+        comments (list): List of comment dicts
+        remote (str): Git remote name
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    return asyncio.run(run_review_agent(mr_iid, branch_name, comments, remote,
+                                        repo_path))

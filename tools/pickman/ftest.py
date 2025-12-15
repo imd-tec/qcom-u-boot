@@ -1105,5 +1105,43 @@ class TestParseApplyWithPush(unittest.TestCase):
         self.assertEqual(args.target, 'main')
 
 
+class TestParseReview(unittest.TestCase):
+    """Tests for review command argument parsing."""
+
+    def test_parse_review_defaults(self):
+        """Test parsing review command with defaults."""
+        args = pickman.parse_args(['review'])
+        self.assertEqual(args.cmd, 'review')
+        self.assertEqual(args.remote, 'ci')
+
+    def test_parse_review_with_remote(self):
+        """Test parsing review command with custom remote."""
+        args = pickman.parse_args(['review', '-r', 'origin'])
+        self.assertEqual(args.cmd, 'review')
+        self.assertEqual(args.remote, 'origin')
+
+
+class TestReview(unittest.TestCase):
+    """Tests for review command."""
+
+    def test_review_no_mrs(self):
+        """Test review when no open MRs found."""
+        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                               return_value=[]):
+            args = argparse.Namespace(cmd='review', remote='ci')
+            ret = control.do_review(args, None)
+
+        self.assertEqual(ret, 0)
+
+    def test_review_gitlab_error(self):
+        """Test review when GitLab API returns error."""
+        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                               return_value=None):
+            args = argparse.Namespace(cmd='review', remote='ci')
+            ret = control.do_review(args, None)
+
+        self.assertEqual(ret, 1)
+
+
 if __name__ == '__main__':
     unittest.main()

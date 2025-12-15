@@ -436,6 +436,82 @@ def do_commit_source(args, dbs):
     return 0
 
 
+def process_mr_reviews(remote, mrs):
+    """Process review comments on open MRs
+
+    Checks each MR for unresolved comments and uses Claude agent to address
+    them.
+
+    Args:
+        remote (str): Remote name
+        mrs (list): List of MR dicts from get_open_pickman_mrs()
+
+    Returns:
+        int: Number of MRs with comments processed
+    """
+    processed = 0
+
+    for merge_req in mrs:
+        comments = gitlab_api.get_mr_comments(remote, merge_req['iid'])
+        if comments is None:
+            continue
+
+        # Filter to unresolved comments
+        unresolved = [c for c in comments if not c.get('resolved', True)]
+        if not unresolved:
+            continue
+
+        tout.info('')
+        tout.info(f"MR !{merge_req['iid']} has {len(unresolved)} comment(s):")
+        for comment in unresolved:
+            tout.info(f"  [{comment['author']}]: {comment['body'][:80]}...")
+
+        # Run agent to handle comments
+        success, _ = agent.handle_mr_comments(
+            merge_req['iid'],
+            merge_req['source_branch'],
+            unresolved,
+            remote,
+        )
+        if not success:
+            tout.error(f"Failed to handle comments for MR !{merge_req['iid']}")
+        processed += 1
+
+    return processed
+
+
+def do_review(args, dbs):  # pylint: disable=unused-argument
+    """Check open pickman MRs and handle comments
+
+    Lists open MRs created by pickman, checks for human comments, and uses
+    Claude agent to address them.
+
+    Args:
+        args (Namespace): Parsed arguments with 'remote' attribute
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    remote = args.remote
+
+    # Get open pickman MRs
+    mrs = gitlab_api.get_open_pickman_mrs(remote)
+    if mrs is None:
+        return 1
+
+    if not mrs:
+        tout.info('No open pickman MRs found')
+        return 0
+
+    tout.info(f'Found {len(mrs)} open pickman MR(s):')
+    for merge_req in mrs:
+        tout.info(f"  !{merge_req['iid']}: {merge_req['title']}")
+
+    process_mr_reviews(remote, mrs)
+
+    return 0
+
 
 def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
@@ -463,6 +539,7 @@ COMMANDS = {
     'compare': do_compare,
     'list-sources': do_list_sources,
     'next-set': do_next_set,
+    'review': do_review,
     'test': do_test,
 }
 

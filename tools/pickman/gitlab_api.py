@@ -152,6 +152,136 @@ def create_mr(host, proj_path, source, target, title, desc=''):
         return None
 
 
+def get_open_pickman_mrs(remote):
+    """Get open merge requests created by pickman
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch' keys,
+              or None on failure
+    """
+    if not check_available():
+        return None
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return None
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        tout.error(f"Could not parse GitLab URL from remote '{remote}'")
+        return None
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+
+        mrs = project.mergerequests.list(state='opened', get_all=True)
+        pickman_mrs = []
+        for merge_req in mrs:
+            if '[pickman]' in merge_req.title:
+                pickman_mrs.append({
+                    'iid': merge_req.iid,
+                    'title': merge_req.title,
+                    'web_url': merge_req.web_url,
+                    'source_branch': merge_req.source_branch,
+                })
+        return pickman_mrs
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return None
+
+
+def get_mr_comments(remote, mr_iid):
+    """Get human comments on a merge request (excluding bot/system notes)
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+
+    Returns:
+        list: List of dicts with 'id', 'author', 'body', 'created_at',
+              'resolvable', 'resolved' keys, or None on failure
+    """
+    if not check_available():
+        return None
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return None
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return None
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        merge_req = project.mergerequests.get(mr_iid)
+
+        comments = []
+        for note in merge_req.notes.list(get_all=True):
+            # Skip system notes (merge status, etc.)
+            if note.system:
+                continue
+            comments.append({
+                'id': note.id,
+                'author': note.author['username'],
+                'body': note.body,
+                'created_at': note.created_at,
+                'resolvable': getattr(note, 'resolvable', False),
+                'resolved': getattr(note, 'resolved', False),
+            })
+        return comments
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return None
+
+
+def reply_to_mr(remote, mr_iid, message):
+    """Post a reply to a merge request
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        message (str): Reply message
+
+    Returns:
+        bool: True on success
+    """
+    if not check_available():
+        return False
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return False
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return False
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        merge_req = project.mergerequests.get(mr_iid)
+        merge_req.notes.create({'body': message})
+        return True
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return False
+
+
 def push_and_create_mr(remote, branch, target, title, desc=''):
     """Push a branch and create a merge request
 

@@ -80,6 +80,18 @@ After successfully applying commits, update the database to record progress::
 This updates the last cherry-picked commit for the source branch, so subsequent
 ``next-set`` and ``apply`` commands will start from the new position.
 
+To check open MRs for comments and address them::
+
+    ./tools/pickman/pickman review
+
+This lists open pickman MRs (those with ``[pickman]`` in the title), checks each
+for unresolved comments, and uses a Claude agent to address them. The agent will
+make code changes based on the feedback and push an updated branch.
+
+Options for the review command:
+
+- ``-r, --remote``: Git remote (default: ci)
+
 Requirements
 ------------
 

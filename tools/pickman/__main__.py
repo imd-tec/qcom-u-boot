@@ -57,6 +57,11 @@ def parse_args(argv):
                                      help='Show next set of commits to cherry-pick')
     next_set.add_argument('source', help='Source branch name')
 
+    review_cmd = subparsers.add_parser('review',
+                                       help='Check open MRs and handle comments')
+    review_cmd.add_argument('-r', '--remote', default='ci',
+                            help='Git remote (default: ci)')
+
     subparsers.add_parser('test', help='Run tests')
 
     return parser.parse_args(argv)
