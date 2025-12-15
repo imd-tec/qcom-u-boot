@@ -1,0 +1,70 @@
+## 2025-12-14: us/next
+
+Branch: cherry-e5565c24bb4
+
+Commits:
+- e5565c24bb4 pinctrl: exynos: fix type of count integer
+- 57e77dc80e0 arm: dts: e850-96: Remove TRNG node from appended dts
+- 06b8aafd681 fastboot: properly handle unknown partition type
+- 35d967f5a82 usb: ci_udc: don't use "advance" feature when setting address
+- 325ac6c1e7f arm: mvebu: Disable JFFS2 support for Kirkwood and Armada XP boards
+- 96ca3147981 arm: kirkwood: Enable bootstd for Sheevaplug board
+- 3eef899b57f arm: mvebu: x240: Use default baudrate table
+- 27b24887352 arm: mvebu: x240: Switch to standard boot
+- cbbfa8d7782 arm: mvebu: x240: Don't build mkeficapsule
+- b25b2d4f67e arm: mvebu: x240: Enable IPV6 support
+- 1b46176532a arm: mvebu: x530: Remove dead comments
+- c6b17af1422 arm: mvebu: x530: Don't build mkeficapsule
+- f337b5aaad8 arm: mvebu: x530: Enable IPV6 support
+- 7446e29db54 arm: mvebu: Add Allied Telesis x250 board
+- 6b96e01d703 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-marvell
+
+### Conversation log
+The working tree is clean. Let me create and checkout the new branch based on ci/master:
+
+Now I'll cherry-pick each commit one at a time. Let me start with the first commit:
+
+Now for the last commit - this is a merge commit, so I need to use the special flags:
+
+The merge commit is empty (since all its changes were already included in the individual commits we cherry-picked). Let me commit it as an empty commit as allowed:
+
+All cherry-picks completed. Let me verify with git log:
+
+All 15 commits are present. Now let me run the build verification:
+
+The build completed successfully. Let me provide a summary:
+
+## Final Status
+
+### Cherry-pick Summary
+All **15 commits** were successfully cherry-picked from `us/next` branch to the new branch `cherry-e5565c24bb4`:
+
+| # | Commit | Description |
+|---|--------|-------------|
+| 1 | e5565c24bb4 → d2f8f751d6e | pinctrl: exynos: fix type of count integer |
+| 2 | 57e77dc80e0 → 0d9479ccc60 | arm: dts: e850-96: Remove TRNG node from appended dts |
+| 3 | 06b8aafd681 → 3080ee1a4b4 | fastboot: properly handle unknown partition type |
+| 4 | 35d967f5a82 → 75b85526b0b | usb: ci_udc: don't use "advance" feature when setting address |
+| 5 | 325ac6c1e7f → d5457f95a0b | arm: mvebu: Disable JFFS2 support for Kirkwood and Armada XP boards |
+| 6 | 96ca3147981 → e61972256a4 | arm: kirkwood: Enable bootstd for Sheevaplug board |
+| 7 | 3eef899b57f → baded9338f8 | arm: mvebu: x240: Use default baudrate table |
+| 8 | 27b24887352 → 184477219d5 | arm: mvebu: x240: Switch to standard boot |
+| 9 | cbbfa8d7782 → fdea0328abf | arm: mvebu: x240: Don't build mkeficapsule |
+| 10 | b25b2d4f67e → 5aa7654f433 | arm: mvebu: x240: Enable IPV6 support |
+| 11 | 1b46176532a → 79959f5062e | arm: mvebu: x530: Remove dead comments |
+| 12 | c6b17af1422 → 5fc84aaedd0 | arm: mvebu: x530: Don't build mkeficapsule |
+| 13 | f337b5aaad8 → 9671e627a58 | arm: mvebu: x530: Enable IPV6 support |
+| 14 | 7446e29db54 → 06c2009529d | arm: mvebu: Add Allied Telesis x250 board |
+| 15 | 6b96e01d703 → c6653cc2ba7 | Merge branch 'master' of u-boot-marvell (empty) |
+
+### Build Result
+✅ **OK** - Sandbox build completed successfully with no warnings or errors.
+
+### Fix-ups Made
+None required. All cherry-picks applied cleanly (some with auto-merge, but no conflicts needed manual resolution). The merge commit (6b96e01d703) was committed as an empty commit since all its changes were already contained in the individual commits.
+
+### Branch Status
+The branch `cherry-e5565c24bb4` is ready for pushing, with 15 commits ahead of `ci/master`.
+
+---
+
