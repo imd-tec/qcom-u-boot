@@ -513,6 +513,76 @@ def do_review(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+def do_step(args, dbs):
+    """Create an MR if none is pending
+
+    Checks for open pickman MRs and if none exist, runs apply with push
+    to create a new one.
+
+    Args:
+        args (Namespace): Parsed arguments with 'source', 'remote', 'target'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    remote = args.remote
+
+    # Check for open pickman MRs
+    mrs = gitlab_api.get_open_pickman_mrs(remote)
+    if mrs is None:
+        return 1
+
+    if mrs:
+        tout.info(f'Found {len(mrs)} open pickman MR(s):')
+        for merge_req in mrs:
+            tout.info(f"  !{merge_req['iid']}: {merge_req['title']}")
+        tout.info('')
+        tout.info('Not creating new MR while others are pending')
+        return 0
+
+    # No pending MRs, run apply with push
+    tout.info('No pending pickman MRs, creating new one...')
+    args.push = True
+    args.branch = None  # Let do_apply generate branch name
+    return do_apply(args, dbs)
+
+
+def do_poll(args, dbs):
+    """Run step repeatedly until stopped
+
+    Runs the step command in a loop with a configurable interval. Useful for
+    automated workflows that continuously process cherry-picks.
+
+    Args:
+        args (Namespace): Parsed arguments with 'source', 'interval', 'remote',
+            'target'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success (never returns unless interrupted)
+    """
+    import time
+
+    interval = args.interval
+    tout.info(f'Polling every {interval} seconds (Ctrl+C to stop)...')
+    tout.info('')
+
+    while True:
+        try:
+            ret = do_step(args, dbs)
+            if ret != 0:
+                tout.warning(f'Step returned {ret}, continuing anyway...')
+            tout.info('')
+            tout.info(f'Sleeping {interval} seconds...')
+            time.sleep(interval)
+            tout.info('')
+        except KeyboardInterrupt:
+            tout.info('')
+            tout.info('Polling stopped by user')
+            return 0
+
+
 def do_test(args, dbs):  # pylint: disable=unused-argument
     """Run tests for this module.
 
@@ -539,7 +609,9 @@ COMMANDS = {
     'compare': do_compare,
     'list-sources': do_list_sources,
     'next-set': do_next_set,
+    'poll': do_poll,
     'review': do_review,
+    'step': do_step,
     'test': do_test,
 }
 

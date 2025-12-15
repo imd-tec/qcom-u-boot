@@ -92,6 +92,32 @@ Options for the review command:
 
 - ``-r, --remote``: Git remote (default: ci)
 
+To automatically create an MR if none is pending::
+
+    ./tools/pickman/pickman step us/next
+
+This checks for open pickman MRs (those with ``[pickman]`` in the title) and if
+none exist, runs ``apply`` with ``--push`` to create a new one. This is useful
+for automated workflows where only one MR should be active at a time.
+
+Options for the step command:
+
+- ``-r, --remote``: Git remote for push (default: ci)
+- ``-t, --target``: Target branch for MR (default: master)
+
+To run step continuously in a polling loop::
+
+    ./tools/pickman/pickman poll us/next
+
+This runs the ``step`` command repeatedly with a configurable interval,
+creating new MRs as previous ones are merged. Press Ctrl+C to stop.
+
+Options for the poll command:
+
+- ``-i, --interval``: Interval between steps in seconds (default: 300)
+- ``-r, --remote``: Git remote for push (default: ci)
+- ``-t, --target``: Target branch for MR (default: master)
+
 Requirements
 ------------
 

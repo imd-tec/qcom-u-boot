@@ -1105,6 +1105,56 @@ class TestParseApplyWithPush(unittest.TestCase):
         self.assertEqual(args.target, 'main')
 
 
+class TestParseStep(unittest.TestCase):
+    """Tests for step command argument parsing."""
+
+    def test_parse_step_defaults(self):
+        """Test parsing step command with defaults."""
+        args = pickman.parse_args(['step', 'us/next'])
+        self.assertEqual(args.cmd, 'step')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.remote, 'ci')
+        self.assertEqual(args.target, 'master')
+
+    def test_parse_step_with_options(self):
+        """Test parsing step command with all options."""
+        args = pickman.parse_args(['step', 'us/next', '-r', 'origin',
+                                   '-t', 'main'])
+        self.assertEqual(args.cmd, 'step')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.remote, 'origin')
+        self.assertEqual(args.target, 'main')
+
+
+class TestStep(unittest.TestCase):
+    """Tests for step command."""
+
+    def test_step_with_pending_mr(self):
+        """Test step does nothing when MR is pending."""
+        mock_mr = {
+            'iid': 123,
+            'title': '[pickman] Test MR',
+            'web_url': 'https://gitlab.com/mr/123',
+        }
+        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                               return_value=[mock_mr]):
+            args = argparse.Namespace(cmd='step', source='us/next',
+                                      remote='ci', target='master')
+            ret = control.do_step(args, None)
+
+        self.assertEqual(ret, 0)
+
+    def test_step_gitlab_error(self):
+        """Test step when GitLab API returns error."""
+        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                               return_value=None):
+            args = argparse.Namespace(cmd='step', source='us/next',
+                                      remote='ci', target='master')
+            ret = control.do_step(args, None)
+
+        self.assertEqual(ret, 1)
+
+
 class TestParseReview(unittest.TestCase):
     """Tests for review command argument parsing."""
 
@@ -1141,6 +1191,56 @@ class TestReview(unittest.TestCase):
             ret = control.do_review(args, None)
 
         self.assertEqual(ret, 1)
+
+
+class TestParsePoll(unittest.TestCase):
+    """Tests for poll command argument parsing."""
+
+    def test_parse_poll_defaults(self):
+        """Test parsing poll command with defaults."""
+        args = pickman.parse_args(['poll', 'us/next'])
+        self.assertEqual(args.cmd, 'poll')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.interval, 300)
+        self.assertEqual(args.remote, 'ci')
+        self.assertEqual(args.target, 'master')
+
+    def test_parse_poll_with_options(self):
+        """Test parsing poll command with all options."""
+        args = pickman.parse_args([
+            'poll', 'us/next',
+            '-i', '60', '-r', 'origin', '-t', 'main'
+        ])
+        self.assertEqual(args.cmd, 'poll')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.interval, 60)
+        self.assertEqual(args.remote, 'origin')
+        self.assertEqual(args.target, 'main')
+
+
+class TestPoll(unittest.TestCase):
+    """Tests for poll command."""
+
+    def test_poll_stops_on_keyboard_interrupt(self):
+        """Test poll stops gracefully on KeyboardInterrupt."""
+        call_count = [0]
+
+        def mock_step(args, dbs):
+            call_count[0] += 1
+            if call_count[0] >= 2:
+                raise KeyboardInterrupt
+            return 0
+
+        with mock.patch.object(control, 'do_step', mock_step):
+            with mock.patch('time.sleep'):
+                args = argparse.Namespace(
+                    cmd='poll', source='us/next', interval=1,
+                    remote='ci', target='master'
+                )
+                ret = control.do_poll(args, None)
+
+        self.assertEqual(ret, 0)
+        self.assertEqual(call_count[0], 2)
 
 
 if __name__ == '__main__':
