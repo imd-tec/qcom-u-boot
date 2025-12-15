@@ -7,6 +7,7 @@
 
 import os
 import sys
+import tempfile
 import unittest
 
 # Allow 'from pickman import xxx' to work via symlink
@@ -19,6 +20,7 @@ from u_boot_pylib import terminal
 
 from pickman import __main__ as pickman
 from pickman import control
+from pickman import database
 
 
 class TestCommit(unittest.TestCase):
@@ -150,6 +152,76 @@ class TestMain(unittest.TestCase):
             self.assertRaises(StopIteration, next, lines)
         finally:
             command.TEST_RESULT = None
+
+
+class TestDatabase(unittest.TestCase):
+    """Tests for Database class."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)  # Remove so database creates it fresh
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_create_database(self):
+        """Test creating a new database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertTrue(dbs.is_open)
+            self.assertEqual(dbs.get_schema_version(), database.LATEST)
+            dbs.close()
+
+    def test_source_get_empty(self):
+        """Test getting source from empty database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            result = dbs.source_get('us/next')
+            self.assertIsNone(result)
+            dbs.close()
+
+    def test_source_set_and_get(self):
+        """Test setting and getting source commit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123def456')
+            dbs.commit()
+            result = dbs.source_get('us/next')
+            self.assertEqual(result, 'abc123def456')
+            dbs.close()
+
+    def test_source_update(self):
+        """Test updating source commit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.source_set('us/next', 'def456')
+            dbs.commit()
+            result = dbs.source_get('us/next')
+            self.assertEqual(result, 'def456')
+            dbs.close()
+
+    def test_get_instance(self):
+        """Test get_instance returns same database."""
+        with terminal.capture():
+            dbs1, created1 = database.Database.get_instance(self.db_path)
+            dbs1.start()
+            dbs2, created2 = database.Database.get_instance(self.db_path)
+            self.assertTrue(created1)
+            self.assertFalse(created2)
+            self.assertIs(dbs1, dbs2)
+            dbs1.close()
 
 
 if __name__ == '__main__':
