@@ -8,6 +8,27 @@ Pickman - Cherry-pick Manager
 
 Pickman is a tool to help manage cherry-picking commits between branches.
 
+Workflow
+--------
+
+The typical workflow for using pickman is:
+
+1. **Setup**: Add a source branch to track with ``add-source``. This records the
+   starting point (merge-base) for cherry-picking.
+
+2. **Cherry-pick**: Run ``apply -p`` to cherry-pick the next set of commits (up
+   to the next merge commit) and create a GitLab MR. A Claude agent handles the
+   cherry-picks automatically, resolving simple conflicts.
+
+3. **Review**: Once the MR is reviewed and merged, run ``commit-source`` to
+   update the database with the last processed commit.
+
+4. **Repeat**: Go back to step 2 until all commits are cherry-picked.
+
+For automated workflows, use ``step`` instead of ``apply -p``. It checks for
+open pickman MRs first and only creates a new one if none are pending. Use
+``review`` to have the agent address MR comments.
+
 Usage
 -----
 
