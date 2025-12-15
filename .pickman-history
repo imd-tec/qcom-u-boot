@@ -1,70 +1,70 @@
-## 2025-12-14: us/next
+## 2025-12-15: us/next
 
 Branch: cherry-e5565c24bb4
 
 Commits:
 - e5565c24bb4 pinctrl: exynos: fix type of count integer
 - 57e77dc80e0 arm: dts: e850-96: Remove TRNG node from appended dts
-- 06b8aafd681 fastboot: properly handle unknown partition type
-- 35d967f5a82 usb: ci_udc: don't use "advance" feature when setting address
-- 325ac6c1e7f arm: mvebu: Disable JFFS2 support for Kirkwood and Armada XP boards
-- 96ca3147981 arm: kirkwood: Enable bootstd for Sheevaplug board
-- 3eef899b57f arm: mvebu: x240: Use default baudrate table
-- 27b24887352 arm: mvebu: x240: Switch to standard boot
-- cbbfa8d7782 arm: mvebu: x240: Don't build mkeficapsule
-- b25b2d4f67e arm: mvebu: x240: Enable IPV6 support
-- 1b46176532a arm: mvebu: x530: Remove dead comments
-- c6b17af1422 arm: mvebu: x530: Don't build mkeficapsule
-- f337b5aaad8 arm: mvebu: x530: Enable IPV6 support
-- 7446e29db54 arm: mvebu: Add Allied Telesis x250 board
-- 6b96e01d703 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-marvell
+- 895b54998e5 configs: khadas-vim3{l}: fix userdata size
+- ea2273911d3 arm: dts: meson: remove meson-a1.dtsi
+- a5ed242ba6a dt-bindings: remove a1 bindings from include/
+- 827edb6c00b dt-bindings: remove axg bindings from include/
+- 1cdb4e03e68 dt-bindings: interrupt-controller: remove arm-gic.h from include/
+- 030ec147af0 Merge tag 'u-boot-amlogic-next-20241113' of https://source.denx.de/u-boot/custodians/u-boot-amlogic into next
 
 ### Conversation log
-The working tree is clean. Let me create and checkout the new branch based on ci/master:
+Let me find the repository first:
 
-Now I'll cherry-pick each commit one at a time. Let me start with the first commit:
+The repository has uncommitted changes. Let me stash them first, then proceed with the cherry-pick operation:
 
-Now for the last commit - this is a merge commit, so I need to use the special flags:
+Now let me create and checkout the new branch based on ci/master:
 
-The merge commit is empty (since all its changes were already included in the individual commits we cherry-picked). Let me commit it as an empty commit as allowed:
+Now let me cherry-pick the first commit:
 
-All cherry-picks completed. Let me verify with git log:
+The commit is empty (likely already applied to master). Let me skip it and move on:
 
-All 15 commits are present. Now let me run the build verification:
+Now cherry-pick the second commit:
 
-The build completed successfully. Let me provide a summary:
+Now the final commit is a merge commit, so we need to use `-m 1`:
 
-## Final Status
+All cherry-picks were empty (the commits are already in master). Let me verify with git log:
 
-### Cherry-pick Summary
-All **15 commits** were successfully cherry-picked from `us/next` branch to the new branch `cherry-e5565c24bb4`:
+The branch shows no new commits were added because all 8 commits were already present in ci/master (they showed as empty cherry-picks). Let me verify this by checking the status vs ci/master:
 
-| # | Commit | Description |
-|---|--------|-------------|
-| 1 | e5565c24bb4 → d2f8f751d6e | pinctrl: exynos: fix type of count integer |
-| 2 | 57e77dc80e0 → 0d9479ccc60 | arm: dts: e850-96: Remove TRNG node from appended dts |
-| 3 | 06b8aafd681 → 3080ee1a4b4 | fastboot: properly handle unknown partition type |
-| 4 | 35d967f5a82 → 75b85526b0b | usb: ci_udc: don't use "advance" feature when setting address |
-| 5 | 325ac6c1e7f → d5457f95a0b | arm: mvebu: Disable JFFS2 support for Kirkwood and Armada XP boards |
-| 6 | 96ca3147981 → e61972256a4 | arm: kirkwood: Enable bootstd for Sheevaplug board |
-| 7 | 3eef899b57f → baded9338f8 | arm: mvebu: x240: Use default baudrate table |
-| 8 | 27b24887352 → 184477219d5 | arm: mvebu: x240: Switch to standard boot |
-| 9 | cbbfa8d7782 → fdea0328abf | arm: mvebu: x240: Don't build mkeficapsule |
-| 10 | b25b2d4f67e → 5aa7654f433 | arm: mvebu: x240: Enable IPV6 support |
-| 11 | 1b46176532a → 79959f5062e | arm: mvebu: x530: Remove dead comments |
-| 12 | c6b17af1422 → 5fc84aaedd0 | arm: mvebu: x530: Don't build mkeficapsule |
-| 13 | f337b5aaad8 → 9671e627a58 | arm: mvebu: x530: Enable IPV6 support |
-| 14 | 7446e29db54 → 06c2009529d | arm: mvebu: Add Allied Telesis x250 board |
-| 15 | 6b96e01d703 → c6653cc2ba7 | Merge branch 'master' of u-boot-marvell (empty) |
+Let me verify the commits are indeed in ci/master by checking if those commits exist in the history:
 
-### Build Result
-✅ **OK** - Sandbox build completed successfully with no warnings or errors.
+All 8 commits are already in ci/master. Let me run the build verification anyway since the branch is at ci/master state:
 
-### Fix-ups Made
-None required. All cherry-picks applied cleanly (some with auto-merge, but no conflicts needed manual resolution). The merge commit (6b96e01d703) was committed as an empty commit since all its changes were already contained in the individual commits.
+## Final Status Report
+
+### Cherry-Pick Summary
+
+All 8 commits were **SKIPPED** because they are already present in `ci/master`:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| e5565c24bb4 | pinctrl: exynos: fix type of count integer | Already in master |
+| 57e77dc80e0 | arm: dts: e850-96: Remove TRNG node from appended dts | Already in master |
+| 895b54998e5 | configs: khadas-vim3{l}: fix userdata size | Already in master |
+| ea2273911d3 | arm: dts: meson: remove meson-a1.dtsi | Already in master |
+| a5ed242ba6a | dt-bindings: remove a1 bindings from include/ | Already in master |
+| 827edb6c00b | dt-bindings: remove axg bindings from include/ | Already in master |
+| 1cdb4e03e68 | dt-bindings: interrupt-controller: remove arm-gic.h from include/ | Already in master |
+| 030ec147af0 | Merge tag 'u-boot-amlogic-next-20241113' | Already in master |
 
 ### Branch Status
-The branch `cherry-e5565c24bb4` is ready for pushing, with 15 commits ahead of `ci/master`.
+- **Branch `cherry-e5565c24bb4`** was created but is identical to `ci/master` (0 commits ahead)
+- No new commits to push since all cherry-picks were empty
+
+### Build Result
+- **Build: OK** ✓
+- sandbox built successfully with no warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Notes
+The requested commits have already been merged into `ci/master` previously, so there are no new changes to cherry-pick. The branch `cherry-e5565c24bb4` is left at `ci/master` HEAD.
 
 ---
 
