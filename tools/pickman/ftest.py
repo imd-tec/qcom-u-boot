@@ -1345,6 +1345,48 @@ class TestCheckAvailable(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestUpdateMrDescription(unittest.TestCase):
+    """Tests for update_mr_description function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_update_mr_description_success(self, mock_token, mock_url):
+        """Test successful MR description update."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        mock_mr = mock.MagicMock()
+        mock_project = mock.MagicMock()
+        mock_project.mergerequests.get.return_value = mock_mr
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            result = gitlab_api.update_mr_description('origin', 123,
+                                                      'New description')
+
+            self.assertTrue(result)
+            self.assertEqual(mock_mr.description, 'New description')
+            mock_mr.save.assert_called_once()
+
+    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
+    def test_update_mr_description_not_available(self):
+        """Test update_mr_description when gitlab not available."""
+        with terminal.capture():
+            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+        self.assertFalse(result)
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_update_mr_description_no_token(self, mock_token):
+        """Test update_mr_description when no token set."""
+        mock_token.return_value = None
+        with terminal.capture():
+            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+        self.assertFalse(result)
+
+
 class TestParseApplyWithPush(unittest.TestCase):
     """Tests for apply command with push options."""
 
