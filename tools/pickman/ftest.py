@@ -1404,6 +1404,120 @@ class TestFormatHistorySummary(unittest.TestCase):
         self.assertIn('- bbb222b Second commit', result)
 
 
+class TestGetHistory(unittest.TestCase):
+    """Tests for get_history function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.history_file = tempfile.mkstemp(suffix='.history')
+        os.close(fd)
+        os.unlink(self.history_file)  # Remove so we start fresh
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.history_file):
+            os.unlink(self.history_file)
+
+    def test_get_history_empty(self):
+        """Test get_history with no existing file."""
+        commits = [
+            control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-abc',
+            'Conversation output')
+
+        self.assertIn('us/next', content)
+        self.assertIn('Branch: cherry-abc', content)
+        self.assertIn('- aaa111a First commit', content)
+        self.assertIn('### Conversation log', content)
+        self.assertIn('Conversation output', content)
+        self.assertIn('---', content)
+
+        # Verify commit message
+        self.assertIn('pickman: Record cherry-pick of 1 commits', commit_msg)
+        self.assertIn('- aaa111a First commit', commit_msg)
+
+        # Verify file was written
+        with open(self.history_file, 'r', encoding='utf-8') as fhandle:
+            file_content = fhandle.read()
+        self.assertEqual(file_content, content)
+
+    def test_get_history_with_existing(self):
+        """Test get_history appends to existing content."""
+        # Create existing file
+        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('Previous history content\n')
+
+        commits = [
+            control.CommitInfo('bbb222', 'bbb222b', 'New commit', 'Author 2'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-new',
+            'New conversation')
+
+        self.assertIn('Previous history content', content)
+        self.assertIn('cherry-new', content)
+        self.assertIn('New conversation', content)
+        self.assertIn('- bbb222b New commit', commit_msg)
+
+    def test_get_history_replaces_existing_branch(self):
+        """Test get_history removes existing entry for same branch."""
+        # Create existing file with an entry for cherry-abc
+        existing = """## 2025-01-01: us/next
+
+Branch: cherry-abc
+
+Commits:
+- aaa111a Old commit
+
+### Conversation log
+Old conversation
+
+---
+
+Other content
+"""
+        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write(existing)
+
+        commits = [
+            control.CommitInfo('ccc333', 'ccc333c', 'Updated commit', 'Author'),
+        ]
+        content, _ = control.get_history(self.history_file, 'us/next', commits,
+                                         'cherry-abc', 'New conversation')
+
+        # Old entry should be removed
+        self.assertNotIn('Old commit', content)
+        self.assertNotIn('Old conversation', content)
+        # New entry should be present
+        self.assertIn('Updated commit', content)
+        self.assertIn('New conversation', content)
+        # Other content should be preserved
+        self.assertIn('Other content', content)
+
+    def test_get_history_multiple_commits(self):
+        """Test get_history with multiple commits."""
+        commits = [
+            control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
+            control.CommitInfo('bbb222', 'bbb222b', 'Second commit', 'Author 2'),
+            control.CommitInfo('ccc333', 'ccc333c', 'Third commit', 'Author 3'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-abc', 'Log')
+
+        # Verify all commits in content
+        self.assertIn('- aaa111a First commit', content)
+        self.assertIn('- bbb222b Second commit', content)
+        self.assertIn('- ccc333c Third commit', content)
+
+        # Verify commit message
+        self.assertIn('pickman: Record cherry-pick of 3 commits', commit_msg)
+        self.assertIn('- aaa111a First commit', commit_msg)
+        self.assertIn('- bbb222b Second commit', commit_msg)
+        self.assertIn('- ccc333c Third commit', commit_msg)
+
+
 class TestGetNextCommitsEmptyLine(unittest.TestCase):
     """Tests for get_next_commits with empty lines."""
 

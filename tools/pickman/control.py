@@ -258,14 +258,19 @@ Commits:
 {commit_list}"""
 
 
-def write_history(source, commits, branch_name, conversation_log):
-    """Write an entry to the pickman history file
+def get_history(fname, source, commits, branch_name, conversation_log):
+    """Read, update and write history file for a cherry-pick operation
 
     Args:
+        fname (str): History filename to read/write
         source (str): Source branch name
         commits (list): list of CommitInfo tuples
         branch_name (str): Name of the cherry-pick branch
         conversation_log (str): The agent's conversation output
+
+    Returns:
+        tuple: (content, commit_msg) where content is the updated history
+            and commit_msg is the git commit message
     """
     summary = format_history_summary(source, commits, branch_name)
     entry = f"""{summary}
@@ -277,24 +282,43 @@ def write_history(source, commits, branch_name, conversation_log):
 
 """
 
-    # Read existing content and remove any entry for this branch
+    # Read existing content
     existing = ''
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+    if os.path.exists(fname):
+        with open(fname, 'r', encoding='utf-8') as fhandle:
             existing = fhandle.read()
         # Remove existing entry for this branch (from ## header to ---)
         pattern = rf'## [^\n]+\n\nBranch: {re.escape(branch_name)}\n.*?---\n\n'
         existing = re.sub(pattern, '', existing, flags=re.DOTALL)
 
+    content = existing + entry
+
     # Write updated history file
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
-        fhandle.write(existing + entry)
+    with open(fname, 'w', encoding='utf-8') as fhandle:
+        fhandle.write(content)
+
+    # Generate commit message
+    commit_msg = f'pickman: Record cherry-pick of {len(commits)} commits from {source}\n\n'
+    commit_msg += '\n'.join(f'- {c.short_hash} {c.subject}' for c in commits)
+
+    return content, commit_msg
+
+
+def write_history(source, commits, branch_name, conversation_log):
+    """Write an entry to the pickman history file and commit it
+
+    Args:
+        source (str): Source branch name
+        commits (list): list of CommitInfo tuples
+        branch_name (str): Name of the cherry-pick branch
+        conversation_log (str): The agent's conversation output
+    """
+    _, commit_msg = get_history(HISTORY_FILE, source, commits, branch_name,
+                                conversation_log)
 
     # Commit the history file (use -f in case .gitignore patterns match)
     run_git(['add', '-f', HISTORY_FILE])
-    msg = f'pickman: Record cherry-pick of {len(commits)} commits from {source}\n\n'
-    msg += '\n'.join(f'- {c.short_hash} {c.subject}' for c in commits)
-    run_git(['commit', '-m', msg])
+    run_git(['commit', '-m', commit_msg])
 
     tout.info(f'Updated {HISTORY_FILE}')
 
