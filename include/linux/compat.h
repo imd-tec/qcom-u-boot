@@ -13,6 +13,7 @@
 #include <linux/err.h>
 #include <linux/export.h>
 #include <linux/kernel.h>
+#include <linux/uaccess.h>
 
 #ifdef CONFIG_XEN
 #include <xen/events.h>
@@ -239,8 +240,6 @@ typedef unsigned long blkcnt_t;
 
 struct work_struct {};
 
-unsigned long copy_from_user(void *dest, const void *src,
-			     unsigned long count);
 
 typedef unused_t spinlock_t;
 typedef int	wait_queue_head_t;

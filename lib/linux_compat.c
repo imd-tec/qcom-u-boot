@@ -10,13 +10,6 @@ struct p_current cur = {
 };
 __maybe_unused struct p_current *current = &cur;
 
-unsigned long copy_from_user(void *dest, const void *src,
-		     unsigned long count)
-{
-	memcpy((void *)dest, (void *)src, count);
-	return 0;
-}
-
 void *kmalloc(size_t size, int flags)
 {
 	void *p;
