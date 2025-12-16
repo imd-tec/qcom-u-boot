@@ -16,6 +16,7 @@ General
    kconfig
    memory
    patman
+   pickman
    process
    release_cycle
    concept_cycle
