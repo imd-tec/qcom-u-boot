@@ -72,6 +72,8 @@ Steps to follow:
    - For regular commits: git cherry-pick -x <hash>
    - For merge commits (identified by "Merge" in subject): git cherry-pick -x -m 1 --allow-empty <hash>
    Cherry-pick one commit at a time to handle each appropriately.
+   IMPORTANT: Always include merge commits even if they result in empty commits.
+   The merge commit message is important for tracking history.
 4. If there are conflicts:
    - Show the conflicting files
    - Try to resolve simple conflicts automatically
@@ -91,6 +93,7 @@ Important:
 - Stop immediately if there's a conflict that cannot be auto-resolved
 - Do not force push or modify history
 - If cherry-pick fails, run 'git cherry-pick --abort'
+- NEVER skip merge commits - always use --allow-empty to preserve them
 """
 
     options = ClaudeAgentOptions(

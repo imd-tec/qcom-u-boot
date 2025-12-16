@@ -907,7 +907,7 @@ def do_poll(args, dbs):
         try:
             ret = do_step(args, dbs)
             if ret != 0:
-                tout.warning(f'Step returned {ret}, continuing anyway...')
+                tout.warning(f'step returned {ret}')
             tout.info('')
             tout.info(f'Sleeping {interval} seconds...')
             time.sleep(interval)
