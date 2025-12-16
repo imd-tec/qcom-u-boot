@@ -5,6 +5,7 @@
 #
 """GitLab integration for pickman - push branches and create merge requests."""
 
+from collections import namedtuple
 import os
 import re
 import sys
@@ -23,6 +24,17 @@ try:
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
+
+
+# Merge request info returned by get_pickman_mrs()
+PickmanMr = namedtuple('PickmanMr', [
+    'iid', 'title', 'web_url', 'source_branch', 'description'
+])
+
+# Comment info returned by get_mr_comments()
+MrComment = namedtuple('MrComment', [
+    'id', 'author', 'body', 'created_at', 'resolvable', 'resolved'
+])
 
 
 def check_available():
@@ -160,8 +172,7 @@ def get_pickman_mrs(remote, state='opened'):
         state (str): MR state ('opened', 'merged', 'closed', 'all')
 
     Returns:
-        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch',
-              'description' keys, or None on failure
+        list: List of PickmanMr tuples, or None on failure
     """
     if not check_available():
         return None
@@ -186,13 +197,13 @@ def get_pickman_mrs(remote, state='opened'):
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
-                pickman_mrs.append({
-                    'iid': merge_req.iid,
-                    'title': merge_req.title,
-                    'web_url': merge_req.web_url,
-                    'source_branch': merge_req.source_branch,
-                    'description': merge_req.description or '',
-                })
+                pickman_mrs.append(PickmanMr(
+                    iid=merge_req.iid,
+                    title=merge_req.title,
+                    web_url=merge_req.web_url,
+                    source_branch=merge_req.source_branch,
+                    description=merge_req.description or '',
+                ))
         return pickman_mrs
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
@@ -233,8 +244,7 @@ def get_mr_comments(remote, mr_iid):
         mr_iid (int): Merge request IID
 
     Returns:
-        list: List of dicts with 'id', 'author', 'body', 'created_at',
-              'resolvable', 'resolved' keys, or None on failure
+        list: List of MrComment tuples, or None on failure
     """
     if not check_available():
         return None
@@ -260,14 +270,14 @@ def get_mr_comments(remote, mr_iid):
             # Skip system notes (merge status, etc.)
             if note.system:
                 continue
-            comments.append({
-                'id': note.id,
-                'author': note.author['username'],
-                'body': note.body,
-                'created_at': note.created_at,
-                'resolvable': getattr(note, 'resolvable', False),
-                'resolved': getattr(note, 'resolved', False),
-            })
+            comments.append(MrComment(
+                id=note.id,
+                author=note.author['username'],
+                body=note.body,
+                created_at=note.created_at,
+                resolvable=getattr(note, 'resolvable', False),
+                resolved=getattr(note, 'resolved', False),
+            ))
         return comments
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')

@@ -1233,11 +1233,13 @@ class TestStep(unittest.TestCase):
 
     def test_step_with_pending_mr(self):
         """Test step does nothing when MR is pending."""
-        mock_mr = {
-            'iid': 123,
-            'title': '[pickman] Test MR',
-            'web_url': 'https://gitlab.com/mr/123',
-        }
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
         with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
                                return_value=[]):
             with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
@@ -1864,11 +1866,13 @@ class TestDoReviewWithMrs(unittest.TestCase):
         """Test review with open MRs but no comments."""
         tout.init(tout.INFO)
 
-        mock_mr = {
-            'iid': 123,
-            'title': '[pickman] Test MR',
-            'web_url': 'https://gitlab.com/mr/123',
-        }
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
         with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                return_value=[mock_mr]):
             with mock.patch.object(gitlab_api, 'get_mr_comments',

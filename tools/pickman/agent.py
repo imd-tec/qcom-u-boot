@@ -154,7 +154,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None
 
     # Format comments for the prompt
     comment_text = '\n'.join(
-        f"- [{c['author']}]: {c['body']}"
+        f'- [{c.author}]: {c.body}'
         for c in comments
     )
 

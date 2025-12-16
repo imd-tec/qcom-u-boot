@@ -528,29 +528,29 @@ def process_mr_reviews(remote, mrs):
     processed = 0
 
     for merge_req in mrs:
-        comments = gitlab_api.get_mr_comments(remote, merge_req['iid'])
+        comments = gitlab_api.get_mr_comments(remote, merge_req.iid)
         if comments is None:
             continue
 
         # Filter to unresolved comments
-        unresolved = [c for c in comments if not c.get('resolved', True)]
+        unresolved = [c for c in comments if not c.resolved]
         if not unresolved:
             continue
 
         tout.info('')
-        tout.info(f"MR !{merge_req['iid']} has {len(unresolved)} comment(s):")
+        tout.info(f"MR !{merge_req.iid} has {len(unresolved)} comment(s):")
         for comment in unresolved:
-            tout.info(f"  [{comment['author']}]: {comment['body'][:80]}...")
+            tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
 
         # Run agent to handle comments
         success, _ = agent.handle_mr_comments(
-            merge_req['iid'],
-            merge_req['source_branch'],
+            merge_req.iid,
+            merge_req.source_branch,
             unresolved,
             remote,
         )
         if not success:
-            tout.error(f"Failed to handle comments for MR !{merge_req['iid']}")
+            tout.error(f"Failed to handle comments for MR !{merge_req.iid}")
         processed += 1
 
     return processed
@@ -582,7 +582,7 @@ def do_review(args, dbs):  # pylint: disable=unused-argument
 
     tout.info(f'Found {len(mrs)} open pickman MR(s):')
     for merge_req in mrs:
-        tout.info(f"  !{merge_req['iid']}: {merge_req['title']}")
+        tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
     process_mr_reviews(remote, mrs)
 
@@ -632,7 +632,7 @@ def process_merged_mrs(remote, source, dbs):
 
     processed = 0
     for merge_req in merged_mrs:
-        mr_source, last_hash = parse_mr_description(merge_req['description'])
+        mr_source, last_hash = parse_mr_description(merge_req.description)
 
         # Only process MRs for the requested source branch
         if mr_source != source:
@@ -648,7 +648,7 @@ def process_merged_mrs(remote, source, dbs):
             full_hash = run_git(['rev-parse', last_hash])
         except Exception:  # pylint: disable=broad-except
             tout.warning(f"Could not resolve commit '{last_hash}' from "
-                         f"MR !{merge_req['iid']}")
+                         f"MR !{merge_req.iid}")
             continue
 
         # Check if this commit is an ancestor of source but not of current
@@ -669,7 +669,7 @@ def process_merged_mrs(remote, source, dbs):
         # Update database
         short_old = current[:12]
         short_new = full_hash[:12]
-        tout.info(f"MR !{merge_req['iid']} merged, updating '{source}': "
+        tout.info(f"MR !{merge_req.iid} merged, updating '{source}': "
                   f'{short_old} -> {short_new}')
         dbs.source_set(source, full_hash)
         dbs.commit()
@@ -708,7 +708,7 @@ def do_step(args, dbs):
     if mrs:
         tout.info(f'Found {len(mrs)} open pickman MR(s):')
         for merge_req in mrs:
-            tout.info(f"  !{merge_req['iid']}: {merge_req['title']}")
+            tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
         # Process any review comments on open MRs
         process_mr_reviews(remote, mrs)
