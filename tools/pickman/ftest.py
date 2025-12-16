@@ -976,7 +976,7 @@ class TestApply(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        args = argparse.Namespace(cmd='apply', source='unknown')
+        args = argparse.Namespace(cmd='apply', source='unknown', branch=None)
         with terminal.capture() as (_, stderr):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 1)
@@ -994,7 +994,7 @@ class TestApply(unittest.TestCase):
         database.Database.instances.clear()
         command.TEST_RESULT = command.CommandResult(stdout='')
 
-        args = argparse.Namespace(cmd='apply', source='us/next')
+        args = argparse.Namespace(cmd='apply', source='us/next', branch=None)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
@@ -1516,6 +1516,110 @@ Other content
         self.assertIn('- aaa111a First commit', commit_msg)
         self.assertIn('- bbb222b Second commit', commit_msg)
         self.assertIn('- ccc333c Third commit', commit_msg)
+
+
+class TestPrepareApply(unittest.TestCase):
+    """Tests for prepare_apply function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_prepare_apply_error(self):
+        """Test prepare_apply returns error code 1 on source not found."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            info, ret = control.prepare_apply(dbs, 'unknown', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_prepare_apply_no_commits(self):
+        """Test prepare_apply returns code 0 when no commits."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(stdout='')
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_prepare_apply_with_commits(self):
+        """Test prepare_apply returns ApplyInfo with commits."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.branch_name, 'cherry-aaa111a')
+            self.assertEqual(info.original_branch, 'master')
+            dbs.close()
+
+    def test_prepare_apply_custom_branch(self):
+        """Test prepare_apply uses custom branch name."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, _ = control.prepare_apply(dbs, 'us/next', 'my-branch')
+
+            self.assertIsNotNone(info)
+            self.assertEqual(info.branch_name, 'my-branch')
+            dbs.close()
 
 
 class TestGetNextCommitsEmptyLine(unittest.TestCase):

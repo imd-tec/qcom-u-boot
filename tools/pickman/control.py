@@ -39,6 +39,11 @@ Commit = namedtuple('Commit', ['hash', 'short_hash', 'subject', 'date'])
 CommitInfo = namedtuple('CommitInfo',
                         ['hash', 'short_hash', 'subject', 'author'])
 
+# Named tuple for prepare_apply result
+ApplyInfo = namedtuple('ApplyInfo',
+                       ['commits', 'branch_name', 'original_branch',
+                        'merge_found'])
+
 
 def run_git(args):
     """Run a git command and return output."""
@@ -323,32 +328,37 @@ def write_history(source, commits, branch_name, conversation_log):
     tout.info(f'Updated {HISTORY_FILE}')
 
 
-def do_apply(args, dbs):  # pylint: disable=too-many-locals,too-many-branches
-    """Apply the next set of commits using Claude agent
+def prepare_apply(dbs, source, branch):
+    """Prepare for applying commits from a source branch
+
+    Gets the next commits, sets up the branch name, and prints info about
+    what will be applied.
 
     Args:
-        args (Namespace): Parsed arguments with 'source' and 'branch' attributes
         dbs (Database): Database instance
+        source (str): Source branch name
+        branch (str): Branch name to use, or None to auto-generate
 
     Returns:
-        int: 0 on success, 1 on failure
+        tuple: (ApplyInfo, return_code) where ApplyInfo is set if there are
+            commits to apply, or None with return_code indicating the result
+            (0 for no commits, 1 for error)
     """
-    source = args.source
     commits, merge_found, error = get_next_commits(dbs, source)
 
     if error:
         tout.error(error)
-        return 1
+        return None, 1
 
     if not commits:
         tout.info('No new commits to cherry-pick')
-        return 0
+        return None, 0
 
     # Save current branch to return to later
     original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
 
     # Generate branch name if not provided
-    branch_name = args.branch
+    branch_name = branch
     if not branch_name:
         # Use first commit's short hash as part of branch name
         branch_name = f'cherry-{commits[0].short_hash}'
@@ -371,6 +381,28 @@ def do_apply(args, dbs):  # pylint: disable=too-many-locals,too-many-branches
     for commit in commits:
         tout.info(f'  {commit.short_hash} {commit.subject}')
     tout.info('')
+
+    return ApplyInfo(commits, branch_name, original_branch, merge_found), 0
+
+
+def do_apply(args, dbs):  # pylint: disable=too-many-locals,too-many-branches
+    """Apply the next set of commits using Claude agent
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' and 'branch' attributes
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    source = args.source
+    info, ret = prepare_apply(dbs, source, args.branch)
+    if not info:
+        return ret
+
+    commits = info.commits
+    branch_name = info.branch_name
+    original_branch = info.original_branch
 
     # Add commits to database with 'pending' status
     source_id = dbs.source_get_id(source)
