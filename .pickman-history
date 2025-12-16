@@ -170,3 +170,65 @@ The branch `cherry-a8c07ac4970` is ready for pushing with 1 new commit ahead of 
 
 ---
 
+## 2025-12-16: us/next
+
+Branch: cherry-06b8aafd681
+
+Commits:
+- 06b8aafd681 fastboot: properly handle unknown partition type
+- 35d967f5a82 usb: ci_udc: don't use "advance" feature when setting address
+- 9e66cb41ee7 Merge tag 'u-boot-dfu-20241126' of https://source.denx.de/u-boot/custodians/u-boot-dfu
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (regular commit):
+
+The first commit is already applied in ci/master (resulting in an empty cherry-pick). Let me skip it and move to the next commit:
+
+Now let me cherry-pick the second commit (regular commit):
+
+This commit is also already in ci/master. Let me skip it and move to the third commit:
+
+Now let me cherry-pick the third commit. This is a merge commit (identified by "Merge" in the subject), so I need to use `-m 1 --allow-empty`:
+
+This commit is also already in ci/master. Let me skip it:
+
+Let me verify the current state with git log:
+
+All three commits that were requested to be cherry-picked are already present in `ci/master`. The cherry-picks resulted in empty commits because:
+
+1. **06b8aafd681** (fastboot: properly handle unknown partition type) - already in ci/master
+2. **35d967f5a82** (usb: ci_udc: don't use "advance" feature when setting address) - already in ci/master  
+3. **9e66cb41ee7** (Merge tag 'u-boot-dfu-20241126'...) - already in ci/master
+
+Let me verify these commits are indeed in the history:
+
+The commit is confirmed to be an ancestor of ci/master. Let me run the build verification regardless:
+
+## Final Status Report
+
+### Cherry-pick Results:
+All three requested commits were **already present** in `ci/master`:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 06b8aafd681 | fastboot: properly handle unknown partition type | Already in ci/master (skipped) |
+| 35d967f5a82 | usb: ci_udc: don't use "advance" feature when setting address | Already in ci/master (skipped) |
+| 9e66cb41ee7 | Merge tag 'u-boot-dfu-20241126' of ... | Already in ci/master (skipped) |
+
+### Build Result:
+✅ **OK** - Build completed successfully with no warnings or errors
+- 1 board built (sandbox)
+- Duration: 4 seconds
+
+### Fix-ups Made:
+None required - all commits were already present in the target branch.
+
+### Branch Status:
+The branch `cherry-06b8aafd681` was created based on `ci/master` but is identical to it since all cherry-picks resulted in empty commits that were skipped. The branch is currently at commit `85d4dc8c116` (same as `ci/master`).
+
+**Note:** The commits from `us/next` branch appear to have already been merged into `ci/master` through a previous merge operation, which is why the cherry-picks resulted in empty changes.
+
+---
+
