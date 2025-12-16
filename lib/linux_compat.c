@@ -10,7 +10,7 @@ struct p_current cur = {
 };
 __maybe_unused struct p_current *current = &cur;
 
-void *kmalloc(size_t size, int flags)
+void *kmalloc(size_t size, gfp_t flags)
 {
 	void *p;
 
@@ -31,7 +31,7 @@ struct kmem_cache *get_mem(int element_sz)
 	return ret;
 }
 
-void *kmem_cache_alloc(struct kmem_cache *obj, int flag)
+void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag)
 {
 	return malloc_cache_aligned(obj->sz);
 }

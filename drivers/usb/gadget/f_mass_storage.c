@@ -248,6 +248,7 @@
 #include <g_dnl.h>
 #include <dm/devres.h>
 #include <linux/bug.h>
+#include <linux/slab.h>
 
 #include <linux/err.h>
 #include <linux/usb/ch9.h>
@@ -278,7 +279,6 @@ static const char fsg_string_interface[] = "Mass Storage";
 
 /*-------------------------------------------------------------------------*/
 
-#define GFP_ATOMIC ((gfp_t) 0)
 #define PAGE_CACHE_SHIFT	12
 #define PAGE_CACHE_SIZE		(1 << PAGE_CACHE_SHIFT)
 #define kthread_create(...)	__builtin_return_address(0)

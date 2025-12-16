@@ -14,7 +14,9 @@
 #include <linux/export.h>
 #include <linux/freezer.h>
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/vmalloc.h>
 
 #ifdef CONFIG_XEN
 #include <xen/events.h>
@@ -28,61 +30,6 @@ struct p_current{
 };
 
 extern struct p_current *current;
-
-#define GFP_ATOMIC ((gfp_t) 0)
-#define GFP_KERNEL ((gfp_t) 0)
-#define GFP_NOFS ((gfp_t) 0)
-#define GFP_USER ((gfp_t) 0)
-#define __GFP_NOWARN ((gfp_t) 0)
-#define __GFP_ZERO	((__force gfp_t)0x8000u)	/* Return zeroed page on success */
-
-void *kmalloc(size_t size, int flags);
-
-static inline void *kzalloc(size_t size, gfp_t flags)
-{
-	return kmalloc(size, flags | __GFP_ZERO);
-}
-
-static inline void *kmalloc_array(size_t n, size_t size, gfp_t flags)
-{
-	if (size != 0 && n > SIZE_MAX / size)
-		return NULL;
-	return kmalloc(n * size, flags | __GFP_ZERO);
-}
-
-static inline void *kcalloc(size_t n, size_t size, gfp_t flags)
-{
-	return kmalloc_array(n, size, flags | __GFP_ZERO);
-}
-
-#define vmalloc(size)	kmalloc(size, 0)
-#define __vmalloc(size, flags, pgsz)	kmalloc(size, flags)
-static inline void *vzalloc(unsigned long size)
-{
-	return kzalloc(size, 0);
-}
-static inline void kfree(const void *block)
-{
-	free((void *)block);
-}
-static inline void vfree(const void *addr)
-{
-	free((void *)addr);
-}
-
-struct kmem_cache { int sz; };
-
-struct kmem_cache *get_mem(int element_sz);
-#define kmem_cache_create(a, sz, c, d, e)	get_mem(sz)
-void *kmem_cache_alloc(struct kmem_cache *obj, int flag);
-static inline void kmem_cache_free(struct kmem_cache *cachep, void *obj)
-{
-	free(obj);
-}
-static inline void kmem_cache_destroy(struct kmem_cache *cachep)
-{
-	free(cachep);
-}
 
 #define DECLARE_WAITQUEUE(...)	do { } while (0)
 #define add_wait_queue(...)	do { } while (0)
@@ -357,7 +304,6 @@ struct writeback_control {
 	unsigned for_sync:1;		/* sync(2) WB_SYNC_ALL writeback */
 };
 
-void *kmemdup(const void *src, size_t len, gfp_t gfp);
 
 typedef int irqreturn_t;
 
