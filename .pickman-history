@@ -234,62 +234,72 @@ The branch `cherry-06b8aafd681` was created based on `ci/master` but is identica
 
 ## 2025-12-16: us/next
 
-Branch: cherry-3881c6b9035
+Branch: cherry-91bc909d317
 
 Commits:
-- 3881c6b9035 configs: Resync with savedefconfig
-- a2fa53be4fa mtd: nand: brcmnand: remove device specific nand driver files
-- 67e52b59a2f arm: dts: Use upstream dts
-- a4f72e8b6ef mtd: rawnand: brcmnand: Default bcmbca parameter_page_big_endian to zero
-- 5b70f26fed5 mtd: rawnand: brcmnand: update log level messages
-- 931122add7a Merge branch 'u-boot-nand-20241126' of https://source.denx.de/u-boot/custodians/u-boot-nand-flash
+- 91bc909d317 spl: increase SPL_SYS_MALLOC_SIZE when using BIOSEMU on RISC-V
+- afc52da8946 configs: SiFive Unmatched: enable 'env erase' sub-command
+- 185986caebf configs: visionfive2: re-enable SPL_SYS_MMCSD_RAW_MODE
+- bdca70632da configs: enable CONFIG_PCI_REGION_MULTI_ENTRY=y in sifive_unmatched_defconfig
+- b51b97e9be1 Merge https://source.denx.de/u-boot/custodians/u-boot-riscv
 
 ### Conversation log
-The repository is clean. Now let me create and checkout the new branch based on ci/master:
+The repository state is clean. Now let me create and checkout a new branch based on ci/master:
 
-Now let me cherry-pick the commits one by one. Starting with the first commit:
+Now let me cherry-pick each commit in order. Let me start with the first commit:
 
-The first commit is empty (changes already in ci/master). Let me skip it and move to the next:
+There's a conflict. Let me examine it:
 
-Second commit cherry-picked successfully. Now the third commit:
+I can see the conflict. The HEAD has a more general `RISCV` condition with a larger size (0x800000), while the commit being cherry-picked adds a more specific `BIOSEMU && RISCV` condition with 0x180000. Since HEAD already has a larger allocation for RISCV, the incoming change is redundant. Let me resolve this by keeping the HEAD version since it already provides sufficient malloc size for RISCV:
 
-Third commit cherry-picked successfully. Now the fourth commit:
+The commit became empty because the HEAD already has a better solution. Let me skip this commit and move to the next one:
 
-Fourth commit cherry-picked successfully. Now the fifth commit:
+Now let me cherry-pick the second commit:
 
-Fifth commit cherry-picked successfully. Now the sixth (and last) commit, which is a merge commit:
+Second commit applied successfully. Now the third commit:
 
-The merge commit is empty (all changes already applied through previous cherry-picks). Since we used `--allow-empty`, let me commit it to preserve the merge record:
+This commit is also already applied. Let me skip it:
 
-All cherry-picks completed. Let me verify with git log:
+Now the fourth commit:
 
-All 5 commits are present (the first commit was skipped since it was already in ci/master, making the total 5 new commits including the empty merge). Now let me run the build verification:
+Fourth commit applied. Now the fifth commit which is a merge commit:
 
-The build completed successfully. Let me provide a final summary:
+There's a conflict. Let me examine it:
 
-## Final Status Report
+Same conflict as before - HEAD already has the larger allocation for RISCV. Let me resolve by keeping the HEAD version:
 
-### Cherry-pick Results
+This merge commit also became empty. Let me skip it:
 
-| Commit | Subject | Status |
-|--------|---------|--------|
-| 3881c6b9035 | configs: Resync with savedefconfig | **Skipped** (already in ci/master) |
-| a2fa53be4fa | mtd: nand: brcmnand: remove device specific nand driver files | ✅ Success |
-| 67e52b59a2f | arm: dts: Use upstream dts | ✅ Success |
-| a4f72e8b6ef | mtd: rawnand: brcmnand: Default bcmbca parameter_page_big_endian to zero | ✅ Success |
-| 5b70f26fed5 | mtd: rawnand: brcmnand: update log level messages | ✅ Success |
-| 931122add7a | Merge branch 'u-boot-nand-20241126' | ✅ Success (empty commit - content was in individual patches) |
+Now let me verify the results with git log:
+
+I see that only 2 commits were applied (the other 3 were already present in ci/master or resolved to empty). Now let me run the build verification:
+
+The build succeeded. Let me provide a summary:
+
+## Final Status
+
+### Cherry-Pick Results
+
+| Commit | Description | Result |
+|--------|-------------|--------|
+| 91bc909d317 | spl: increase SPL_SYS_MALLOC_SIZE when using BIOSEMU on RISC-V | **Skipped** - Already applied (ci/master has `0x800000 if RISCV` which supersedes this) |
+| afc52da8946 | configs: SiFive Unmatched: enable 'env erase' sub-command | **Applied** ✓ |
+| 185986caebf | configs: visionfive2: re-enable SPL_SYS_MMCSD_RAW_MODE | **Skipped** - Already applied |
+| bdca70632da | configs: enable CONFIG_PCI_REGION_MULTI_ENTRY=y in sifive_unmatched_defconfig | **Applied** ✓ |
+| b51b97e9be1 | Merge https://source.denx.de/u-boot/custodians/u-boot-riscv | **Skipped** - Already applied (merge commit content already in ci/master) |
 
 ### Build Result
-- **Status**: ✅ OK
-- Build completed successfully for sandbox board with no warnings or errors
+- **Status:** ✅ OK
+- **Board:** sandbox
+- **Output:** `/tmp/pickman`
 
 ### Fix-ups Made
-- None required - all cherry-picks applied cleanly
+- None required - conflicts were resolved by keeping the existing HEAD versions which already contained the equivalent or better changes.
 
 ### Branch Status
-- Branch `cherry-3881c6b9035` is ready for pushing
-- 5 commits ahead of `ci/master` (4 content commits + 1 empty merge commit)
+- Branch `cherry-91bc909d317` is ready for pushing
+- 2 new commits ahead of `ci/master`
+- 3 commits were skipped (already present in ci/master)
 
 ---
 
