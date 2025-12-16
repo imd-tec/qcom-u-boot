@@ -314,6 +314,53 @@ class TestDatabase(unittest.TestCase):
             self.assertIs(dbs1, dbs2)
             dbs1.close()
 
+    def test_duplicate_database_error(self):
+        """Test creating duplicate database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            with self.assertRaises(ValueError) as ctx:
+                database.Database(self.db_path)
+            self.assertIn('already a database', str(ctx.exception))
+            dbs.close()
+
+    def test_open_already_open_error(self):
+        """Test opening already open database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            with self.assertRaises(ValueError) as ctx:
+                dbs.open_it()
+            self.assertIn('Already open', str(ctx.exception))
+            dbs.close()
+
+    def test_close_already_closed_error(self):
+        """Test closing already closed database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+            with self.assertRaises(ValueError) as ctx:
+                dbs.close()
+            self.assertIn('Already closed', str(ctx.exception))
+
+    def test_rollback(self):
+        """Test rollback discards uncommitted changes."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            # Make a change but don't commit
+            dbs.source_set('us/next', 'def456')
+            # Rollback should discard the change
+            dbs.rollback()
+
+            result = dbs.source_get('us/next')
+            self.assertEqual(result, 'abc123')
+            dbs.close()
+
     def test_source_get_all(self):
         """Test getting all sources."""
         with terminal.capture():
