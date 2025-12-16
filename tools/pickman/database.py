@@ -18,7 +18,7 @@ from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 1
+LATEST = 2
 
 # Default database filename
 DB_FNAME = '.pickman.db'
@@ -101,6 +101,34 @@ class Database:
         # Schema version table
         self.cur.execute('CREATE TABLE schema_version (version INTEGER)')
 
+    def _create_v2(self):
+        """Migrate database to v2 schema - add commit and mergereq tables"""
+        # Table for tracking individual commits
+        self.cur.execute(
+            'CREATE TABLE pcommit ('
+            'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            'chash TEXT UNIQUE, '
+            'source_id INTEGER, '
+            'mergereq_id INTEGER, '
+            'subject TEXT, '
+            'author TEXT, '
+            'status TEXT, '
+            'cherry_hash TEXT, '
+            'FOREIGN KEY (source_id) REFERENCES source(id), '
+            'FOREIGN KEY (mergereq_id) REFERENCES mergereq(id))')
+
+        # Table for tracking merge requests
+        self.cur.execute(
+            'CREATE TABLE mergereq ('
+            'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            'source_id INTEGER, '
+            'branch_name TEXT, '
+            'mr_id INTEGER, '
+            'status TEXT, '
+            'url TEXT, '
+            'created_at TEXT, '
+            'FOREIGN KEY (source_id) REFERENCES source(id))')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -121,6 +149,8 @@ class Database:
             self.open_it()
             if version == 1:
                 self._create_v1()
+            elif version == 2:
+                self._create_v2()
 
             self.cur.execute('DELETE FROM schema_version')
             self.cur.execute(
@@ -200,3 +230,184 @@ class Database:
             self.execute(
                 'INSERT INTO source (name, last_commit) VALUES (?, ?)',
                 (name, commit))
+
+    def source_get_id(self, name):
+        """Get the id for a source branch
+
+        Args:
+            name (str): Source branch name
+
+        Return:
+            int: Source id, or None if not found
+        """
+        res = self.execute('SELECT id FROM source WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
+    # commit functions
+
+    def commit_add(self, chash, source_id, subject, author, status='pending',
+                   mergereq_id=None):
+        """Add a commit to the database
+
+        Args:
+            chash (str): Commit hash
+            source_id (int): Source branch id
+            subject (str): Commit subject line
+            author (str): Commit author
+            status (str): Status (pending, applied, skipped, conflict)
+            mergereq_id (int): Merge request id (optional)
+        """
+        self.execute(
+            'INSERT OR REPLACE INTO pcommit '
+            '(chash, source_id, mergereq_id, subject, author, status) '
+            'VALUES (?, ?, ?, ?, ?, ?)',
+            (chash, source_id, mergereq_id, subject, author, status))
+
+    def commit_get(self, chash):
+        """Get a commit by hash
+
+        Args:
+            chash (str): Commit hash
+
+        Return:
+            tuple: (id, chash, source_id, mergereq_id, subject, author, status,
+                   cherry_hash) or None if not found
+        """
+        res = self.execute(
+            'SELECT id, chash, source_id, mergereq_id, subject, author, status, '
+            'cherry_hash FROM pcommit WHERE chash = ?', (chash,))
+        return res.fetchone()
+
+    def commit_get_by_source(self, source_id, status=None):
+        """Get all commits for a source branch
+
+        Args:
+            source_id (int): Source branch id
+            status (str): Optional status filter
+
+        Return:
+            list of tuple: Commit records
+        """
+        if status:
+            res = self.execute(
+                'SELECT id, chash, source_id, mergereq_id, subject, author, '
+                'status, cherry_hash FROM pcommit '
+                'WHERE source_id = ? AND status = ?',
+                (source_id, status))
+        else:
+            res = self.execute(
+                'SELECT id, chash, source_id, mergereq_id, subject, author, '
+                'status, cherry_hash FROM pcommit WHERE source_id = ?',
+                (source_id,))
+        return res.fetchall()
+
+    def commit_get_by_mergereq(self, mergereq_id):
+        """Get all commits for a merge request
+
+        Args:
+            mergereq_id (int): Merge request id
+
+        Return:
+            list of tuple: Commit records
+        """
+        res = self.execute(
+            'SELECT id, chash, source_id, mergereq_id, subject, author, '
+            'status, cherry_hash FROM pcommit WHERE mergereq_id = ?',
+            (mergereq_id,))
+        return res.fetchall()
+
+    def commit_set_status(self, chash, status, cherry_hash=None):
+        """Update the status of a commit
+
+        Args:
+            chash (str): Commit hash
+            status (str): New status
+            cherry_hash (str): Hash of cherry-picked commit (optional)
+        """
+        if cherry_hash:
+            self.execute(
+                'UPDATE pcommit SET status = ?, cherry_hash = ? WHERE chash = ?',
+                (status, cherry_hash, chash))
+        else:
+            self.execute(
+                'UPDATE pcommit SET status = ? WHERE chash = ?', (status, chash))
+
+    def commit_set_mergereq(self, chash, mergereq_id):
+        """Set the merge request for a commit
+
+        Args:
+            chash (str): Commit hash
+            mergereq_id (int): Merge request id
+        """
+        self.execute(
+            'UPDATE pcommit SET mergereq_id = ? WHERE chash = ?',
+            (mergereq_id, chash))
+
+    # mergereq functions
+
+    def mergereq_add(self, source_id, branch_name, mr_id, status, url,
+                     created_at):
+        """Add a merge request to the database
+
+        Args:
+            source_id (int): Source branch id
+            branch_name (str): Branch name for the MR
+            mr_id (int): GitLab MR id
+            status (str): Status (open, merged, closed)
+            url (str): URL to the MR
+            created_at (str): Creation timestamp
+        """
+        self.execute(
+            'INSERT INTO mergereq '
+            '(source_id, branch_name, mr_id, status, url, created_at) '
+            'VALUES (?, ?, ?, ?, ?, ?)',
+            (source_id, branch_name, mr_id, status, url, created_at))
+
+    def mergereq_get(self, mr_id):
+        """Get a merge request by GitLab MR id
+
+        Args:
+            mr_id (int): GitLab MR id
+
+        Return:
+            tuple: (id, source_id, branch_name, mr_id, status, url, created_at)
+                   or None if not found
+        """
+        res = self.execute(
+            'SELECT id, source_id, branch_name, mr_id, status, url, created_at '
+            'FROM mergereq WHERE mr_id = ?', (mr_id,))
+        return res.fetchone()
+
+    def mergereq_get_by_source(self, source_id, status=None):
+        """Get all merge requests for a source branch
+
+        Args:
+            source_id (int): Source branch id
+            status (str): Optional status filter
+
+        Return:
+            list of tuple: Merge request records
+        """
+        if status:
+            res = self.execute(
+                'SELECT id, source_id, branch_name, mr_id, status, url, '
+                'created_at FROM mergereq WHERE source_id = ? AND status = ?',
+                (source_id, status))
+        else:
+            res = self.execute(
+                'SELECT id, source_id, branch_name, mr_id, status, url, '
+                'created_at FROM mergereq WHERE source_id = ?', (source_id,))
+        return res.fetchall()
+
+    def mergereq_set_status(self, mr_id, status):
+        """Update the status of a merge request
+
+        Args:
+            mr_id (int): GitLab MR id
+            status (str): New status
+        """
+        self.execute(
+            'UPDATE mergereq SET status = ? WHERE mr_id = ?', (status, mr_id))

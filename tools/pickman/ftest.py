@@ -309,6 +309,343 @@ class TestDatabase(unittest.TestCase):
             dbs.close()
 
 
+class TestDatabaseCommit(unittest.TestCase):
+    """Tests for Database commit functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_commit_add_and_get(self):
+        """Test adding and getting a commit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # First add a source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add a commit
+            dbs.commit_add('abc123def456', source_id, 'Test subject',
+                           'Author Name')
+            dbs.commit()
+
+            # Get the commit
+            result = dbs.commit_get('abc123def456')
+            self.assertIsNotNone(result)
+            self.assertEqual(result[1], 'abc123def456')  # chash
+            self.assertEqual(result[2], source_id)  # source_id
+            self.assertIsNone(result[3])  # mergereq_id
+            self.assertEqual(result[4], 'Test subject')  # subject
+            self.assertEqual(result[5], 'Author Name')  # author
+            self.assertEqual(result[6], 'pending')  # status
+            dbs.close()
+
+    def test_commit_get_not_found(self):
+        """Test getting a non-existent commit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            result = dbs.commit_get('nonexistent')
+            self.assertIsNone(result)
+            dbs.close()
+
+    def test_commit_get_by_source(self):
+        """Test getting commits by source."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Add a source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add commits
+            dbs.commit_add('commit1', source_id, 'Subject 1', 'Author 1')
+            dbs.commit_add('commit2', source_id, 'Subject 2', 'Author 2',
+                           status='applied')
+            dbs.commit_add('commit3', source_id, 'Subject 3', 'Author 3')
+            dbs.commit()
+
+            # Get all commits for source
+            commits = dbs.commit_get_by_source(source_id)
+            self.assertEqual(len(commits), 3)
+
+            # Get only pending commits
+            pending = dbs.commit_get_by_source(source_id, status='pending')
+            self.assertEqual(len(pending), 2)
+
+            # Get only applied commits
+            applied = dbs.commit_get_by_source(source_id, status='applied')
+            self.assertEqual(len(applied), 1)
+            self.assertEqual(applied[0][1], 'commit2')
+            dbs.close()
+
+    def test_commit_set_status(self):
+        """Test updating commit status."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            dbs.commit_add('abc123', source_id, 'Subject', 'Author')
+            dbs.commit()
+
+            # Update status
+            dbs.commit_set_status('abc123', 'applied')
+            dbs.commit()
+
+            result = dbs.commit_get('abc123')
+            self.assertEqual(result[6], 'applied')
+            dbs.close()
+
+    def test_commit_set_status_with_cherry_hash(self):
+        """Test updating commit status with cherry hash."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            dbs.commit_add('abc123', source_id, 'Subject', 'Author')
+            dbs.commit()
+
+            # Update status with cherry hash
+            dbs.commit_set_status('abc123', 'applied', cherry_hash='xyz789')
+            dbs.commit()
+
+            result = dbs.commit_get('abc123')
+            self.assertEqual(result[6], 'applied')
+            self.assertEqual(result[7], 'xyz789')  # cherry_hash
+            dbs.close()
+
+    def test_source_get_id(self):
+        """Test getting source id by name."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Not found initially
+            self.assertIsNone(dbs.source_get_id('us/next'))
+
+            # Add source and get id
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            source_id = dbs.source_get_id('us/next')
+            self.assertIsNotNone(source_id)
+            self.assertIsInstance(source_id, int)
+            dbs.close()
+
+
+class TestDatabaseMergereq(unittest.TestCase):
+    """Tests for Database mergereq functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_mergereq_add_and_get(self):
+        """Test adding and getting a merge request."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Add a source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add a merge request
+            dbs.mergereq_add(source_id, 'cherry-abc123', 42, 'open',
+                             'https://gitlab.com/mr/42', '2025-01-15')
+            dbs.commit()
+
+            # Get the merge request
+            result = dbs.mergereq_get(42)
+            self.assertIsNotNone(result)
+            self.assertEqual(result[1], source_id)  # source_id
+            self.assertEqual(result[2], 'cherry-abc123')  # branch_name
+            self.assertEqual(result[3], 42)  # mr_id
+            self.assertEqual(result[4], 'open')  # status
+            self.assertEqual(result[5], 'https://gitlab.com/mr/42')  # url
+            self.assertEqual(result[6], '2025-01-15')  # created_at
+            dbs.close()
+
+    def test_mergereq_get_not_found(self):
+        """Test getting a non-existent merge request."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            result = dbs.mergereq_get(999)
+            self.assertIsNone(result)
+            dbs.close()
+
+    def test_mergereq_get_by_source(self):
+        """Test getting merge requests by source."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Add a source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add merge requests
+            dbs.mergereq_add(source_id, 'branch-1', 1, 'open',
+                             'https://gitlab.com/mr/1', '2025-01-01')
+            dbs.mergereq_add(source_id, 'branch-2', 2, 'merged',
+                             'https://gitlab.com/mr/2', '2025-01-02')
+            dbs.mergereq_add(source_id, 'branch-3', 3, 'open',
+                             'https://gitlab.com/mr/3', '2025-01-03')
+            dbs.commit()
+
+            # Get all merge requests for source
+            mrs = dbs.mergereq_get_by_source(source_id)
+            self.assertEqual(len(mrs), 3)
+
+            # Get only open merge requests
+            open_mrs = dbs.mergereq_get_by_source(source_id, status='open')
+            self.assertEqual(len(open_mrs), 2)
+
+            # Get only merged
+            merged = dbs.mergereq_get_by_source(source_id, status='merged')
+            self.assertEqual(len(merged), 1)
+            self.assertEqual(merged[0][3], 2)  # mr_id
+            dbs.close()
+
+    def test_mergereq_set_status(self):
+        """Test updating merge request status."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
+                             'https://gitlab.com/mr/42', '2025-01-15')
+            dbs.commit()
+
+            # Update status
+            dbs.mergereq_set_status(42, 'merged')
+            dbs.commit()
+
+            result = dbs.mergereq_get(42)
+            self.assertEqual(result[4], 'merged')
+            dbs.close()
+
+
+class TestDatabaseCommitMergereq(unittest.TestCase):
+    """Tests for commit-mergereq relationship."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_commit_set_mergereq(self):
+        """Test setting merge request for a commit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Add source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add merge request
+            dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
+                             'https://gitlab.com/mr/42', '2025-01-15')
+            dbs.commit()
+            mr = dbs.mergereq_get(42)
+            mr_id = mr[0]  # id field
+
+            # Add commit without mergereq
+            dbs.commit_add('abc123', source_id, 'Subject', 'Author')
+            dbs.commit()
+
+            # Set mergereq
+            dbs.commit_set_mergereq('abc123', mr_id)
+            dbs.commit()
+
+            result = dbs.commit_get('abc123')
+            self.assertEqual(result[3], mr_id)  # mergereq_id
+            dbs.close()
+
+    def test_commit_get_by_mergereq(self):
+        """Test getting commits by merge request."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Add source
+            dbs.source_set('us/next', 'base123')
+            dbs.commit()
+            source_id = dbs.source_get_id('us/next')
+
+            # Add merge request
+            dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
+                             'https://gitlab.com/mr/42', '2025-01-15')
+            dbs.commit()
+            mr = dbs.mergereq_get(42)
+            mr_id = mr[0]
+
+            # Add commits with mergereq_id
+            dbs.commit_add('commit1', source_id, 'Subject 1', 'Author 1',
+                           mergereq_id=mr_id)
+            dbs.commit_add('commit2', source_id, 'Subject 2', 'Author 2',
+                           mergereq_id=mr_id)
+            dbs.commit_add('commit3', source_id, 'Subject 3', 'Author 3')
+            dbs.commit()
+
+            # Get commits for merge request
+            commits = dbs.commit_get_by_mergereq(mr_id)
+            self.assertEqual(len(commits), 2)
+            hashes = [c[1] for c in commits]
+            self.assertIn('commit1', hashes)
+            self.assertIn('commit2', hashes)
+            self.assertNotIn('commit3', hashes)
+            dbs.close()
+
+
 class TestListSources(unittest.TestCase):
     """Tests for list-sources command."""
 

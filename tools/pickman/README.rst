@@ -44,10 +44,42 @@ represents a logical grouping of commits (e.g., a pull request).
 Database
 --------
 
-Pickman uses a sqlite3 database (``.pickman.db``) to track state:
+Pickman uses a sqlite3 database (``.pickman.db``) to track state. The schema
+version is stored in the ``schema_version`` table and migrations are applied
+automatically when the database is opened.
 
-- **source table**: Tracks source branches and the last commit that was
-  cherry-picked into master
+Tables
+~~~~~~
+
+**source**
+    Tracks source branches and their cherry-pick progress.
+
+    - ``id``: Primary key
+    - ``name``: Branch name (e.g., 'us/next')
+    - ``last_commit``: Hash of the last commit cherry-picked from this branch
+
+**pcommit**
+    Tracks individual commits being cherry-picked.
+
+    - ``id``: Primary key
+    - ``chash``: Original commit hash
+    - ``source_id``: Foreign key to source table
+    - ``mergereq_id``: Foreign key to mergereq table (optional)
+    - ``subject``: Commit subject line
+    - ``author``: Commit author
+    - ``status``: One of 'pending', 'applied', 'skipped', 'conflict'
+    - ``cherry_hash``: Hash of the cherry-picked commit (if applied)
+
+**mergereq**
+    Tracks merge requests created for cherry-picked commits.
+
+    - ``id``: Primary key
+    - ``source_id``: Foreign key to source table
+    - ``branch_name``: Git branch name for this MR
+    - ``mr_id``: GitLab merge request ID
+    - ``status``: One of 'open', 'merged', 'closed'
+    - ``url``: URL to the merge request
+    - ``created_at``: Timestamp when the MR was created
 
 Configuration
 -------------
