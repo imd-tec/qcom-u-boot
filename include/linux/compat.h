@@ -11,6 +11,7 @@
 
 #include <linux/types.h>
 #include <linux/err.h>
+#include <linux/export.h>
 #include <linux/kernel.h>
 
 #ifdef CONFIG_XEN
@@ -182,8 +183,6 @@ typedef unsigned long blkcnt_t;
 #define module_put(...)		do { } while (0)
 #define module_init(...)
 #define module_exit(...)
-#define EXPORT_SYMBOL(...)
-#define EXPORT_SYMBOL_GPL(...)
 #define module_param(...)
 #define module_param_call(...)
 #define MODULE_PARM_DESC(...)
