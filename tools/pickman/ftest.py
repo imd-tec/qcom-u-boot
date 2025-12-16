@@ -840,14 +840,27 @@ class TestNextSet(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with commits including a merge
-        log_output = (
+        # First-parent log (to find next merge on mainline)
+        fp_log_output = (
             'aaa111|aaa111a|Author 1|First commit|abc123\n'
             'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
             'ccc333|ccc333c|Author 3|Merge branch feature|bbb222 ddd444\n'
             'eee555|eee555e|Author 4|After merge|ccc333\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        # Full log (to get all commits up to the merge)
+        full_log_output = (
+            'aaa111|aaa111a|Author 1|First commit|abc123\n'
+            'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            'ccc333|ccc333c|Author 3|Merge branch feature|bbb222 ddd444\n'
+        )
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--first-parent' in cmd:
+                return command.CommandResult(stdout=fp_log_output)
+            return command.CommandResult(stdout=full_log_output)
+
+        command.TEST_RESULT = mock_git
 
         args = argparse.Namespace(cmd='next-set', source='us/next')
         with terminal.capture() as (stdout, _):
@@ -931,11 +944,25 @@ class TestGetNextCommits(unittest.TestCase):
             dbs.source_set('us/next', 'abc123')
             dbs.commit()
 
-            log_output = (
+            # First-parent log (to find next merge on mainline)
+            fp_log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Merge branch|aaa111 ccc333\n'
+                'ddd444|ddd444d|Author 3|After merge|bbb222\n'
+            )
+            # Full log (to get all commits up to the merge)
+            full_log_output = (
                 'aaa111|aaa111a|Author 1|First commit|abc123\n'
                 'bbb222|bbb222b|Author 2|Merge branch|aaa111 ccc333\n'
             )
-            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if '--first-parent' in cmd:
+                    return command.CommandResult(stdout=fp_log_output)
+                return command.CommandResult(stdout=full_log_output)
+
+            command.TEST_RESULT = mock_git
 
             commits, merge_found, error = control.get_next_commits(dbs,
                                                                    'us/next')

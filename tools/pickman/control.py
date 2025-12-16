@@ -151,7 +151,7 @@ def get_next_commits(dbs, source):
     """Get the next set of commits to cherry-pick from a source
 
     Finds commits between the last cherry-picked commit and the next merge
-    commit in the source branch.
+    commit on the first-parent (mainline) chain of the source branch.
 
     Args:
         dbs (Database): Database instance
@@ -169,20 +169,38 @@ def get_next_commits(dbs, source):
     if not last_commit:
         return None, False, f"Source '{source}' not found in database"
 
-    # Get commits between last_commit and source HEAD (oldest first)
-    # Format: hash|short_hash|author|subject|parents
-    # Using | as separator since subject may contain colons
+    # First, find the next merge commit on the first-parent chain
+    # This ensures we follow the mainline and find merges in order
+    fp_output = run_git([
+        'log', '--reverse', '--first-parent', '--format=%H|%h|%an|%s|%P',
+        f'{last_commit}..{source}'
+    ])
+
+    if not fp_output:
+        return [], False, None
+
+    # Find the first merge on the first-parent chain
+    merge_hash = None
+    for line in fp_output.split('\n'):
+        if not line:
+            continue
+        parts = line.split('|')
+        parents = parts[-1].split()
+        if len(parents) > 1:
+            merge_hash = parts[0]
+            break
+
+    # Now get all commits from last_commit to the merge (or end of branch)
+    # Without --first-parent to include commits from merged branches
     log_output = run_git([
         'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'{last_commit}..{source}'
+        f'{last_commit}..{merge_hash or source}'
     ])
 
     if not log_output:
         return [], False, None
 
     commits = []
-    merge_found = False
-
     for line in log_output.split('\n'):
         if not line:
             continue
@@ -191,16 +209,10 @@ def get_next_commits(dbs, source):
         short_hash = parts[1]
         author = parts[2]
         subject = '|'.join(parts[3:-1])  # Subject may contain separator
-        parents = parts[-1].split()
 
         commits.append(CommitInfo(commit_hash, short_hash, subject, author))
 
-        # Check if this is a merge commit (has multiple parents)
-        if len(parents) > 1:
-            merge_found = True
-            break
-
-    return commits, merge_found, None
+    return commits, bool(merge_hash), None
 
 
 def do_next_set(args, dbs):
