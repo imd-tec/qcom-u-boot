@@ -18,8 +18,10 @@
 #include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
+#include <linux/workqueue.h>
 
 #ifdef CONFIG_XEN
 #include <xen/events.h>
@@ -162,12 +164,6 @@ typedef unsigned long blkcnt_t;
 #define dump_stack(...)			do { } while (0)
 
 
-#define setup_timer(timer, func, data) do {} while (0)
-#define del_timer_sync(timer) do {} while (0)
-#define schedule_work(work) do {} while (0)
-#define INIT_WORK(work, fun) do {} while (0)
-
-struct work_struct {};
 
 
 typedef unused_t spinlock_t;
@@ -280,7 +276,6 @@ struct writeback_control {
 
 typedef int irqreturn_t;
 
-struct timer_list {};
 struct notifier_block {};
 
 typedef unsigned long dmaaddr_t;
