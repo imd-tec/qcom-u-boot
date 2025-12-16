@@ -1885,5 +1885,96 @@ class TestDoReviewWithMrs(unittest.TestCase):
         self.assertIn('Found 1 open pickman MR', stdout.getvalue())
 
 
+class TestProcessMergedMrs(unittest.TestCase):
+    """Tests for process_merged_mrs function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_process_merged_mrs_updates_newer(self):
+        """Test that newer commits update the database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'aaa111aaa111aaa111aaa111aaa111aaa111aaa1')
+            dbs.commit()
+
+            merged_mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                description='## 2025-01-01: us/next\n\n- bbb222b Subject',
+                source_branch='cherry-test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            def mock_git(args):
+                if args[0] == 'rev-parse':
+                    return 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2'
+                if args[0] == 'merge-base':
+                    # current is ancestor of last_hash (newer)
+                    return ''
+                return ''
+
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=merged_mrs):
+                with mock.patch.object(control, 'run_git', mock_git):
+                    processed = control.process_merged_mrs('ci', 'us/next', dbs)
+
+            self.assertEqual(processed, 1)
+            new_commit = dbs.source_get('us/next')
+            self.assertEqual(new_commit,
+                             'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+
+            dbs.close()
+
+    def test_process_merged_mrs_skips_older(self):
+        """Test that older commits don't update the database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+            dbs.commit()
+
+            merged_mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                description='## 2025-01-01: us/next\n\n- aaa111a Subject',
+                source_branch='cherry-test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            def mock_git(args):
+                if args[0] == 'rev-parse':
+                    return 'aaa111aaa111aaa111aaa111aaa111aaa111aaa1'
+                if args[0] == 'merge-base':
+                    # current is NOT ancestor of last_hash (older)
+                    raise RuntimeError('Not an ancestor')
+                return ''
+
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=merged_mrs):
+                with mock.patch.object(control, 'run_git', mock_git):
+                    processed = control.process_merged_mrs('ci', 'us/next', dbs)
+
+            self.assertEqual(processed, 0)
+            # Should remain unchanged
+            current = dbs.source_get('us/next')
+            self.assertEqual(current,
+                             'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+
+            dbs.close()
+
+
 if __name__ == '__main__':
     unittest.main()

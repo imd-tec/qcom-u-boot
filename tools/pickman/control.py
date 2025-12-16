@@ -651,20 +651,12 @@ def process_merged_mrs(remote, source, dbs):
                          f"MR !{merge_req.iid}")
             continue
 
-        # Check if this commit is an ancestor of source but not of current
-        # (meaning it's newer than what we have)
+        # Check if this commit is newer than current (current is ancestor of it)
         try:
-            # Is last_hash reachable from source?
-            run_git(['merge-base', '--is-ancestor', full_hash, source])
+            # Is current an ancestor of last_hash? (meaning last_hash is newer)
+            run_git(['merge-base', '--is-ancestor', current, full_hash])
         except Exception:  # pylint: disable=broad-except
-            continue  # Not reachable, skip
-
-        try:
-            # Is last_hash already at or before current?
-            run_git(['merge-base', '--is-ancestor', full_hash, current])
-            continue  # Already processed
-        except Exception:  # pylint: disable=broad-except
-            pass  # Not an ancestor of current, so it's newer
+            continue  # current is not an ancestor, so last_hash is not newer
 
         # Update database
         short_old = current[:12]
