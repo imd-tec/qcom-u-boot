@@ -722,6 +722,8 @@ coreboot test.py:
   rules:
     - if: $SJG_LAB == $ROLE || $SJG_LAB == "1"
       when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
     - if: $SJG_LAB != "" && $SJG_LAB != "1" && $SJG_LAB != $ROLE
       when: never
     - if: $SJG_LAB == ""
