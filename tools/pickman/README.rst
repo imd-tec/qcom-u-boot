@@ -192,9 +192,20 @@ To use the ``-p`` (push) option for GitLab integration, install python-gitlab::
 
     pip install python-gitlab
 
-You will also need a GitLab API token set in the ``GITLAB_TOKEN`` environment
-variable. See `GitLab Personal Access Tokens`_ for instructions on creating one.
-The token needs ``api`` scope.
+You will also need a GitLab API token. The token can be configured in a config
+file or environment variable. Pickman checks in this order:
+
+1. Config file ``~/.config/pickman.conf``::
+
+       [gitlab]
+       token = glpat-xxxxxxxxxxxxxxxxxxxx
+
+2. ``GITLAB_TOKEN`` environment variable
+3. ``GITLAB_API_TOKEN`` environment variable
+
+See `GitLab Personal Access Tokens`_ for instructions on creating a token.
+The token needs ``api`` scope. Using a dedicated bot account for pickman is
+recommended.
 
 .. _GitLab Personal Access Tokens:
    https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html

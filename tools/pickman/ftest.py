@@ -1431,6 +1431,55 @@ class TestCheckAvailable(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestConfigFile(unittest.TestCase):
+    """Tests for config file support."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.config_dir = tempfile.mkdtemp()
+        self.config_file = os.path.join(self.config_dir, 'pickman.conf')
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        shutil.rmtree(self.config_dir)
+
+    def test_get_token_from_config(self):
+        """Test getting token from config file."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[gitlab]\ntoken = test-config-token\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            token = gitlab_api.get_token()
+        self.assertEqual(token, 'test-config-token')
+
+    def test_get_token_fallback_to_env(self):
+        """Test falling back to environment variable."""
+        # Config file doesn't exist
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', '/nonexistent/path'):
+            with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
+                token = gitlab_api.get_token()
+        self.assertEqual(token, 'env-token')
+
+    def test_get_token_config_missing_section(self):
+        """Test config file without gitlab section."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[other]\nkey = value\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
+                token = gitlab_api.get_token()
+        self.assertEqual(token, 'env-token')
+
+    def test_get_config_value(self):
+        """Test get_config_value function."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[section1]\nkey1 = value1\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            value = gitlab_api.get_config_value('section1', 'key1')
+        self.assertEqual(value, 'value1')
+
+
 class TestUpdateMrDescription(unittest.TestCase):
     """Tests for update_mr_description function."""
 

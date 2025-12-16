@@ -6,6 +6,7 @@
 """GitLab integration for pickman - push branches and create merge requests."""
 
 from collections import namedtuple
+import configparser
 import os
 import re
 import sys
@@ -50,12 +51,48 @@ def check_available():
     return True
 
 
+CONFIG_FILE = os.path.expanduser('~/.config/pickman.conf')
+
+
+def get_config_value(section, key):
+    """Get a value from the pickman config file
+
+    Args:
+        section (str): Config section name
+        key (str): Config key name
+
+    Returns:
+        str: Value or None if not found
+    """
+    if not os.path.exists(CONFIG_FILE):
+        return None
+
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+
+    try:
+        return config.get(section, key)
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        return None
+
+
 def get_token():
-    """Get GitLab API token from environment
+    """Get GitLab API token from config file or environment
+
+    Checks in order:
+    1. Config file (~/.config/pickman.conf) [gitlab] token
+    2. GITLAB_TOKEN environment variable
+    3. GITLAB_API_TOKEN environment variable
 
     Returns:
         str: Token or None if not set
     """
+    # Try config file first
+    token = get_config_value('gitlab', 'token')
+    if token:
+        return token
+
+    # Fall back to environment variables
     return os.environ.get('GITLAB_TOKEN') or os.environ.get('GITLAB_API_TOKEN')
 
 
