@@ -68,6 +68,13 @@ This finds commits between the last cherry-picked commit and the next merge
 commit in the source branch. It stops at the merge commit since that typically
 represents a logical grouping of commits (e.g., a pull request).
 
+To count the total remaining merges to process::
+
+    ./tools/pickman/pickman count-merges us/next
+
+This shows how many merge commits remain on the first-parent chain between the
+last cherry-picked commit and the source branch tip.
+
 To show the next N merges that will be applied::
 
     ./tools/pickman/pickman next-merges us/next

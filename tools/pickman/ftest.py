@@ -1090,6 +1090,89 @@ class TestNextMerges(unittest.TestCase):
         self.assertIn('No merges remaining', stdout.getvalue())
 
 
+class TestCountMerges(unittest.TestCase):
+    """Tests for count-merges command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_count_merges(self):
+        """Test count-merges shows total remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits (oneline format)
+        log_output = (
+            'aaa111a Merge branch feature-1\n'
+            'bbb222b Merge branch feature-2\n'
+            'ccc333c Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='count-merges', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('3 merges remaining from us/next', stdout.getvalue())
+
+    def test_count_merges_none(self):
+        """Test count-merges with no merges remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='count-merges', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('0 merges remaining', stdout.getvalue())
+
+    def test_count_merges_source_not_found(self):
+        """Test count-merges with unknown source"""
+        # Create empty database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='count-merges', source='unknown')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+
 class TestGetNextCommits(unittest.TestCase):
     """Tests for get_next_commits function."""
 

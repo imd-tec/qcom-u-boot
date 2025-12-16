@@ -298,6 +298,41 @@ def do_next_merges(args, dbs):
     return 0
 
 
+def do_count_merges(args, dbs):
+    """Count total remaining merges to be applied from a source
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' attribute
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 if source not found
+    """
+    source = args.source
+
+    # Get the last cherry-picked commit from database
+    last_commit = dbs.source_get(source)
+
+    if not last_commit:
+        tout.error(f"Source '{source}' not found in database")
+        return 1
+
+    # Count merge commits on the first-parent chain
+    fp_output = run_git([
+        'log', '--first-parent', '--merges', '--oneline',
+        f'{last_commit}..{source}'
+    ])
+
+    if not fp_output:
+        tout.info('0 merges remaining')
+        return 0
+
+    count = len([line for line in fp_output.split('\n') if line])
+    tout.info(f'{count} merges remaining from {source}')
+
+    return 0
+
+
 HISTORY_FILE = '.pickman-history'
 
 
@@ -907,6 +942,7 @@ COMMANDS = {
     'apply': do_apply,
     'commit-source': do_commit_source,
     'compare': do_compare,
+    'count-merges': do_count_merges,
     'list-sources': do_list_sources,
     'next-merges': do_next_merges,
     'next-set': do_next_set,

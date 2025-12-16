@@ -54,6 +54,11 @@ def parse_args(argv):
     commit_src.add_argument('commit', help='Commit hash to record')
 
     subparsers.add_parser('compare', help='Compare branches')
+
+    count_merges = subparsers.add_parser('count-merges',
+                                         help='Count remaining merges to process')
+    count_merges.add_argument('source', help='Source branch name')
+
     subparsers.add_parser('list-sources', help='List tracked source branches')
 
     next_merges = subparsers.add_parser('next-merges',
