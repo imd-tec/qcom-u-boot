@@ -1622,6 +1622,126 @@ class TestPrepareApply(unittest.TestCase):
             dbs.close()
 
 
+class TestExecuteApply(unittest.TestCase):
+    """Tests for execute_apply function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_execute_apply_success(self):
+        """Test execute_apply with successful cherry-pick."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('aaa111', 'aaa111a', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'conversation log')):
+                ret, success, conv_log = control.execute_apply(
+                    dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(success)
+            self.assertEqual(conv_log, 'conversation log')
+
+            # Check commit was added to database
+            commit_rec = dbs.commit_get('aaa111')
+            self.assertIsNotNone(commit_rec)
+            self.assertEqual(commit_rec[6], 'applied')  # status field
+            dbs.close()
+
+    def test_execute_apply_failure(self):
+        """Test execute_apply with failed cherry-pick."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('bbb222', 'bbb222b', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(False, 'error log')):
+                ret, success, _ = control.execute_apply(
+                    dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 1)
+            self.assertFalse(success)
+
+            # Check commit status is conflict
+            commit_rec = dbs.commit_get('bbb222')
+            self.assertEqual(commit_rec[6], 'conflict')
+            dbs.close()
+
+    def test_execute_apply_with_push(self):
+        """Test execute_apply with push enabled."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('ccc333', 'ccc333c', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=True, remote='origin',
+                                      target='main')
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'log')):
+                with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                       return_value='https://mr/url'):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(success)
+            dbs.close()
+
+    def test_execute_apply_push_fails(self):
+        """Test execute_apply when MR creation fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('ddd444', 'ddd444d', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=True, remote='origin',
+                                      target='main')
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'log')):
+                with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                       return_value=None):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 1)
+            self.assertTrue(success)  # cherry-pick succeeded, MR failed
+            dbs.close()
+
+
 class TestGetNextCommitsEmptyLine(unittest.TestCase):
     """Tests for get_next_commits with empty lines."""
 
