@@ -427,3 +427,91 @@ def push_and_create_mr(remote, branch, target, title, desc=''):
         tout.info(f'Merge request created: {mr_url}')
 
     return mr_url
+
+
+# Access level constants from GitLab
+ACCESS_LEVELS = {
+    0: 'No access',
+    5: 'Minimal access',
+    10: 'Guest',
+    20: 'Reporter',
+    30: 'Developer',
+    40: 'Maintainer',
+    50: 'Owner',
+}
+
+# Permission info returned by check_permissions()
+PermissionInfo = namedtuple('PermissionInfo', [
+    'user', 'user_id', 'access_level', 'access_name',
+    'can_push', 'can_create_mr', 'can_merge', 'project', 'host'
+])
+
+
+def check_permissions(remote):  # pylint: disable=too-many-return-statements
+    """Check GitLab permissions for the current token
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        PermissionInfo: Permission info, or None on failure
+    """
+    if not check_available():
+        return None
+
+    token = get_token()
+    if not token:
+        tout.error('No GitLab token configured')
+        tout.error('Set token in ~/.config/pickman.conf or GITLAB_TOKEN env var')
+        return None
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        tout.error(f"Could not parse GitLab URL from remote '{remote}'")
+        return None
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        glab.auth()
+        user = glab.user
+
+        project = glab.projects.get(proj_path)
+
+        # Get user's access level in this project
+        access_level = 0
+        try:
+            # Try to get the member directly
+            member = project.members.get(user.id)
+            access_level = member.access_level
+        except gitlab.exceptions.GitlabGetError:
+            # User might have inherited access from a group
+            try:
+                member = project.members_all.get(user.id)
+                access_level = member.access_level
+            except gitlab.exceptions.GitlabGetError:
+                pass
+
+        access_name = ACCESS_LEVELS.get(access_level, f'Unknown ({access_level})')
+
+        return PermissionInfo(
+            user=user.username,
+            user_id=user.id,
+            access_level=access_level,
+            access_name=access_name,
+            can_push=access_level >= 30,  # Developer or higher
+            can_create_mr=access_level >= 30,  # Developer or higher
+            can_merge=access_level >= 40,  # Maintainer or higher
+            project=proj_path,
+            host=host,
+        )
+    except gitlab.exceptions.GitlabAuthenticationError as exc:
+        tout.error(f'Authentication failed: {exc}')
+        return None
+    except gitlab.exceptions.GitlabGetError as exc:
+        tout.error(f'Could not access project: {exc}')
+        return None
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return None

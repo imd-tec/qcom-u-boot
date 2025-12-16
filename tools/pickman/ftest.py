@@ -1480,6 +1480,59 @@ class TestConfigFile(unittest.TestCase):
         self.assertEqual(value, 'value1')
 
 
+class TestCheckPermissions(unittest.TestCase):
+    """Tests for check_permissions function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_check_permissions_developer(self, mock_token, mock_url):
+        """Test checking permissions for a developer."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        mock_user = mock.MagicMock()
+        mock_user.username = 'testuser'
+        mock_user.id = 123
+
+        mock_member = mock.MagicMock()
+        mock_member.access_level = 30  # Developer
+
+        mock_project = mock.MagicMock()
+        mock_project.members.get.return_value = mock_member
+
+        mock_glab = mock.MagicMock()
+        mock_glab.user = mock_user
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            perms = gitlab_api.check_permissions('origin')
+
+        self.assertIsNotNone(perms)
+        self.assertEqual(perms.user, 'testuser')
+        self.assertEqual(perms.access_level, 30)
+        self.assertEqual(perms.access_name, 'Developer')
+        self.assertTrue(perms.can_push)
+        self.assertTrue(perms.can_create_mr)
+        self.assertFalse(perms.can_merge)
+
+    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
+    def test_check_permissions_not_available(self):
+        """Test check_permissions when gitlab not available."""
+        with terminal.capture():
+            perms = gitlab_api.check_permissions('origin')
+        self.assertIsNone(perms)
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_check_permissions_no_token(self, mock_token):
+        """Test check_permissions when no token set."""
+        mock_token.return_value = None
+        with terminal.capture():
+            perms = gitlab_api.check_permissions('origin')
+        self.assertIsNone(perms)
+
+
 class TestUpdateMrDescription(unittest.TestCase):
     """Tests for update_mr_description function."""
 

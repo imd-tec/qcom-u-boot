@@ -48,6 +48,11 @@ def parse_args(argv):
     apply_cmd.add_argument('-t', '--target', default='master',
                            help='Target branch for MR (default: master)')
 
+    check_gl = subparsers.add_parser('check-gitlab',
+                                      help='Check GitLab permissions')
+    check_gl.add_argument('-r', '--remote', default='ci',
+                          help='Git remote (default: ci)')
+
     commit_src = subparsers.add_parser('commit-source',
                                         help='Update database with last commit')
     commit_src.add_argument('source', help='Source branch name')

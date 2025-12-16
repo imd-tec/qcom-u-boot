@@ -3,6 +3,7 @@
 # Copyright 2025 Canonical Ltd.
 # Written by Simon Glass <simon.glass@canonical.com>
 #
+# pylint: disable=too-many-lines
 """Control module for pickman - handles the main logic."""
 
 from collections import namedtuple
@@ -144,6 +145,44 @@ def do_compare(args, dbs):  # pylint: disable=unused-argument
     tout.info(f'  Subject: {base.subject}')
     tout.info(f'  Date:    {base.date}')
 
+    return 0
+
+
+def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
+    """Check GitLab permissions for the configured token
+
+    Args:
+        args (Namespace): Parsed arguments with 'remote' attribute
+        dbs (Database): Database instance (unused)
+
+    Returns:
+        int: 0 on success with sufficient permissions, 1 otherwise
+    """
+    remote = args.remote
+
+    perms = gitlab_api.check_permissions(remote)
+    if not perms:
+        return 1
+
+    tout.info(f"GitLab permission check for remote '{remote}':")
+    tout.info(f"  Host:         {perms.host}")
+    tout.info(f"  Project:      {perms.project}")
+    tout.info(f"  User:         {perms.user}")
+    tout.info(f"  Access level: {perms.access_name}")
+    tout.info('')
+    tout.info('Permissions:')
+    tout.info(f"  Push branches:    {'Yes' if perms.can_push else 'No'}")
+    tout.info(f"  Create MRs:       {'Yes' if perms.can_create_mr else 'No'}")
+    tout.info(f"  Merge MRs:        {'Yes' if perms.can_merge else 'No'}")
+
+    if not perms.can_create_mr:
+        tout.warning('')
+        tout.warning('Insufficient permissions to create merge requests!')
+        tout.warning('The user needs at least Developer access level.')
+        return 1
+
+    tout.info('')
+    tout.info('All required permissions are available.')
     return 0
 
 
@@ -940,6 +979,7 @@ def do_test(args, dbs):  # pylint: disable=unused-argument
 COMMANDS = {
     'add-source': do_add_source,
     'apply': do_apply,
+    'check-gitlab': do_check_gitlab,
     'commit-source': do_commit_source,
     'compare': do_compare,
     'count-merges': do_count_merges,

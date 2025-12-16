@@ -60,6 +60,13 @@ This shows:
   master branch (ci/master)
 - The last common commit between the two branches
 
+To check GitLab permissions for the configured token::
+
+    ./tools/pickman/pickman check-gitlab
+
+This verifies that the GitLab token has the required permissions to push
+branches and create merge requests. Use ``-r`` to specify a different remote.
+
 To show the next set of commits to cherry-pick from a source branch::
 
     ./tools/pickman/pickman next-set us/next
