@@ -1355,6 +1355,24 @@ Branch: cherry-abc"""
         self.assertIsNone(source)
         self.assertIsNone(last_hash)
 
+    def test_parse_mr_description_ignores_short_hashes(self):
+        """Test that short numbers in conversation log are not matched."""
+        description = """## 2025-01-15: us/next
+
+Branch: cherry-abc123
+
+Commits:
+- abc123a First commit
+- def456b Second commit
+
+### Conversation log
+- 1 board built (sandbox)
+- 2 tests passed"""
+        source, last_hash = control.parse_mr_description(description)
+        self.assertEqual(source, 'us/next')
+        # Should match def456b, not "1" or "2" from conversation log
+        self.assertEqual(last_hash, 'def456b')
+
 
 class TestStep(unittest.TestCase):
     """Tests for step command."""

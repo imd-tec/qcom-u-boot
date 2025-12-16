@@ -651,23 +651,23 @@ def do_review(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
-def parse_mr_description(description):
+def parse_mr_description(desc):
     """Parse a pickman MR description to extract source and last commit
 
     Args:
-        description (str): MR description text
+        desc (str): MR description text
 
     Returns:
         tuple: (source_branch, last_commit_hash) or (None, None) if not parseable
     """
     # Extract source branch from "## date: source_branch" line
-    source_match = re.search(r'^## [^:]+: (.+)$', description, re.MULTILINE)
+    source_match = re.search(r'^## [^:]+: (.+)$', desc, re.MULTILINE)
     if not source_match:
         return None, None
     source = source_match.group(1)
 
-    # Extract commits from "- hash subject" lines
-    commit_matches = re.findall(r'^- ([a-f0-9]+) ', description, re.MULTILINE)
+    # Extract commits from '- hash subject' lines (must be at least 7 chars)
+    commit_matches = re.findall(r'^- ([a-f0-9]{7,}) ', desc, re.MULTILINE)
     if not commit_matches:
         return None, None
 
