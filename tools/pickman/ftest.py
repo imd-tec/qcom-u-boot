@@ -8,6 +8,8 @@
 
 import argparse
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -23,6 +25,7 @@ from u_boot_pylib import terminal
 from u_boot_pylib import tout
 
 from pickman import __main__ as pickman
+from pickman import agent
 from pickman import control
 from pickman import database
 from pickman import gitlab_api
@@ -1584,6 +1587,149 @@ class TestReview(unittest.TestCase):
                 ret = control.do_review(args, None)
 
         self.assertEqual(ret, 1)
+
+
+class TestUpdateHistoryWithReview(unittest.TestCase):
+    """Tests for update_history_with_review function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_dir = tempfile.mkdtemp()
+        self.orig_dir = os.getcwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        subprocess.run(['git', 'init'], check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@test.com'],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test'],
+                       check=True, capture_output=True)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        os.chdir(self.orig_dir)
+        shutil.rmtree(self.test_dir)
+
+    def test_update_history_with_review(self):
+        """Test that review handling is appended to history."""
+        comments = [
+            gitlab_api.MrComment(id=1, author='reviewer1',
+                                 body='Please fix the indentation here',
+                                 created_at='2025-01-01', resolvable=True,
+                                 resolved=False),
+            gitlab_api.MrComment(id=2, author='reviewer2', body='Add a docstring',
+                                 created_at='2025-01-01', resolvable=True,
+                                 resolved=False),
+        ]
+        conversation_log = 'Fixed indentation and added docstring.'
+
+        control.update_history_with_review('cherry-abc123', comments,
+                                           conversation_log)
+
+        # Check history file was created
+        self.assertTrue(os.path.exists(control.HISTORY_FILE))
+
+        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+
+        self.assertIn('### Review:', content)
+        self.assertIn('Branch: cherry-abc123', content)
+        self.assertIn('reviewer1', content)
+        self.assertIn('reviewer2', content)
+        self.assertIn('Fixed indentation', content)
+
+    def test_update_history_appends(self):
+        """Test that review handling appends to existing history."""
+        # Create existing history
+        with open(control.HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('Existing history content\n')
+        subprocess.run(['git', 'add', control.HISTORY_FILE],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'Initial'],
+                       check=True, capture_output=True)
+
+        comments = [gitlab_api.MrComment(id=1, author='reviewer', body='Fix this',
+                                         created_at='2025-01-01', resolvable=True,
+                                         resolved=False)]
+        control.update_history_with_review('cherry-xyz', comments, 'Fixed it')
+
+        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+
+        self.assertIn('Existing history content', content)
+        self.assertIn('### Review:', content)
+
+
+class TestProcessMrReviewsCommentTracking(unittest.TestCase):
+    """Tests for comment tracking in process_mr_reviews."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.test_dir = tempfile.mkdtemp()
+        self.orig_dir = os.getcwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        subprocess.run(['git', 'init'], check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@test.com'],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test'],
+                       check=True, capture_output=True)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        os.chdir(self.orig_dir)
+        shutil.rmtree(self.test_dir)
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_skips_processed_comments(self):
+        """Test that already-processed comments are skipped."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark comment as processed
+            dbs.comment_mark_processed(100, 1)
+            dbs.commit()
+
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            # Comment 1 is processed, comment 2 is new
+            comments = [
+                gitlab_api.MrComment(id=1, author='reviewer', body='Old comment',
+                                     created_at='2025-01-01', resolvable=True,
+                                     resolved=False),
+                gitlab_api.MrComment(id=2, author='reviewer', body='New comment',
+                                     created_at='2025-01-01', resolvable=True,
+                                     resolved=False),
+            ]
+
+            with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                   return_value=comments):
+                with mock.patch.object(agent, 'handle_mr_comments',
+                                       return_value=(True, 'Done')) as mock_agent:
+                    with mock.patch.object(gitlab_api, 'update_mr_description'):
+                        with mock.patch.object(control, 'update_history_with_review'):
+                            control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should only receive the new comment
+            call_args = mock_agent.call_args
+            passed_comments = call_args[0][2]
+            self.assertEqual(len(passed_comments), 1)
+            self.assertEqual(passed_comments[0].id, 2)
+
+            dbs.close()
 
 
 class TestParsePoll(unittest.TestCase):

@@ -119,8 +119,18 @@ To check open MRs for comments and address them::
     ./tools/pickman/pickman review
 
 This lists open pickman MRs (those with ``[pickman]`` in the title), checks each
-for unresolved comments, and uses a Claude agent to address them. The agent will
-make code changes based on the feedback and push an updated branch.
+for unresolved comments, and uses a Claude agent to address them. The agent will:
+
+- Make code changes based on the feedback
+- Create a local branch with version suffix (e.g., ``cherry-abc123-v2``)
+- Force push to the original remote branch to update the existing MR
+- Use ``--keep-empty`` when rebasing to preserve empty merge commits
+
+After processing, pickman:
+
+- Marks comments as processed in the database (to avoid reprocessing)
+- Updates the MR description with the agent's conversation log
+- Appends the review handling to ``.pickman-history``
 
 Options for the review command:
 

@@ -574,15 +574,16 @@ def do_commit_source(args, dbs):
     return 0
 
 
-def process_mr_reviews(remote, mrs):
+def process_mr_reviews(remote, mrs, dbs):
     """Process review comments on open MRs
 
     Checks each MR for unresolved comments and uses Claude agent to address
-    them.
+    them. Updates MR description and .pickman-history with conversation log.
 
     Args:
         remote (str): Remote name
         mrs (list): List of MR dicts from get_open_pickman_mrs()
+        dbs (Database): Database instance for tracking processed comments
 
     Returns:
         int: Number of MRs with comments processed
@@ -590,35 +591,106 @@ def process_mr_reviews(remote, mrs):
     processed = 0
 
     for merge_req in mrs:
-        comments = gitlab_api.get_mr_comments(remote, merge_req.iid)
+        mr_iid = merge_req.iid
+        comments = gitlab_api.get_mr_comments(remote, mr_iid)
         if comments is None:
             continue
 
-        # Filter to unresolved comments
-        unresolved = [c for c in comments if not c.resolved]
+        # Filter to unresolved comments that haven't been processed
+        unresolved = []
+        for com in comments:
+            if com.resolved:
+                continue
+            if dbs.comment_is_processed(mr_iid, com.id):
+                continue
+            unresolved.append(com)
         if not unresolved:
             continue
 
         tout.info('')
-        tout.info(f"MR !{merge_req.iid} has {len(unresolved)} comment(s):")
+        tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
         for comment in unresolved:
             tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
 
         # Run agent to handle comments
-        success, _ = agent.handle_mr_comments(
-            merge_req.iid,
+        success, conversation_log = agent.handle_mr_comments(
+            mr_iid,
             merge_req.source_branch,
             unresolved,
             remote,
         )
-        if not success:
-            tout.error(f"Failed to handle comments for MR !{merge_req.iid}")
+
+        if success:
+            # Mark comments as processed
+            for comment in unresolved:
+                dbs.comment_mark_processed(mr_iid, comment.id)
+            dbs.commit()
+
+            # Update MR description with comments and conversation log
+            old_desc = merge_req.description
+            comment_summary = '\n'.join(
+                f"- [{c.author}]: {c.body}"
+                for c in unresolved
+            )
+            new_desc = (f"{old_desc}\n\n### Review response\n\n"
+                        f"**Comments addressed:**\n{comment_summary}\n\n"
+                        f"**Response:**\n{conversation_log}")
+            gitlab_api.update_mr_description(remote, mr_iid, new_desc)
+
+            # Update .pickman-history
+            update_history_with_review(merge_req.source_branch,
+                                       unresolved, conversation_log)
+
+            tout.info(f'Updated MR !{mr_iid} description and history')
+        else:
+            tout.error(f"Failed to handle comments for MR !{mr_iid}")
         processed += 1
 
     return processed
 
 
-def do_review(args, dbs):  # pylint: disable=unused-argument
+def update_history_with_review(branch_name, comments, conversation_log):
+    """Append review handling to .pickman-history
+
+    Args:
+        branch_name (str): Branch name for the MR
+        comments (list): List of comments that were addressed
+        conversation_log (str): Agent conversation log
+    """
+    comment_summary = '\n'.join(
+        f"- [{c.author}]: {c.body[:100]}..."
+        for c in comments
+    )
+
+    entry = f"""### Review: {date.today()}
+
+Branch: {branch_name}
+
+Comments addressed:
+{comment_summary}
+
+### Conversation log
+{conversation_log}
+
+---
+
+"""
+
+    # Append to history file
+    existing = ''
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            existing = fhandle.read()
+
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
+        fhandle.write(existing + entry)
+
+    # Commit the history file
+    run_git(['add', '-f', HISTORY_FILE])
+    run_git(['commit', '-m', f'pickman: Record review handling for {branch_name}'])
+
+
+def do_review(args, dbs):
     """Check open pickman MRs and handle comments
 
     Lists open MRs created by pickman, checks for human comments, and uses
@@ -646,7 +718,7 @@ def do_review(args, dbs):  # pylint: disable=unused-argument
     for merge_req in mrs:
         tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
-    process_mr_reviews(remote, mrs)
+    process_mr_reviews(remote, mrs, dbs)
 
     return 0
 
@@ -765,7 +837,7 @@ def do_step(args, dbs):
             tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
         # Process any review comments on open MRs
-        process_mr_reviews(remote, mrs)
+        process_mr_reviews(remote, mrs, dbs)
 
         tout.info('')
         tout.info('Not creating new MR while others are pending')
