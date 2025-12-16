@@ -721,6 +721,88 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
             dbs.close()
 
 
+class TestDatabaseComment(unittest.TestCase):
+    """Tests for Database comment functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_comment_mark_and_check_processed(self):
+        """Test marking and checking processed comments"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Comment should not be processed initially
+            self.assertFalse(dbs.comment_is_processed(123, 456))
+
+            # Mark as processed
+            dbs.comment_mark_processed(123, 456)
+            dbs.commit()
+
+            # Now should be processed
+            self.assertTrue(dbs.comment_is_processed(123, 456))
+
+            # Different comment should not be processed
+            self.assertFalse(dbs.comment_is_processed(123, 789))
+            self.assertFalse(dbs.comment_is_processed(999, 456))
+
+            dbs.close()
+
+    def test_comment_get_processed(self):
+        """Test getting all processed comments for an MR"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark several comments as processed
+            dbs.comment_mark_processed(100, 1)
+            dbs.comment_mark_processed(100, 2)
+            dbs.comment_mark_processed(100, 3)
+            dbs.comment_mark_processed(200, 10)  # Different MR
+            dbs.commit()
+
+            # Get processed for MR 100
+            processed = dbs.comment_get_processed(100)
+            self.assertEqual(len(processed), 3)
+            self.assertIn(1, processed)
+            self.assertIn(2, processed)
+            self.assertIn(3, processed)
+            self.assertNotIn(10, processed)
+
+            # Get processed for MR 200
+            processed = dbs.comment_get_processed(200)
+            self.assertEqual(len(processed), 1)
+            self.assertIn(10, processed)
+
+            dbs.close()
+
+    def test_comment_mark_processed_idempotent(self):
+        """Test that marking same comment twice doesn't fail"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark same comment twice (should not raise)
+            dbs.comment_mark_processed(123, 456)
+            dbs.comment_mark_processed(123, 456)
+            dbs.commit()
+
+            # Should still be processed
+            self.assertTrue(dbs.comment_is_processed(123, 456))
+
+            dbs.close()
+
+
 class TestListSources(unittest.TestCase):
     """Tests for list-sources command."""
 

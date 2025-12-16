@@ -222,6 +222,17 @@ Tables
     - ``url``: URL to the merge request
     - ``created_at``: Timestamp when the MR was created
 
+**comment**
+    Tracks MR comments that have been processed by the review agent.
+
+    - ``id``: Primary key
+    - ``mr_iid``: GitLab merge request IID
+    - ``comment_id``: GitLab comment/note ID
+    - ``processed_at``: Timestamp when the comment was processed
+
+    This table prevents the same comment from being addressed multiple times
+    when running ``review`` or ``poll`` commands.
+
 Configuration
 -------------
 
