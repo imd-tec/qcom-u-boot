@@ -232,3 +232,64 @@ The branch `cherry-06b8aafd681` was created based on `ci/master` but is identica
 
 ---
 
+## 2025-12-16: us/next
+
+Branch: cherry-3881c6b9035
+
+Commits:
+- 3881c6b9035 configs: Resync with savedefconfig
+- a2fa53be4fa mtd: nand: brcmnand: remove device specific nand driver files
+- 67e52b59a2f arm: dts: Use upstream dts
+- a4f72e8b6ef mtd: rawnand: brcmnand: Default bcmbca parameter_page_big_endian to zero
+- 5b70f26fed5 mtd: rawnand: brcmnand: update log level messages
+- 931122add7a Merge branch 'u-boot-nand-20241126' of https://source.denx.de/u-boot/custodians/u-boot-nand-flash
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the commits one by one. Starting with the first commit:
+
+The first commit is empty (changes already in ci/master). Let me skip it and move to the next:
+
+Second commit cherry-picked successfully. Now the third commit:
+
+Third commit cherry-picked successfully. Now the fourth commit:
+
+Fourth commit cherry-picked successfully. Now the fifth commit:
+
+Fifth commit cherry-picked successfully. Now the sixth (and last) commit, which is a merge commit:
+
+The merge commit is empty (all changes already applied through previous cherry-picks). Since we used `--allow-empty`, let me commit it to preserve the merge record:
+
+All cherry-picks completed. Let me verify with git log:
+
+All 5 commits are present (the first commit was skipped since it was already in ci/master, making the total 5 new commits including the empty merge). Now let me run the build verification:
+
+The build completed successfully. Let me provide a final summary:
+
+## Final Status Report
+
+### Cherry-pick Results
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 3881c6b9035 | configs: Resync with savedefconfig | **Skipped** (already in ci/master) |
+| a2fa53be4fa | mtd: nand: brcmnand: remove device specific nand driver files | ✅ Success |
+| 67e52b59a2f | arm: dts: Use upstream dts | ✅ Success |
+| a4f72e8b6ef | mtd: rawnand: brcmnand: Default bcmbca parameter_page_big_endian to zero | ✅ Success |
+| 5b70f26fed5 | mtd: rawnand: brcmnand: update log level messages | ✅ Success |
+| 931122add7a | Merge branch 'u-boot-nand-20241126' | ✅ Success (empty commit - content was in individual patches) |
+
+### Build Result
+- **Status**: ✅ OK
+- Build completed successfully for sandbox board with no warnings or errors
+
+### Fix-ups Made
+- None required - all cherry-picks applied cleanly
+
+### Branch Status
+- Branch `cherry-3881c6b9035` is ready for pushing
+- 5 commits ahead of `ci/master` (4 content commits + 1 empty merge commit)
+
+---
+
