@@ -303,3 +303,71 @@ The build succeeded. Let me provide a summary:
 
 ---
 
+## 2025-12-16: us/next
+
+Branch: cherry-6e18eec9080
+
+Commits:
+- 6e18eec9080 ARM: dts: imx: Make DRAM coding GPIOs available before relocation on Data Modul i.MX8M Mini/Plus eDM SBC
+- 1171adfd899 ARM: dts: imx: Pick safe DRAM size on failure on Data Modul i.MX8M Mini/Plus eDM SBC
+- ec3e5fa55d8 ARM: imx: Perform plain boot in altbootcmd on Data Modul i.MX8M Mini/Plus eDM SBC
+- 3a689038bf9 ARM: imx: Deduplicate Data Modul i.MX8M eDM SBC defconfigs
+- 0b97a394f6b ARM: imx: Replace YModem with SDP on Data Modul i.MX8M Mini eDM SBC SPL
+- 4835efca7a0 ARM: dts: imx: Enable PCIe and NVMe on Data Modul i.MX8M Mini eDM SBC
+- 6ceb861882b Revert "arm64: dts: ti: k3-j7200: Fix OSPI boot"
+- 20f641987f8 test/cmd/wget.c: move net_test_wget() to the cmd test suite
+- bf3dfb405ba Merge tag 'u-boot-imx-master-20241130' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick each commit in order. I'll start with the first commit:
+
+There are conflicts. Let me check the conflicting files:
+
+Let me also check the other file:
+
+I can see the conflict. The commit is trying to deduplicate the defconfigs by moving common settings into a shared include file. The conflict shows that the main content should be removed (keeping only the #include and the platform-specific settings). Let me check what the original commit looks like:
+
+Now I understand the conflict. The original commit removes all the common settings and moves them to the shared config file, but the base branch has slightly different content. The resolution should keep the "theirs" version (the incoming commit's version). Let me resolve by using the incoming commit's version:
+
+Let me now amend this commit to note the conflict resolution:
+
+Now let me continue with the next cherry-pick:
+
+Now the last one is the merge commit - I'll use -m 1 --allow-empty:
+
+All cherry-picks are complete. Let me verify with git log:
+
+All 9 commits are present. Now let me run the build verification:
+
+The build completed successfully with no warnings or errors.
+
+## Final Status Summary
+
+### Cherry-pick Results
+All 9 commits have been successfully cherry-picked from `us/next` branch to `cherry-6e18eec9080`:
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 6e18eec9080 | ARM: dts: imx: Make DRAM coding GPIOs available before relocation | ✅ Clean |
+| 2 | 1171adfd899 | ARM: dts: imx: Pick safe DRAM size on failure | ✅ Clean |
+| 3 | ec3e5fa55d8 | ARM: imx: Perform plain boot in altbootcmd | ✅ Clean |
+| 4 | 3a689038bf9 | ARM: imx: Deduplicate Data Modul i.MX8M eDM SBC defconfigs | ⚠️ Conflict resolved |
+| 5 | 0b97a394f6b | ARM: imx: Replace YModem with SDP on Data Modul i.MX8M Mini eDM SBC SPL | ✅ Clean |
+| 6 | 4835efca7a0 | ARM: dts: imx: Enable PCIe and NVMe on Data Modul i.MX8M Mini eDM SBC | ✅ Clean |
+| 7 | 6ceb861882b | Revert "arm64: dts: ti: k3-j7200: Fix OSPI boot" | ✅ Clean |
+| 8 | 20f641987f8 | test/cmd/wget.c: move net_test_wget() to the cmd test suite | ✅ Clean (auto-merged) |
+| 9 | bf3dfb405ba | Merge tag 'u-boot-imx-master-20241130' | ✅ Empty (expected) |
+
+### Build Result
+**✅ OK** - Sandbox build completed successfully with no warnings or errors.
+
+### Fix-ups Made
+- **Commit 3a689038bf9**: Resolved merge conflicts in `configs/imx8mm_data_modul_edm_sbc_defconfig` and `configs/imx8mp_data_modul_edm_sbc_defconfig` by accepting the incoming commit version. This was the correct resolution since the commit deduplicates defconfigs by moving common settings to a shared include file.
+
+### Current Branch State
+Branch `cherry-6e18eec9080` is ready for pushing and is ahead of `ci/master` by 9 commits.
+
+---
+
