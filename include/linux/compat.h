@@ -11,16 +11,21 @@
 
 #include <linux/types.h>
 #include <linux/err.h>
+#include <linux/cred.h>
 #include <linux/export.h>
 #include <linux/freezer.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/module.h>
+#include <linux/random.h>
+#include <linux/rwsem.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
+#include <linux/wait.h>
 #include <linux/workqueue.h>
 
 #ifdef CONFIG_XEN
@@ -29,16 +34,6 @@
 
 struct unused {};
 typedef struct unused unused_t;
-
-struct p_current{
-       int pid;
-};
-
-extern struct p_current *current;
-
-#define DECLARE_WAITQUEUE(...)	do { } while (0)
-#define add_wait_queue(...)	do { } while (0)
-#define remove_wait_queue(...)	do { } while (0)
 
 #ifndef CONFIG_XEN
 #define eventchn_poll()
@@ -93,8 +88,6 @@ extern struct p_current *current;
 #define PAGE_SIZE	4096
 #endif
 
-/* drivers/char/random.c */
-#define get_random_bytes(...)
 
 /* include/linux/leds.h */
 struct led_trigger {};
@@ -158,16 +151,12 @@ typedef unsigned long blkcnt_t;
 #define volume_sysfs_init(...)		0
 #define volume_sysfs_close(...)		do { } while (0)
 
-#define init_waitqueue_head(...)	do { } while (0)
-#define wait_event_interruptible(...)	0
-#define wake_up_interruptible(...)	do { } while (0)
 #define dump_stack(...)			do { } while (0)
 
 
 
 
 typedef unused_t spinlock_t;
-typedef int	wait_queue_head_t;
 
 #define spin_lock_init(lock) do {} while (0)
 #define spin_lock(lock) do {} while (0)
@@ -180,23 +169,9 @@ typedef int	wait_queue_head_t;
 #define mutex_lock(...)
 #define mutex_unlock(...)
 
-#define init_rwsem(...)			do { } while (0)
-#define down_read(...)			do { } while (0)
-#define down_write(...)			do { } while (0)
-#define down_write_trylock(...)		1
-#define up_read(...)			do { } while (0)
-#define up_write(...)			do { } while (0)
-
-#define cond_resched()			do { } while (0)
-#define yield()				do { } while (0)
 
 
 
-struct rw_semaphore { int i; };
-#define down_write(...)			do { } while (0)
-#define up_write(...)			do { } while (0)
-#define down_read(...)			do { } while (0)
-#define up_read(...)			do { } while (0)
 struct device {
 	struct device		*parent;
 	struct class		*class;
@@ -217,15 +192,7 @@ struct cdev {
 #define cdev_add(...)		0
 #define cdev_del(...)		do { } while (0)
 
-#define prandom_u32(...)	0
 
-typedef struct {
-	uid_t val;
-} kuid_t;
-
-typedef struct {
-	gid_t val;
-} kgid_t;
 
 /* from include/linux/types.h */
 

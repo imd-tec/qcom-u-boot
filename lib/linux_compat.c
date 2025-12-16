@@ -5,10 +5,10 @@
 #include <asm/cache.h>
 #include <linux/compat.h>
 
-struct p_current cur = {
+struct task_struct cur = {
 	.pid = 1,
 };
-__maybe_unused struct p_current *current = &cur;
+__maybe_unused struct task_struct *current = &cur;
 
 void *kmalloc(size_t size, gfp_t flags)
 {
