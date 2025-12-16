@@ -57,7 +57,8 @@ def run_test_coverage(prog, filter_fname, exclude_list, build_dir,
     glob_list += exclude_list
     glob_list += ['*libfdt.py', '*/site-packages/*', '*/dist-packages/*']
     glob_list += ['*concurrencytest*']
-    test_cmd = 'test' if 'binman' in prog or 'patman' in prog else '-t'
+    use_test = 'binman' in prog or 'patman' in prog or 'pickman' in prog
+    test_cmd = 'test' if use_test else '-t'
     prefix = ''
     if build_dir:
         prefix = 'PYTHONPATH=$PYTHONPATH:%s/sandbox_spl/tools ' % build_dir
@@ -91,13 +92,12 @@ def run_test_coverage(prog, filter_fname, exclude_list, build_dir,
     print(coverage)
     if coverage != '100%':
         print(stdout)
-        print("To get a report in 'htmlcov/index.html', type: python3-coverage html")
+        print("To get a report in 'htmlcov/index.html', type: "
+              "python3-coverage html")
         print('Coverage error: %s, but should be 100%%' % coverage)
         ok = False
     if not ok:
         if allow_failures:
-            # for line in lines:
-                # print('.', line, re.match(r'^(tools/.*py) *\d+ *(\d+) *(\d+)%$', line))
             lines = [re.match(r'^(tools/.*py) *\d+ *(\d+) *\d+%$', line)
                      for line in stdout.splitlines()]
             bad = []
