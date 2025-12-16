@@ -513,11 +513,103 @@ def do_review(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+def parse_mr_description(description):
+    """Parse a pickman MR description to extract source and last commit
+
+    Args:
+        description (str): MR description text
+
+    Returns:
+        tuple: (source_branch, last_commit_hash) or (None, None) if not parseable
+    """
+    import re
+
+    # Extract source branch from "## date: source_branch" line
+    source_match = re.search(r'^## [^:]+: (.+)$', description, re.MULTILINE)
+    if not source_match:
+        return None, None
+    source = source_match.group(1)
+
+    # Extract commits from "- hash subject" lines
+    commit_matches = re.findall(r'^- ([a-f0-9]+) ', description, re.MULTILINE)
+    if not commit_matches:
+        return None, None
+
+    # Last commit is the last one in the list
+    last_hash = commit_matches[-1]
+
+    return source, last_hash
+
+
+def process_merged_mrs(remote, source, dbs):
+    """Check for merged MRs and update the database
+
+    Args:
+        remote (str): Remote name
+        source (str): Source branch name to filter by
+        dbs (Database): Database instance
+
+    Returns:
+        int: Number of MRs processed, or -1 on error
+    """
+    merged_mrs = gitlab_api.get_merged_pickman_mrs(remote)
+    if merged_mrs is None:
+        return -1
+
+    processed = 0
+    for merge_req in merged_mrs:
+        mr_source, last_hash = parse_mr_description(merge_req['description'])
+
+        # Only process MRs for the requested source branch
+        if mr_source != source:
+            continue
+
+        # Check if this MR's last commit is newer than current database
+        current = dbs.source_get(source)
+        if not current:
+            continue
+
+        # Resolve the short hash to full hash
+        try:
+            full_hash = run_git(['rev-parse', last_hash])
+        except Exception:  # pylint: disable=broad-except
+            tout.warning(f"Could not resolve commit '{last_hash}' from "
+                         f"MR !{merge_req['iid']}")
+            continue
+
+        # Check if this commit is an ancestor of source but not of current
+        # (meaning it's newer than what we have)
+        try:
+            # Is last_hash reachable from source?
+            run_git(['merge-base', '--is-ancestor', full_hash, source])
+        except Exception:  # pylint: disable=broad-except
+            continue  # Not reachable, skip
+
+        try:
+            # Is last_hash already at or before current?
+            run_git(['merge-base', '--is-ancestor', full_hash, current])
+            continue  # Already processed
+        except Exception:  # pylint: disable=broad-except
+            pass  # Not an ancestor of current, so it's newer
+
+        # Update database
+        short_old = current[:12]
+        short_new = full_hash[:12]
+        tout.info(f"MR !{merge_req['iid']} merged, updating '{source}': "
+                  f'{short_old} -> {short_new}')
+        dbs.source_set(source, full_hash)
+        dbs.commit()
+        processed += 1
+
+    return processed
+
+
 def do_step(args, dbs):
     """Create an MR if none is pending
 
-    Checks for open pickman MRs and if none exist, runs apply with push
-    to create a new one.
+    Checks for merged pickman MRs and updates the database, then checks for
+    open pickman MRs and if none exist, runs apply with push to create a new
+    one.
 
     Args:
         args (Namespace): Parsed arguments with 'source', 'remote', 'target'
@@ -527,6 +619,12 @@ def do_step(args, dbs):
         int: 0 on success, 1 on failure
     """
     remote = args.remote
+    source = args.source
+
+    # First check for merged MRs and update database
+    processed = process_merged_mrs(remote, source, dbs)
+    if processed < 0:
+        return 1
 
     # Check for open pickman MRs
     mrs = gitlab_api.get_open_pickman_mrs(remote)

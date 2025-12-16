@@ -117,9 +117,16 @@ To automatically create an MR if none is pending::
 
     ./tools/pickman/pickman step us/next
 
-This checks for open pickman MRs (those with ``[pickman]`` in the title) and if
-none exist, runs ``apply`` with ``--push`` to create a new one. This is useful
-for automated workflows where only one MR should be active at a time.
+This command performs the following:
+
+1. Checks for merged pickman MRs and updates the database with the last
+   cherry-picked commit from each merged MR
+2. Checks for open pickman MRs (those with ``[pickman]`` in the title)
+3. If no open MRs exist, runs ``apply`` with ``--push`` to create a new one
+
+This is useful for automated workflows where only one MR should be active at a
+time. The automatic database update on merge means you don't need to manually
+run ``commit-source`` after each MR is merged.
 
 Options for the step command:
 

@@ -152,15 +152,16 @@ def create_mr(host, proj_path, source, target, title, desc=''):
         return None
 
 
-def get_open_pickman_mrs(remote):
-    """Get open merge requests created by pickman
+def get_pickman_mrs(remote, state='opened'):
+    """Get merge requests created by pickman
 
     Args:
         remote (str): Remote name
+        state (str): MR state ('opened', 'merged', 'closed', 'all')
 
     Returns:
-        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch' keys,
-              or None on failure
+        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch',
+              'description' keys, or None on failure
     """
     if not check_available():
         return None
@@ -181,7 +182,7 @@ def get_open_pickman_mrs(remote):
         glab = gitlab.Gitlab(f'https://{host}', private_token=token)
         project = glab.projects.get(proj_path)
 
-        mrs = project.mergerequests.list(state='opened', get_all=True)
+        mrs = project.mergerequests.list(state=state, get_all=True)
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
@@ -190,11 +191,38 @@ def get_open_pickman_mrs(remote):
                     'title': merge_req.title,
                     'web_url': merge_req.web_url,
                     'source_branch': merge_req.source_branch,
+                    'description': merge_req.description or '',
                 })
         return pickman_mrs
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
         return None
+
+
+def get_open_pickman_mrs(remote):
+    """Get open merge requests created by pickman
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch' keys,
+              or None on failure
+    """
+    return get_pickman_mrs(remote, state='opened')
+
+
+def get_merged_pickman_mrs(remote):
+    """Get merged merge requests created by pickman
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch',
+              'description' keys, or None on failure
+    """
+    return get_pickman_mrs(remote, state='merged')
 
 
 def get_mr_comments(remote, mr_iid):

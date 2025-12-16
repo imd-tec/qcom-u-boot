@@ -1126,6 +1126,54 @@ class TestParseStep(unittest.TestCase):
         self.assertEqual(args.target, 'main')
 
 
+class TestParseMrDescription(unittest.TestCase):
+    """Tests for parse_mr_description function."""
+
+    def test_parse_mr_description(self):
+        """Test parsing a valid MR description."""
+        description = """## 2025-01-15: us/next
+
+Branch: cherry-abc123
+
+Commits:
+- abc123a First commit
+- def456b Second commit
+- caf789c Third commit
+
+### Conversation log
+Some log text"""
+        source, last_hash = control.parse_mr_description(description)
+        self.assertEqual(source, 'us/next')
+        self.assertEqual(last_hash, 'caf789c')
+
+    def test_parse_mr_description_single_commit(self):
+        """Test parsing MR description with single commit."""
+        description = """## 2025-01-15: feature/branch
+
+Branch: cherry-xyz
+
+Commits:
+- abc1234 Only commit"""
+        source, last_hash = control.parse_mr_description(description)
+        self.assertEqual(source, 'feature/branch')
+        self.assertEqual(last_hash, 'abc1234')
+
+    def test_parse_mr_description_invalid(self):
+        """Test parsing invalid MR description."""
+        source, last_hash = control.parse_mr_description('invalid description')
+        self.assertIsNone(source)
+        self.assertIsNone(last_hash)
+
+    def test_parse_mr_description_no_commits(self):
+        """Test parsing MR description without commits."""
+        description = """## 2025-01-15: us/next
+
+Branch: cherry-abc"""
+        source, last_hash = control.parse_mr_description(description)
+        self.assertIsNone(source)
+        self.assertIsNone(last_hash)
+
+
 class TestStep(unittest.TestCase):
     """Tests for step command."""
 
@@ -1136,21 +1184,35 @@ class TestStep(unittest.TestCase):
             'title': '[pickman] Test MR',
             'web_url': 'https://gitlab.com/mr/123',
         }
-        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
-                               return_value=[mock_mr]):
-            args = argparse.Namespace(cmd='step', source='us/next',
-                                      remote='ci', target='master')
-            ret = control.do_step(args, None)
+        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                               return_value=[]):
+            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                   return_value=[mock_mr]):
+                args = argparse.Namespace(cmd='step', source='us/next',
+                                          remote='ci', target='master')
+                ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
     def test_step_gitlab_error(self):
         """Test step when GitLab API returns error."""
-        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
                                       remote='ci', target='master')
             ret = control.do_step(args, None)
+
+        self.assertEqual(ret, 1)
+
+    def test_step_open_mrs_error(self):
+        """Test step when get_open_pickman_mrs returns error."""
+        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                               return_value=[]):
+            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                   return_value=None):
+                args = argparse.Namespace(cmd='step', source='us/next',
+                                          remote='ci', target='master')
+                ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
 
