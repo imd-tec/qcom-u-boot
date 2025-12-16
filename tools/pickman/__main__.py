@@ -56,6 +56,12 @@ def parse_args(argv):
     subparsers.add_parser('compare', help='Compare branches')
     subparsers.add_parser('list-sources', help='List tracked source branches')
 
+    next_merges = subparsers.add_parser('next-merges',
+                                         help='Show next N merges to be applied')
+    next_merges.add_argument('source', help='Source branch name')
+    next_merges.add_argument('-c', '--count', type=int, default=10,
+                             help='Number of merges to show (default: 10)')
+
     next_set = subparsers.add_parser('next-set',
                                      help='Show next set of commits to cherry-pick')
     next_set.add_argument('source', help='Source branch name')

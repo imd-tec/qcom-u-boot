@@ -68,6 +68,13 @@ This finds commits between the last cherry-picked commit and the next merge
 commit in the source branch. It stops at the merge commit since that typically
 represents a logical grouping of commits (e.g., a pull request).
 
+To show the next N merges that will be applied::
+
+    ./tools/pickman/pickman next-merges us/next
+
+This shows the upcoming merge commits on the first-parent chain, useful for
+seeing what's coming up. Use ``-c`` to specify the count (default 10).
+
 To apply the next set of commits using a Claude agent::
 
     ./tools/pickman/pickman apply us/next

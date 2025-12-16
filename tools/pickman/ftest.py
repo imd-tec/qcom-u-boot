@@ -904,6 +904,107 @@ class TestNextSet(unittest.TestCase):
         self.assertIn('bbb222b Second commit', output)
 
 
+class TestNextMerges(unittest.TestCase):
+    """Tests for next-merges command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_next_merges(self):
+        """Test next-merges shows upcoming merges"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits
+        log_output = (
+            'aaa111|aaa111a|Merge branch feature-1\n'
+            'bbb222|bbb222b|Merge branch feature-2\n'
+            'ccc333|ccc333c|Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Next 3 merges from us/next:', output)
+        self.assertIn('1. aaa111a Merge branch feature-1', output)
+        self.assertIn('2. bbb222b Merge branch feature-2', output)
+        self.assertIn('3. ccc333c Merge branch feature-3', output)
+
+    def test_next_merges_with_count(self):
+        """Test next-merges respects count parameter"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits
+        log_output = (
+            'aaa111|aaa111a|Merge branch feature-1\n'
+            'bbb222|bbb222b|Merge branch feature-2\n'
+            'ccc333|ccc333c|Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=2)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Next 2 merges from us/next:', output)
+        self.assertIn('1. aaa111a', output)
+        self.assertIn('2. bbb222b', output)
+        self.assertNotIn('3. ccc333c', output)
+
+    def test_next_merges_no_merges(self):
+        """Test next-merges with no merges remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('No merges remaining', stdout.getvalue())
+
+
 class TestGetNextCommits(unittest.TestCase):
     """Tests for get_next_commits function."""
 
