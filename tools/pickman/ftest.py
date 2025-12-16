@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 # Allow 'from pickman import xxx' to work via symlink
 our_path = os.path.dirname(os.path.realpath(__file__))
@@ -22,6 +23,7 @@ from u_boot_pylib import terminal
 from pickman import __main__ as pickman
 from pickman import control
 from pickman import database
+from pickman import gitlab_api
 
 
 class TestCommit(unittest.TestCase):
@@ -938,6 +940,80 @@ class TestApply(unittest.TestCase):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         self.assertIn('No new commits to cherry-pick', stdout.getvalue())
+
+
+class TestParseUrl(unittest.TestCase):
+    """Tests for parse_url function."""
+
+    def test_parse_ssh_url(self):
+        """Test parsing SSH URL."""
+        host, path = gitlab_api.parse_url(
+            'git@gitlab.com:group/project.git')
+        self.assertEqual(host, 'gitlab.com')
+        self.assertEqual(path, 'group/project')
+
+    def test_parse_ssh_url_no_git_suffix(self):
+        """Test parsing SSH URL without .git suffix."""
+        host, path = gitlab_api.parse_url(
+            'git@gitlab.com:group/project')
+        self.assertEqual(host, 'gitlab.com')
+        self.assertEqual(path, 'group/project')
+
+    def test_parse_ssh_url_nested_group(self):
+        """Test parsing SSH URL with nested group."""
+        host, path = gitlab_api.parse_url(
+            'git@gitlab.denx.de:u-boot/custodians/u-boot-dm.git')
+        self.assertEqual(host, 'gitlab.denx.de')
+        self.assertEqual(path, 'u-boot/custodians/u-boot-dm')
+
+    def test_parse_https_url(self):
+        """Test parsing HTTPS URL."""
+        host, path = gitlab_api.parse_url(
+            'https://gitlab.com/group/project.git')
+        self.assertEqual(host, 'gitlab.com')
+        self.assertEqual(path, 'group/project')
+
+    def test_parse_https_url_no_git_suffix(self):
+        """Test parsing HTTPS URL without .git suffix."""
+        host, path = gitlab_api.parse_url(
+            'https://gitlab.com/group/project')
+        self.assertEqual(host, 'gitlab.com')
+        self.assertEqual(path, 'group/project')
+
+    def test_parse_http_url(self):
+        """Test parsing HTTP URL."""
+        host, path = gitlab_api.parse_url(
+            'http://gitlab.example.com/group/project.git')
+        self.assertEqual(host, 'gitlab.example.com')
+        self.assertEqual(path, 'group/project')
+
+    def test_parse_invalid_url(self):
+        """Test parsing invalid URL."""
+        host, path = gitlab_api.parse_url('not-a-valid-url')
+        self.assertIsNone(host)
+        self.assertIsNone(path)
+
+    def test_parse_empty_url(self):
+        """Test parsing empty URL."""
+        host, path = gitlab_api.parse_url('')
+        self.assertIsNone(host)
+        self.assertIsNone(path)
+
+
+class TestCheckAvailable(unittest.TestCase):
+    """Tests for GitLab availability checks."""
+
+    def test_check_available_false(self):
+        """Test check_available returns False when gitlab not installed."""
+        with mock.patch.object(gitlab_api, 'AVAILABLE', False):
+            result = gitlab_api.check_available()
+            self.assertFalse(result)
+
+    def test_check_available_true(self):
+        """Test check_available returns True when gitlab is installed."""
+        with mock.patch.object(gitlab_api, 'AVAILABLE', True):
+            result = gitlab_api.check_available()
+            self.assertTrue(result)
 
 
 if __name__ == '__main__':
