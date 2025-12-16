@@ -6,8 +6,11 @@
 """Control module for pickman - handles the main logic."""
 
 from collections import namedtuple
+from datetime import date
 import os
+import re
 import sys
+import time
 import unittest
 
 # Allow 'from pickman import xxx' to work via symlink
@@ -61,9 +64,9 @@ def compare_branches(master, source):
 
     # Get details about the merge-base commit
     info = run_git(['log', '-1', '--format=%H%n%h%n%s%n%ci', base])
-    full_hash, short_hash, subject, date = info.split('\n')
+    full_hash, short_hash, subject, commit_date = info.split('\n')
 
-    return count, Commit(full_hash, short_hash, subject, date)
+    return count, Commit(full_hash, short_hash, subject, commit_date)
 
 
 def do_add_source(args, dbs):
@@ -242,8 +245,6 @@ def format_history_summary(source, commits, branch_name):
     Returns:
         str: Formatted summary text
     """
-    from datetime import date
-
     commit_list = '\n'.join(
         f'- {c.short_hash} {c.subject}'
         for c in commits
@@ -266,9 +267,6 @@ def write_history(source, commits, branch_name, conversation_log):
         branch_name (str): Name of the cherry-pick branch
         conversation_log (str): The agent's conversation output
     """
-    import os
-    import re
-
     summary = format_history_summary(source, commits, branch_name)
     entry = f"""{summary}
 
@@ -522,8 +520,6 @@ def parse_mr_description(description):
     Returns:
         tuple: (source_branch, last_commit_hash) or (None, None) if not parseable
     """
-    import re
-
     # Extract source branch from "## date: source_branch" line
     source_match = re.search(r'^## [^:]+: (.+)$', description, re.MULTILINE)
     if not source_match:
@@ -664,8 +660,6 @@ def do_poll(args, dbs):
     Returns:
         int: 0 on success (never returns unless interrupted)
     """
-    import time
-
     interval = args.interval
     tout.info(f'Polling every {interval} seconds (Ctrl+C to stop)...')
     tout.info('')
