@@ -51,7 +51,8 @@ class TestRunGit(unittest.TestCase):
         result = command.CommandResult(stdout='  output with spaces  \n')
         command.TEST_RESULT = result
         try:
-            out = control.run_git(['status'])
+            with terminal.capture():
+                out = control.run_git(['status'])
             self.assertEqual(out, 'output with spaces')
         finally:
             command.TEST_RESULT = None
@@ -73,7 +74,8 @@ class TestCompareBranches(unittest.TestCase):
 
         command.TEST_RESULT = handle_command
         try:
-            count, commit = control.compare_branches('master', 'source')
+            with terminal.capture():
+                count, commit = control.compare_branches('master', 'source')
 
             self.assertEqual(count, 42)
             self.assertEqual(commit.hash, 'abc123def456789')
@@ -96,7 +98,8 @@ class TestCompareBranches(unittest.TestCase):
 
         command.TEST_RESULT = handle_command
         try:
-            count, commit = control.compare_branches('branch1', 'branch2')
+            with terminal.capture():
+                count, commit = control.compare_branches('branch1', 'branch2')
 
             self.assertEqual(count, 0)
             self.assertEqual(commit.short_hash, 'def456a')
@@ -1071,13 +1074,15 @@ class TestCheckAvailable(unittest.TestCase):
     def test_check_available_false(self):
         """Test check_available returns False when gitlab not installed."""
         with mock.patch.object(gitlab_api, 'AVAILABLE', False):
-            result = gitlab_api.check_available()
+            with terminal.capture():
+                result = gitlab_api.check_available()
             self.assertFalse(result)
 
     def test_check_available_true(self):
         """Test check_available returns True when gitlab is installed."""
         with mock.patch.object(gitlab_api, 'AVAILABLE', True):
-            result = gitlab_api.check_available()
+            with terminal.capture():
+                result = gitlab_api.check_available()
             self.assertTrue(result)
 
 
@@ -1190,7 +1195,8 @@ class TestStep(unittest.TestCase):
                                    return_value=[mock_mr]):
                 args = argparse.Namespace(cmd='step', source='us/next',
                                           remote='ci', target='master')
-                ret = control.do_step(args, None)
+                with terminal.capture():
+                    ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -1200,7 +1206,8 @@ class TestStep(unittest.TestCase):
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
                                       remote='ci', target='master')
-            ret = control.do_step(args, None)
+            with terminal.capture():
+                ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
 
@@ -1212,7 +1219,8 @@ class TestStep(unittest.TestCase):
                                    return_value=None):
                 args = argparse.Namespace(cmd='step', source='us/next',
                                           remote='ci', target='master')
-                ret = control.do_step(args, None)
+                with terminal.capture():
+                    ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
 
@@ -1241,7 +1249,8 @@ class TestReview(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                return_value=[]):
             args = argparse.Namespace(cmd='review', remote='ci')
-            ret = control.do_review(args, None)
+            with terminal.capture():
+                ret = control.do_review(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -1250,7 +1259,8 @@ class TestReview(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='review', remote='ci')
-            ret = control.do_review(args, None)
+            with terminal.capture():
+                ret = control.do_review(args, None)
 
         self.assertEqual(ret, 1)
 
@@ -1287,7 +1297,7 @@ class TestPoll(unittest.TestCase):
         """Test poll stops gracefully on KeyboardInterrupt."""
         call_count = [0]
 
-        def mock_step(args, dbs):
+        def mock_step(_args, _dbs):
             call_count[0] += 1
             if call_count[0] >= 2:
                 raise KeyboardInterrupt
@@ -1299,7 +1309,8 @@ class TestPoll(unittest.TestCase):
                     cmd='poll', source='us/next', interval=1,
                     remote='ci', target='master'
                 )
-                ret = control.do_poll(args, None)
+                with terminal.capture():
+                    ret = control.do_poll(args, None)
 
         self.assertEqual(ret, 0)
         self.assertEqual(call_count[0], 2)
