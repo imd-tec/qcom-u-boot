@@ -15,6 +15,7 @@
 #include <linux/freezer.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -160,9 +161,6 @@ typedef unsigned long blkcnt_t;
 #define wake_up_interruptible(...)	do { } while (0)
 #define dump_stack(...)			do { } while (0)
 
-#define task_pid_nr(x)			0
-#define set_current_state(...)		do { } while (0)
-#define kthread_should_stop(...)	0
 
 #define setup_timer(timer, func, data) do {} while (0)
 #define del_timer_sync(timer) do {} while (0)
@@ -197,9 +195,6 @@ typedef int	wait_queue_head_t;
 #define yield()				do { } while (0)
 
 
-#define kthread_create(...)	__builtin_return_address(0)
-#define kthread_stop(...)	do { } while (0)
-#define wake_up_process(...)	do { } while (0)
 
 struct rw_semaphore { int i; };
 #define down_write(...)			do { } while (0)

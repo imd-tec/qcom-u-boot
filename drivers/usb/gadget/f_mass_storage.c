@@ -281,7 +281,9 @@ static const char fsg_string_interface[] = "Mass Storage";
 
 #define PAGE_CACHE_SHIFT	12
 #define PAGE_CACHE_SIZE		(1 << PAGE_CACHE_SHIFT)
+#ifndef kthread_create
 #define kthread_create(...)	__builtin_return_address(0)
+#endif
 #define wait_for_completion(...) do {} while (0)
 
 struct kref {int x; };
