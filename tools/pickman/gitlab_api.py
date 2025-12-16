@@ -146,10 +146,8 @@ def push_branch(remote, branch, force=False):
         bool: True on success
     """
     try:
-        # Use ci.skip to avoid duplicate pipeline (MR pipeline will still run)
-        # Set SJG_LAB=1 CI variable for the MR pipeline
-        args = ['git', 'push', '-u', '-o', 'ci.skip',
-                '-o', 'ci.variable=SJG_LAB=1']
+        # Skip push pipeline; MR pipeline will run when MR is created
+        args = ['git', 'push', '-u', '-o', 'ci.skip']
         if force:
             args.append('--force-with-lease')
         args.extend([remote, branch])
