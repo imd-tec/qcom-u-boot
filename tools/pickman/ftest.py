@@ -3,6 +3,7 @@
 # Copyright 2025 Canonical Ltd.
 # Written by Simon Glass <simon.glass@canonical.com>
 #
+# pylint: disable=too-many-lines
 """Tests for pickman."""
 
 import argparse

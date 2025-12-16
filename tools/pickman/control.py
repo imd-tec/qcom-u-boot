@@ -299,7 +299,7 @@ def write_history(source, commits, branch_name, conversation_log):
     tout.info(f'Updated {HISTORY_FILE}')
 
 
-def do_apply(args, dbs):  # pylint: disable=too-many-locals
+def do_apply(args, dbs):  # pylint: disable=too-many-locals,too-many-branches
     """Apply the next set of commits using Claude agent
 
     Args:

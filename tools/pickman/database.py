@@ -24,7 +24,7 @@ LATEST = 2
 DB_FNAME = '.pickman.db'
 
 
-class Database:
+class Database:  # pylint: disable=too-many-public-methods
     """Database of cherry-pick state used by pickman"""
 
     # dict of databases:
@@ -248,6 +248,7 @@ class Database:
 
     # commit functions
 
+    # pylint: disable-next=too-many-arguments
     def commit_add(self, chash, source_id, subject, author, status='pending',
                    mergereq_id=None):
         """Add a commit to the database
@@ -348,6 +349,7 @@ class Database:
 
     # mergereq functions
 
+    # pylint: disable-next=too-many-arguments
     def mergereq_add(self, source_id, branch_name, mr_id, status, url,
                      created_at):
         """Add a merge request to the database

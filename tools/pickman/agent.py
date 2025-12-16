@@ -60,7 +60,6 @@ async def run(commits, source, branch_name, repo_path=None):
         f'  - {short_hash}: {subject}'
         for _, short_hash, subject in commits
     )
-    commit_hashes = ' '.join(hash for hash, _, _ in commits)
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
