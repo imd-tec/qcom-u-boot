@@ -13,6 +13,7 @@
 #include <linux/err.h>
 #include <linux/export.h>
 #include <linux/freezer.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -147,8 +148,6 @@ typedef unsigned long blkcnt_t;
 
 #define blocking_notifier_call_chain(...) 0
 
-#define __initdata
-#define late_initcall(...)
 
 #define dev_set_name(...)		do { } while (0)
 #define device_register(...)		0
@@ -197,13 +196,6 @@ typedef int	wait_queue_head_t;
 #define cond_resched()			do { } while (0)
 #define yield()				do { } while (0)
 
-#define __init
-#define __exit
-#define __devinit
-#define __devinitdata
-#define __devinitconst
-#define __initconst
-#define __initdata
 
 #define kthread_create(...)	__builtin_return_address(0)
 #define kthread_stop(...)	do { } while (0)
