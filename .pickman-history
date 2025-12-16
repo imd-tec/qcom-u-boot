@@ -68,3 +68,105 @@ The requested commits have already been merged into `ci/master` previously, so t
 
 ---
 
+## 2025-12-15: us/next
+
+Branch: cherry-a8c07ac4970
+
+Commits:
+- a8c07ac4970 alist: Mention the error condition in alist_add_placeholder()
+- 13bd2984995 alist: Add a comment for alist_init_struct()
+- 6668d860f78 alist: Expand the comment for alist_get()
+- 2ce146a3de7 alist: Add a way to get the next element
+- 83bc5989fc5 alist: Add for-loop helpers
+- 70f5f17415a alist: Add a function to empty the list
+- d01c58acb71 alist: Add a way to efficiently filter an alist
+- b84c13f37d1 alist: Add maintainer
+- cedf9ccaa27 dm: core: Add a function to see if a device exists
+- 6e625484f59 test: boot: Use a consistent name for the script bootmeth
+- 57e77dc80e0 arm: dts: e850-96: Remove TRNG node from appended dts
+- 33ddfc059ee driver: sifive ccache: enable TRUNKCLOCKGATE and REGIONCLOCKGATE
+- e83a99cb674 configs: visionfive2: re-enable SPL_SYS_MMCSD_RAW_MODE
+- d86ff34285f xilinx: mbv: Place DTB by default to DDR location
+- e4b8d8be4e1 xilinx: mbv: Align smode_defconfig with upstream QEMU
+- d5f5e778183 riscv: Introduce configuration for 64bit version Microblaze V
+- a7a96a37cbd Merge https://source.denx.de/u-boot/custodians/u-boot-riscv
+
+### Conversation log
+Let me find the U-Boot repository first:
+
+The repository is in a clean state. Let me now create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick each commit one at a time. Starting with the first commit:
+
+The first commit is already in the base, so it's empty. Let me skip it and continue with the rest:
+
+It appears these commits are already in the base branch. Let me continue:
+
+We have conflicts. Let me see what files are conflicted and examine the conflicts:
+
+I can see the conflicts. The base branch (ci/master) already has the additional alist features (for-loop helpers, empty, filter) while the commit 2ce146a3de7 is simpler and doesn't have them. The resolution is to keep the HEAD (ci/master) version which has all the features. Let me resolve the conflicts:
+
+Let me use git to resolve the conflicts instead:
+
+This commit is also empty after resolution - it's already in the base. Let me skip and continue with the remaining commits:
+
+Same pattern - these alist commits are already present in ci/master. Let me take the HEAD version (which already has the content):
+
+We got our first successful cherry-pick! Let me continue with the rest:
+
+Let me check these conflicts - they appear to be add/add conflicts for the xilinx config files:
+
+These are simple add/add conflicts where HEAD has an extra line `CONFIG_SPL_HAVE_INIT_STACK=y` that the incoming commit doesn't have. Since ci/master already has the files and the extra config option, I should keep the HEAD version:
+
+Now cherry-pick the merge commit with -m 1:
+
+Same conflicts for the merge commit. Let me resolve them:
+
+Now let me verify the cherry-picks:
+
+I see only 1 commit was cherry-picked (ce6c8cd376e for visionfive2). This is because most of the commits in the list were already in ci/master. The branch is now 1 commit ahead of ci/master.
+
+Let me run the build verification:
+
+Let me check the final branch status:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+**Branch:** `cherry-a8c07ac4970` (based on `ci/master`)
+
+**Commits Requested:** 17
+
+**Commits Successfully Cherry-picked:** 1
+- `e83a99cb674` - configs: visionfive2: re-enable SPL_SYS_MMCSD_RAW_MODE → `ce6c8cd376e`
+
+**Commits Skipped (already in base):** 16
+All of the following commits were already present in `ci/master` and resulted in empty cherry-picks:
+1. `a8c07ac4970` - alist: Mention the error condition in alist_add_placeholder()
+2. `13bd2984995` - alist: Add a comment for alist_init_struct()
+3. `6668d860f78` - alist: Expand the comment for alist_get()
+4. `2ce146a3de7` - alist: Add a way to get the next element
+5. `83bc5989fc5` - alist: Add for-loop helpers
+6. `70f5f17415a` - alist: Add a function to empty the list
+7. `d01c58acb71` - alist: Add a way to efficiently filter an alist
+8. `b84c13f37d1` - alist: Add maintainer
+9. `cedf9ccaa27` - dm: core: Add a function to see if a device exists
+10. `6e625484f59` - test: boot: Use a consistent name for the script bootmeth
+11. `57e77dc80e0` - arm: dts: e850-96: Remove TRNG node from appended dts
+12. `33ddfc059ee` - driver: sifive ccache: enable TRUNKCLOCKGATE and REGIONCLOCKGATE
+13. `d86ff34285f` - xilinx: mbv: Place DTB by default to DDR location
+14. `e4b8d8be4e1` - xilinx: mbv: Align smode_defconfig with upstream QEMU
+15. `d5f5e778183` - riscv: Introduce configuration for 64bit version Microblaze V
+16. `a7a96a37cbd` - Merge https://source.denx.de/u-boot/custodians/u-boot-riscv
+
+### Build Result: **OK** ✅
+- `buildman -L --board sandbox -w -o /tmp/pickman` completed successfully
+- 1 board built with no errors or warnings
+
+### Fix-ups Made: None
+
+The branch `cherry-a8c07ac4970` is ready for pushing with 1 new commit ahead of `ci/master`.
+
+---
+
