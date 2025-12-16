@@ -25,9 +25,15 @@ The typical workflow for using pickman is:
 
 4. **Repeat**: Go back to step 2 until all commits are cherry-picked.
 
-For automated workflows, use ``step`` instead of ``apply -p``. It checks for
-open pickman MRs first and only creates a new one if none are pending. Use
-``review`` to have the agent address MR comments.
+For fully automated workflows, use ``poll`` which runs ``step`` in a loop. The
+``step`` command handles the complete cycle automatically:
+
+- Detects merged MRs and updates the database (no manual ``commit-source``)
+- Processes review comments on open MRs using Claude agent
+- Creates new MRs when none are pending
+
+This allows hands-off operation: just run ``poll`` and approve/merge MRs in
+GitLab as they come in.
 
 Usage
 -----
@@ -122,11 +128,13 @@ This command performs the following:
 1. Checks for merged pickman MRs and updates the database with the last
    cherry-picked commit from each merged MR
 2. Checks for open pickman MRs (those with ``[pickman]`` in the title)
-3. If no open MRs exist, runs ``apply`` with ``--push`` to create a new one
+3. If open MRs exist, processes any review comments using Claude agent
+4. If no open MRs exist, runs ``apply`` with ``--push`` to create a new one
 
 This is useful for automated workflows where only one MR should be active at a
 time. The automatic database update on merge means you don't need to manually
-run ``commit-source`` after each MR is merged.
+run ``commit-source`` after each MR is merged, and review comments are handled
+automatically.
 
 Options for the step command:
 

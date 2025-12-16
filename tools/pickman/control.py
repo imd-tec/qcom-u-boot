@@ -608,8 +608,8 @@ def do_step(args, dbs):
     """Create an MR if none is pending
 
     Checks for merged pickman MRs and updates the database, then checks for
-    open pickman MRs and if none exist, runs apply with push to create a new
-    one.
+    open pickman MRs. If open MRs exist, processes any review comments. If no
+    open MRs exist, runs apply with push to create a new one.
 
     Args:
         args (Namespace): Parsed arguments with 'source', 'remote', 'target'
@@ -635,6 +635,10 @@ def do_step(args, dbs):
         tout.info(f'Found {len(mrs)} open pickman MR(s):')
         for merge_req in mrs:
             tout.info(f"  !{merge_req['iid']}: {merge_req['title']}")
+
+        # Process any review comments on open MRs
+        process_mr_reviews(remote, mrs)
+
         tout.info('')
         tout.info('Not creating new MR while others are pending')
         return 0
