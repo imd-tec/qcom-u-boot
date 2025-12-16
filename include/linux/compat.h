@@ -12,6 +12,7 @@
 #include <linux/types.h>
 #include <linux/err.h>
 #include <linux/export.h>
+#include <linux/freezer.h>
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
 
@@ -228,8 +229,6 @@ typedef unsigned long blkcnt_t;
 #define dump_stack(...)			do { } while (0)
 
 #define task_pid_nr(x)			0
-#define set_freezable(...)		do { } while (0)
-#define try_to_freeze(...)		0
 #define set_current_state(...)		do { } while (0)
 #define kthread_should_stop(...)	0
 
