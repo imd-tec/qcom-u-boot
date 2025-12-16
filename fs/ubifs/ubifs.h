@@ -605,7 +605,9 @@ static inline ino_t parent_ino(struct dentry *dentry)
 
 /* debug.c */
 
+#ifndef module_param_named
 #define module_param_named(...)
+#endif
 
 /* misc.h */
 #define mutex_lock_nested(...)

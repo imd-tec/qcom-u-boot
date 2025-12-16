@@ -14,6 +14,7 @@
 #include <linux/export.h>
 #include <linux/freezer.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
@@ -126,21 +127,6 @@ typedef unsigned long sector_t;
 typedef unsigned long blkcnt_t;
 #endif
 
-/* module */
-#define THIS_MODULE		0
-#define try_module_get(...)	1
-#define module_put(...)		do { } while (0)
-#define module_init(...)
-#define module_exit(...)
-#define module_param(...)
-#define module_param_call(...)
-#define MODULE_PARM_DESC(...)
-#define MODULE_VERSION(...)
-#define MODULE_DESCRIPTION(...)
-#define MODULE_AUTHOR(...)
-#define MODULE_LICENSE(...)
-#define MODULE_ALIAS(...)
-#define __module_get(...)
 
 /* character device */
 #define MKDEV(...)			0
