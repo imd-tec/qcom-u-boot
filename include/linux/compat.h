@@ -22,6 +22,7 @@
 #include <linux/rwsem.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
@@ -153,24 +154,12 @@ typedef unsigned long blkcnt_t;
 
 #define dump_stack(...)			do { } while (0)
 
-
-
-
-typedef unused_t spinlock_t;
-
-#define spin_lock_init(lock) do {} while (0)
-#define spin_lock(lock) do {} while (0)
-#define spin_unlock(lock) do {} while (0)
-#define spin_lock_irqsave(lock, flags) do {} while (0)
-#define spin_unlock_irqrestore(lock, flags) do { flags = 0; } while (0)
+/* spinlock_t is defined in linux/spinlock.h */
 
 #define DEFINE_MUTEX(...)
 #define mutex_init(...)
 #define mutex_lock(...)
 #define mutex_unlock(...)
-
-
-
 
 struct device {
 	struct device		*parent;
