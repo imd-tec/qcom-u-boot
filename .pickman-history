@@ -452,90 +452,92 @@ The branch is ready for pushing.
 
 ## 2025-12-17: us/next
 
-Branch: cherry-ccddb0abec3
+Branch: cherry-ef9574da96f
 
 Commits:
-- ccddb0abec3 power: regulator: replace some debug() by dev_dbg()
-- 74cd1af1124 power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind()
-- 448add55297 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
+- ef9574da96f configs: Resync with savedefconfig
+- 1a48b0be93d lmb: prohibit allocations above ram_top even from same bank
+- 1ac28383502 rtc: CONFIGS_RTC_PL031 must depend on CONFIGS_DM_RTC
+- c7401fc1d99 net: disable MBEDTLS in SPL
+- 1f40dbad60d arm: qemu: fix update_info declaration
+- 45f05f68122 mbedtls: remove MBEDTLS_HAVE_TIME
+- 9a699a0a0d6 clk: rzg2l: Ignore enable for core clocks
+- 2b1a5efca88 net: ravb: Simplify max-speed handling in ravb_of_to_plat
+- 215663f5e47 pinctrl: rzg2l: Support 2.5V PVDD for Ethernet interfaces
+- bba516a7728 pinctrl: rzg2l: Support Ethernet TXC output enable
+- 3a735cff5f2 pinctrl: rzg2l: Drop unnecessary scope
+- 455e66bc598 arm64: renesas: Disable AVB1 and AVB2 on R8A779G0 V4H White Hawk board
+- 497353969e3 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
 
 ### Conversation log
-The repository is clean (untracked files don't affect cherry-picking). Let me proceed with creating the new branch and cherry-picking.
+The repository is clean (only untracked files, which won't interfere). Now I'll create and checkout the new branch based on ci/master.
 
-Now let me cherry-pick the first commit:
+Now I'll cherry-pick each commit in order. Let me start with the first one:
 
-There's a conflict. Let me examine it:
+There are conflicts. Let me examine them to see if they can be auto-resolved:
 
-This is a complex conflict. The incoming commit changes the code structure and uses `dev_dbg()`, but the HEAD version has refactored the logic. Let me look at both versions more carefully:
+I can see the conflicts are related to the transition from `$(XPL_)` to `$(PHASE_)` macro naming convention in the base branch and some additional code reorganization. The incoming commit uses the older `$(XPL_)` syntax while the target branch uses `$(PHASE_)`. I need to resolve these by taking the intent of the incoming change (disabling MBEDTLS in SPL) but using the newer `$(PHASE_)` syntax.
 
-I can see the conflict clearly now. The HEAD version (ci/master) has refactored the logic to:
-- `if (regulator_name_is_unique(dev, uc_pdata->name)) return 0;`
-- Then `debug(...)` followed by `return -EINVAL;`
+Let me resolve these conflicts:
 
-The incoming commit wants to change that debug() to dev_dbg() and restructure the logic slightly.
+Good, the ci/master version already doesn't have sha256_csum_wd in sha256.c - so I should keep the HEAD version (without the incoming changes that add the function back). Let me check where sha256_csum_wd is defined in ci/master:
 
-The correct resolution should:
-1. Keep the HEAD's logic structure (use early return for unique case)
-2. But apply the change from debug() to dev_dbg() for the non-unique case
+So `sha256_csum_wd` already exists in `sha256_common.c` in ci/master. The incoming commit is trying to add it to `sha256.c` but it's already in the proper place. I should keep the HEAD version of `sha256.c` (without the function):
 
-Let me resolve this:
+Now I need to amend this commit to note the conflict resolution:
 
-First commit cherry-picked with conflict resolution. Now I need to amend the commit to note the fix-up. Let me do that:
+Now let me continue with the remaining commits:
 
-Now let's cherry-pick the second commit:
+The cherry-pick is empty - likely this change was already applied. Let me commit it empty to preserve the history:
 
-Another conflict. Let me check it:
+All 13 commits have been cherry-picked. Let me verify with git log:
 
-This is the same pattern - the second commit changes `dev_dbg()` to `dev_err()`. I need to apply this change while keeping our structure:
+All 13 commits are present. Now let me run the build verification:
 
-Now let me amend this commit to note the fix-up:
+The build succeeded with no warnings or errors. Let me provide the final status:
 
-Now let's cherry-pick the third commit (the merge commit):
+## Summary
 
-Conflict in the merge commit too. Let me examine it:
+### Cherry-pick Status: ✅ Complete
 
-The merge commit is trying to apply the same changes, but we've already applied them. Since HEAD already has `dev_err()` and the right structure, this should result in keeping our current code:
-
-The merge commit is now empty because all the changes were already applied. As instructed, we need to keep the merge commit, so I'll commit it as empty:
-
-All 3 commits cherry-picked. Now let me verify with git log:
-
-All 3 commits are present. Now let me run the build verification:
-
-The build completed successfully. Let me check for any warnings or errors:
-
-The build log is empty (no warnings or errors). The build succeeded. Let me provide a final summary:
-
-## Cherry-Pick Summary
-
-### Commits Cherry-Picked Successfully (3/3):
+All 13 commits were successfully cherry-picked from `us/next` to branch `cherry-ef9574da96f` (based on `ci/master`):
 
 | # | Hash | Subject | Status |
 |---|------|---------|--------|
-| 1 | ccddb0abec3 | power: regulator: replace some debug() by dev_dbg() | ✅ Conflict resolved |
-| 2 | 74cd1af1124 | power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind() | ✅ Conflict resolved |
-| 3 | 448add55297 | Merge branch 'master' of .../u-boot-pmic | ✅ Empty (changes already applied) |
+| 1 | ef9574da96f | configs: Resync with savedefconfig | ✅ |
+| 2 | 1a48b0be93d | lmb: prohibit allocations above ram_top even from same bank | ✅ |
+| 3 | 1ac28383502 | rtc: CONFIGS_RTC_PL031 must depend on CONFIGS_DM_RTC | ✅ |
+| 4 | c7401fc1d99 | net: disable MBEDTLS in SPL | ✅ (conflict resolved) |
+| 5 | 1f40dbad60d | arm: qemu: fix update_info declaration | ✅ |
+| 6 | 45f05f68122 | mbedtls: remove MBEDTLS_HAVE_TIME | ✅ (empty - already present) |
+| 7 | 9a699a0a0d6 | clk: rzg2l: Ignore enable for core clocks | ✅ |
+| 8 | 2b1a5efca88 | net: ravb: Simplify max-speed handling in ravb_of_to_plat | ✅ |
+| 9 | 215663f5e47 | pinctrl: rzg2l: Support 2.5V PVDD for Ethernet interfaces | ✅ |
+| 10 | bba516a7728 | pinctrl: rzg2l: Support Ethernet TXC output enable | ✅ |
+| 11 | 3a735cff5f2 | pinctrl: rzg2l: Drop unnecessary scope | ✅ |
+| 12 | 455e66bc598 | arm64: renesas: Disable AVB1 and AVB2 on R8A779G0 V4H White Hawk board | ✅ |
+| 13 | 497353969e3 | Merge branch 'master' of u-boot-sh | ✅ (empty - already present) |
 
 ### Fix-ups Made:
 
-1. **Commit 1 (ccddb0abec3)**: Resolved conflict - kept ci/master's early-return logic structure (`if (regulator_name_is_unique(...)) return 0;`) while applying the `debug()` → `dev_dbg()` change.
+1. **c7401fc1d99 (net: disable MBEDTLS in SPL)**: Resolved conflicts in 5 files:
+   - `include/u-boot/sha1.h`: Kept `mbedtls_options.h` include instead of inline `MBEDTLS_ALLOW_PRIVATE_ACCESS` define
+   - `include/u-boot/sha256.h`: Kept `mbedtls_options.h` include and additional headers from HEAD
+   - `lib/Makefile`: Kept `$(PHASE_)` macro syntax instead of `$(XPL_)`
+   - `lib/lwip/Makefile`: Kept `$(PHASE_)` macro syntax instead of `$(XPL_)`
+   - `lib/sha256.c`: Kept HEAD version (sha256_csum_wd already exists in sha256_common.c)
 
-2. **Commit 2 (74cd1af1124)**: Resolved conflict - same pattern, kept ci/master's early-return logic structure while applying the `dev_dbg()` → `dev_err()` change.
+2. **45f05f68122 (mbedtls: remove MBEDTLS_HAVE_TIME)**: Empty commit - changes already present in base
 
-3. **Commit 3 (448add55297)**: Merge commit resulted in empty commit because all underlying changes were already applied in commits 1 and 2. Preserved with `--allow-empty` as instructed.
+3. **497353969e3 (Merge commit)**: Empty commit - merge changes already present in base
 
-### Build Result:
-- **Status**: ✅ OK
-- **Warnings/Errors**: None
+### Build Result: ✅ OK
+- `buildman -L --board sandbox -w -o /tmp/pickman` completed successfully with no warnings or errors
 
-### Final State:
-```
-040ca6a7c54 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
-872be1014be power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind()
-505b21718ab power: regulator: replace some debug() by dev_dbg()
-```
-
-Branch `cherry-ccddb0abec3` is ready for pushing.
+### Branch Ready for Push:
+- Branch: `cherry-ef9574da96f`
+- Based on: `ci/master`
+- 13 commits ahead of `ci/master`
 
 ---
 
