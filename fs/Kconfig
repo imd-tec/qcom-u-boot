@@ -52,6 +52,8 @@ source "fs/exfat/Kconfig"
 
 source "fs/ext4/Kconfig"
 
+source "fs/ext4l/Kconfig"
+
 source "fs/fat/Kconfig"
 
 source "fs/jffs2/Kconfig"
