@@ -106,9 +106,9 @@ config ENV_IS_IN_FAT
 
 config ENV_IS_IN_EXT4
 	bool "Environment is in a EXT4 filesystem"
-	depends on !CHAIN_OF_TRUST
-	select FS_EXT4
-	select EXT4_WRITE
+	depends on !CHAIN_OF_TRUST && !FS_EXT4L
+	select FS_EXT4 if !FS_EXT4L
+	select EXT4_WRITE if !FS_EXT4L
 	help
 	  Define this if you want to use the EXT4 file system for the environment.
 
