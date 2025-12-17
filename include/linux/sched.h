@@ -14,6 +14,7 @@
 struct task_struct {
 	int pid;
 	char comm[16];
+	void *journal_info;	/* For jbd2 */
 };
 
 extern struct task_struct *current;
