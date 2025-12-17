@@ -1,5 +1,75 @@
 ## 2025-12-15: us/next
 
+Branch: cherry-e5565c24bb4
+
+Commits:
+- e5565c24bb4 pinctrl: exynos: fix type of count integer
+- 57e77dc80e0 arm: dts: e850-96: Remove TRNG node from appended dts
+- 895b54998e5 configs: khadas-vim3{l}: fix userdata size
+- ea2273911d3 arm: dts: meson: remove meson-a1.dtsi
+- a5ed242ba6a dt-bindings: remove a1 bindings from include/
+- 827edb6c00b dt-bindings: remove axg bindings from include/
+- 1cdb4e03e68 dt-bindings: interrupt-controller: remove arm-gic.h from include/
+- 030ec147af0 Merge tag 'u-boot-amlogic-next-20241113' of https://source.denx.de/u-boot/custodians/u-boot-amlogic into next
+
+### Conversation log
+Let me find the repository first:
+
+The repository has uncommitted changes. Let me stash them first, then proceed with the cherry-pick operation:
+
+Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+The commit is empty (likely already applied to master). Let me skip it and move on:
+
+Now cherry-pick the second commit:
+
+Now the final commit is a merge commit, so we need to use `-m 1`:
+
+All cherry-picks were empty (the commits are already in master). Let me verify with git log:
+
+The branch shows no new commits were added because all 8 commits were already present in ci/master (they showed as empty cherry-picks). Let me verify this by checking the status vs ci/master:
+
+Let me verify the commits are indeed in ci/master by checking if those commits exist in the history:
+
+All 8 commits are already in ci/master. Let me run the build verification anyway since the branch is at ci/master state:
+
+## Final Status Report
+
+### Cherry-Pick Summary
+
+All 8 commits were **SKIPPED** because they are already present in `ci/master`:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| e5565c24bb4 | pinctrl: exynos: fix type of count integer | Already in master |
+| 57e77dc80e0 | arm: dts: e850-96: Remove TRNG node from appended dts | Already in master |
+| 895b54998e5 | configs: khadas-vim3{l}: fix userdata size | Already in master |
+| ea2273911d3 | arm: dts: meson: remove meson-a1.dtsi | Already in master |
+| a5ed242ba6a | dt-bindings: remove a1 bindings from include/ | Already in master |
+| 827edb6c00b | dt-bindings: remove axg bindings from include/ | Already in master |
+| 1cdb4e03e68 | dt-bindings: interrupt-controller: remove arm-gic.h from include/ | Already in master |
+| 030ec147af0 | Merge tag 'u-boot-amlogic-next-20241113' | Already in master |
+
+### Branch Status
+- **Branch `cherry-e5565c24bb4`** was created but is identical to `ci/master` (0 commits ahead)
+- No new commits to push since all cherry-picks were empty
+
+### Build Result
+- **Build: OK** ✓
+- sandbox built successfully with no warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Notes
+The requested commits have already been merged into `ci/master` previously, so there are no new changes to cherry-pick. The branch `cherry-e5565c24bb4` is left at `ci/master` HEAD.
+
+---
+
+## 2025-12-15: us/next
+
 Branch: cherry-a8c07ac4970
 
 Commits:
@@ -303,129 +373,80 @@ Branch `cherry-6e18eec9080` is ready for pushing and is ahead of `ci/master` by 
 
 ## 2025-12-16: us/next
 
-Branch: cherry-e5565c24bb4
+Branch: cherry-05396fb7245
 
 Commits:
-- e5565c24bb4 pinctrl: exynos: fix type of count integer
-- 57e77dc80e0 arm: dts: e850-96: Remove TRNG node from appended dts
-- 65b38a519b0 Revert "efi_memory: do not add U-Boot memory to the memory map"
-- a37064cb2e4 net: lwip: wget: fix legacy syntax
-- 57b6fb7eb1f Makefile: avoid non-standard sed expressions
-- 6e3e72ed4e9 arm: dts: socfpga: remove spurious execute permission from dt files
-- 12fcb982575 powerpc/t2080qds: remove spurious x permission from README file
-- 03e57244bc2 binman: Avoid skipping binman_init()
-- 924a5e4e41e Revert "global_data: Drop spl_handoff"
-- acab6e78aca common: relocate fdt_blob in global_data for FDTSRC_EMBED case
-- 0bbc17f06bf configs: e850-96: Disable PSCI reset
-- f96e5133184 Merge branch 'master' of https://gitlab.denx.de/u-boot/custodians/u-boot-samsung
+- 05396fb7245 efi_loader: Check for a valid fw_name before auto generating GUIDs
+- 1d9aa4a283d lmb: Fix the allocation of overlapping memory areas with !LMB_NONE
+- ac3428fcc7b Merge tag 'efi-master-05122024' of https://source.denx.de/u-boot/custodians/u-boot-tpm
 
 ### Conversation log
-The working tree is clean. Now let me create and checkout the new branch based on ci/master:
+The repository is clean (untracked files don't affect cherry-picking). Now let me create and checkout a new branch based on ci/master:
 
-Now let me cherry-pick each commit in order. Let me start with the first one:
+Now let me check the commit messages to determine which are merge commits:
 
-The first commit is already included in ci/master. Let me commit it as empty to preserve the history:
+The first two are regular commits, and the third one (ac3428fcc7b) is a merge commit. Let me cherry-pick them one at a time:
 
-There's a conflict. Let me look at the conflicting file:
+**Cherry-pick 1: 05396fb7245 (regular commit)**
 
-Let me examine the full context to understand the conflict better:
+There's a conflict. Let me examine it:
 
-I see the conflict. The HEAD already has the code wrapped in `if (!IS_ENABLED(CONFIG_SANDBOX))`. The incoming commit (the revert) wants to add the U-Boot code unconditionally. The conflict is that HEAD has the SANDBOX check which is a more refined version, but the incoming commit removes the SANDBOX check.
+I see the conflict. The base branch has `gen_v5_guid_le` with a different formatting, while the incoming commit uses `gen_v5_guid` with `uint16_t`. Let me check what version is in the base:
 
-Looking at the intent: the revert commit is trying to restore the original behavior of adding U-Boot to the memory map (unconditionally). However, HEAD has a newer fix that adds the SANDBOX check. The incoming code after the markers also adds the U-Boot code unconditionally.
+The base already has the fix (fw_name check and early return). The incoming commit introduces the same check but with a different function name (`gen_v5_guid` vs `gen_v5_guid_le`) and type (`uint16_t` vs `u16`). The base version (`gen_v5_guid_le` with `u16`) is the correct one to keep. This commit's primary change (the fw_name check) is already present. Let me resolve this by keeping the HEAD version:
 
-This would result in duplicate code if both are kept. The correct resolution is to accept the incoming changes (the revert) which removes the SANDBOX check for the "Add U-Boot" section, since that's what the revert is meant to do, but we already have an improved version in HEAD.
+The cherry-pick is empty because the changes are already applied in the base. Since the changes are already present, I'll skip this commit as it adds nothing new:
 
-Looking more carefully:
-- HEAD code: has the SANDBOX check wrapping the U-Boot add
-- Incoming (revert): wants to add U-Boot unconditionally (no SANDBOX check)
+**Cherry-pick 2: 1d9aa4a283d (regular commit)**
 
-Since the base already has the improved SANDBOX check, and the "revert" wants to undo some changes - the safest resolution is to keep HEAD's version which has the proper SANDBOX wrapper. Let me check what the original commit being reverted was doing:
+Second commit applied successfully.
 
-Now I understand. The revert is adding back the "Add U-Boot" code. In HEAD (ci/master), there's already code that does this but wrapped with `if (!IS_ENABLED(CONFIG_SANDBOX))`. The revert would add the code unconditionally.
+**Cherry-pick 3: ac3428fcc7b (merge commit)**
 
-Since ci/master already has a version of this change with a proper SANDBOX check (which is arguably better), and this revert would result in duplicate code if both sections remain, the best resolution is to keep only HEAD's version. The functional effect of the revert (adding U-Boot to memory map) is already achieved by HEAD's code, just with a better SANDBOX guard.
+There's a conflict in the merge commit. Let me examine it:
 
-Let me resolve the conflict by keeping HEAD's version (which already has the functionality that the revert was supposed to add back):
+Same conflict as before. The HEAD version with `gen_v5_guid_le` and `u16` is the correct one. Let me resolve it:
 
-This is a more complex conflict due to refactoring. The code style changed from `init_sequence_f[]` array to `INITCALL()` macros. Let me look at the full context:
+The merge commit is empty after resolution, but as instructed, I must preserve merge commits even if empty for history tracking:
 
-I see. The HEAD version uses the new `INITCALL()` macro style and already has `INITCALL(setup_spl_handoff);` after the `#endif`. The incoming commit (the revert) is in the old array style and is trying to add `setup_spl_handoff,` and `bloblist_maybe_init,`.
+Now let me verify the results:
 
-Looking at what the revert is trying to do - it wants to:
-1. Change `bloblist_init` to `bloblist_maybe_init` 
-2. Add `setup_spl_handoff` call
+I see only 2 of the 3 commits are present. The first commit (05396fb7245 - efi_loader) was skipped because it was already fully applied. Let me verify this is correct:
 
-The HEAD version already has `setup_spl_handoff` call, but uses `bloblist_init` instead of `bloblist_maybe_init`. Let me check if `bloblist_maybe_init` exists:
+Confirmed - commit 05396fb7245 already exists in ci/master as 0bdbf20cbfc. This is why the cherry-pick was empty.
 
-Now I understand. The revert adds:
-1. The `setup_spl_handoff()` function definition (around line 305)
-2. Adds `setup_spl_handoff` call to the init sequence
-3. Uses `bloblist_maybe_init` (old name)
+Now let me run the build verification:
 
-HEAD already has `INITCALL(setup_spl_handoff)` but the revert wanted to add it. The HEAD version uses `bloblist_init` while the revert uses `bloblist_maybe_init`.
+Build completed successfully. Let me check for any warnings:
 
-Let me check if HEAD has the `setup_spl_handoff` function and what bloblist function is correct:
+Build completed successfully with no errors.
 
-HEAD has `setup_spl_handoff` function and both old array style (line 908 within the conflict markers) and new INITCALL style (line 913).
+---
 
-Let me look at the actual file to understand the context better:
+## Final Status Report
 
-I see lines 900 and 907 showing both `INITCALL(bloblist_init)` and `bloblist_maybe_init`. The conflict shows both versions in the conflict markers. 
+### Cherry-pick Summary
 
-Let me resolve this conflict. The key changes from the revert are:
-1. Add `setup_spl_handoff` function - already present in HEAD
-2. Add `setup_spl_handoff` call - already present in HEAD as `INITCALL(setup_spl_handoff)`
-3. The revert uses `bloblist_maybe_init` while HEAD uses `bloblist_init`
-
-Since HEAD already has both the function and the call to `setup_spl_handoff`, the key difference is just the bloblist function name. Let me check what's the correct one:
-
-There is no `bloblist_maybe_init` function in HEAD - only `bloblist_init` exists. This is because HEAD has a newer codebase where the function was renamed/consolidated. The revert is for an older version.
-
-Since HEAD already incorporates the essential change (adding `setup_spl_handoff`), I should keep HEAD's version. The resolution is to accept HEAD's code:
-
-Now the last one is a merge commit. Let me cherry-pick it with `-m 1 --allow-empty`:
-
-All cherry-picks are complete. Let me verify with `git log`:
-
-All 12 commits have been cherry-picked successfully. Now let me run the build verification:
-
-The build completed successfully. Let me provide a final summary:
-
-## Summary
-
-### Cherry-pick Results
-
-All 12 commits were successfully cherry-picked from `us/next` to the new branch `cherry-e5565c24bb4`:
-
-| # | Commit | Subject | Status |
-|---|--------|---------|--------|
-| 1 | e5565c24bb4 | pinctrl: exynos: fix type of count integer | Empty (already in ci/master) |
-| 2 | 57e77dc80e0 | arm: dts: e850-96: Remove TRNG node from appended dts | Empty (already in ci/master) |
-| 3 | 65b38a519b0 | Revert "efi_memory: do not add U-Boot memory to the memory map" | Empty - conflict resolved, ci/master already has this with SANDBOX check |
-| 4 | a37064cb2e4 | net: lwip: wget: fix legacy syntax | Empty (already in ci/master) |
-| 5 | 57b6fb7eb1f | Makefile: avoid non-standard sed expressions | ✅ Applied |
-| 6 | 6e3e72ed4e9 | arm: dts: socfpga: remove spurious execute permission from dt files | ✅ Applied |
-| 7 | 12fcb982575 | powerpc/t2080qds: remove spurious x permission from README file | ✅ Applied |
-| 8 | 03e57244bc2 | binman: Avoid skipping binman_init() | Empty (already in ci/master) |
-| 9 | 924a5e4e41e | Revert "global_data: Drop spl_handoff" | Empty - conflict resolved, ci/master already has setup_spl_handoff |
-| 10 | acab6e78aca | common: relocate fdt_blob in global_data for FDTSRC_EMBED case | ✅ Applied |
-| 11 | 0bbc17f06bf | configs: e850-96: Disable PSCI reset | ✅ Applied |
-| 12 | f96e5133184 | Merge branch 'master' of u-boot-samsung | Empty (merge commit preserved) |
-
-### Conflicts Resolved
-
-1. **lib/efi_loader/efi_memory.c** (commit 65b38a519b0): ci/master already had the same fix with an improved SANDBOX check. Resolved by keeping ci/master version.
-
-2. **common/board_f.c** (commit 924a5e4e41e): ci/master already had `setup_spl_handoff` function and call with updated INITCALL style. Resolved by keeping ci/master version.
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 05396fb7245 | efi_loader: Check for a valid fw_name before auto generating GUIDs | **SKIPPED** - Already present in ci/master as 0bdbf20cbfc |
+| 1d9aa4a283d | lmb: Fix the allocation of overlapping memory areas with !LMB_NONE | **SUCCESS** - Applied as 253acd465e2 |
+| ac3428fcc7b | Merge tag 'efi-master-05122024' | **SUCCESS** - Applied as 86002525021 (empty commit preserved for history) |
 
 ### Build Result
+**OK** - Build completed successfully with no warnings or errors.
 
-✅ **Build OK** - sandbox board built successfully with no errors or warnings.
+### Fix-ups Made
+- **05396fb7245**: Conflict in `lib/efi_loader/efi_firmware.c` - resolved by keeping HEAD version (commit already present in ci/master)
+- **ac3428fcc7b**: Conflict in `lib/efi_loader/efi_firmware.c` - resolved by keeping HEAD version. Commit preserved as empty to maintain merge history.
 
-### Branch Status
+### Current Branch State
+```
+Branch: cherry-05396fb7245
+Commits ahead of ci/master: 2
+```
 
-The branch `cherry-e5565c24bb4` is ready for pushing with 12 commits ahead of `ci/master`.
+The branch is ready for pushing.
 
 ---
 
