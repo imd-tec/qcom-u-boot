@@ -58,10 +58,10 @@ typedef struct { atomic_t refs; } refcount_t;
 typedef int rwlock_t;
 /* spinlock_t is defined in linux/compat.h */
 
-#define read_lock(l)		do { } while (0)
-#define read_unlock(l)		do { } while (0)
-#define write_lock(l)		do { } while (0)
-#define write_unlock(l)		do { } while (0)
+#define read_lock(l)		do { (void)(l); } while (0)
+#define read_unlock(l)		do { (void)(l); } while (0)
+#define write_lock(l)		do { (void)(l); } while (0)
+#define write_unlock(l)		do { (void)(l); } while (0)
 
 /* RB tree types - stubs */
 struct rb_node {
@@ -177,7 +177,8 @@ struct dir_context {
 	loff_t pos;
 };
 
-/* iomap types */
+/* iomap types - only define if linux/iomap.h not included */
+#ifndef _LINUX_IOMAP_H
 #define IOMAP_MAPPED	0
 #define IOMAP_INLINE	1
 #define IOMAP_UNWRITTEN	2
@@ -200,6 +201,7 @@ struct iomap_ops {
 	int (*iomap_end)(struct inode *inode, loff_t pos, loff_t length,
 			 ssize_t written, unsigned flags, struct iomap *iomap);
 };
+#endif /* _LINUX_IOMAP_H */
 
 /* fiemap types */
 #define FIEMAP_FLAG_SYNC	0x00000001
@@ -313,12 +315,14 @@ extern struct user_namespace init_user_ns;
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
 
-/* Quota operations - stubs */
+/* Quota operations - stubs (only define if quotaops.h not included) */
+#ifndef _LINUX_QUOTAOPS_H
 #define dquot_alloc_block_nofail(inode, nr)	({ (void)(inode); (void)(nr); 0; })
 #define dquot_initialize(inode)			({ (void)(inode); 0; })
 #define dquot_free_inode(inode)			do { (void)(inode); } while (0)
 #define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
 #define dquot_drop(inode)			do { (void)(inode); } while (0)
+#endif /* _LINUX_QUOTAOPS_H */
 
 /* Trace stubs for ialloc.c */
 #define trace_ext4_load_inode_bitmap(...)	do { } while (0)
@@ -358,12 +362,13 @@ extern struct user_namespace init_user_ns;
 #define fscrypt_prepare_new_inode(dir, i, e)	({ (void)(dir); (void)(i); (void)(e); 0; })
 #define fscrypt_set_context(inode, handle)	({ (void)(inode); (void)(handle); 0; })
 
-/* ACL and security stubs */
+/* ACL and security stubs - only if acl.h won't be included */
+#ifndef _FS_EXT4_ACL_H
 #define ext4_init_acl(h, i, d)			({ (void)(h); (void)(i); (void)(d); 0; })
-#define ext4_init_security(h, i, d, q)		({ (void)(h); (void)(i); (void)(d); (void)(q); 0; })
+#endif
+/* Note: ext4_init_security is already handled in xattr.h */
 
-/* xattr stubs */
-#define __ext4_xattr_set_credits(sb, i, b, isz, cr)	({ (void)(sb); (void)(i); (void)(b); (void)(isz); (void)(cr); 0; })
+/* xattr stubs - __ext4_xattr_set_credits is declared in xattr.h */
 
 /* inode state stubs */
 #define is_bad_inode(inode)			(0)
@@ -420,7 +425,7 @@ extern struct user_namespace init_user_ns;
 #define rb_next(node)		((node)->rb_right)
 #define rb_prev(node)		((node)->rb_left)
 #define rb_insert_color(node, root)	do { } while (0)
-#define rb_erase(node, root)		do { } while (0)
+#define rb_erase(node, root)		do { (void)(node); (void)(root); } while (0)
 #define rb_link_node(node, parent, rb_link)	do { *(rb_link) = (node); } while (0)
 #define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
 #define rbtree_postorder_for_each_entry_safe(pos, n, root, field) \
@@ -783,5 +788,68 @@ static inline int in_range(unsigned long val, unsigned long start,
 #define truncate_inode_pages(m, s)	do { } while (0)
 
 /* ext4_sb_bread_nofail is stubbed in interface.c */
+
+/* extents_status.c stubs */
+
+/* shrinker - memory reclaim infrastructure (stub for U-Boot) */
+struct shrink_control {
+	gfp_t gfp_mask;
+	int nid;
+	unsigned long nr_to_scan;
+	unsigned long nr_scanned;
+};
+
+struct shrinker {
+	unsigned long (*count_objects)(struct shrinker *, struct shrink_control *);
+	unsigned long (*scan_objects)(struct shrinker *, struct shrink_control *);
+	void *private_data;
+};
+
+static inline struct shrinker *shrinker_alloc(unsigned int flags,
+					      const char *fmt, ...)
+{
+	return NULL;
+}
+
+static inline void shrinker_register(struct shrinker *s)
+{
+}
+
+static inline void shrinker_free(struct shrinker *s)
+{
+}
+
+/* ktime functions */
+static inline ktime_t ktime_get(void)
+{
+	return 0;
+}
+
+static inline s64 ktime_to_ns(ktime_t kt)
+{
+	return kt;
+}
+
+static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
+{
+	return a - b;
+}
+
+/* write lock variants */
+#define write_trylock(lock)		({ (void)(lock); 1; })
+
+/* percpu counter init/destroy */
+#define percpu_counter_init(fbc, val, gfp)	({ (fbc)->count = (val); 0; })
+#define percpu_counter_destroy(fbc)		do { } while (0)
+
+/* ratelimit macros */
+#define DEFAULT_RATELIMIT_INTERVAL	(5 * 1000)
+#define DEFAULT_RATELIMIT_BURST		10
+#define DEFINE_RATELIMIT_STATE(name, interval, burst) \
+	int name __attribute__((unused)) = 0
+#define __ratelimit(state)		({ (void)(state); 1; })
+
+/* seq_file tokens */
+#define SEQ_START_TOKEN			((void *)1)
 
 #endif /* __EXT4_UBOOT_H__ */

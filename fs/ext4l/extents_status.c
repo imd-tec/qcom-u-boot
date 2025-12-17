@@ -1741,6 +1741,7 @@ int ext4_seq_es_shrinker_info_show(struct seq_file *seq, void *v)
 		    max->vfs_inode.i_ino, max->i_es_all_nr, max->i_es_shk_nr,
 		    div_u64(es_stats->es_stats_max_scan_time, 1000));
 
+	(void)es_stats;  /* Used only by seq_printf which is stubbed */
 	return 0;
 }
 

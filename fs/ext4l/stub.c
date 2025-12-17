@@ -248,12 +248,7 @@ struct ext4_sb_info;
 struct ext4_es_tree;
 struct extent_status;
 
-int ext4_es_cache_extent(struct inode *inode, unsigned long lblk,
-			 unsigned long len, unsigned long long pblk,
-			 unsigned int status)
-{
-	return 0;
-}
+/* ext4_es_cache_extent is now in extents_status.c */
 
 int ext4_issue_zeroout(struct inode *inode, unsigned long long lblk,
 		       unsigned long long pblk, unsigned long long len)
@@ -261,13 +256,15 @@ int ext4_issue_zeroout(struct inode *inode, unsigned long long lblk,
 	return 0;
 }
 
-void ext4_es_insert_extent(struct inode *inode, unsigned long lblk,
-			   unsigned long len, unsigned long long pblk,
-			   unsigned int status)
+/* ext4_es_insert_extent is now in extents_status.c */
+
+/* ext4_remove_pending is now in extents_status.c */
+
+void ext4_da_release_space(struct inode *inode, int to_free)
 {
 }
 
-void ext4_remove_pending(struct inode *inode, unsigned long lblk)
+void ext4_da_update_reserve_space(struct inode *inode, int used, int quota_claim)
 {
 }
 
@@ -306,10 +303,7 @@ int ext4_chunk_trans_blocks(struct inode *inode, int nrblocks)
 	return 0;
 }
 
-int ext4_is_pending(struct inode *inode, unsigned long lblk)
-{
-	return 0;
-}
+/* ext4_is_pending is now in extents_status.c */
 
 int ext4_meta_trans_blocks(struct inode *inode, int lblk, int pblk)
 {
@@ -355,24 +349,11 @@ void ext4_truncate_page_cache_block_range(struct inode *inode, loff_t start,
 /* ext4_iomap_report_ops - just a symbol needed for linking */
 char ext4_iomap_report_ops;
 
-int ext4_es_lookup_extent(struct inode *inode, unsigned long lblk,
-			  unsigned long *next_lblk, void *es)
-{
-	return 0;
-}
+/* ext4_es_lookup_extent is now in extents_status.c */
 
-int ext4_es_remove_extent(struct inode *inode, unsigned long lblk,
-			  unsigned long len)
-{
-	return 0;
-}
+/* ext4_es_remove_extent is now in extents_status.c */
 
-int ext4_es_find_extent_range(struct inode *inode, void *matching_fn,
-			      unsigned long lblk, unsigned long end,
-			      void *es)
-{
-	return 0;
-}
+/* ext4_es_find_extent_range is now in extents_status.c */
 
 void ext4_mb_mark_bb(struct super_block *sb, unsigned long long block,
 		     int len, int state)
