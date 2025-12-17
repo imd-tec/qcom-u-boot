@@ -5,8 +5,6 @@
 
 #include "ext4_jbd2.h"
 
-#include <trace/events/ext4.h>
-
 int ext4_inode_journal_mode(struct inode *inode)
 {
 	if (EXT4_JOURNAL(inode) == NULL)
@@ -28,6 +26,9 @@ int ext4_inode_journal_mode(struct inode *inode)
 	if (test_opt(inode->i_sb, DATA_FLAGS) == EXT4_MOUNT_WRITEBACK_DATA)
 		return EXT4_INODE_WRITEBACK_DATA_MODE;	/* writeback */
 	BUG();
+#ifdef __UBOOT__
+	return EXT4_INODE_WRITEBACK_DATA_MODE;	/* unreachable, silence warning */
+#endif
 }
 
 /* Just increment the non-pointer handle value */
@@ -209,6 +210,7 @@ static void ext4_journal_abort_handle(const char *caller, unsigned int line,
 
 static void ext4_check_bdev_write_error(struct super_block *sb)
 {
+#ifndef __UBOOT__
 	struct address_space *mapping = sb->s_bdev->bd_mapping;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	int err;
@@ -227,6 +229,7 @@ static void ext4_check_bdev_write_error(struct super_block *sb)
 			ext4_error_err(sb, -err,
 				       "Error while async write back metadata");
 	}
+#endif
 }
 
 int __ext4_journal_get_write_access(const char *where, unsigned int line,

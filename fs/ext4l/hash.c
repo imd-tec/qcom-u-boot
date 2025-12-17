@@ -5,6 +5,7 @@
  * Copyright (C) 2002 by Theodore Ts'o
  */
 
+#define EXT4_UBOOT_NO_EXT4_H
 #include "ext4_uboot.h"
 #include <linux/compiler.h>
 

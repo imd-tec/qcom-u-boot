@@ -8,7 +8,7 @@
  * Universite Pierre et Marie Curie (Paris VI)
  */
 
-#include <linux/buffer_head.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 
 unsigned int ext4_count_free(char *bitmap, unsigned int numchars)

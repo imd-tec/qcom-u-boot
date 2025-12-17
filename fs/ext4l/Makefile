@@ -3,6 +3,6 @@
 # Makefile for the ext4l filesystem (Linux port)
 #
 
-obj-y := interface.o
+obj-y := interface.o stub.o
 
-obj-y	+= hash.o
+obj-y	+= bitmap.o block_validity.o ext4_jbd2.o hash.o

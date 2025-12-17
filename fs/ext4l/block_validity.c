@@ -9,15 +9,7 @@
  * should never be used as data blocks by files or directories.
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
-#include <linux/namei.h>
-#include <linux/quotaops.h>
-#include <linux/buffer_head.h>
-#include <linux/swap.h>
-#include <linux/pagemap.h>
-#include <linux/blkdev.h>
-#include <linux/slab.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 
 struct ext4_system_zone {
