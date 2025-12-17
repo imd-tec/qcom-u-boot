@@ -11,7 +11,22 @@
 
 #include <linux/types.h>
 #include <linux/err.h>
+#include <linux/cred.h>
+#include <linux/export.h>
+#include <linux/freezer.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/kthread.h>
+#include <linux/module.h>
+#include <linux/random.h>
+#include <linux/rwsem.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/timer.h>
+#include <linux/uaccess.h>
+#include <linux/vmalloc.h>
+#include <linux/wait.h>
+#include <linux/workqueue.h>
 
 #ifdef CONFIG_XEN
 #include <xen/events.h>
@@ -19,71 +34,6 @@
 
 struct unused {};
 typedef struct unused unused_t;
-
-struct p_current{
-       int pid;
-};
-
-extern struct p_current *current;
-
-#define GFP_ATOMIC ((gfp_t) 0)
-#define GFP_KERNEL ((gfp_t) 0)
-#define GFP_NOFS ((gfp_t) 0)
-#define GFP_USER ((gfp_t) 0)
-#define __GFP_NOWARN ((gfp_t) 0)
-#define __GFP_ZERO	((__force gfp_t)0x8000u)	/* Return zeroed page on success */
-
-void *kmalloc(size_t size, int flags);
-
-static inline void *kzalloc(size_t size, gfp_t flags)
-{
-	return kmalloc(size, flags | __GFP_ZERO);
-}
-
-static inline void *kmalloc_array(size_t n, size_t size, gfp_t flags)
-{
-	if (size != 0 && n > SIZE_MAX / size)
-		return NULL;
-	return kmalloc(n * size, flags | __GFP_ZERO);
-}
-
-static inline void *kcalloc(size_t n, size_t size, gfp_t flags)
-{
-	return kmalloc_array(n, size, flags | __GFP_ZERO);
-}
-
-#define vmalloc(size)	kmalloc(size, 0)
-#define __vmalloc(size, flags, pgsz)	kmalloc(size, flags)
-static inline void *vzalloc(unsigned long size)
-{
-	return kzalloc(size, 0);
-}
-static inline void kfree(const void *block)
-{
-	free((void *)block);
-}
-static inline void vfree(const void *addr)
-{
-	free((void *)addr);
-}
-
-struct kmem_cache { int sz; };
-
-struct kmem_cache *get_mem(int element_sz);
-#define kmem_cache_create(a, sz, c, d, e)	get_mem(sz)
-void *kmem_cache_alloc(struct kmem_cache *obj, int flag);
-static inline void kmem_cache_free(struct kmem_cache *cachep, void *obj)
-{
-	free(obj);
-}
-static inline void kmem_cache_destroy(struct kmem_cache *cachep)
-{
-	free(cachep);
-}
-
-#define DECLARE_WAITQUEUE(...)	do { } while (0)
-#define add_wait_queue(...)	do { } while (0)
-#define remove_wait_queue(...)	do { } while (0)
 
 #ifndef CONFIG_XEN
 #define eventchn_poll()
@@ -138,8 +88,6 @@ static inline void kmem_cache_destroy(struct kmem_cache *cachep)
 #define PAGE_SIZE	4096
 #endif
 
-/* drivers/char/random.c */
-#define get_random_bytes(...)
 
 /* include/linux/leds.h */
 struct led_trigger {};
@@ -176,23 +124,6 @@ typedef unsigned long sector_t;
 typedef unsigned long blkcnt_t;
 #endif
 
-/* module */
-#define THIS_MODULE		0
-#define try_module_get(...)	1
-#define module_put(...)		do { } while (0)
-#define module_init(...)
-#define module_exit(...)
-#define EXPORT_SYMBOL(...)
-#define EXPORT_SYMBOL_GPL(...)
-#define module_param(...)
-#define module_param_call(...)
-#define MODULE_PARM_DESC(...)
-#define MODULE_VERSION(...)
-#define MODULE_DESCRIPTION(...)
-#define MODULE_AUTHOR(...)
-#define MODULE_LICENSE(...)
-#define MODULE_ALIAS(...)
-#define __module_get(...)
 
 /* character device */
 #define MKDEV(...)			0
@@ -213,8 +144,6 @@ typedef unsigned long blkcnt_t;
 
 #define blocking_notifier_call_chain(...) 0
 
-#define __initdata
-#define late_initcall(...)
 
 #define dev_set_name(...)		do { } while (0)
 #define device_register(...)		0
@@ -222,29 +151,12 @@ typedef unsigned long blkcnt_t;
 #define volume_sysfs_init(...)		0
 #define volume_sysfs_close(...)		do { } while (0)
 
-#define init_waitqueue_head(...)	do { } while (0)
-#define wait_event_interruptible(...)	0
-#define wake_up_interruptible(...)	do { } while (0)
 #define dump_stack(...)			do { } while (0)
 
-#define task_pid_nr(x)			0
-#define set_freezable(...)		do { } while (0)
-#define try_to_freeze(...)		0
-#define set_current_state(...)		do { } while (0)
-#define kthread_should_stop(...)	0
 
-#define setup_timer(timer, func, data) do {} while (0)
-#define del_timer_sync(timer) do {} while (0)
-#define schedule_work(work) do {} while (0)
-#define INIT_WORK(work, fun) do {} while (0)
 
-struct work_struct {};
-
-unsigned long copy_from_user(void *dest, const void *src,
-			     unsigned long count);
 
 typedef unused_t spinlock_t;
-typedef int	wait_queue_head_t;
 
 #define spin_lock_init(lock) do {} while (0)
 #define spin_lock(lock) do {} while (0)
@@ -257,33 +169,9 @@ typedef int	wait_queue_head_t;
 #define mutex_lock(...)
 #define mutex_unlock(...)
 
-#define init_rwsem(...)			do { } while (0)
-#define down_read(...)			do { } while (0)
-#define down_write(...)			do { } while (0)
-#define down_write_trylock(...)		1
-#define up_read(...)			do { } while (0)
-#define up_write(...)			do { } while (0)
 
-#define cond_resched()			do { } while (0)
-#define yield()				do { } while (0)
 
-#define __init
-#define __exit
-#define __devinit
-#define __devinitdata
-#define __devinitconst
-#define __initconst
-#define __initdata
 
-#define kthread_create(...)	__builtin_return_address(0)
-#define kthread_stop(...)	do { } while (0)
-#define wake_up_process(...)	do { } while (0)
-
-struct rw_semaphore { int i; };
-#define down_write(...)			do { } while (0)
-#define up_write(...)			do { } while (0)
-#define down_read(...)			do { } while (0)
-#define up_read(...)			do { } while (0)
 struct device {
 	struct device		*parent;
 	struct class		*class;
@@ -304,15 +192,7 @@ struct cdev {
 #define cdev_add(...)		0
 #define cdev_del(...)		do { } while (0)
 
-#define prandom_u32(...)	0
 
-typedef struct {
-	uid_t val;
-} kuid_t;
-
-typedef struct {
-	gid_t val;
-} kgid_t;
 
 /* from include/linux/types.h */
 
@@ -360,11 +240,9 @@ struct writeback_control {
 	unsigned for_sync:1;		/* sync(2) WB_SYNC_ALL writeback */
 };
 
-void *kmemdup(const void *src, size_t len, gfp_t gfp);
 
 typedef int irqreturn_t;
 
-struct timer_list {};
 struct notifier_block {};
 
 typedef unsigned long dmaaddr_t;

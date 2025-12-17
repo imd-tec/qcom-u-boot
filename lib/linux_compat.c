@@ -5,19 +5,12 @@
 #include <asm/cache.h>
 #include <linux/compat.h>
 
-struct p_current cur = {
+struct task_struct cur = {
 	.pid = 1,
 };
-__maybe_unused struct p_current *current = &cur;
+__maybe_unused struct task_struct *current = &cur;
 
-unsigned long copy_from_user(void *dest, const void *src,
-		     unsigned long count)
-{
-	memcpy((void *)dest, (void *)src, count);
-	return 0;
-}
-
-void *kmalloc(size_t size, int flags)
+void *kmalloc(size_t size, gfp_t flags)
 {
 	void *p;
 
@@ -38,7 +31,7 @@ struct kmem_cache *get_mem(int element_sz)
 	return ret;
 }
 
-void *kmem_cache_alloc(struct kmem_cache *obj, int flag)
+void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag)
 {
 	return malloc_cache_aligned(obj->sz);
 }
