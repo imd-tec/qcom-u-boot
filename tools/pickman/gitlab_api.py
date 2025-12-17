@@ -28,9 +28,11 @@ except ImportError:
 
 
 # Merge request info returned by get_pickman_mrs()
+# Use defaults for new fields so existing code doesn't break
 PickmanMr = namedtuple('PickmanMr', [
-    'iid', 'title', 'web_url', 'source_branch', 'description'
-])
+    'iid', 'title', 'web_url', 'source_branch', 'description',
+    'has_conflicts', 'needs_rebase'
+], defaults=[False, False])
 
 # Comment info returned by get_mr_comments()
 MrComment = namedtuple('MrComment', [
@@ -232,12 +234,22 @@ def get_pickman_mrs(remote, state='opened'):
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
+                # Check merge status - detailed_merge_status is newer API
+                detailed_status = getattr(merge_req, 'detailed_merge_status', '')
+                needs_rebase = detailed_status == 'need_rebase'
+                # Also check diverged_commits_count as fallback
+                if not needs_rebase:
+                    diverged = getattr(merge_req, 'diverged_commits_count', 0)
+                    needs_rebase = diverged and diverged > 0
+
                 pickman_mrs.append(PickmanMr(
                     iid=merge_req.iid,
                     title=merge_req.title,
                     web_url=merge_req.web_url,
                     source_branch=merge_req.source_branch,
                     description=merge_req.description or '',
+                    has_conflicts=getattr(merge_req, 'has_conflicts', False),
+                    needs_rebase=needs_rebase,
                 ))
         return pickman_mrs
     except gitlab.exceptions.GitlabError as exc:

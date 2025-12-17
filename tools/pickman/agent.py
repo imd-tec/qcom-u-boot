@@ -136,14 +136,20 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
                                              repo_path))
 
 
-async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None):
-    """Run the Claude agent to handle MR comments
+async def run_review_agent(mr_iid, branch_name, comments, remote, target='master',
+                           needs_rebase=False, has_conflicts=False,
+                           mr_description='', repo_path=None):
+    """Run the Claude agent to handle MR comments and/or rebase
 
     Args:
         mr_iid (int): Merge request IID
         branch_name (str): Source branch name
         comments (list): List of comment dicts with 'author', 'body' keys
         remote (str): Git remote name
+        target (str): Target branch for rebase operations
+        needs_rebase (bool): Whether the MR needs rebasing
+        has_conflicts (bool): Whether the MR has merge conflicts
+        mr_description (str): MR description with context from previous work
         repo_path (str): Path to repository (defaults to current directory)
 
     Returns:
@@ -155,35 +161,75 @@ async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None
     if repo_path is None:
         repo_path = os.getcwd()
 
-    # Format comments for the prompt
-    comment_text = '\n'.join(
-        f'- [{c.author}]: {c.body}'
-        for c in comments
-    )
+    # Build the prompt based on what needs to be done
+    tasks = []
+    if needs_rebase:
+        if has_conflicts:
+            tasks.append("rebase and resolve merge conflicts")
+        else:
+            tasks.append("rebase onto latest target branch")
+    if comments:
+        tasks.append(f"address {len(comments)} review comment(s)")
 
-    prompt = f"""Review comments on merge request !{mr_iid} (branch: {branch_name}):
+    task_desc = " and ".join(tasks)
+
+    # Include MR description for context from previous work
+    context_section = ""
+    if mr_description:
+        context_section = f"""
+Context from MR description (includes previous work done on this MR):
+
+{mr_description}
+
+Use this context to understand what was done previously and respond appropriately.
+"""
+
+    # Format comments for the prompt (if any)
+    comment_section = ""
+    if comments:
+        comment_text = '\n'.join(
+            f'- [{c.author}]: {c.body}'
+            for c in comments
+        )
+        comment_section = f"""
+Review comments to address:
 
 {comment_text}
+"""
 
+    # Build rebase instructions
+    rebase_section = ""
+    if needs_rebase:
+        rebase_section = f"""
+Rebase instructions:
+- The MR is behind the target branch and needs rebasing
+- Use: git rebase --keep-empty {remote}/{target}
+- This preserves empty merge commits which are important for tracking
+- If there are conflicts, try to resolve them automatically
+- For complex conflicts that cannot be resolved, describe them and abort
+"""
+
+    prompt = f"""Task for merge request !{mr_iid} (branch: {branch_name}): {task_desc}
+{context_section}{comment_section}{rebase_section}
 Steps to follow:
 1. Checkout the branch: git checkout {branch_name}
-2. Read and understand each comment
-3. For each actionable comment:
-   - Make the requested changes to the code
-   - Amend the relevant commit or create a fixup commit
+2. {'Rebase onto ' + remote + '/' + target + ' first' if needs_rebase else 'Read and understand each comment'}
+3. {'After rebase, address any review comments' if needs_rebase and comments else 'For each actionable comment:' if comments else 'Verify the rebase completed successfully'}
+   {'- Make the requested changes to the code' if comments else ''}
+   {'- Amend the relevant commit or create a fixup commit' if comments else ''}
 4. Run 'crosfw sandbox -L' to verify the build
 5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
 6. Force push to the ORIGINAL remote branch to update the MR:
-   git push --force-with-lease {remote} HEAD:{branch_name}
-7. Report what changes were made and what reply should be posted to the MR
+   git push -o ci.skip --force-with-lease {remote} HEAD:{branch_name}
+   (ci.skip prevents a duplicate pipeline; the MR pipeline will run automatically)
+7. Report what was done and what reply should be posted to the MR
 
 Important:
-- Keep changes minimal and focused on addressing the comments
+- Keep changes minimal and focused
 - If a comment is unclear or cannot be addressed, note this in your report
 - Local branch: {branch_name}-v2 (or -v3, -v4 etc.)
 - Remote push: always to '{branch_name}' to update the existing MR
-- If rebasing is requested, use: git rebase --keep-empty <base>
-  This preserves empty merge commits which are important for tracking
+- Always use -o ci.skip when pushing to avoid duplicate pipelines
 """
 
     options = ClaudeAgentOptions(
@@ -191,7 +237,7 @@ Important:
         cwd=repo_path,
     )
 
-    tout.info(f'Starting Claude agent to handle {len(comments)} comment(s)...')
+    tout.info(f'Starting Claude agent to {task_desc}...')
     tout.info('')
 
     conversation_log = []
@@ -208,7 +254,9 @@ Important:
         return False, '\n\n'.join(conversation_log)
 
 
-def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
+def handle_mr_comments(mr_iid, branch_name, comments, remote, target='master',
+                       needs_rebase=False, has_conflicts=False,
+                       mr_description='', repo_path=None):
     """Synchronous wrapper for running the review agent
 
     Args:
@@ -216,6 +264,10 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
         branch_name (str): Source branch name
         comments (list): List of comment dicts
         remote (str): Git remote name
+        target (str): Target branch for rebase operations
+        needs_rebase (bool): Whether the MR needs rebasing
+        has_conflicts (bool): Whether the MR has merge conflicts
+        mr_description (str): MR description with context from previous work
         repo_path (str): Path to repository (defaults to current directory)
 
     Returns:
@@ -223,4 +275,5 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
             conversation_log is the agent's output text
     """
     return asyncio.run(run_review_agent(mr_iid, branch_name, comments, remote,
-                                        repo_path))
+                                        target, needs_rebase, has_conflicts,
+                                        mr_description, repo_path))

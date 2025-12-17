@@ -648,7 +648,7 @@ def do_commit_source(args, dbs):
     return 0
 
 
-def process_mr_reviews(remote, mrs, dbs):
+def process_mr_reviews(remote, mrs, dbs, target='master'):
     """Process review comments on open MRs
 
     Checks each MR for unresolved comments and uses Claude agent to address
@@ -658,17 +658,25 @@ def process_mr_reviews(remote, mrs, dbs):
         remote (str): Remote name
         mrs (list): List of MR dicts from get_open_pickman_mrs()
         dbs (Database): Database instance for tracking processed comments
+        target (str): Target branch for rebase operations
 
     Returns:
         int: Number of MRs with comments processed
     """
+    # Save current branch to restore later
+    original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+    # Fetch to get latest remote state (needed for rebase)
+    tout.info(f'Fetching {remote}...')
+    run_git(['fetch', remote])
+
     processed = 0
 
     for merge_req in mrs:
         mr_iid = merge_req.iid
         comments = gitlab_api.get_mr_comments(remote, mr_iid)
         if comments is None:
-            continue
+            comments = []
 
         # Filter to unresolved comments that haven't been processed
         unresolved = []
@@ -678,20 +686,35 @@ def process_mr_reviews(remote, mrs, dbs):
             if dbs.comment_is_processed(mr_iid, com.id):
                 continue
             unresolved.append(com)
-        if not unresolved:
+
+        # Check if rebase is needed
+        needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
+
+        # Skip if no comments and no rebase needed
+        if not unresolved and not needs_rebase:
             continue
 
         tout.info('')
-        tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
-        for comment in unresolved:
-            tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
+        if needs_rebase:
+            if merge_req.has_conflicts:
+                tout.info(f"MR !{mr_iid} has merge conflicts - rebasing...")
+            else:
+                tout.info(f"MR !{mr_iid} needs rebase...")
+        if unresolved:
+            tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
+            for comment in unresolved:
+                tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
 
-        # Run agent to handle comments
+        # Run agent to handle comments and/or rebase
         success, conversation_log = agent.handle_mr_comments(
             mr_iid,
             merge_req.source_branch,
             unresolved,
             remote,
+            target,
+            needs_rebase=needs_rebase,
+            has_conflicts=merge_req.has_conflicts,
+            mr_description=merge_req.description,
         )
 
         if success:
@@ -719,6 +742,11 @@ def process_mr_reviews(remote, mrs, dbs):
         else:
             tout.error(f"Failed to handle comments for MR !{mr_iid}")
         processed += 1
+
+    # Restore original branch
+    if processed:
+        tout.info(f'Returning to {original_branch}')
+        run_git(['checkout', original_branch])
 
     return processed
 
@@ -911,13 +939,17 @@ def do_step(args, dbs):
             tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
         # Process any review comments on open MRs
-        process_mr_reviews(remote, mrs, dbs)
+        process_mr_reviews(remote, mrs, dbs, args.target)
 
         tout.info('')
         tout.info('Not creating new MR while others are pending')
         return 0
 
     # No pending MRs, run apply with push
+    # First fetch to get latest remote state
+    tout.info(f'Fetching {remote}...')
+    run_git(['fetch', remote])
+
     tout.info('No pending pickman MRs, creating new one...')
     args.push = True
     args.branch = None  # Let do_apply generate branch name

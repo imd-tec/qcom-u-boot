@@ -1698,14 +1698,15 @@ class TestStep(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
-        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
-                               return_value=[]):
-            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
-                                   return_value=[mock_mr]):
-                args = argparse.Namespace(cmd='step', source='us/next',
-                                          remote='ci', target='master')
-                with terminal.capture():
-                    ret = control.do_step(args, None)
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                       return_value=[mock_mr]):
+                    args = argparse.Namespace(cmd='step', source='us/next',
+                                              remote='ci', target='master')
+                    with terminal.capture():
+                        ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -1900,19 +1901,83 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
                                      resolved=False),
             ]
 
-            with mock.patch.object(gitlab_api, 'get_mr_comments',
-                                   return_value=comments):
-                with mock.patch.object(agent, 'handle_mr_comments',
-                                       return_value=(True, 'Done')) as mock_agent:
-                    with mock.patch.object(gitlab_api, 'update_mr_description'):
-                        with mock.patch.object(control, 'update_history_with_review'):
-                            control.process_mr_reviews('ci', mrs, dbs)
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=comments):
+                    with mock.patch.object(agent, 'handle_mr_comments',
+                                           return_value=(True, 'Done')) as mock_agent:
+                        with mock.patch.object(gitlab_api, 'update_mr_description'):
+                            with mock.patch.object(control, 'update_history_with_review'):
+                                control.process_mr_reviews('ci', mrs, dbs)
 
             # Agent should only receive the new comment
             call_args = mock_agent.call_args
             passed_comments = call_args[0][2]
             self.assertEqual(len(passed_comments), 1)
             self.assertEqual(passed_comments[0].id, 2)
+
+            dbs.close()
+
+    def test_rebase_without_comments(self):
+        """Test that MRs needing rebase trigger agent even without comments."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # MR needs rebase but has no comments
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+                has_conflicts=False,
+                needs_rebase=True,
+            )]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=[]):
+                    with mock.patch.object(agent, 'handle_mr_comments',
+                                           return_value=(True, 'Rebased')) as mock_agent:
+                        with mock.patch.object(gitlab_api, 'update_mr_description'):
+                            with mock.patch.object(control, 'update_history_with_review'):
+                                control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should be called with needs_rebase=True
+            mock_agent.assert_called_once()
+            call_kwargs = mock_agent.call_args[1]
+            self.assertTrue(call_kwargs.get('needs_rebase'))
+            self.assertFalse(call_kwargs.get('has_conflicts'))
+
+            dbs.close()
+
+    def test_skips_mr_no_rebase_no_comments(self):
+        """Test that MRs without rebase need or comments are skipped."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # MR has no comments and doesn't need rebase
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+                has_conflicts=False,
+                needs_rebase=False,
+            )]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=[]):
+                    with mock.patch.object(agent, 'handle_mr_comments',
+                                           return_value=(True, 'Done')) as mock_agent:
+                        control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should NOT be called
+            mock_agent.assert_not_called()
 
             dbs.close()
 
@@ -2474,13 +2539,15 @@ class TestDoReviewWithMrs(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
-        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
-                               return_value=[mock_mr]):
-            with mock.patch.object(gitlab_api, 'get_mr_comments',
-                                   return_value=[]):
-                args = argparse.Namespace(cmd='review', remote='ci')
-                with terminal.capture() as (stdout, _):
-                    ret = control.do_review(args, None)
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                   return_value=[mock_mr]):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=[]):
+                    args = argparse.Namespace(cmd='review', remote='ci',
+                                              target='master')
+                    with terminal.capture() as (stdout, _):
+                        ret = control.do_review(args, None)
 
         self.assertEqual(ret, 0)
         self.assertIn('Found 1 open pickman MR', stdout.getvalue())
