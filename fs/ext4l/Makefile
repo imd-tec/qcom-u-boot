@@ -4,3 +4,5 @@
 #
 
 obj-y := interface.o
+
+obj-y	+= hash.o
