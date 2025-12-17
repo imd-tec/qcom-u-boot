@@ -136,7 +136,8 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
                                              repo_path))
 
 
-async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None):
+async def run_review_agent(mr_iid, branch_name, comments, remote, target='master',
+                           repo_path=None):
     """Run the Claude agent to handle MR comments
 
     Args:
@@ -144,6 +145,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None
         branch_name (str): Source branch name
         comments (list): List of comment dicts with 'author', 'body' keys
         remote (str): Git remote name
+        target (str): Target branch for rebase operations
         repo_path (str): Path to repository (defaults to current directory)
 
     Returns:
@@ -182,7 +184,7 @@ Important:
 - If a comment is unclear or cannot be addressed, note this in your report
 - Local branch: {branch_name}-v2 (or -v3, -v4 etc.)
 - Remote push: always to '{branch_name}' to update the existing MR
-- If rebasing is requested, use: git rebase --keep-empty <base>
+- If rebasing is requested, use: git rebase --keep-empty {remote}/{target}
   This preserves empty merge commits which are important for tracking
 """
 
@@ -208,7 +210,8 @@ Important:
         return False, '\n\n'.join(conversation_log)
 
 
-def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
+def handle_mr_comments(mr_iid, branch_name, comments, remote, target='master',
+                       repo_path=None):
     """Synchronous wrapper for running the review agent
 
     Args:
@@ -216,6 +219,7 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
         branch_name (str): Source branch name
         comments (list): List of comment dicts
         remote (str): Git remote name
+        target (str): Target branch for rebase operations
         repo_path (str): Path to repository (defaults to current directory)
 
     Returns:
@@ -223,4 +227,4 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, repo_path=None):
             conversation_log is the agent's output text
     """
     return asyncio.run(run_review_agent(mr_iid, branch_name, comments, remote,
-                                        repo_path))
+                                        target, repo_path))

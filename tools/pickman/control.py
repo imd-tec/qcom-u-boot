@@ -648,7 +648,7 @@ def do_commit_source(args, dbs):
     return 0
 
 
-def process_mr_reviews(remote, mrs, dbs):
+def process_mr_reviews(remote, mrs, dbs, target='master'):
     """Process review comments on open MRs
 
     Checks each MR for unresolved comments and uses Claude agent to address
@@ -658,10 +658,15 @@ def process_mr_reviews(remote, mrs, dbs):
         remote (str): Remote name
         mrs (list): List of MR dicts from get_open_pickman_mrs()
         dbs (Database): Database instance for tracking processed comments
+        target (str): Target branch for rebase operations
 
     Returns:
         int: Number of MRs with comments processed
     """
+    # Fetch to get latest remote state (needed for rebase)
+    tout.info(f'Fetching {remote}...')
+    run_git(['fetch', remote])
+
     processed = 0
 
     for merge_req in mrs:
@@ -692,6 +697,7 @@ def process_mr_reviews(remote, mrs, dbs):
             merge_req.source_branch,
             unresolved,
             remote,
+            target,
         )
 
         if success:
@@ -911,13 +917,17 @@ def do_step(args, dbs):
             tout.info(f"  !{merge_req.iid}: {merge_req.title}")
 
         # Process any review comments on open MRs
-        process_mr_reviews(remote, mrs, dbs)
+        process_mr_reviews(remote, mrs, dbs, args.target)
 
         tout.info('')
         tout.info('Not creating new MR while others are pending')
         return 0
 
     # No pending MRs, run apply with push
+    # First fetch to get latest remote state
+    tout.info(f'Fetching {remote}...')
+    run_git(['fetch', remote])
+
     tout.info('No pending pickman MRs, creating new one...')
     args.push = True
     args.branch = None  # Let do_apply generate branch name
