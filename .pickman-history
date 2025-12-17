@@ -541,3 +541,74 @@ All 13 commits were successfully cherry-picked from `us/next` to branch `cherry-
 
 ---
 
+## 2025-12-17: us/next
+
+Branch: cherry-b841e559cd2
+
+Commits:
+- b841e559cd2 Prepare v2025.01-rc4
+- 28a620d2815 board: rpi: Pass CMA through from firmware DT
+- 6a5fc32fd20 board: rpi: Enable capsule updates
+- 26512629fb3 Merge tag 'rpi-2025.01-rc5' of https://source.denx.de/u-boot/custodians/u-boot-raspberrypi
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+There's a conflict in the Makefile. Let me examine it:
+
+This is a simple version conflict. The base branch has PATCHLEVEL = 12 (newer version) and the cherry-picked commit is trying to set EXTRAVERSION = -rc4 for an older release. Let me resolve this by keeping the current base PATCHLEVEL (12) and adding the EXTRAVERSION from the cherry-picked commit:
+
+Let me resolve this conflict. Since we're cherry-picking to add the -rc4 release tag functionality, I'll take the EXTRAVERSION = -rc4 from the incoming commit:
+
+Now let me resolve the conflict by taking the EXTRAVERSION = -rc4 from the incoming commit:
+
+There's a duplicate NAME = line. Let me fix that:
+
+Now let me add the file and continue the cherry-pick:
+
+Now let me amend the commit to note the fix-up:
+
+Now let me cherry-pick the second commit:
+
+Now the third commit:
+
+Now let me check if the fourth commit is a merge commit:
+
+Yes, this is a merge commit. Let me use the correct options:
+
+The merge commit is empty (as expected since we already have the changes from the individual commits). Let me commit it as an empty commit to preserve the merge history:
+
+All cherry-picks are done. Let me verify with git log:
+
+All 4 commits are present. Now let me run the build to verify:
+
+Build completed successfully. Let me provide the final status:
+
+## Final Status
+
+### Cherry-pick Results
+All 4 commits successfully cherry-picked from `us/next` branch to new branch `cherry-b841e559cd2`:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| b841e559cd2 | Prepare v2025.01-rc4 | ✅ (conflict resolved) |
+| 28a620d2815 | board: rpi: Pass CMA through from firmware DT | ✅ |
+| 6a5fc32fd20 | board: rpi: Enable capsule updates | ✅ |
+| 26512629fb3 | Merge tag 'rpi-2025.01-rc5' | ✅ (empty merge commit preserved) |
+
+### Fix-ups Made
+1. **Makefile conflict** in commit `b841e559cd2`:
+   - Conflict: PATCHLEVEL was 01 in original commit, but base branch has PATCHLEVEL=12
+   - Resolution: Kept PATCHLEVEL=12, applied EXTRAVERSION=-rc4
+   - Note added to commit message
+
+### Build Result
+✅ **OK** - Build completed successfully for sandbox board with no warnings or errors.
+
+### Branch Status
+The branch `cherry-b841e559cd2` is ready for pushing with 4 new commits ahead of `ci/master`.
+
+---
+
