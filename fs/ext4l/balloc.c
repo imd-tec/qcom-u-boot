@@ -12,17 +12,10 @@
  *        David S. Miller (davem@caip.rutgers.edu), 1995
  */
 
-#include <linux/time.h>
-#include <linux/capability.h>
-#include <linux/fs.h>
-#include <linux/quotaops.h>
-#include <linux/buffer_head.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "ext4_jbd2.h"
 #include "mballoc.h"
-
-#include <trace/events/ext4.h>
-#include <kunit/static_stub.h>
 
 static unsigned ext4_num_base_meta_clusters(struct super_block *sb,
 					    ext4_group_t block_group);

@@ -5,4 +5,4 @@
 
 obj-y := interface.o stub.o
 
-obj-y	+= bitmap.o block_validity.o ext4_jbd2.o hash.o
+obj-y	+= balloc.o bitmap.o block_validity.o ext4_jbd2.o hash.o ialloc.o

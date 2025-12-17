@@ -16,15 +16,7 @@ struct buffer_head;
 struct inode;
 struct ext4_map_blocks;
 
-int ext4_num_base_meta_blocks(struct super_block *sb, int group)
-{
-	return 0;
-}
-
-void *ext4_get_group_desc(struct super_block *sb, int group, void **bh)
-{
-	return NULL;
-}
+/* ext4_num_base_meta_blocks and ext4_get_group_desc are now in balloc.c */
 
 unsigned long ext4_block_bitmap(struct super_block *sb, void *gdp)
 {
@@ -139,4 +131,102 @@ int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 int jbd2_journal_dirty_metadata(handle_t *handle, struct buffer_head *bh)
 {
 	return 0;
+}
+
+int jbd2_journal_force_commit_nested(journal_t *journal)
+{
+	return 0;
+}
+
+/*
+ * Stubs for balloc.c
+ */
+void ext4_mark_group_bitmap_corrupted(struct super_block *sb,
+				      unsigned int group, unsigned int flags)
+{
+}
+
+void __ext4_warning(struct super_block *sb, const char *func,
+		    unsigned int line, const char *fmt, ...)
+{
+}
+
+unsigned long long ext4_mb_new_blocks(void *handle, void *ar, int *errp)
+{
+	*errp = -1;
+	return 0;
+}
+
+unsigned int ext4_free_group_clusters(struct super_block *sb, void *gdp)
+{
+	return 0;
+}
+
+/*
+ * Stubs for ialloc.c
+ */
+void ext4_clear_inode(struct inode *inode)
+{
+}
+
+void __ext4_msg(struct super_block *sb, const char *prefix,
+		const char *fmt, ...)
+{
+}
+
+void ext4_free_group_clusters_set(struct super_block *sb, void *gdp,
+				  unsigned int count)
+{
+}
+
+void ext4_group_desc_csum_set(struct super_block *sb, unsigned int group,
+			      void *gdp)
+{
+}
+
+unsigned int ext4_itable_unused_count(struct super_block *sb, void *gdp)
+{
+	return 0;
+}
+
+void ext4_itable_unused_set(struct super_block *sb, void *gdp, unsigned int v)
+{
+}
+
+unsigned int ext4_free_inodes_count(struct super_block *sb, void *gdp)
+{
+	return 0;
+}
+
+void ext4_free_inodes_set(struct super_block *sb, void *gdp, unsigned int v)
+{
+}
+
+unsigned int ext4_used_dirs_count(struct super_block *sb, void *gdp)
+{
+	return 0;
+}
+
+/*
+ * Bit operations - sandbox declares these extern but doesn't implement them.
+ */
+void set_bit(int nr, void *addr)
+{
+	unsigned long *p = (unsigned long *)addr;
+
+	*p |= (1UL << nr);
+}
+
+void clear_bit(int nr, void *addr)
+{
+	unsigned long *p = (unsigned long *)addr;
+
+	*p &= ~(1UL << nr);
+}
+
+void change_bit(int nr, void *addr)
+{
+	unsigned long *p = (unsigned long *)addr;
+
+	*p ^= (1UL << nr);
 }

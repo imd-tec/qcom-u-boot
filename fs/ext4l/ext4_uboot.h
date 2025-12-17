@@ -94,6 +94,9 @@ struct name_snapshot {
 /* Project ID type */
 typedef struct { unsigned int val; } kprojid_t;
 
+#define make_kprojid(ns, id)	((kprojid_t){ .val = (id) })
+#define from_kprojid(ns, kprojid)	((kprojid).val)
+
 /* kobject - stub */
 struct kobject {
 	const char *name;
@@ -106,6 +109,16 @@ struct completion {
 
 /* Cache alignment - stub */
 #define ____cacheline_aligned_in_smp
+
+/* Block I/O request flags - stubs */
+#define REQ_META	0
+#define REQ_PRIO	0
+#define REQ_RAHEAD	0
+
+/* Capabilities - stubs (always allow) */
+#define CAP_SYS_ADMIN		0
+#define CAP_SYS_RESOURCE	0
+#define capable(cap)		(1)
 
 /* fscrypt_str - stub */
 struct fscrypt_str {
@@ -130,6 +143,16 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 /* Inode flags - stubs */
 #define IS_CASEFOLDED(inode)	(0)
 #define IS_ENCRYPTED(inode)	(0)
+#define S_NOQUOTA		0
+
+/* fscrypt context - stub */
+#define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
+
+/* User namespace - stub */
+struct user_namespace {
+	int dummy;
+};
+extern struct user_namespace init_user_ns;
 
 /* BUG_ON / BUG - stubs */
 #define BUG_ON(cond)	do { } while (0)
@@ -146,13 +169,16 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 #define trace_ext4_journal_start_sb(...)	do { } while (0)
 #define trace_ext4_journal_start_reserved(...)	do { } while (0)
 #define trace_ext4_forget(...)			do { } while (0)
+#define trace_ext4_read_block_bitmap_load(...)	do { } while (0)
 
 /* Buffer operations - stubs */
 #define wait_on_buffer(bh)		do { } while (0)
 #define __bforget(bh)			do { } while (0)
 #define mark_buffer_dirty_inode(bh, i)	do { } while (0)
 #define mark_buffer_dirty(bh)		do { } while (0)
-#define sync_dirty_buffer(bh)		do { } while (0)
+#define lock_buffer(bh)			do { } while (0)
+#define unlock_buffer(bh)		do { } while (0)
+#define sb_getblk(sb, block)		((struct buffer_head *)NULL)
 
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
@@ -160,6 +186,102 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 /* Memory barriers - stubs for single-threaded */
 #define smp_rmb()	do { } while (0)
 #define smp_wmb()	do { } while (0)
+#define smp_mb()	do { } while (0)
+
+/*
+ * set_bit/clear_bit are declared extern in asm/bitops.h but not implemented.
+ * We implement them in interface.c for sandbox.
+ */
+
+/* Little-endian bit operations */
+#define __set_bit_le(nr, addr)		((void)(nr), (void)(addr))
+#define test_bit_le(nr, addr)		({ (void)(nr); (void)(addr); 0; })
+#define find_next_zero_bit_le(addr, size, offset) \
+	({ (void)(addr); (void)(size); (offset); })
+#define __test_and_clear_bit_le(nr, addr) ({ (void)(nr); (void)(addr); 0; })
+#define __test_and_set_bit_le(nr, addr)	({ (void)(nr); (void)(addr); 0; })
+
+/* KUNIT stub */
+#define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
+
+/* percpu_counter operations - stubs */
+#define percpu_counter_read_positive(fbc)	((fbc)->count)
+#define percpu_counter_sum_positive(fbc)	((fbc)->count)
+#define percpu_counter_add(fbc, amount)		((fbc)->count += (amount))
+#define percpu_counter_inc(fbc)			((fbc)->count++)
+#define percpu_counter_dec(fbc)			((fbc)->count--)
+#define percpu_counter_initialized(fbc)		(1)
+
+/* Group permission - stub */
+#define in_group_p(gid)			(0)
+
+/* Quota operations - stubs */
+#define dquot_alloc_block_nofail(inode, nr)	({ (void)(inode); (void)(nr); 0; })
+#define dquot_initialize(inode)			({ (void)(inode); 0; })
+#define dquot_free_inode(inode)			do { (void)(inode); } while (0)
+#define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
+#define dquot_drop(inode)			do { (void)(inode); } while (0)
+
+/* Trace stubs for ialloc.c */
+#define trace_ext4_load_inode_bitmap(...)	do { } while (0)
+#define trace_ext4_free_inode(...)		do { } while (0)
+#define trace_ext4_allocate_inode(...)		do { } while (0)
+#define trace_ext4_request_inode(...)		do { } while (0)
+
+/* icount - inode reference count */
+#define icount_read(inode)			(1)
+
+/* d_inode - get inode from dentry */
+#define d_inode(dentry)				((dentry) ? (dentry)->d_inode : NULL)
+
+/* Random number functions */
+#define get_random_u32_below(max)		(0)
+
+/* Buffer cache operations */
+#define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
+#define sync_dirty_buffer(bh)			({ (void)(bh); 0; })
+
+/* Time functions */
+#define ktime_get_real_seconds()		(0)
+#define time_before32(a, b)			(0)
+
+/* Inode operations - stubs */
+#define new_inode(sb)				((struct inode *)NULL)
+#define i_uid_write(inode, uid)			do { } while (0)
+#define i_gid_write(inode, gid)			do { } while (0)
+#define inode_fsuid_set(inode, idmap)		do { } while (0)
+#define inode_init_owner(idmap, i, dir, mode)	do { } while (0)
+#define insert_inode_locked(inode)		(0)
+#define unlock_new_inode(inode)			do { } while (0)
+#define clear_nlink(inode)			do { } while (0)
+#define IS_DIRSYNC(inode)			(0)
+
+/* fscrypt stubs */
+#define fscrypt_prepare_new_inode(dir, i, e)	({ (void)(dir); (void)(i); (void)(e); 0; })
+#define fscrypt_set_context(inode, handle)	({ (void)(inode); (void)(handle); 0; })
+
+/* ACL and security stubs */
+#define ext4_init_acl(h, i, d)			({ (void)(h); (void)(i); (void)(d); 0; })
+#define ext4_init_security(h, i, d, q)		({ (void)(h); (void)(i); (void)(d); (void)(q); 0; })
+
+/* xattr stubs */
+#define __ext4_xattr_set_credits(sb, i, b, isz, cr)	({ (void)(sb); (void)(i); (void)(b); (void)(isz); (void)(cr); 0; })
+
+/* inode state stubs */
+#define is_bad_inode(inode)			(0)
+
+/* Block device operations - stubs */
+#define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
+#define blkdev_issue_flush(bdev)		do { (void)(bdev); } while (0)
+
+/* do_div - divide u64 by u32 */
+#define do_div(n, base) ({			\
+	unsigned int __base = (base);		\
+	unsigned int __rem;			\
+	__rem = ((unsigned long long)(n)) % __base;	\
+	(n) = ((unsigned long long)(n)) / __base;	\
+	__rem;					\
+})
 
 /* Inode locking - stubs */
 #define inode_is_locked(i)	(1)
@@ -342,7 +464,12 @@ struct super_block {
 	struct rw_semaphore s_umount;
 	struct sb_writers s_writers;
 	struct block_device *s_bdev;
+	const char *s_id;
+	struct dentry *s_root;
 };
+
+/* kuid_t and kgid_t - from linux/cred.h */
+#include <linux/cred.h>
 
 /* inode - minimal stub */
 struct inode {
@@ -352,7 +479,35 @@ struct inode {
 	unsigned int i_nlink;
 	loff_t i_size;
 	struct address_space *i_mapping;
+	kuid_t i_uid;
+	kgid_t i_gid;
+	unsigned long i_blocks;
+	unsigned int i_generation;
+	unsigned int i_flags;
+	struct timespec64 i_atime;
+	struct timespec64 i_mtime;
+	struct timespec64 i_ctime;
 };
+
+/* Inode time accessors */
+static inline struct timespec64 inode_get_mtime(const struct inode *inode)
+{
+	return inode->i_mtime;
+}
+
+static inline struct timespec64 inode_get_ctime(const struct inode *inode)
+{
+	return inode->i_ctime;
+}
+
+static inline void simple_inode_init_ts(struct inode *inode)
+{
+	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
+
+	inode->i_atime = ts;
+	inode->i_mtime = ts;
+	inode->i_ctime = ts;
+}
 
 #define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
 
