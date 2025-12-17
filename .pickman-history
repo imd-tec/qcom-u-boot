@@ -612,3 +612,74 @@ The branch `cherry-b841e559cd2` is ready for pushing with 4 new commits ahead of
 
 ---
 
+## 2025-12-17: us/next
+
+Branch: cherry-c1b9d3eb88a
+
+Commits:
+- c1b9d3eb88a ARM: dts: renesas: Fix R-Car spelling
+- 279d916b986 ARM: renesas: Fix R-Car spelling
+- d774197bb04 clk: renesas: Fix R-Car spelling
+- 4a9c8946b8c gpio: renesas: Fix R-Car spelling
+- 1fea57811ff i2c: renesas: Fix R-Car spelling
+- 190c6d05e89 mmc: renesas: Fix R-Car spelling
+- 5f97f5c7ed8 mtd: renesas: Fix R-Car spelling
+- 7246f98d29a pci: renesas: Fix R-Car spelling
+- 1bf8f02f145 phy: renesas: Fix R-Car spelling
+- 4380b31e406 pinctrl: renesas: Fix R-Car spelling
+- b1c2886cf2a serial: renesas: Fix R-Car spelling
+- 14655e62cf1 spi: renesas: Fix R-Car spelling
+- 802b08805c1 usb: renesas: Fix R-Car spelling
+- 9452fb74841 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now I'll cherry-pick each commit one at a time. Let me start with the first one:
+
+Now for the merge commit - I'll use `-m 1 --allow-empty`:
+
+The merge commit is empty as expected. I need to commit it with `--allow-empty`:
+
+All 14 commits have been cherry-picked. Let me verify with git log:
+
+All 14 commits are present. Now let me run the build verification:
+
+Excellent! The build completed successfully. Here's the final status:
+
+## Summary
+
+**Cherry-pick Status: ✅ Complete**
+
+All 14 commits from `us/next` were successfully cherry-picked to branch `cherry-c1b9d3eb88a`:
+
+| # | Commit | Subject |
+|---|--------|---------|
+| 1 | c1b9d3eb88a | ARM: dts: renesas: Fix R-Car spelling |
+| 2 | 279d916b986 | ARM: renesas: Fix R-Car spelling |
+| 3 | d774197bb04 | clk: renesas: Fix R-Car spelling |
+| 4 | 4a9c8946b8c | gpio: renesas: Fix R-Car spelling |
+| 5 | 1fea57811ff | i2c: renesas: Fix R-Car spelling |
+| 6 | 190c6d05e89 | mmc: renesas: Fix R-Car spelling |
+| 7 | 5f97f5c7ed8 | mtd: renesas: Fix R-Car spelling |
+| 8 | 7246f98d29a | pci: renesas: Fix R-Car spelling |
+| 9 | 1bf8f02f145 | phy: renesas: Fix R-Car spelling |
+| 10 | 4380b31e406 | pinctrl: renesas: Fix R-Car spelling |
+| 11 | b1c2886cf2a | serial: renesas: Fix R-Car spelling |
+| 12 | 14655e62cf1 | spi: renesas: Fix R-Car spelling |
+| 13 | 802b08805c1 | usb: renesas: Fix R-Car spelling |
+| 14 | 9452fb74841 | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh |
+
+**Build Result: ✅ OK**
+- sandbox board built successfully with no errors or warnings
+
+**Fix-ups Made: None**
+- All commits applied cleanly (some with auto-merge but no conflicts)
+- The merge commit resulted in an empty commit (expected - all changes were already cherry-picked) and was preserved using `--allow-empty`
+
+**Branch Status:**
+- Branch `cherry-c1b9d3eb88a` is ready for pushing
+- Currently 14 commits ahead of `ci/master`
+
+---
+
