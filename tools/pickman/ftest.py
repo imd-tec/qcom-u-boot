@@ -3,10 +3,13 @@
 # Copyright 2025 Canonical Ltd.
 # Written by Simon Glass <simon.glass@canonical.com>
 #
+# pylint: disable=too-many-lines
 """Tests for pickman."""
 
 import argparse
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,8 +22,10 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 # pylint: disable=wrong-import-position,import-error,cyclic-import
 from u_boot_pylib import command
 from u_boot_pylib import terminal
+from u_boot_pylib import tout
 
 from pickman import __main__ as pickman
+from pickman import agent
 from pickman import control
 from pickman import database
 from pickman import gitlab_api
@@ -51,7 +56,8 @@ class TestRunGit(unittest.TestCase):
         result = command.CommandResult(stdout='  output with spaces  \n')
         command.TEST_RESULT = result
         try:
-            out = control.run_git(['status'])
+            with terminal.capture():
+                out = control.run_git(['status'])
             self.assertEqual(out, 'output with spaces')
         finally:
             command.TEST_RESULT = None
@@ -73,7 +79,8 @@ class TestCompareBranches(unittest.TestCase):
 
         command.TEST_RESULT = handle_command
         try:
-            count, commit = control.compare_branches('master', 'source')
+            with terminal.capture():
+                count, commit = control.compare_branches('master', 'source')
 
             self.assertEqual(count, 42)
             self.assertEqual(commit.hash, 'abc123def456789')
@@ -96,7 +103,8 @@ class TestCompareBranches(unittest.TestCase):
 
         command.TEST_RESULT = handle_command
         try:
-            count, commit = control.compare_branches('branch1', 'branch2')
+            with terminal.capture():
+                count, commit = control.compare_branches('branch1', 'branch2')
 
             self.assertEqual(count, 0)
             self.assertEqual(commit.short_hash, 'def456a')
@@ -309,6 +317,53 @@ class TestDatabase(unittest.TestCase):
             self.assertFalse(created2)
             self.assertIs(dbs1, dbs2)
             dbs1.close()
+
+    def test_duplicate_database_error(self):
+        """Test creating duplicate database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            with self.assertRaises(ValueError) as ctx:
+                database.Database(self.db_path)
+            self.assertIn('already a database', str(ctx.exception))
+            dbs.close()
+
+    def test_open_already_open_error(self):
+        """Test opening already open database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            with self.assertRaises(ValueError) as ctx:
+                dbs.open_it()
+            self.assertIn('Already open', str(ctx.exception))
+            dbs.close()
+
+    def test_close_already_closed_error(self):
+        """Test closing already closed database raises error."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+            with self.assertRaises(ValueError) as ctx:
+                dbs.close()
+            self.assertIn('Already closed', str(ctx.exception))
+
+    def test_rollback(self):
+        """Test rollback discards uncommitted changes."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            # Make a change but don't commit
+            dbs.source_set('us/next', 'def456')
+            # Rollback should discard the change
+            dbs.rollback()
+
+            result = dbs.source_get('us/next')
+            self.assertEqual(result, 'abc123')
+            dbs.close()
 
     def test_source_get_all(self):
         """Test getting all sources."""
@@ -669,6 +724,88 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
             dbs.close()
 
 
+class TestDatabaseComment(unittest.TestCase):
+    """Tests for Database comment functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_comment_mark_and_check_processed(self):
+        """Test marking and checking processed comments"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Comment should not be processed initially
+            self.assertFalse(dbs.comment_is_processed(123, 456))
+
+            # Mark as processed
+            dbs.comment_mark_processed(123, 456)
+            dbs.commit()
+
+            # Now should be processed
+            self.assertTrue(dbs.comment_is_processed(123, 456))
+
+            # Different comment should not be processed
+            self.assertFalse(dbs.comment_is_processed(123, 789))
+            self.assertFalse(dbs.comment_is_processed(999, 456))
+
+            dbs.close()
+
+    def test_comment_get_processed(self):
+        """Test getting all processed comments for an MR"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark several comments as processed
+            dbs.comment_mark_processed(100, 1)
+            dbs.comment_mark_processed(100, 2)
+            dbs.comment_mark_processed(100, 3)
+            dbs.comment_mark_processed(200, 10)  # Different MR
+            dbs.commit()
+
+            # Get processed for MR 100
+            processed = dbs.comment_get_processed(100)
+            self.assertEqual(len(processed), 3)
+            self.assertIn(1, processed)
+            self.assertIn(2, processed)
+            self.assertIn(3, processed)
+            self.assertNotIn(10, processed)
+
+            # Get processed for MR 200
+            processed = dbs.comment_get_processed(200)
+            self.assertEqual(len(processed), 1)
+            self.assertIn(10, processed)
+
+            dbs.close()
+
+    def test_comment_mark_processed_idempotent(self):
+        """Test that marking same comment twice doesn't fail"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark same comment twice (should not raise)
+            dbs.comment_mark_processed(123, 456)
+            dbs.comment_mark_processed(123, 456)
+            dbs.commit()
+
+            # Should still be processed
+            self.assertTrue(dbs.comment_is_processed(123, 456))
+
+            dbs.close()
+
+
 class TestListSources(unittest.TestCase):
     """Tests for list-sources command."""
 
@@ -788,14 +925,27 @@ class TestNextSet(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with commits including a merge
-        log_output = (
+        # First-parent log (to find next merge on mainline)
+        fp_log_output = (
             'aaa111|aaa111a|Author 1|First commit|abc123\n'
             'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
             'ccc333|ccc333c|Author 3|Merge branch feature|bbb222 ddd444\n'
             'eee555|eee555e|Author 4|After merge|ccc333\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        # Full log (to get all commits up to the merge)
+        full_log_output = (
+            'aaa111|aaa111a|Author 1|First commit|abc123\n'
+            'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            'ccc333|ccc333c|Author 3|Merge branch feature|bbb222 ddd444\n'
+        )
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--first-parent' in cmd:
+                return command.CommandResult(stdout=fp_log_output)
+            return command.CommandResult(stdout=full_log_output)
+
+        command.TEST_RESULT = mock_git
 
         args = argparse.Namespace(cmd='next-set', source='us/next')
         with terminal.capture() as (stdout, _):
@@ -839,6 +989,190 @@ class TestNextSet(unittest.TestCase):
         self.assertIn('bbb222b Second commit', output)
 
 
+class TestNextMerges(unittest.TestCase):
+    """Tests for next-merges command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_next_merges(self):
+        """Test next-merges shows upcoming merges"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits
+        log_output = (
+            'aaa111|aaa111a|Merge branch feature-1\n'
+            'bbb222|bbb222b|Merge branch feature-2\n'
+            'ccc333|ccc333c|Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Next 3 merges from us/next:', output)
+        self.assertIn('1. aaa111a Merge branch feature-1', output)
+        self.assertIn('2. bbb222b Merge branch feature-2', output)
+        self.assertIn('3. ccc333c Merge branch feature-3', output)
+
+    def test_next_merges_with_count(self):
+        """Test next-merges respects count parameter"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits
+        log_output = (
+            'aaa111|aaa111a|Merge branch feature-1\n'
+            'bbb222|bbb222b|Merge branch feature-2\n'
+            'ccc333|ccc333c|Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=2)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('Next 2 merges from us/next:', output)
+        self.assertIn('1. aaa111a', output)
+        self.assertIn('2. bbb222b', output)
+        self.assertNotIn('3. ccc333c', output)
+
+    def test_next_merges_no_merges(self):
+        """Test next-merges with no merges remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('No merges remaining', stdout.getvalue())
+
+
+class TestCountMerges(unittest.TestCase):
+    """Tests for count-merges command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_count_merges(self):
+        """Test count-merges shows total remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        # Mock git log with merge commits (oneline format)
+        log_output = (
+            'aaa111a Merge branch feature-1\n'
+            'bbb222b Merge branch feature-2\n'
+            'ccc333c Merge branch feature-3\n'
+        )
+        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+        args = argparse.Namespace(cmd='count-merges', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('3 merges remaining from us/next', stdout.getvalue())
+
+    def test_count_merges_none(self):
+        """Test count-merges with no merges remaining"""
+        # Add source to database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        command.TEST_RESULT = command.CommandResult(stdout='')
+
+        args = argparse.Namespace(cmd='count-merges', source='us/next')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('0 merges remaining', stdout.getvalue())
+
+    def test_count_merges_source_not_found(self):
+        """Test count-merges with unknown source"""
+        # Create empty database
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='count-merges', source='unknown')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+
 class TestGetNextCommits(unittest.TestCase):
     """Tests for get_next_commits function."""
 
@@ -879,11 +1213,25 @@ class TestGetNextCommits(unittest.TestCase):
             dbs.source_set('us/next', 'abc123')
             dbs.commit()
 
-            log_output = (
+            # First-parent log (to find next merge on mainline)
+            fp_log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Merge branch|aaa111 ccc333\n'
+                'ddd444|ddd444d|Author 3|After merge|bbb222\n'
+            )
+            # Full log (to get all commits up to the merge)
+            full_log_output = (
                 'aaa111|aaa111a|Author 1|First commit|abc123\n'
                 'bbb222|bbb222b|Author 2|Merge branch|aaa111 ccc333\n'
             )
-            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if '--first-parent' in cmd:
+                    return command.CommandResult(stdout=fp_log_output)
+                return command.CommandResult(stdout=full_log_output)
+
+            command.TEST_RESULT = mock_git
 
             commits, merge_found, error = control.get_next_commits(dbs,
                                                                    'us/next')
@@ -924,7 +1272,7 @@ class TestApply(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        args = argparse.Namespace(cmd='apply', source='unknown')
+        args = argparse.Namespace(cmd='apply', source='unknown', branch=None)
         with terminal.capture() as (_, stderr):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 1)
@@ -942,7 +1290,7 @@ class TestApply(unittest.TestCase):
         database.Database.instances.clear()
         command.TEST_RESULT = command.CommandResult(stdout='')
 
-        args = argparse.Namespace(cmd='apply', source='us/next')
+        args = argparse.Namespace(cmd='apply', source='us/next', branch=None)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
@@ -1071,14 +1419,160 @@ class TestCheckAvailable(unittest.TestCase):
     def test_check_available_false(self):
         """Test check_available returns False when gitlab not installed."""
         with mock.patch.object(gitlab_api, 'AVAILABLE', False):
-            result = gitlab_api.check_available()
+            with terminal.capture():
+                result = gitlab_api.check_available()
             self.assertFalse(result)
 
     def test_check_available_true(self):
         """Test check_available returns True when gitlab is installed."""
         with mock.patch.object(gitlab_api, 'AVAILABLE', True):
-            result = gitlab_api.check_available()
+            with terminal.capture():
+                result = gitlab_api.check_available()
             self.assertTrue(result)
+
+
+class TestConfigFile(unittest.TestCase):
+    """Tests for config file support."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.config_dir = tempfile.mkdtemp()
+        self.config_file = os.path.join(self.config_dir, 'pickman.conf')
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        shutil.rmtree(self.config_dir)
+
+    def test_get_token_from_config(self):
+        """Test getting token from config file."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[gitlab]\ntoken = test-config-token\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            token = gitlab_api.get_token()
+        self.assertEqual(token, 'test-config-token')
+
+    def test_get_token_fallback_to_env(self):
+        """Test falling back to environment variable."""
+        # Config file doesn't exist
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', '/nonexistent/path'):
+            with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
+                token = gitlab_api.get_token()
+        self.assertEqual(token, 'env-token')
+
+    def test_get_token_config_missing_section(self):
+        """Test config file without gitlab section."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[other]\nkey = value\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
+                token = gitlab_api.get_token()
+        self.assertEqual(token, 'env-token')
+
+    def test_get_config_value(self):
+        """Test get_config_value function."""
+        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('[section1]\nkey1 = value1\n')
+
+        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+            value = gitlab_api.get_config_value('section1', 'key1')
+        self.assertEqual(value, 'value1')
+
+
+class TestCheckPermissions(unittest.TestCase):
+    """Tests for check_permissions function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_check_permissions_developer(self, mock_token, mock_url):
+        """Test checking permissions for a developer."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        mock_user = mock.MagicMock()
+        mock_user.username = 'testuser'
+        mock_user.id = 123
+
+        mock_member = mock.MagicMock()
+        mock_member.access_level = 30  # Developer
+
+        mock_project = mock.MagicMock()
+        mock_project.members.get.return_value = mock_member
+
+        mock_glab = mock.MagicMock()
+        mock_glab.user = mock_user
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            perms = gitlab_api.check_permissions('origin')
+
+        self.assertIsNotNone(perms)
+        self.assertEqual(perms.user, 'testuser')
+        self.assertEqual(perms.access_level, 30)
+        self.assertEqual(perms.access_name, 'Developer')
+        self.assertTrue(perms.can_push)
+        self.assertTrue(perms.can_create_mr)
+        self.assertFalse(perms.can_merge)
+
+    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
+    def test_check_permissions_not_available(self):
+        """Test check_permissions when gitlab not available."""
+        with terminal.capture():
+            perms = gitlab_api.check_permissions('origin')
+        self.assertIsNone(perms)
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_check_permissions_no_token(self, mock_token):
+        """Test check_permissions when no token set."""
+        mock_token.return_value = None
+        with terminal.capture():
+            perms = gitlab_api.check_permissions('origin')
+        self.assertIsNone(perms)
+
+
+class TestUpdateMrDescription(unittest.TestCase):
+    """Tests for update_mr_description function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_update_mr_description_success(self, mock_token, mock_url):
+        """Test successful MR description update."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        mock_mr = mock.MagicMock()
+        mock_project = mock.MagicMock()
+        mock_project.mergerequests.get.return_value = mock_mr
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            result = gitlab_api.update_mr_description('origin', 123,
+                                                      'New description')
+
+            self.assertTrue(result)
+            self.assertEqual(mock_mr.description, 'New description')
+            mock_mr.save.assert_called_once()
+
+    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
+    def test_update_mr_description_not_available(self):
+        """Test update_mr_description when gitlab not available."""
+        with terminal.capture():
+            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+        self.assertFalse(result)
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_update_mr_description_no_token(self, mock_token):
+        """Test update_mr_description when no token set."""
+        mock_token.return_value = None
+        with terminal.capture():
+            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+        self.assertFalse(result)
 
 
 class TestParseApplyWithPush(unittest.TestCase):
@@ -1173,24 +1667,45 @@ Branch: cherry-abc"""
         self.assertIsNone(source)
         self.assertIsNone(last_hash)
 
+    def test_parse_mr_description_ignores_short_hashes(self):
+        """Test that short numbers in conversation log are not matched."""
+        description = """## 2025-01-15: us/next
+
+Branch: cherry-abc123
+
+Commits:
+- abc123a First commit
+- def456b Second commit
+
+### Conversation log
+- 1 board built (sandbox)
+- 2 tests passed"""
+        source, last_hash = control.parse_mr_description(description)
+        self.assertEqual(source, 'us/next')
+        # Should match def456b, not "1" or "2" from conversation log
+        self.assertEqual(last_hash, 'def456b')
+
 
 class TestStep(unittest.TestCase):
     """Tests for step command."""
 
     def test_step_with_pending_mr(self):
         """Test step does nothing when MR is pending."""
-        mock_mr = {
-            'iid': 123,
-            'title': '[pickman] Test MR',
-            'web_url': 'https://gitlab.com/mr/123',
-        }
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
         with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
                                return_value=[]):
             with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                    return_value=[mock_mr]):
                 args = argparse.Namespace(cmd='step', source='us/next',
                                           remote='ci', target='master')
-                ret = control.do_step(args, None)
+                with terminal.capture():
+                    ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -1200,7 +1715,8 @@ class TestStep(unittest.TestCase):
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
                                       remote='ci', target='master')
-            ret = control.do_step(args, None)
+            with terminal.capture():
+                ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
 
@@ -1212,7 +1728,8 @@ class TestStep(unittest.TestCase):
                                    return_value=None):
                 args = argparse.Namespace(cmd='step', source='us/next',
                                           remote='ci', target='master')
-                ret = control.do_step(args, None)
+                with terminal.capture():
+                    ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
 
@@ -1241,7 +1758,8 @@ class TestReview(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                return_value=[]):
             args = argparse.Namespace(cmd='review', remote='ci')
-            ret = control.do_review(args, None)
+            with terminal.capture():
+                ret = control.do_review(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -1250,9 +1768,153 @@ class TestReview(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='review', remote='ci')
-            ret = control.do_review(args, None)
+            with terminal.capture():
+                ret = control.do_review(args, None)
 
         self.assertEqual(ret, 1)
+
+
+class TestUpdateHistoryWithReview(unittest.TestCase):
+    """Tests for update_history_with_review function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_dir = tempfile.mkdtemp()
+        self.orig_dir = os.getcwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        subprocess.run(['git', 'init'], check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@test.com'],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test'],
+                       check=True, capture_output=True)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        os.chdir(self.orig_dir)
+        shutil.rmtree(self.test_dir)
+
+    def test_update_history_with_review(self):
+        """Test that review handling is appended to history."""
+        comments = [
+            gitlab_api.MrComment(id=1, author='reviewer1',
+                                 body='Please fix the indentation here',
+                                 created_at='2025-01-01', resolvable=True,
+                                 resolved=False),
+            gitlab_api.MrComment(id=2, author='reviewer2', body='Add a docstring',
+                                 created_at='2025-01-01', resolvable=True,
+                                 resolved=False),
+        ]
+        conversation_log = 'Fixed indentation and added docstring.'
+
+        control.update_history_with_review('cherry-abc123', comments,
+                                           conversation_log)
+
+        # Check history file was created
+        self.assertTrue(os.path.exists(control.HISTORY_FILE))
+
+        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+
+        self.assertIn('### Review:', content)
+        self.assertIn('Branch: cherry-abc123', content)
+        self.assertIn('reviewer1', content)
+        self.assertIn('reviewer2', content)
+        self.assertIn('Fixed indentation', content)
+
+    def test_update_history_appends(self):
+        """Test that review handling appends to existing history."""
+        # Create existing history
+        with open(control.HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('Existing history content\n')
+        subprocess.run(['git', 'add', control.HISTORY_FILE],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '-m', 'Initial'],
+                       check=True, capture_output=True)
+
+        comments = [gitlab_api.MrComment(id=1, author='reviewer', body='Fix this',
+                                         created_at='2025-01-01', resolvable=True,
+                                         resolved=False)]
+        control.update_history_with_review('cherry-xyz', comments, 'Fixed it')
+
+        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+
+        self.assertIn('Existing history content', content)
+        self.assertIn('### Review:', content)
+
+
+class TestProcessMrReviewsCommentTracking(unittest.TestCase):
+    """Tests for comment tracking in process_mr_reviews."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.test_dir = tempfile.mkdtemp()
+        self.orig_dir = os.getcwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        subprocess.run(['git', 'init'], check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.email', 'test@test.com'],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test'],
+                       check=True, capture_output=True)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        os.chdir(self.orig_dir)
+        shutil.rmtree(self.test_dir)
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_skips_processed_comments(self):
+        """Test that already-processed comments are skipped."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Mark comment as processed
+            dbs.comment_mark_processed(100, 1)
+            dbs.commit()
+
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            # Comment 1 is processed, comment 2 is new
+            comments = [
+                gitlab_api.MrComment(id=1, author='reviewer', body='Old comment',
+                                     created_at='2025-01-01', resolvable=True,
+                                     resolved=False),
+                gitlab_api.MrComment(id=2, author='reviewer', body='New comment',
+                                     created_at='2025-01-01', resolvable=True,
+                                     resolved=False),
+            ]
+
+            with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                   return_value=comments):
+                with mock.patch.object(agent, 'handle_mr_comments',
+                                       return_value=(True, 'Done')) as mock_agent:
+                    with mock.patch.object(gitlab_api, 'update_mr_description'):
+                        with mock.patch.object(control, 'update_history_with_review'):
+                            control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should only receive the new comment
+            call_args = mock_agent.call_args
+            passed_comments = call_args[0][2]
+            self.assertEqual(len(passed_comments), 1)
+            self.assertEqual(passed_comments[0].id, 2)
+
+            dbs.close()
 
 
 class TestParsePoll(unittest.TestCase):
@@ -1287,7 +1949,7 @@ class TestPoll(unittest.TestCase):
         """Test poll stops gracefully on KeyboardInterrupt."""
         call_count = [0]
 
-        def mock_step(args, dbs):
+        def mock_step(_args, _dbs):
             call_count[0] += 1
             if call_count[0] >= 2:
                 raise KeyboardInterrupt
@@ -1299,10 +1961,620 @@ class TestPoll(unittest.TestCase):
                     cmd='poll', source='us/next', interval=1,
                     remote='ci', target='master'
                 )
-                ret = control.do_poll(args, None)
+                with terminal.capture():
+                    ret = control.do_poll(args, None)
 
         self.assertEqual(ret, 0)
         self.assertEqual(call_count[0], 2)
+
+    def test_poll_continues_on_step_error(self):
+        """Test poll continues when step returns non-zero."""
+        call_count = [0]
+
+        def mock_step(_args, _dbs):
+            call_count[0] += 1
+            if call_count[0] >= 2:
+                raise KeyboardInterrupt
+            return 1  # Return error
+
+        with mock.patch.object(control, 'do_step', mock_step):
+            with mock.patch('time.sleep'):
+                args = argparse.Namespace(
+                    cmd='poll', source='us/next', interval=1,
+                    remote='ci', target='master'
+                )
+                with terminal.capture() as (_, stderr):
+                    ret = control.do_poll(args, None)
+
+        self.assertEqual(ret, 0)
+        self.assertIn('returned 1', stderr.getvalue())
+
+
+class TestFormatHistorySummary(unittest.TestCase):
+    """Tests for format_history_summary function."""
+
+    def test_format_history_summary(self):
+        """Test formatting history summary."""
+        commits = [
+            control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
+            control.CommitInfo('bbb222', 'bbb222b', 'Second commit', 'Author 2'),
+        ]
+        result = control.format_history_summary('us/next', commits, 'cherry-abc')
+
+        self.assertIn('us/next', result)
+        self.assertIn('Branch: cherry-abc', result)
+        self.assertIn('- aaa111a First commit', result)
+        self.assertIn('- bbb222b Second commit', result)
+
+
+class TestGetHistory(unittest.TestCase):
+    """Tests for get_history function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.history_file = tempfile.mkstemp(suffix='.history')
+        os.close(fd)
+        os.unlink(self.history_file)  # Remove so we start fresh
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.history_file):
+            os.unlink(self.history_file)
+
+    def test_get_history_empty(self):
+        """Test get_history with no existing file."""
+        commits = [
+            control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-abc',
+            'Conversation output')
+
+        self.assertIn('us/next', content)
+        self.assertIn('Branch: cherry-abc', content)
+        self.assertIn('- aaa111a First commit', content)
+        self.assertIn('### Conversation log', content)
+        self.assertIn('Conversation output', content)
+        self.assertIn('---', content)
+
+        # Verify commit message
+        self.assertIn('pickman: Record cherry-pick of 1 commits', commit_msg)
+        self.assertIn('- aaa111a First commit', commit_msg)
+
+        # Verify file was written
+        with open(self.history_file, 'r', encoding='utf-8') as fhandle:
+            file_content = fhandle.read()
+        self.assertEqual(file_content, content)
+
+    def test_get_history_with_existing(self):
+        """Test get_history appends to existing content."""
+        # Create existing file
+        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('Previous history content\n')
+
+        commits = [
+            control.CommitInfo('bbb222', 'bbb222b', 'New commit', 'Author 2'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-new',
+            'New conversation')
+
+        self.assertIn('Previous history content', content)
+        self.assertIn('cherry-new', content)
+        self.assertIn('New conversation', content)
+        self.assertIn('- bbb222b New commit', commit_msg)
+
+    def test_get_history_replaces_existing_branch(self):
+        """Test get_history removes existing entry for same branch."""
+        # Create existing file with an entry for cherry-abc
+        existing = """## 2025-01-01: us/next
+
+Branch: cherry-abc
+
+Commits:
+- aaa111a Old commit
+
+### Conversation log
+Old conversation
+
+---
+
+Other content
+"""
+        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
+            fhandle.write(existing)
+
+        commits = [
+            control.CommitInfo('ccc333', 'ccc333c', 'Updated commit', 'Author'),
+        ]
+        content, _ = control.get_history(self.history_file, 'us/next', commits,
+                                         'cherry-abc', 'New conversation')
+
+        # Old entry should be removed
+        self.assertNotIn('Old commit', content)
+        self.assertNotIn('Old conversation', content)
+        # New entry should be present
+        self.assertIn('Updated commit', content)
+        self.assertIn('New conversation', content)
+        # Other content should be preserved
+        self.assertIn('Other content', content)
+
+    def test_get_history_multiple_commits(self):
+        """Test get_history with multiple commits."""
+        commits = [
+            control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
+            control.CommitInfo('bbb222', 'bbb222b', 'Second commit', 'Author 2'),
+            control.CommitInfo('ccc333', 'ccc333c', 'Third commit', 'Author 3'),
+        ]
+        content, commit_msg = control.get_history(
+            self.history_file, 'us/next', commits, 'cherry-abc', 'Log')
+
+        # Verify all commits in content
+        self.assertIn('- aaa111a First commit', content)
+        self.assertIn('- bbb222b Second commit', content)
+        self.assertIn('- ccc333c Third commit', content)
+
+        # Verify commit message
+        self.assertIn('pickman: Record cherry-pick of 3 commits', commit_msg)
+        self.assertIn('- aaa111a First commit', commit_msg)
+        self.assertIn('- bbb222b Second commit', commit_msg)
+        self.assertIn('- ccc333c Third commit', commit_msg)
+
+
+class TestPrepareApply(unittest.TestCase):
+    """Tests for prepare_apply function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_prepare_apply_error(self):
+        """Test prepare_apply returns error code 1 on source not found."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            info, ret = control.prepare_apply(dbs, 'unknown', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_prepare_apply_no_commits(self):
+        """Test prepare_apply returns code 0 when no commits."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(stdout='')
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_prepare_apply_with_commits(self):
+        """Test prepare_apply returns ApplyInfo with commits."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.branch_name, 'cherry-aaa111a')
+            self.assertEqual(info.original_branch, 'master')
+            dbs.close()
+
+    def test_prepare_apply_custom_branch(self):
+        """Test prepare_apply uses custom branch name."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, _ = control.prepare_apply(dbs, 'us/next', 'my-branch')
+
+            self.assertIsNotNone(info)
+            self.assertEqual(info.branch_name, 'my-branch')
+            dbs.close()
+
+
+class TestExecuteApply(unittest.TestCase):
+    """Tests for execute_apply function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_execute_apply_success(self):
+        """Test execute_apply with successful cherry-pick."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('aaa111', 'aaa111a', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'conversation log')):
+                ret, success, conv_log = control.execute_apply(
+                    dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(success)
+            self.assertEqual(conv_log, 'conversation log')
+
+            # Check commit was added to database
+            commit_rec = dbs.commit_get('aaa111')
+            self.assertIsNotNone(commit_rec)
+            self.assertEqual(commit_rec[6], 'applied')  # status field
+            dbs.close()
+
+    def test_execute_apply_failure(self):
+        """Test execute_apply with failed cherry-pick."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('bbb222', 'bbb222b', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(False, 'error log')):
+                ret, success, _ = control.execute_apply(
+                    dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 1)
+            self.assertFalse(success)
+
+            # Check commit status is conflict
+            commit_rec = dbs.commit_get('bbb222')
+            self.assertEqual(commit_rec[6], 'conflict')
+            dbs.close()
+
+    def test_execute_apply_with_push(self):
+        """Test execute_apply with push enabled."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('ccc333', 'ccc333c', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=True, remote='origin',
+                                      target='main')
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'log')):
+                with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                       return_value='https://mr/url'):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(success)
+            dbs.close()
+
+    def test_execute_apply_push_fails(self):
+        """Test execute_apply when MR creation fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('ddd444', 'ddd444d', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=True, remote='origin',
+                                      target='main')
+
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'log')):
+                with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                       return_value=None):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            self.assertEqual(ret, 1)
+            self.assertTrue(success)  # cherry-pick succeeded, MR failed
+            dbs.close()
+
+
+class TestGetNextCommitsEmptyLine(unittest.TestCase):
+    """Tests for get_next_commits with empty lines."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_get_next_commits_with_empty_lines(self):
+        """Test get_next_commits handles empty lines in output."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            # Log output with empty lines
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                '\n'  # Empty line
+                'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+                '\n'  # Another empty line
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertFalse(merge_found)
+            self.assertEqual(len(commits), 2)
+            dbs.close()
+
+
+class TestDoCommitSourceResolveError(unittest.TestCase):
+    """Tests for do_commit_source error handling."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_commit_source_resolve_error(self):
+        """Test commit-source fails when commit can't be resolved."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'oldcommit12345')
+            dbs.commit()
+
+        database.Database.instances.clear()
+
+        def mock_git_fail(**_kwargs):
+            raise command.CommandExc('git error', command.CommandResult())
+
+        command.TEST_RESULT = mock_git_fail
+
+        args = argparse.Namespace(cmd='commit-source', source='us/next',
+                                  commit='badcommit')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_commit_source(args, None)
+        self.assertEqual(ret, 1)
+        self.assertIn('Could not resolve', stderr.getvalue())
+
+
+class TestDoPickmanUnknownCommand(unittest.TestCase):
+    """Tests for do_pickman with unknown command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_unknown_command(self):
+        """Test do_pickman returns 1 for unknown command."""
+        args = argparse.Namespace(cmd='unknown-command')
+        with terminal.capture():
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+
+
+class TestDoReviewWithMrs(unittest.TestCase):
+    """Tests for do_review with open MRs."""
+
+    def test_review_with_mrs_no_comments(self):
+        """Test review with open MRs but no comments."""
+        tout.init(tout.INFO)
+
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
+        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                               return_value=[mock_mr]):
+            with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                   return_value=[]):
+                args = argparse.Namespace(cmd='review', remote='ci')
+                with terminal.capture() as (stdout, _):
+                    ret = control.do_review(args, None)
+
+        self.assertEqual(ret, 0)
+        self.assertIn('Found 1 open pickman MR', stdout.getvalue())
+
+
+class TestProcessMergedMrs(unittest.TestCase):
+    """Tests for process_merged_mrs function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_process_merged_mrs_updates_newer(self):
+        """Test that newer commits update the database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'aaa111aaa111aaa111aaa111aaa111aaa111aaa1')
+            dbs.commit()
+
+            merged_mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                description='## 2025-01-01: us/next\n\n- bbb222b Subject',
+                source_branch='cherry-test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            def mock_git(args):
+                if args[0] == 'rev-parse':
+                    return 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2'
+                if args[0] == 'merge-base':
+                    # current is ancestor of last_hash (newer)
+                    return ''
+                return ''
+
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=merged_mrs):
+                with mock.patch.object(control, 'run_git', mock_git):
+                    processed = control.process_merged_mrs('ci', 'us/next', dbs)
+
+            self.assertEqual(processed, 1)
+            new_commit = dbs.source_get('us/next')
+            self.assertEqual(new_commit,
+                             'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+
+            dbs.close()
+
+    def test_process_merged_mrs_skips_older(self):
+        """Test that older commits don't update the database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+            dbs.commit()
+
+            merged_mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                description='## 2025-01-01: us/next\n\n- aaa111a Subject',
+                source_branch='cherry-test',
+                web_url='https://gitlab.com/mr/100',
+            )]
+
+            def mock_git(args):
+                if args[0] == 'rev-parse':
+                    return 'aaa111aaa111aaa111aaa111aaa111aaa111aaa1'
+                if args[0] == 'merge-base':
+                    # current is NOT ancestor of last_hash (older)
+                    raise RuntimeError('Not an ancestor')
+                return ''
+
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=merged_mrs):
+                with mock.patch.object(control, 'run_git', mock_git):
+                    processed = control.process_merged_mrs('ci', 'us/next', dbs)
+
+            self.assertEqual(processed, 0)
+            # Should remain unchanged
+            current = dbs.source_get('us/next')
+            self.assertEqual(current,
+                             'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+
+            dbs.close()
 
 
 if __name__ == '__main__':

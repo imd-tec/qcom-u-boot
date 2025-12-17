@@ -60,7 +60,6 @@ async def run(commits, source, branch_name, repo_path=None):
         f'  - {short_hash}: {subject}'
         for _, short_hash, subject in commits
     )
-    commit_hashes = ' '.join(hash for hash, _, _ in commits)
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
@@ -73,6 +72,8 @@ Steps to follow:
    - For regular commits: git cherry-pick -x <hash>
    - For merge commits (identified by "Merge" in subject): git cherry-pick -x -m 1 --allow-empty <hash>
    Cherry-pick one commit at a time to handle each appropriately.
+   IMPORTANT: Always include merge commits even if they result in empty commits.
+   The merge commit message is important for tracking history.
 4. If there are conflicts:
    - Show the conflicting files
    - Try to resolve simple conflicts automatically
@@ -92,6 +93,7 @@ Important:
 - Stop immediately if there's a conflict that cannot be auto-resolved
 - Do not force push or modify history
 - If cherry-pick fails, run 'git cherry-pick --abort'
+- NEVER skip merge commits - always use --allow-empty to preserve them
 """
 
     options = ClaudeAgentOptions(
@@ -155,7 +157,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote, repo_path=None
 
     # Format comments for the prompt
     comment_text = '\n'.join(
-        f"- [{c['author']}]: {c['body']}"
+        f'- [{c.author}]: {c.body}'
         for c in comments
     )
 
@@ -169,16 +171,19 @@ Steps to follow:
 3. For each actionable comment:
    - Make the requested changes to the code
    - Amend the relevant commit or create a fixup commit
-4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
-5. Create a new branch with suffix '-v2' (or increment existing version)
-6. Push the new branch: git push {remote} <new-branch-name>
+4. Run 'crosfw sandbox -L' to verify the build
+5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
+6. Force push to the ORIGINAL remote branch to update the MR:
+   git push --force-with-lease {remote} HEAD:{branch_name}
 7. Report what changes were made and what reply should be posted to the MR
 
 Important:
 - Keep changes minimal and focused on addressing the comments
 - If a comment is unclear or cannot be addressed, note this in your report
-- Do not force push to the original branch
-- The new branch name should be: {branch_name}-v2 (or -v3, -v4 etc if needed)
+- Local branch: {branch_name}-v2 (or -v3, -v4 etc.)
+- Remote push: always to '{branch_name}' to update the existing MR
+- If rebasing is requested, use: git rebase --keep-empty <base>
+  This preserves empty merge commits which are important for tracking
 """
 
     options = ClaudeAgentOptions(

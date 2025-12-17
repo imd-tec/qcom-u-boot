@@ -11,6 +11,7 @@ To adjust the schema, increment LATEST, create a _migrate_to_v<x>() function
 and add code in migrate_to() to call it.
 """
 
+from datetime import datetime
 import os
 import sqlite3
 
@@ -18,13 +19,13 @@ from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 2
+LATEST = 3
 
 # Default database filename
 DB_FNAME = '.pickman.db'
 
 
-class Database:
+class Database:  # pylint: disable=too-many-public-methods
     """Database of cherry-pick state used by pickman"""
 
     # dict of databases:
@@ -129,6 +130,17 @@ class Database:
             'created_at TEXT, '
             'FOREIGN KEY (source_id) REFERENCES source(id))')
 
+    def _create_v3(self):
+        """Migrate database to v3 schema - add comment table"""
+        # Table for tracking processed MR comments
+        self.cur.execute(
+            'CREATE TABLE comment ('
+            'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            'mr_iid INTEGER, '
+            'comment_id INTEGER, '
+            'processed_at TEXT, '
+            'UNIQUE(mr_iid, comment_id))')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -151,6 +163,8 @@ class Database:
                 self._create_v1()
             elif version == 2:
                 self._create_v2()
+            elif version == 3:
+                self._create_v3()
 
             self.cur.execute('DELETE FROM schema_version')
             self.cur.execute(
@@ -248,6 +262,7 @@ class Database:
 
     # commit functions
 
+    # pylint: disable-next=too-many-arguments
     def commit_add(self, chash, source_id, subject, author, status='pending',
                    mergereq_id=None):
         """Add a commit to the database
@@ -348,6 +363,7 @@ class Database:
 
     # mergereq functions
 
+    # pylint: disable-next=too-many-arguments
     def mergereq_add(self, source_id, branch_name, mr_id, status, url,
                      created_at):
         """Add a merge request to the database
@@ -411,3 +427,46 @@ class Database:
         """
         self.execute(
             'UPDATE mergereq SET status = ? WHERE mr_id = ?', (status, mr_id))
+
+    # comment functions
+
+    def comment_is_processed(self, mr_iid, comment_id):
+        """Check if a comment has been processed
+
+        Args:
+            mr_iid (int): Merge request IID
+            comment_id (int): Comment ID
+
+        Return:
+            bool: True if already processed
+        """
+        res = self.execute(
+            'SELECT id FROM comment WHERE mr_iid = ? AND comment_id = ?',
+            (mr_iid, comment_id))
+        return res.fetchone() is not None
+
+    def comment_mark_processed(self, mr_iid, comment_id):
+        """Mark a comment as processed
+
+        Args:
+            mr_iid (int): Merge request IID
+            comment_id (int): Comment ID
+        """
+        self.execute(
+            'INSERT OR IGNORE INTO comment '
+            '(mr_iid, comment_id, processed_at) VALUES (?, ?, ?)',
+            (mr_iid, comment_id, datetime.now().isoformat()))
+
+    def comment_get_processed(self, mr_iid):
+        """Get all processed comment IDs for an MR
+
+        Args:
+            mr_iid (int): Merge request IID
+
+        Return:
+            list: List of comment IDs
+        """
+        res = self.execute(
+            'SELECT comment_id FROM comment WHERE mr_iid = ?',
+            (mr_iid,))
+        return [row[0] for row in res.fetchall()]

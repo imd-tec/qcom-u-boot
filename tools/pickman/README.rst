@@ -60,6 +60,13 @@ This shows:
   master branch (ci/master)
 - The last common commit between the two branches
 
+To check GitLab permissions for the configured token::
+
+    ./tools/pickman/pickman check-gitlab
+
+This verifies that the GitLab token has the required permissions to push
+branches and create merge requests. Use ``-r`` to specify a different remote.
+
 To show the next set of commits to cherry-pick from a source branch::
 
     ./tools/pickman/pickman next-set us/next
@@ -67,6 +74,20 @@ To show the next set of commits to cherry-pick from a source branch::
 This finds commits between the last cherry-picked commit and the next merge
 commit in the source branch. It stops at the merge commit since that typically
 represents a logical grouping of commits (e.g., a pull request).
+
+To count the total remaining merges to process::
+
+    ./tools/pickman/pickman count-merges us/next
+
+This shows how many merge commits remain on the first-parent chain between the
+last cherry-picked commit and the source branch tip.
+
+To show the next N merges that will be applied::
+
+    ./tools/pickman/pickman next-merges us/next
+
+This shows the upcoming merge commits on the first-parent chain, useful for
+seeing what's coming up. Use ``-c`` to specify the count (default 10).
 
 To apply the next set of commits using a Claude agent::
 
@@ -112,8 +133,18 @@ To check open MRs for comments and address them::
     ./tools/pickman/pickman review
 
 This lists open pickman MRs (those with ``[pickman]`` in the title), checks each
-for unresolved comments, and uses a Claude agent to address them. The agent will
-make code changes based on the feedback and push an updated branch.
+for unresolved comments, and uses a Claude agent to address them. The agent will:
+
+- Make code changes based on the feedback
+- Create a local branch with version suffix (e.g., ``cherry-abc123-v2``)
+- Force push to the original remote branch to update the existing MR
+- Use ``--keep-empty`` when rebasing to preserve empty merge commits
+
+After processing, pickman:
+
+- Marks comments as processed in the database (to avoid reprocessing)
+- Updates the MR description with the agent's conversation log
+- Appends the review handling to ``.pickman-history``
 
 Options for the review command:
 
@@ -168,9 +199,20 @@ To use the ``-p`` (push) option for GitLab integration, install python-gitlab::
 
     pip install python-gitlab
 
-You will also need a GitLab API token set in the ``GITLAB_TOKEN`` environment
-variable. See `GitLab Personal Access Tokens`_ for instructions on creating one.
-The token needs ``api`` scope.
+You will also need a GitLab API token. The token can be configured in a config
+file or environment variable. Pickman checks in this order:
+
+1. Config file ``~/.config/pickman.conf``::
+
+       [gitlab]
+       token = glpat-xxxxxxxxxxxxxxxxxxxx
+
+2. ``GITLAB_TOKEN`` environment variable
+3. ``GITLAB_API_TOKEN`` environment variable
+
+See `GitLab Personal Access Tokens`_ for instructions on creating a token.
+The token needs ``api`` scope. Using a dedicated bot account for pickman is
+recommended.
 
 .. _GitLab Personal Access Tokens:
    https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html
@@ -214,6 +256,17 @@ Tables
     - ``status``: One of 'open', 'merged', 'closed'
     - ``url``: URL to the merge request
     - ``created_at``: Timestamp when the MR was created
+
+**comment**
+    Tracks MR comments that have been processed by the review agent.
+
+    - ``id``: Primary key
+    - ``mr_iid``: GitLab merge request IID
+    - ``comment_id``: GitLab comment/note ID
+    - ``processed_at``: Timestamp when the comment was processed
+
+    This table prevents the same comment from being addressed multiple times
+    when running ``review`` or ``poll`` commands.
 
 Configuration
 -------------

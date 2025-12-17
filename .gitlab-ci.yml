@@ -273,7 +273,7 @@ Build tools-only and envtools:
       make mrproper;
       make tools-only_config envtools -j$(nproc)
 
-Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig and patman test suites:
+Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig, patman and pickman suites:
   extends: .test_suites
   script:
     - git config --global user.name "GitLab CI Runner";
@@ -284,7 +284,7 @@ Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig and patman test suites:
       . /tmp/venv/bin/activate;
       pip install -r test/py/requirements.txt -r tools/binman/requirements.txt
         -r tools/buildman/requirements.txt -r tools/patman/requirements.txt
-        -r tools/u_boot_pylib/requirements.txt;
+        -r tools/pickman/requirements.txt -r tools/u_boot_pylib/requirements.txt;
       export UBOOT_TRAVIS_BUILD_DIR=/tmp/tools-only;
       export PYTHONPATH="${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc/pylibfdt";
       export PATH="${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc:${PATH}";
@@ -299,6 +299,8 @@ Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig and patman test suites:
       ./tools/buildman/buildman -t;
       ./tools/dtoc/dtoc -t;
       ./tools/patman/patman test;
+      ./tools/pickman/pickman test;
+      ./tools/pickman/pickman test -T;
       python3 ./test/scripts/test_hwids_to_dtsi.py;
       python3 -m pytest ./test/scripts/test_release_version.py;
       make testconfig
@@ -721,6 +723,8 @@ coreboot test.py:
   needs: []
   rules:
     - if: $SJG_LAB == $ROLE || $SJG_LAB == "1"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
     - if: $SJG_LAB != "" && $SJG_LAB != "1" && $SJG_LAB != $ROLE
       when: never

@@ -1,0 +1,4 @@
+# Requirements for pickman
+# Install with: pip install -r tools/pickman/requirements.txt
+
+python-gitlab

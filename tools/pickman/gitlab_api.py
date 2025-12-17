@@ -5,6 +5,8 @@
 #
 """GitLab integration for pickman - push branches and create merge requests."""
 
+from collections import namedtuple
+import configparser
 import os
 import re
 import sys
@@ -25,6 +27,17 @@ except ImportError:
     AVAILABLE = False
 
 
+# Merge request info returned by get_pickman_mrs()
+PickmanMr = namedtuple('PickmanMr', [
+    'iid', 'title', 'web_url', 'source_branch', 'description'
+])
+
+# Comment info returned by get_mr_comments()
+MrComment = namedtuple('MrComment', [
+    'id', 'author', 'body', 'created_at', 'resolvable', 'resolved'
+])
+
+
 def check_available():
     """Check if the python-gitlab module is available
 
@@ -38,12 +51,48 @@ def check_available():
     return True
 
 
+CONFIG_FILE = os.path.expanduser('~/.config/pickman.conf')
+
+
+def get_config_value(section, key):
+    """Get a value from the pickman config file
+
+    Args:
+        section (str): Config section name
+        key (str): Config key name
+
+    Returns:
+        str: Value or None if not found
+    """
+    if not os.path.exists(CONFIG_FILE):
+        return None
+
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+
+    try:
+        return config.get(section, key)
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        return None
+
+
 def get_token():
-    """Get GitLab API token from environment
+    """Get GitLab API token from config file or environment
+
+    Checks in order:
+    1. Config file (~/.config/pickman.conf) [gitlab] token
+    2. GITLAB_TOKEN environment variable
+    3. GITLAB_API_TOKEN environment variable
 
     Returns:
         str: Token or None if not set
     """
+    # Try config file first
+    token = get_config_value('gitlab', 'token')
+    if token:
+        return token
+
+    # Fall back to environment variables
     return os.environ.get('GITLAB_TOKEN') or os.environ.get('GITLAB_API_TOKEN')
 
 
@@ -97,10 +146,8 @@ def push_branch(remote, branch, force=False):
         bool: True on success
     """
     try:
-        # Use ci.skip to avoid duplicate pipeline (MR pipeline will still run)
-        # Set SJG_LAB=1 CI variable for the MR pipeline
-        args = ['git', 'push', '-u', '-o', 'ci.skip',
-                '-o', 'ci.variable=SJG_LAB=1']
+        # Skip push pipeline; MR pipeline will run when MR is created
+        args = ['git', 'push', '-u', '-o', 'ci.skip']
         if force:
             args.append('--force-with-lease')
         args.extend([remote, branch])
@@ -160,8 +207,7 @@ def get_pickman_mrs(remote, state='opened'):
         state (str): MR state ('opened', 'merged', 'closed', 'all')
 
     Returns:
-        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch',
-              'description' keys, or None on failure
+        list: List of PickmanMr tuples, or None on failure
     """
     if not check_available():
         return None
@@ -186,13 +232,13 @@ def get_pickman_mrs(remote, state='opened'):
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
-                pickman_mrs.append({
-                    'iid': merge_req.iid,
-                    'title': merge_req.title,
-                    'web_url': merge_req.web_url,
-                    'source_branch': merge_req.source_branch,
-                    'description': merge_req.description or '',
-                })
+                pickman_mrs.append(PickmanMr(
+                    iid=merge_req.iid,
+                    title=merge_req.title,
+                    web_url=merge_req.web_url,
+                    source_branch=merge_req.source_branch,
+                    description=merge_req.description or '',
+                ))
         return pickman_mrs
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
@@ -233,8 +279,7 @@ def get_mr_comments(remote, mr_iid):
         mr_iid (int): Merge request IID
 
     Returns:
-        list: List of dicts with 'id', 'author', 'body', 'created_at',
-              'resolvable', 'resolved' keys, or None on failure
+        list: List of MrComment tuples, or None on failure
     """
     if not check_available():
         return None
@@ -260,14 +305,14 @@ def get_mr_comments(remote, mr_iid):
             # Skip system notes (merge status, etc.)
             if note.system:
                 continue
-            comments.append({
-                'id': note.id,
-                'author': note.author['username'],
-                'body': note.body,
-                'created_at': note.created_at,
-                'resolvable': getattr(note, 'resolvable', False),
-                'resolved': getattr(note, 'resolved', False),
-            })
+            comments.append(MrComment(
+                id=note.id,
+                author=note.author['username'],
+                body=note.body,
+                created_at=note.created_at,
+                resolvable=getattr(note, 'resolvable', False),
+                resolved=getattr(note, 'resolved', False),
+            ))
         return comments
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
@@ -310,6 +355,43 @@ def reply_to_mr(remote, mr_iid, message):
         return False
 
 
+def update_mr_description(remote, mr_iid, desc):
+    """Update a merge request's description
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        desc (str): New description
+
+    Returns:
+        bool: True on success
+    """
+    if not check_available():
+        return False
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return False
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return False
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        merge_req = project.mergerequests.get(mr_iid)
+        merge_req.description = desc
+        merge_req.save()
+        return True
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return False
+
+
 def push_and_create_mr(remote, branch, target, title, desc=''):
     """Push a branch and create a merge request
 
@@ -343,3 +425,91 @@ def push_and_create_mr(remote, branch, target, title, desc=''):
         tout.info(f'Merge request created: {mr_url}')
 
     return mr_url
+
+
+# Access level constants from GitLab
+ACCESS_LEVELS = {
+    0: 'No access',
+    5: 'Minimal access',
+    10: 'Guest',
+    20: 'Reporter',
+    30: 'Developer',
+    40: 'Maintainer',
+    50: 'Owner',
+}
+
+# Permission info returned by check_permissions()
+PermissionInfo = namedtuple('PermissionInfo', [
+    'user', 'user_id', 'access_level', 'access_name',
+    'can_push', 'can_create_mr', 'can_merge', 'project', 'host'
+])
+
+
+def check_permissions(remote):  # pylint: disable=too-many-return-statements
+    """Check GitLab permissions for the current token
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        PermissionInfo: Permission info, or None on failure
+    """
+    if not check_available():
+        return None
+
+    token = get_token()
+    if not token:
+        tout.error('No GitLab token configured')
+        tout.error('Set token in ~/.config/pickman.conf or GITLAB_TOKEN env var')
+        return None
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        tout.error(f"Could not parse GitLab URL from remote '{remote}'")
+        return None
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        glab.auth()
+        user = glab.user
+
+        project = glab.projects.get(proj_path)
+
+        # Get user's access level in this project
+        access_level = 0
+        try:
+            # Try to get the member directly
+            member = project.members.get(user.id)
+            access_level = member.access_level
+        except gitlab.exceptions.GitlabGetError:
+            # User might have inherited access from a group
+            try:
+                member = project.members_all.get(user.id)
+                access_level = member.access_level
+            except gitlab.exceptions.GitlabGetError:
+                pass
+
+        access_name = ACCESS_LEVELS.get(access_level, f'Unknown ({access_level})')
+
+        return PermissionInfo(
+            user=user.username,
+            user_id=user.id,
+            access_level=access_level,
+            access_name=access_name,
+            can_push=access_level >= 30,  # Developer or higher
+            can_create_mr=access_level >= 30,  # Developer or higher
+            can_merge=access_level >= 40,  # Maintainer or higher
+            project=proj_path,
+            host=host,
+        )
+    except gitlab.exceptions.GitlabAuthenticationError as exc:
+        tout.error(f'Authentication failed: {exc}')
+        return None
+    except gitlab.exceptions.GitlabGetError as exc:
+        tout.error(f'Could not access project: {exc}')
+        return None
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return None
