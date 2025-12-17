@@ -450,3 +450,92 @@ The branch is ready for pushing.
 
 ---
 
+## 2025-12-17: us/next
+
+Branch: cherry-ccddb0abec3
+
+Commits:
+- ccddb0abec3 power: regulator: replace some debug() by dev_dbg()
+- 74cd1af1124 power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind()
+- 448add55297 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Let me proceed with creating the new branch and cherry-picking.
+
+Now let me cherry-pick the first commit:
+
+There's a conflict. Let me examine it:
+
+This is a complex conflict. The incoming commit changes the code structure and uses `dev_dbg()`, but the HEAD version has refactored the logic. Let me look at both versions more carefully:
+
+I can see the conflict clearly now. The HEAD version (ci/master) has refactored the logic to:
+- `if (regulator_name_is_unique(dev, uc_pdata->name)) return 0;`
+- Then `debug(...)` followed by `return -EINVAL;`
+
+The incoming commit wants to change that debug() to dev_dbg() and restructure the logic slightly.
+
+The correct resolution should:
+1. Keep the HEAD's logic structure (use early return for unique case)
+2. But apply the change from debug() to dev_dbg() for the non-unique case
+
+Let me resolve this:
+
+First commit cherry-picked with conflict resolution. Now I need to amend the commit to note the fix-up. Let me do that:
+
+Now let's cherry-pick the second commit:
+
+Another conflict. Let me check it:
+
+This is the same pattern - the second commit changes `dev_dbg()` to `dev_err()`. I need to apply this change while keeping our structure:
+
+Now let me amend this commit to note the fix-up:
+
+Now let's cherry-pick the third commit (the merge commit):
+
+Conflict in the merge commit too. Let me examine it:
+
+The merge commit is trying to apply the same changes, but we've already applied them. Since HEAD already has `dev_err()` and the right structure, this should result in keeping our current code:
+
+The merge commit is now empty because all the changes were already applied. As instructed, we need to keep the merge commit, so I'll commit it as empty:
+
+All 3 commits cherry-picked. Now let me verify with git log:
+
+All 3 commits are present. Now let me run the build verification:
+
+The build completed successfully. Let me check for any warnings or errors:
+
+The build log is empty (no warnings or errors). The build succeeded. Let me provide a final summary:
+
+## Cherry-Pick Summary
+
+### Commits Cherry-Picked Successfully (3/3):
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | ccddb0abec3 | power: regulator: replace some debug() by dev_dbg() | ✅ Conflict resolved |
+| 2 | 74cd1af1124 | power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind() | ✅ Conflict resolved |
+| 3 | 448add55297 | Merge branch 'master' of .../u-boot-pmic | ✅ Empty (changes already applied) |
+
+### Fix-ups Made:
+
+1. **Commit 1 (ccddb0abec3)**: Resolved conflict - kept ci/master's early-return logic structure (`if (regulator_name_is_unique(...)) return 0;`) while applying the `debug()` → `dev_dbg()` change.
+
+2. **Commit 2 (74cd1af1124)**: Resolved conflict - same pattern, kept ci/master's early-return logic structure while applying the `dev_dbg()` → `dev_err()` change.
+
+3. **Commit 3 (448add55297)**: Merge commit resulted in empty commit because all underlying changes were already applied in commits 1 and 2. Preserved with `--allow-empty` as instructed.
+
+### Build Result:
+- **Status**: ✅ OK
+- **Warnings/Errors**: None
+
+### Final State:
+```
+040ca6a7c54 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
+872be1014be power: regulator: replace dev_dbg() by dev_err() in regulator_post_bind()
+505b21718ab power: regulator: replace some debug() by dev_dbg()
+```
+
+Branch `cherry-ccddb0abec3` is ready for pushing.
+
+---
+
