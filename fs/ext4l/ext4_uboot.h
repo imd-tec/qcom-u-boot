@@ -115,6 +115,104 @@ struct completion {
 #define REQ_PRIO	0
 #define REQ_RAHEAD	0
 
+/* GFP flags - stubs */
+#define __GFP_MOVABLE	0
+#define __GFP_FS	0
+
+/* FIEMAP extent flags */
+#define FIEMAP_EXTENT_LAST		0x00000001
+#define FIEMAP_EXTENT_UNKNOWN		0x00000002
+#define FIEMAP_EXTENT_DELALLOC		0x00000004
+#define FIEMAP_EXTENT_UNWRITTEN		0x00000800
+#define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
+
+/* FALLOC flags */
+#define FALLOC_FL_KEEP_SIZE		0x01
+#define FALLOC_FL_PUNCH_HOLE		0x02
+#define FALLOC_FL_COLLAPSE_RANGE	0x08
+#define FALLOC_FL_ZERO_RANGE		0x10
+#define FALLOC_FL_INSERT_RANGE		0x20
+#define FALLOC_FL_WRITE_ZEROES		0x40
+#define FALLOC_FL_ALLOCATE_RANGE	0x80
+#define FALLOC_FL_MODE_MASK		0xff
+
+/* File flags */
+#define O_SYNC		0
+
+/* Forward declarations for iomap_ops */
+struct inode;
+struct address_space;
+
+/* Page types */
+typedef unsigned long pgoff_t;
+#ifndef PAGE_SHIFT
+#define PAGE_SHIFT	12
+#endif
+
+/* File readahead state - stub */
+struct file_ra_state {
+	pgoff_t start;
+	unsigned int size;
+	unsigned int async_size;
+	unsigned int ra_pages;
+	unsigned int mmap_miss;
+	loff_t prev_pos;
+};
+
+/* File mode flags */
+#define FMODE_32BITHASH		0x00000001
+#define FMODE_64BITHASH		0x00000002
+
+/* struct file is defined in linux/fs.h */
+
+/* __counted_by attribute - not available in U-Boot */
+#define __counted_by(x)
+
+/* dir_context for directory iteration */
+struct dir_context;
+typedef int (*filldir_t)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
+
+struct dir_context {
+	filldir_t actor;
+	loff_t pos;
+};
+
+/* iomap types */
+#define IOMAP_MAPPED	0
+#define IOMAP_INLINE	1
+#define IOMAP_UNWRITTEN	2
+#define IOMAP_DELALLOC	3
+#define IOMAP_HOLE	4
+
+struct iomap {
+	u64 addr;
+	loff_t offset;
+	loff_t length;
+	u16 type;
+	u16 flags;
+	struct block_device *bdev;
+	void *inline_data;
+};
+
+struct iomap_ops {
+	int (*iomap_begin)(struct inode *inode, loff_t pos, loff_t length,
+			   unsigned flags, struct iomap *iomap, struct iomap *srcmap);
+	int (*iomap_end)(struct inode *inode, loff_t pos, loff_t length,
+			 ssize_t written, unsigned flags, struct iomap *iomap);
+};
+
+/* fiemap types */
+#define FIEMAP_FLAG_SYNC	0x00000001
+#define FIEMAP_FLAG_XATTR	0x00000002
+#define FIEMAP_FLAG_CACHE	0x00000004
+
+struct fiemap_extent_info {
+	unsigned int fi_flags;
+	unsigned int fi_extents_mapped;
+	unsigned int fi_extents_max;
+	void *fi_extents_start;
+};
+
 /* Capabilities - stubs (always allow) */
 #define CAP_SYS_ADMIN		0
 #define CAP_SYS_RESOURCE	0
@@ -484,6 +582,7 @@ struct inode {
 	unsigned long i_blocks;
 	unsigned int i_generation;
 	unsigned int i_flags;
+	unsigned int i_blkbits;
 	struct timespec64 i_atime;
 	struct timespec64 i_mtime;
 	struct timespec64 i_ctime;
@@ -593,5 +692,96 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #ifndef BITS_PER_BYTE
 #define BITS_PER_BYTE 8
 #endif
+
+/* extents.c stubs */
+
+/* Trace functions for extents.c */
+#define trace_ext4_ext_load_extent(...)		do { } while (0)
+#define trace_ext4_ext_rm_idx(...)		do { } while (0)
+#define trace_ext4_remove_blocks(...)		do { } while (0)
+#define trace_ext4_ext_rm_leaf(...)		do { } while (0)
+#define trace_ext4_ext_remove_space(...)	do { } while (0)
+#define trace_ext4_ext_remove_space_done(...)	do { } while (0)
+#define trace_ext4_ext_convert_to_initialized_enter(...)	do { } while (0)
+#define trace_ext4_ext_convert_to_initialized_fastpath(...)	do { } while (0)
+#define trace_ext4_ext_handle_unwritten_extents(...)	do { } while (0)
+#define trace_ext4_get_implied_cluster_alloc_exit(...)	do { } while (0)
+#define trace_ext4_ext_map_blocks_enter(...)	do { } while (0)
+#define trace_ext4_ext_map_blocks_exit(...)	do { } while (0)
+#define trace_ext4_ext_show_extent(...)		do { } while (0)
+#define trace_ext4_collapse_range(...)		do { } while (0)
+#define trace_ext4_insert_range(...)		do { } while (0)
+#define trace_ext4_zero_range(...)		do { } while (0)
+#define trace_ext4_fallocate_enter(...)		do { } while (0)
+#define trace_ext4_fallocate_exit(...)		do { } while (0)
+
+/* rwsem is_locked stub */
+#define rwsem_is_locked(sem)		(1)
+
+/* Buffer operations */
+#define sb_getblk_gfp(sb, blk, gfp)	((struct buffer_head *)NULL)
+#define bh_uptodate_or_lock(bh)		(1)
+/* ext4_read_bh is stubbed in interface.c */
+
+/* Inode locking */
+#define inode_lock(inode)		do { } while (0)
+#define inode_unlock(inode)		do { } while (0)
+#define inode_lock_shared(inode)	do { } while (0)
+#define inode_unlock_shared(inode)	do { } while (0)
+#define inode_dio_wait(inode)		do { } while (0)
+
+/* File operations */
+#define file_modified(file)		({ (void)(file); 0; })
+
+/* Filemap operations */
+#define filemap_invalidate_lock(m)	do { } while (0)
+#define filemap_invalidate_unlock(m)	do { } while (0)
+#define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
+#define truncate_pagecache(i, s)	do { } while (0)
+#define pagecache_isize_extended(i, f, t) do { } while (0)
+
+/* Inode time/size operations */
+#define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
+#define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
+#define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
+#define i_blocksize(i)			(1UL << (i)->i_blkbits)
+
+/* IS_SYNC macro */
+#define IS_SYNC(inode)			(0)
+
+/* in_range helper - check if value is in range [start, start+len) */
+static inline int in_range(unsigned long val, unsigned long start,
+			   unsigned long len)
+{
+	return val >= start && val < start + len;
+}
+
+/* Quota stub */
+#define dquot_reclaim_block(i, n)	do { } while (0)
+
+/* fiemap stubs */
+#define fiemap_prep(i, fi, s, l, f)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(f); 0; })
+#define fiemap_fill_next_extent(fi, l, p, sz, f) ({ (void)(fi); (void)(l); (void)(p); (void)(sz); (void)(f); 0; })
+#define iomap_fiemap(i, fi, s, l, o)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(o); 0; })
+
+/* Memory retry wait */
+#define memalloc_retry_wait(g)		do { } while (0)
+
+/* bdev operations */
+#define bdev_write_zeroes_unmap_sectors(b) ({ (void)(b); 0; })
+
+/* indirect.c stubs */
+
+/* Trace functions for indirect.c */
+#define trace_ext4_ind_map_blocks_enter(...)	do { } while (0)
+#define trace_ext4_ind_map_blocks_exit(...)	do { } while (0)
+
+/* umin - unsigned min (Linux 6.x) */
+#define umin(x, y)	((x) < (y) ? (x) : (y))
+
+/* truncate_inode_pages - stub */
+#define truncate_inode_pages(m, s)	do { } while (0)
+
+/* ext4_sb_bread_nofail is stubbed in interface.c */
 
 #endif /* __EXT4_UBOOT_H__ */

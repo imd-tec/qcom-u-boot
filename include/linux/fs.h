@@ -56,7 +56,15 @@ static inline int errseq_check_and_advance(errseq_t *eseq, errseq_t *since)
 struct file {
 	fmode_t f_mode;
 	struct inode *f_inode;
+	unsigned int f_flags;
+	struct address_space *f_mapping;
 };
+
+/* Get inode from file */
+static inline struct inode *file_inode(struct file *f)
+{
+	return f->f_inode;
+}
 
 /* iattr - inode attributes for setattr */
 struct iattr {

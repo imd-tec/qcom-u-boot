@@ -15,6 +15,10 @@ struct super_block;
 struct buffer_head;
 struct inode;
 struct ext4_map_blocks;
+struct file;
+
+/* bh_end_io_t - buffer head end io callback */
+typedef void bh_end_io_t(struct buffer_head *bh, int uptodate);
 
 /* ext4_num_base_meta_blocks and ext4_get_group_desc are now in balloc.c */
 
@@ -138,6 +142,12 @@ int jbd2_journal_force_commit_nested(journal_t *journal)
 	return 0;
 }
 
+int jbd2__journal_restart(void *handle, int nblocks, int revoke_records,
+			  int gfp_mask)
+{
+	return 0;
+}
+
 /*
  * Stubs for balloc.c
  */
@@ -229,4 +239,160 @@ void change_bit(int nr, void *addr)
 	unsigned long *p = (unsigned long *)addr;
 
 	*p ^= (1UL << nr);
+}
+
+/*
+ * Stubs for extents.c
+ */
+struct ext4_sb_info;
+struct ext4_es_tree;
+struct extent_status;
+
+int ext4_es_cache_extent(struct inode *inode, unsigned long lblk,
+			 unsigned long len, unsigned long long pblk,
+			 unsigned int status)
+{
+	return 0;
+}
+
+int ext4_issue_zeroout(struct inode *inode, unsigned long long lblk,
+		       unsigned long long pblk, unsigned long long len)
+{
+	return 0;
+}
+
+void ext4_es_insert_extent(struct inode *inode, unsigned long lblk,
+			   unsigned long len, unsigned long long pblk,
+			   unsigned int status)
+{
+}
+
+void ext4_remove_pending(struct inode *inode, unsigned long lblk)
+{
+}
+
+int ext4_get_inode_loc(struct inode *inode, void *iloc)
+{
+	return -1;
+}
+
+void ext4_free_blocks(void *handle, struct inode *inode,
+		      struct buffer_head *bh, unsigned long long block,
+		      unsigned long count, int flags)
+{
+}
+
+int __ext4_mark_inode_dirty(void *handle, struct inode *inode, int flags)
+{
+	return 0;
+}
+
+void ext4_discard_preallocations(struct inode *inode, unsigned int needed)
+{
+}
+
+int ext4_check_map_extents_env(struct inode *inode)
+{
+	return 0;
+}
+
+int ext4_chunk_trans_extent(struct inode *inode, int nrblocks)
+{
+	return 0;
+}
+
+int ext4_chunk_trans_blocks(struct inode *inode, int nrblocks)
+{
+	return 0;
+}
+
+int ext4_is_pending(struct inode *inode, unsigned long lblk)
+{
+	return 0;
+}
+
+int ext4_meta_trans_blocks(struct inode *inode, int lblk, int pblk)
+{
+	return 0;
+}
+
+int ext4_zero_partial_blocks(void *handle, struct inode *inode,
+			     loff_t lstart, loff_t length)
+{
+	return 0;
+}
+
+int ext4_convert_inline_data(struct inode *inode)
+{
+	return 0;
+}
+
+int ext4_break_layouts(struct inode *inode)
+{
+	return 0;
+}
+
+int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
+{
+	return 0;
+}
+
+void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
+			     void *handle)
+{
+}
+
+void ext4_update_disksize_before_punch(struct inode *inode, loff_t offset,
+				       loff_t len)
+{
+}
+
+void ext4_truncate_page_cache_block_range(struct inode *inode, loff_t start,
+					  loff_t len)
+{
+}
+
+/* ext4_iomap_report_ops - just a symbol needed for linking */
+char ext4_iomap_report_ops;
+
+int ext4_es_lookup_extent(struct inode *inode, unsigned long lblk,
+			  unsigned long *next_lblk, void *es)
+{
+	return 0;
+}
+
+int ext4_es_remove_extent(struct inode *inode, unsigned long lblk,
+			  unsigned long len)
+{
+	return 0;
+}
+
+int ext4_es_find_extent_range(struct inode *inode, void *matching_fn,
+			      unsigned long lblk, unsigned long end,
+			      void *es)
+{
+	return 0;
+}
+
+void ext4_mb_mark_bb(struct super_block *sb, unsigned long long block,
+		     int len, int state)
+{
+}
+
+void ext4_fc_record_regions(struct super_block *sb, int ino,
+			    unsigned long lblk, unsigned long long pblk,
+			    int len, int mapped)
+{
+}
+
+int ext4_read_bh(struct buffer_head *bh, unsigned int op_flags,
+		 bh_end_io_t *end_io, bool simu_fail)
+{
+	return 0;
+}
+
+struct buffer_head *ext4_sb_bread_nofail(struct super_block *sb,
+					 unsigned long long block)
+{
+	return NULL;
 }

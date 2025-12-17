@@ -11,7 +11,7 @@
  */
 static inline void ext4_truncate_failed_write(struct inode *inode)
 {
-	struct address_space *mapping = inode->i_mapping;
+	struct address_space *mapping __maybe_unused = inode->i_mapping;
 
 	/*
 	 * We don't need to call ext4_break_layouts() because the blocks we
