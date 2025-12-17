@@ -663,6 +663,9 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
     Returns:
         int: Number of MRs with comments processed
     """
+    # Save current branch to restore later
+    original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
     # Fetch to get latest remote state (needed for rebase)
     tout.info(f'Fetching {remote}...')
     run_git(['fetch', remote])
@@ -673,7 +676,7 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
         mr_iid = merge_req.iid
         comments = gitlab_api.get_mr_comments(remote, mr_iid)
         if comments is None:
-            continue
+            comments = []
 
         # Filter to unresolved comments that haven't been processed
         unresolved = []
@@ -683,21 +686,35 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
             if dbs.comment_is_processed(mr_iid, com.id):
                 continue
             unresolved.append(com)
-        if not unresolved:
+
+        # Check if rebase is needed
+        needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
+
+        # Skip if no comments and no rebase needed
+        if not unresolved and not needs_rebase:
             continue
 
         tout.info('')
-        tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
-        for comment in unresolved:
-            tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
+        if needs_rebase:
+            if merge_req.has_conflicts:
+                tout.info(f"MR !{mr_iid} has merge conflicts - rebasing...")
+            else:
+                tout.info(f"MR !{mr_iid} needs rebase...")
+        if unresolved:
+            tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
+            for comment in unresolved:
+                tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
 
-        # Run agent to handle comments
+        # Run agent to handle comments and/or rebase
         success, conversation_log = agent.handle_mr_comments(
             mr_iid,
             merge_req.source_branch,
             unresolved,
             remote,
             target,
+            needs_rebase=needs_rebase,
+            has_conflicts=merge_req.has_conflicts,
+            mr_description=merge_req.description,
         )
 
         if success:
@@ -725,6 +742,11 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
         else:
             tout.error(f"Failed to handle comments for MR !{mr_iid}")
         processed += 1
+
+    # Restore original branch
+    if processed:
+        tout.info(f'Returning to {original_branch}')
+        run_git(['checkout', original_branch])
 
     return processed
 

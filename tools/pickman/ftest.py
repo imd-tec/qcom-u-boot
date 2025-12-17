@@ -1918,6 +1918,69 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
 
             dbs.close()
 
+    def test_rebase_without_comments(self):
+        """Test that MRs needing rebase trigger agent even without comments."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # MR needs rebase but has no comments
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+                has_conflicts=False,
+                needs_rebase=True,
+            )]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=[]):
+                    with mock.patch.object(agent, 'handle_mr_comments',
+                                           return_value=(True, 'Rebased')) as mock_agent:
+                        with mock.patch.object(gitlab_api, 'update_mr_description'):
+                            with mock.patch.object(control, 'update_history_with_review'):
+                                control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should be called with needs_rebase=True
+            mock_agent.assert_called_once()
+            call_kwargs = mock_agent.call_args[1]
+            self.assertTrue(call_kwargs.get('needs_rebase'))
+            self.assertFalse(call_kwargs.get('has_conflicts'))
+
+            dbs.close()
+
+    def test_skips_mr_no_rebase_no_comments(self):
+        """Test that MRs without rebase need or comments are skipped."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # MR has no comments and doesn't need rebase
+            mrs = [gitlab_api.PickmanMr(
+                iid=100,
+                title='[pickman] Test MR',
+                source_branch='cherry-test',
+                description='Test',
+                web_url='https://gitlab.com/mr/100',
+                has_conflicts=False,
+                needs_rebase=False,
+            )]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                                       return_value=[]):
+                    with mock.patch.object(agent, 'handle_mr_comments',
+                                           return_value=(True, 'Done')) as mock_agent:
+                        control.process_mr_reviews('ci', mrs, dbs)
+
+            # Agent should NOT be called
+            mock_agent.assert_not_called()
+
+            dbs.close()
+
 
 class TestParsePoll(unittest.TestCase):
     """Tests for poll command argument parsing."""
