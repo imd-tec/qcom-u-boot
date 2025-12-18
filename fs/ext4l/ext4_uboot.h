@@ -390,12 +390,7 @@ struct qstr;
 int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 			     struct buffer_head *block_bh, size_t value_len,
 			     bool is_create);
-/* ext4_init_security - stub for files that don't include xattr.h */
-static inline int ext4_init_security(void *handle, struct inode *inode,
-				     struct inode *dir, const struct qstr *qstr)
-{
-	return 0;
-}
+/* ext4_init_security is provided by xattr.h */
 
 /* inode state stubs */
 #define is_bad_inode(inode)			(0)

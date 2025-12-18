@@ -388,12 +388,21 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 	return 0;
 }
 
-struct qstr;
+/* ext4_init_security stub is provided by xattr.h */
 
-int ext4_init_security(void *handle, struct inode *inode, struct inode *dir,
-		       const struct qstr *qstr)
+/*
+ * Stubs for xattr_trusted.c
+ */
+int ext4_xattr_get(struct inode *inode, int name_index, const char *name,
+		   void *buffer, size_t buffer_size)
 {
-	return 0;
+	return -1;
+}
+
+int ext4_xattr_set(struct inode *inode, int name_index, const char *name,
+		   const void *value, size_t value_len, int flags)
+{
+	return -1;
 }
 
 /*
