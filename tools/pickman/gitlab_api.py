@@ -201,6 +201,7 @@ def create_mr(host, proj_path, source, target, title, desc=''):
         return None
 
 
+# pylint: disable=too-many-locals
 def get_pickman_mrs(remote, state='opened'):
     """Get merge requests created by pickman
 
@@ -234,13 +235,23 @@ def get_pickman_mrs(remote, state='opened'):
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
-                # Check merge status - detailed_merge_status is newer API
-                detailed_status = getattr(merge_req, 'detailed_merge_status', '')
-                needs_rebase = detailed_status == 'need_rebase'
-                # Also check diverged_commits_count as fallback
-                if not needs_rebase:
-                    diverged = getattr(merge_req, 'diverged_commits_count', 0)
-                    needs_rebase = diverged and diverged > 0
+                needs_rebase = False
+                has_conflicts = False
+
+                # For open MRs, fetch full details since list() doesn't
+                # include accurate merge status fields
+                if state == 'opened':
+                    full_mr = project.mergerequests.get(merge_req.iid)
+                    has_conflicts = getattr(full_mr, 'has_conflicts', False)
+
+                    # Check merge status - detailed_merge_status is newer API
+                    detailed_status = getattr(full_mr,
+                                              'detailed_merge_status', '')
+                    needs_rebase = detailed_status == 'need_rebase'
+                    # Also check diverged_commits_count as fallback
+                    if not needs_rebase:
+                        diverged = getattr(full_mr, 'diverged_commits_count', 0)
+                        needs_rebase = diverged and diverged > 0
 
                 pickman_mrs.append(PickmanMr(
                     iid=merge_req.iid,
@@ -248,7 +259,7 @@ def get_pickman_mrs(remote, state='opened'):
                     web_url=merge_req.web_url,
                     source_branch=merge_req.source_branch,
                     description=merge_req.description or '',
-                    has_conflicts=getattr(merge_req, 'has_conflicts', False),
+                    has_conflicts=has_conflicts,
                     needs_rebase=needs_rebase,
                 ))
         return pickman_mrs
