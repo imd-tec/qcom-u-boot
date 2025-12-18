@@ -377,3 +377,21 @@ struct buffer_head *ext4_sb_bread_nofail(struct super_block *sb,
 {
 	return NULL;
 }
+
+/*
+ * Stubs for ialloc.c - xattr functions
+ */
+int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
+			     struct buffer_head *block_bh, size_t value_len,
+			     bool is_create)
+{
+	return 0;
+}
+
+struct qstr;
+
+int ext4_init_security(void *handle, struct inode *inode, struct inode *dir,
+		       const struct qstr *qstr)
+{
+	return 0;
+}

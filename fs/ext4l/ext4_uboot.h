@@ -366,9 +366,15 @@ extern struct user_namespace init_user_ns;
 #ifndef _FS_EXT4_ACL_H
 #define ext4_init_acl(h, i, d)			({ (void)(h); (void)(i); (void)(d); 0; })
 #endif
-/* Note: ext4_init_security is already handled in xattr.h */
+/* xattr stubs for files that don't include xattr.h */
+struct super_block;
+struct buffer_head;
+struct qstr;
 
-/* xattr stubs - __ext4_xattr_set_credits is declared in xattr.h */
+int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
+			     struct buffer_head *block_bh, size_t value_len,
+			     bool is_create);
+/* ext4_init_security is declared in xattr.h */
 
 /* inode state stubs */
 #define is_bad_inode(inode)			(0)
