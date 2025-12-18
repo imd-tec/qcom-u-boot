@@ -599,7 +599,7 @@ static int ext4_es_can_be_merged(struct extent_status *es1,
 static struct extent_status *
 ext4_es_try_to_merge_left(struct inode *inode, struct extent_status *es)
 {
-	struct ext4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct ext4_es_tree *tree __maybe_unused = &EXT4_I(inode)->i_es_tree;
 	struct extent_status *es1;
 	struct rb_node *node;
 
@@ -623,7 +623,7 @@ ext4_es_try_to_merge_left(struct inode *inode, struct extent_status *es)
 static struct extent_status *
 ext4_es_try_to_merge_right(struct inode *inode, struct extent_status *es)
 {
-	struct ext4_es_tree *tree = &EXT4_I(inode)->i_es_tree;
+	struct ext4_es_tree *tree __maybe_unused = &EXT4_I(inode)->i_es_tree;
 	struct extent_status *es1;
 	struct rb_node *node;
 
@@ -1704,7 +1704,7 @@ static unsigned long ext4_es_scan(struct shrinker *shrink,
 int ext4_seq_es_shrinker_info_show(struct seq_file *seq, void *v)
 {
 	struct ext4_sb_info *sbi = EXT4_SB((struct super_block *) seq->private);
-	struct ext4_es_stats *es_stats = &sbi->s_es_stats;
+	struct ext4_es_stats *es_stats __maybe_unused = &sbi->s_es_stats;
 	struct ext4_inode_info *ei, *max = NULL;
 	unsigned int inode_cnt = 0;
 
@@ -1886,7 +1886,7 @@ static int es_reclaim_extents(struct ext4_inode_info *ei, int *nr_to_scan)
  */
 void ext4_clear_inode_es(struct inode *inode)
 {
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	struct ext4_inode_info *ei __maybe_unused = EXT4_I(inode);
 	struct extent_status *es;
 	struct ext4_es_tree *tree;
 	struct rb_node *node;
@@ -2069,7 +2069,7 @@ static void __remove_pending(struct inode *inode, ext4_lblk_t lblk)
  */
 void ext4_remove_pending(struct inode *inode, ext4_lblk_t lblk)
 {
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	struct ext4_inode_info *ei __maybe_unused = EXT4_I(inode);
 
 	write_lock(&ei->i_es_lock);
 	__remove_pending(inode, lblk);
@@ -2089,7 +2089,7 @@ void ext4_remove_pending(struct inode *inode, ext4_lblk_t lblk)
 bool ext4_is_pending(struct inode *inode, ext4_lblk_t lblk)
 {
 	struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	struct ext4_inode_info *ei __maybe_unused = EXT4_I(inode);
 	bool ret;
 
 	read_lock(&ei->i_es_lock);
