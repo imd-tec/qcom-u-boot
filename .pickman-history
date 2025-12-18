@@ -683,3 +683,52 @@ All 14 commits from `us/next` were successfully cherry-picked to branch `cherry-
 
 ---
 
+## 2025-12-18: us/next
+
+Branch: cherry-1db256a3473
+
+Commits:
+- 1db256a3473 driver: clk: tegra: partially support PLL clocks
+- b46bd4f8746 driver: clk: tegra: init basic clocks on probe
+- 429d4846ea2 Merge patch series "Tegra: fix clock init"
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked successfully. Now let me cherry-pick the third commit, which is a merge commit:
+
+The merge commit is empty (which is expected since we already cherry-picked the individual commits). I need to commit it with --allow-empty to preserve the merge commit message:
+
+All three commits are cherry-picked. Let me verify with git log:
+
+All 3 commits are present. Now let me run the build verification:
+
+The build completed successfully. Let me provide a summary:
+
+## Cherry-Pick Summary
+
+### Commits Cherry-Picked:
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 1db256a3473 | driver: clk: tegra: partially support PLL clocks | ✅ Success |
+| b46bd4f8746 | driver: clk: tegra: init basic clocks on probe | ✅ Success |
+| 429d4846ea2 | Merge patch series "Tegra: fix clock init" | ✅ Success (empty commit preserved) |
+
+### Build Result:
+- **Status:** ✅ OK - Build completed successfully
+- **Warnings/Errors:** None
+
+### Fix-ups Made:
+- None required - all commits cherry-picked cleanly
+
+### Branch Status:
+- Branch `cherry-1db256a3473` is ready for pushing
+- The branch is ahead of `ci/master` by 3 commits
+- All 3 commits verified present in git log
+
+---
+
