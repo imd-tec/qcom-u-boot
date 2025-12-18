@@ -526,6 +526,7 @@ struct qstr {
 struct dentry {
 	struct qstr d_name;
 	struct inode *d_inode;
+	struct super_block *d_sb;
 };
 
 /* vm_fault_t - stub */

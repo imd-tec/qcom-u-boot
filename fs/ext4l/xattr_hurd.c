@@ -9,6 +9,7 @@
 
 #include <linux/init.h>
 #include <linux/string.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "xattr.h"
 
