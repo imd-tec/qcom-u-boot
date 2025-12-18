@@ -395,3 +395,40 @@ int ext4_init_security(void *handle, struct inode *inode, struct inode *dir,
 {
 	return 0;
 }
+
+/*
+ * Stubs for orphan.c
+ */
+struct ext4_iloc;
+
+int ext4_reserve_inode_write(void *handle, struct inode *inode,
+			     struct ext4_iloc *iloc)
+{
+	return 0;
+}
+
+void ext4_superblock_csum_set(struct super_block *sb)
+{
+}
+
+int ext4_mark_iloc_dirty(void *handle, struct inode *inode,
+			 struct ext4_iloc *iloc)
+{
+	return 0;
+}
+
+int ext4_truncate(struct inode *inode)
+{
+	return 0;
+}
+
+int ext4_feature_set_ok(struct super_block *sb, int readonly)
+{
+	return 1;
+}
+
+struct buffer_head *ext4_bread(void *handle, struct inode *inode,
+			       unsigned long long block, int create)
+{
+	return NULL;
+}

@@ -48,8 +48,24 @@ typedef struct { long counter; } atomic64_t;
 
 #define atomic_read(v)		((v)->counter)
 #define atomic_set(v, i)	((v)->counter = (i))
+#define atomic_inc(v)		((v)->counter++)
+#define atomic_dec(v)		((v)->counter--)
 #define atomic64_read(v)	((v)->counter)
 #define atomic64_set(v, i)	((v)->counter = (i))
+#define atomic_dec_if_positive(v)	(--(v)->counter)
+
+/* SMP stubs - U-Boot is single-threaded */
+#define raw_smp_processor_id()	0
+
+/* cmpxchg - compare and exchange, single-threaded version */
+#define cmpxchg(ptr, old, new) ({		\
+	typeof(*(ptr)) __old = (old);		\
+	typeof(*(ptr)) __new = (new);		\
+	typeof(*(ptr)) __ret = *(ptr);		\
+	if (__ret == __old)			\
+		*(ptr) = __new;			\
+	__ret;					\
+})
 
 /* Reference count type */
 typedef struct { atomic_t refs; } refcount_t;
@@ -58,10 +74,10 @@ typedef struct { atomic_t refs; } refcount_t;
 typedef int rwlock_t;
 /* spinlock_t is defined in linux/compat.h */
 
-#define read_lock(l)		do { (void)(l); } while (0)
-#define read_unlock(l)		do { (void)(l); } while (0)
-#define write_lock(l)		do { (void)(l); } while (0)
-#define write_unlock(l)		do { (void)(l); } while (0)
+#define read_lock(l)		do { } while (0)
+#define read_unlock(l)		do { } while (0)
+#define write_lock(l)		do { } while (0)
+#define write_unlock(l)		do { } while (0)
 
 /* RB tree types - stubs */
 struct rb_node {
@@ -374,7 +390,12 @@ struct qstr;
 int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 			     struct buffer_head *block_bh, size_t value_len,
 			     bool is_create);
-/* ext4_init_security is declared in xattr.h */
+/* ext4_init_security - stub for files that don't include xattr.h */
+static inline int ext4_init_security(void *handle, struct inode *inode,
+				     struct inode *dir, const struct qstr *qstr)
+{
+	return 0;
+}
 
 /* inode state stubs */
 #define is_bad_inode(inode)			(0)
@@ -431,7 +452,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #define rb_next(node)		((node)->rb_right)
 #define rb_prev(node)		((node)->rb_left)
 #define rb_insert_color(node, root)	do { } while (0)
-#define rb_erase(node, root)		do { (void)(node); (void)(root); } while (0)
+#define rb_erase(node, root)		do { } while (0)
 #define rb_link_node(node, parent, rb_link)	do { *(rb_link) = (node); } while (0)
 #define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
 #define rbtree_postorder_for_each_entry_safe(pos, n, root, field) \
@@ -563,6 +584,9 @@ struct fstrim_range {
 
 /* block_device is defined in linux/fs.h */
 
+/* Superblock flags */
+#define SB_RDONLY		(1 << 0)
+
 /* super_block - minimal stub */
 struct super_block {
 	void *s_fs_info;
@@ -570,6 +594,7 @@ struct super_block {
 	unsigned char s_blocksize_bits;
 	unsigned long s_magic;
 	loff_t s_maxbytes;
+	unsigned long s_flags;
 	struct rw_semaphore s_umount;
 	struct sb_writers s_writers;
 	struct block_device *s_bdev;
@@ -577,8 +602,18 @@ struct super_block {
 	struct dentry *s_root;
 };
 
+/* Block device read-only check - stub */
+static inline int bdev_read_only(struct block_device *bdev)
+{
+	return 0;
+}
+
 /* kuid_t and kgid_t - from linux/cred.h */
 #include <linux/cred.h>
+
+/* Inode state bits */
+#define I_NEW			(1 << 0)
+#define I_FREEING		(1 << 1)
 
 /* inode - minimal stub */
 struct inode {
@@ -594,6 +629,7 @@ struct inode {
 	unsigned int i_generation;
 	unsigned int i_flags;
 	unsigned int i_blkbits;
+	unsigned long i_state;
 	struct timespec64 i_atime;
 	struct timespec64 i_mtime;
 	struct timespec64 i_ctime;

@@ -67,6 +67,16 @@ static inline void kfree(const void *block)
 	free((void *)block);
 }
 
+static inline void kvfree(const void *addr)
+{
+	kfree(addr);
+}
+
+static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
+{
+	return kmalloc_array(n, size, flags);
+}
+
 static inline void *krealloc(const void *p, size_t new_size, gfp_t flags)
 {
 	return realloc((void *)p, new_size);
