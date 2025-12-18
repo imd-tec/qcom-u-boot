@@ -21,6 +21,7 @@ obj-$(CONFIG_FS_CBFS) += cbfs/
 obj-$(CONFIG_CMD_CRAMFS) += cramfs/
 obj-$(CONFIG_FS_EXFAT) += exfat/
 obj-$(CONFIG_FS_EXT4) += ext4/
+obj-$(CONFIG_FS_EXT4L) += ext4l/
 obj-$(CONFIG_FS_FAT) += fat/
 obj-$(CONFIG_FS_JFFS2) += jffs2/
 obj-$(CONFIG_SANDBOX) += sandbox/

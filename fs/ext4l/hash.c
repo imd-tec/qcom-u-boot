@@ -5,11 +5,9 @@
  * Copyright (C) 2002 by Theodore Ts'o
  */
 
-#include <linux/fs.h>
-#include <linux/unicode.h>
+#define EXT4_UBOOT_NO_EXT4_H
+#include "ext4_uboot.h"
 #include <linux/compiler.h>
-#include <linux/bitops.h>
-#include "ext4.h"
 
 #define DELTA 0x9E3779B9
 
@@ -41,6 +39,7 @@ static void TEA_transform(__u32 buf[4], __u32 const in[])
  * good macro practice, in favor of extra legibility.
  * Rotation is separate from addition to prevent recomputation
  */
+#undef ROUND
 #define ROUND(f, a, b, c, d, x, s)	\
 	(a += f(b, c, d) + x, a = rol32(a, s))
 #define K1 0

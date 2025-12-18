@@ -29,6 +29,8 @@
 #include <linux/bit_spinlock.h>
 #include <linux/blkdev.h>
 #include <linux/crc32c.h>
+#include <linux/wait.h>
+#include <linux/init.h>
 #endif
 
 #define journal_oom_retry 1

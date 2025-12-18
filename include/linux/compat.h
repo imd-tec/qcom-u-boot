@@ -22,11 +22,13 @@
 #include <linux/rwsem.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
 
 #ifdef CONFIG_XEN
 #include <xen/events.h>
@@ -153,24 +155,9 @@ typedef unsigned long blkcnt_t;
 
 #define dump_stack(...)			do { } while (0)
 
+/* spinlock_t is defined in linux/spinlock.h */
 
-
-
-typedef unused_t spinlock_t;
-
-#define spin_lock_init(lock) do {} while (0)
-#define spin_lock(lock) do {} while (0)
-#define spin_unlock(lock) do {} while (0)
-#define spin_lock_irqsave(lock, flags) do {} while (0)
-#define spin_unlock_irqrestore(lock, flags) do { flags = 0; } while (0)
-
-#define DEFINE_MUTEX(...)
-#define mutex_init(...)
-#define mutex_lock(...)
-#define mutex_unlock(...)
-
-
-
+/* mutex is defined in linux/mutex.h */
 
 struct device {
 	struct device		*parent;
@@ -181,7 +168,6 @@ struct device {
 	void		*driver_data;	/* data private to the driver */
 	void            *device_data;   /* data private to the device */
 };
-struct mutex { int i; };
 struct kernel_param { int i; };
 
 struct cdev {
@@ -191,8 +177,6 @@ struct cdev {
 #define cdev_init(...)		do { } while (0)
 #define cdev_add(...)		0
 #define cdev_del(...)		do { } while (0)
-
-
 
 /* from include/linux/types.h */
 

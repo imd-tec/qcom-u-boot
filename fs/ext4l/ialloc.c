@@ -13,25 +13,10 @@
  *        David S. Miller (davem@caip.rutgers.edu), 1995
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
-#include <linux/stat.h>
-#include <linux/string.h>
-#include <linux/quotaops.h>
-#include <linux/buffer_head.h>
-#include <linux/random.h>
-#include <linux/bitops.h>
-#include <linux/blkdev.h>
-#include <linux/cred.h>
-
-#include <asm/byteorder.h>
-
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "ext4_jbd2.h"
 #include "xattr.h"
-#include "acl.h"
-
-#include <trace/events/ext4.h>
 
 /*
  * ialloc.c contains the inodes allocation and deallocation routines

@@ -17,23 +17,10 @@
  *   - smart tree reduction
  */
 
-#include <linux/fs.h>
-#include <linux/time.h>
-#include <linux/jbd2.h>
-#include <linux/highuid.h>
-#include <linux/pagemap.h>
-#include <linux/quotaops.h>
-#include <linux/string.h>
-#include <linux/slab.h>
-#include <linux/uaccess.h>
-#include <linux/fiemap.h>
-#include <linux/iomap.h>
-#include <linux/sched/mm.h>
+#include "ext4_uboot.h"
+#include "ext4.h"
 #include "ext4_jbd2.h"
 #include "ext4_extents.h"
-#include "xattr.h"
-
-#include <trace/events/ext4.h>
 
 /*
  * used by extent splitting.
@@ -602,7 +589,7 @@ errout:
  */
 int ext4_ext_precache(struct inode *inode)
 {
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	struct ext4_inode_info *ei __maybe_unused = EXT4_I(inode);
 	struct ext4_ext_path *path = NULL;
 	struct buffer_head *bh;
 	int i = 0, depth, ret = 0;
@@ -4763,7 +4750,7 @@ out:
 long ext4_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 {
 	struct inode *inode = file_inode(file);
-	struct address_space *mapping = file->f_mapping;
+	struct address_space *mapping __maybe_unused = file->f_mapping;
 	int ret;
 
 	/*

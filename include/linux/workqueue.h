@@ -23,7 +23,7 @@ struct delayed_work {
 #define cancel_work_sync(work)			0
 #define cancel_delayed_work(work)		0
 #define cancel_delayed_work_sync(work)		0
-#define flush_work(work)			0
+#define flush_work(work)			({ (void)(work); 0; })
 #define flush_delayed_work(work)		0
 #define queue_work(wq, work)			0
 #define queue_delayed_work(wq, work, delay)	0

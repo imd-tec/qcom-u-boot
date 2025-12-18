@@ -257,6 +257,26 @@ static struct fstype_info fstypes[] = {
 		.rename = fs_rename_unsupported,
 	},
 #endif
+#if CONFIG_IS_ENABLED(FS_EXT4L)
+	{
+		.fstype = FS_TYPE_EXT,
+		.name = "ext4",
+		.null_dev_desc_ok = false,
+		.probe = fs_probe_unsupported,
+		.close = fs_close_unsupported,
+		.ls = fs_ls_unsupported,
+		.exists = fs_exists_unsupported,
+		.size = fs_size_unsupported,
+		.read = fs_read_unsupported,
+		.write = fs_write_unsupported,
+		.uuid = fs_uuid_unsupported,
+		.opendir = fs_opendir_unsupported,
+		.unlink = fs_unlink_unsupported,
+		.mkdir = fs_mkdir_unsupported,
+		.ln = fs_ln_unsupported,
+		.rename = fs_rename_unsupported,
+	},
+#endif
 #if IS_ENABLED(CONFIG_SANDBOX) && !IS_ENABLED(CONFIG_XPL_BUILD)
 	{
 		.fstype = FS_TYPE_SANDBOX,

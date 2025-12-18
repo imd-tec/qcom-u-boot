@@ -16,6 +16,7 @@
 
 #include <malloc.h>
 #include <linux/types.h>
+#include <linux/string.h>
 
 #ifndef GFP_ATOMIC
 #define GFP_ATOMIC	((gfp_t)0)
@@ -81,6 +82,15 @@ struct kmem_cache {
 struct kmem_cache *get_mem(int element_sz);
 #define kmem_cache_create(a, sz, c, d, e)	get_mem(sz)
 void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag);
+
+static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)
+{
+	void *ret = kmem_cache_alloc(obj, flags);
+
+	if (ret)
+		memset(ret, 0, obj->sz);
+	return ret;
+}
 
 static inline void kmem_cache_free(struct kmem_cache *cachep, void *obj)
 {
