@@ -5,7 +5,7 @@
 
 obj-y := interface.o stub.o
 
-obj-y	+= balloc.o bitmap.o block_validity.o ext4_jbd2.o extents.o \
+obj-y	+= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
 		extents_status.o hash.o ialloc.o \
 		indirect.o inode.o \
 		xattr_hurd.o xattr_trusted.o \

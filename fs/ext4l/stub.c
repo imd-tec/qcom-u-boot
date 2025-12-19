@@ -520,7 +520,7 @@ int ext4_find_inline_data_nolock(struct inode *inode)
 char ext4_file_inode_operations;
 char ext4_file_operations;
 char ext4_dir_inode_operations;
-char ext4_dir_operations;
+/* ext4_dir_operations is now in dir.c */
 char ext4_special_inode_operations;
 char ext4_symlink_inode_operations;
 char ext4_fast_symlink_inode_operations;
@@ -579,4 +579,50 @@ int jbd2_journal_try_to_free_buffers(journal_t *journal, struct folio *folio)
 
 void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
 {
+}
+
+/*
+ * Stubs for dir.c
+ */
+ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
+{
+	return -EISDIR;
+}
+
+void __ext4_error_file(struct file *file, const char *func, unsigned int line,
+		       unsigned long long block, const char *fmt, ...)
+{
+}
+
+loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
+{
+	return 0;
+}
+
+int ext4_htree_fill_tree(struct file *dir_file, unsigned long long pos,
+			 unsigned long long start_hash,
+			 unsigned long long start_minor_hash,
+			 unsigned long long *next_hash)
+{
+	return 0;
+}
+
+int ext4_read_inline_dir(struct file *file, void *ctx, void *f_pos)
+{
+	return 0;
+}
+
+int ext4_dirblock_csum_verify(struct inode *inode, struct buffer_head *bh)
+{
+	return 1;
+}
+
+long ext4_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	return 0;
+}
+
+int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
+{
+	return 0;
 }

@@ -1402,4 +1402,53 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define truncate_inode_pages_final(m)	do { } while (0)
 #define truncate_pagecache_range(i, s, e) do { } while (0)
 
+/*
+ * Additional stubs for dir.c
+ */
+
+/* fscrypt_str - encrypted filename string */
+#define FSTR_INIT(n, l)		{ .name = (n), .len = (l) }
+
+/* fscrypt directory operations */
+#define fscrypt_prepare_readdir(i)		({ (void)(i); 0; })
+#define fscrypt_fname_alloc_buffer(len, buf)	({ (void)(len); (void)(buf); 0; })
+#define fscrypt_fname_free_buffer(buf)		do { (void)(buf); } while (0)
+#define fscrypt_fname_disk_to_usr(i, h1, h2, d, u) ({ (void)(i); (void)(h1); (void)(h2); (void)(d); (void)(u); 0; })
+
+/* Readahead operations */
+#define ra_has_index(ra, idx)			({ (void)(ra); (void)(idx); 0; })
+#define page_cache_sync_readahead(m, ra, f, i, n) do { } while (0)
+
+/* Inode version operations */
+#define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
+#define inode_query_iversion(i)			({ (void)(i); 0ULL; })
+
+/* Directory context operations */
+#define dir_emit(ctx, name, len, ino, type)	({ (void)(ctx); (void)(name); (void)(len); (void)(ino); (void)(type); 1; })
+#define dir_relax_shared(i)			({ (void)(i); 1; })
+
+/* File llseek */
+#define generic_file_llseek_size(f, o, w, m, e)	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })
+
+/* generic_read_dir - stub function (needs to be a real function for struct init) */
+ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
+			 loff_t *ppos);
+
+/* struct_size helper */
+#define struct_size(p, member, count)		(sizeof(*(p)) + sizeof((p)->member[0]) * (count))
+
+/* file_operations - extended for dir.c */
+struct file_operations {
+	int (*open)(struct inode *, struct file *);
+	loff_t (*llseek)(struct file *, loff_t, int);
+	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
+	int (*iterate_shared)(struct file *, struct dir_context *);
+	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
+	int (*fsync)(struct file *, loff_t, loff_t, int);
+	int (*release)(struct inode *, struct file *);
+};
+
+/* file open helper */
+#define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+
 #endif /* __EXT4_UBOOT_H__ */
