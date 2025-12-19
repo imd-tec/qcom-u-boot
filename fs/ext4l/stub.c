@@ -429,8 +429,8 @@ int ext4_find_inline_data_nolock(struct inode *inode)
 char ext4_dir_inode_operations;
 /* ext4_dir_operations is now in dir.c */
 char ext4_special_inode_operations;
-char ext4_symlink_inode_operations;
-char ext4_fast_symlink_inode_operations;
+/* ext4_symlink_inode_operations is now in symlink.c */
+/* ext4_fast_symlink_inode_operations is now in symlink.c */
 
 
 /* ext4_update_dynamic_rev is now in super.c */
@@ -483,6 +483,12 @@ int jbd2_journal_try_to_free_buffers(journal_t *journal, struct folio *folio)
 
 void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
 {
+}
+
+/* symlink.c stub */
+void *ext4_read_inline_link(struct inode *inode)
+{
+	return ERR_PTR(-EOPNOTSUPP);
 }
 
 /*
@@ -870,10 +876,7 @@ int ext4_register_sysfs(void *sb)
 	return 0;
 }
 
-/* dentry put */
-void dput(void *dentry)
-{
-}
+/* dput - now provided as macro in ext4_uboot.h */
 
 /* timer_delete_sync is now a macro in linux/timer.h */
 

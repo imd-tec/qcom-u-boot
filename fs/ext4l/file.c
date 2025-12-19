@@ -119,7 +119,8 @@ static ssize_t ext4_dax_read_iter(struct kiocb *iocb, struct iov_iter *to)
 }
 #endif
 
-static ssize_t ext4_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
+static ssize_t __maybe_unused ext4_file_read_iter(struct kiocb *iocb,
+						  struct iov_iter *to)
 {
 	struct inode *inode = file_inode(iocb->ki_filp);
 
@@ -139,9 +140,11 @@ static ssize_t ext4_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 	return generic_file_read_iter(iocb, to);
 }
 
-static ssize_t ext4_file_splice_read(struct file *in, loff_t *ppos,
-				     struct pipe_inode_info *pipe,
-				     size_t len, unsigned int flags)
+static ssize_t __maybe_unused ext4_file_splice_read(struct file *in,
+						    loff_t *ppos,
+						    struct pipe_inode_info *pipe,
+						    size_t len,
+						    unsigned int flags)
 {
 	struct inode *inode = file_inode(in);
 
@@ -682,7 +685,7 @@ out:
 }
 #endif
 
-static ssize_t
+static ssize_t __maybe_unused
 ext4_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	int ret;
@@ -796,7 +799,7 @@ static const struct vm_operations_struct ext4_file_vm_ops = {
 	.page_mkwrite   = ext4_page_mkwrite,
 };
 
-static int ext4_file_mmap_prepare(struct vm_area_desc *desc)
+static int __maybe_unused ext4_file_mmap_prepare(struct vm_area_desc *desc)
 {
 	int ret;
 	struct file *file = desc->file;

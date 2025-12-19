@@ -816,6 +816,7 @@ struct inode {
 	const struct file_operations *i_fop;
 	atomic_t i_writecount;		/* Count of writers */
 	struct rw_semaphore i_rwsem;	/* inode lock */
+	const char *i_link;		/* Symlink target for fast symlinks */
 };
 
 /* Inode time accessors */
@@ -916,6 +917,16 @@ static inline u64 fscrypt_fname_siphash(const struct inode *dir,
 #define WARN_ON_ONCE(cond) ({ (void)(cond); 0; })
 #define WARN_ON(cond) ({ (void)(cond); 0; })
 
+/* strtomem_pad - copy string to fixed-size buffer with padding */
+#define strtomem_pad(dest, src, pad) do { \
+	size_t _len = strlen(src); \
+	if (_len >= sizeof(dest)) \
+		_len = sizeof(dest); \
+	memcpy(dest, src, _len); \
+	if (_len < sizeof(dest)) \
+		memset((char *)(dest) + _len, (pad), sizeof(dest) - _len); \
+} while (0)
+
 /* Memory weight - count set bits */
 static inline unsigned long memweight(const void *ptr, size_t bytes)
 {
@@ -979,6 +990,14 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* File operations */
 #define file_modified(file)		({ (void)(file); 0; })
 #define file_accessed(file)		do { (void)(file); } while (0)
+
+/* Generic file operations - stubs for file.c */
+#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
+#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
+#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
 /* Security checks - no security in U-Boot */
 #define IS_NOSEC(inode)			(1)
@@ -1295,6 +1314,7 @@ typedef unsigned int projid_t;
 /* Dentry operations - stubs */
 #define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
 #define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
+#define dput(d)					do { (void)(d); } while (0)
 
 /* Sync operations - stubs */
 #define sync_mapping_buffers(m)			({ (void)(m); 0; })
@@ -1393,6 +1413,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
 #define mapping_gfp_constraint(m, g)		(g)
 #define mapping_set_folio_order_range(m, l, h)	do { } while (0)
+#define filemap_splice_read(i, p, pi, l, f)	({ (void)(i); (void)(p); (void)(pi); (void)(l); (void)(f); 0L; })
 
 /* Buffer operations - additional */
 #define getblk_unmovable(bd, b, s)		((struct buffer_head *)NULL)
@@ -1512,15 +1533,6 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define file_update_time(f)		do { } while (0)
 #define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 
-/* VFS file operations for file.c */
-#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0; })
-#define filemap_splice_read(f, p, pipe, l, fl)	({ (void)(f); (void)(p); (void)(pipe); (void)(l); (void)(fl); 0; })
-#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0; })
-#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0; })
-#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
-#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); true; })
-#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
-
 /* iomap stubs */
 #define iomap_bmap(m, b, o)		({ (void)(m); (void)(b); (void)(o); 0UL; })
 #define iomap_swapfile_activate(s, f, sp, o) ({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
@@ -1578,8 +1590,30 @@ struct file_operations {
 	int (*release)(struct inode *, struct file *);
 };
 
+/* delayed_call - for delayed freeing of symlink data */
+typedef void (*delayed_call_func_t)(const void *);
+struct delayed_call {
+	delayed_call_func_t fn;
+	const void *arg;
+};
+
+#define set_delayed_call(dc, func, data) do { \
+	(dc)->fn = (func); \
+	(dc)->arg = (data); \
+} while (0)
+
+#define kfree_link		kfree
+
+/* nd_terminate_link - terminate symlink string */
+static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
+{
+	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
+}
+
 /* inode_operations - for file and directory operations */
 struct inode_operations {
+	const char *(*get_link)(struct dentry *, struct inode *,
+				struct delayed_call *);
 	int (*getattr)(struct mnt_idmap *, const struct path *,
 		       struct kstat *, u32, unsigned int);
 	ssize_t (*listxattr)(struct dentry *, char *, size_t);
@@ -1595,6 +1629,18 @@ struct inode_operations {
 
 /* file open helper */
 #define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* simple_get_link - for fast symlinks stored in inode */
+static inline const char *simple_get_link(struct dentry *dentry,
+					  struct inode *inode,
+					  struct delayed_call *callback)
+{
+	return inode->i_link;
+}
+
+/* fscrypt symlink stubs */
+#define fscrypt_get_symlink(i, c, m, d)	({ (void)(i); (void)(c); (void)(m); (void)(d); ERR_PTR(-EOPNOTSUPP); })
+#define fscrypt_symlink_getattr(p, s)	({ (void)(p); (void)(s); 0; })
 
 /*
  * Additional stubs for super.c
@@ -2118,22 +2164,9 @@ void set_task_ioprio(void *task, int ioprio);
 /* Dentry operations - declarations for stub.c */
 void generic_set_sb_d_ops(struct super_block *sb);
 struct dentry *d_make_root(struct inode *inode);
-void dput(void *dentry);
 
 /* String operations - declarations for stub.c */
 char *strreplace(const char *str, char old, char new);
-
-/* strtomem_pad - copy string with padding (Linux kernel macro) */
-#define strtomem_pad(dest, src, pad) do { \
-	const char *__src = (src); \
-	size_t __len = strlen(__src); \
-	if (__len >= sizeof(dest)) { \
-		memcpy((dest), __src, sizeof(dest)); \
-	} else { \
-		memcpy((dest), __src, __len); \
-		memset((char *)(dest) + __len, (pad), sizeof(dest) - __len); \
-	} \
-} while (0)
 
 /* Ratelimit - declaration for stub.c */
 void ratelimit_state_init(void *rs, int interval, int burst);

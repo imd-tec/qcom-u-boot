@@ -18,8 +18,7 @@
  *  ext4 symlink handling code
  */
 
-#include <linux/fs.h>
-#include <linux/namei.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "xattr.h"
 
@@ -65,9 +64,9 @@ static int ext4_encrypted_symlink_getattr(struct mnt_idmap *idmap,
 	return fscrypt_symlink_getattr(path, stat);
 }
 
-static void ext4_free_link(void *bh)
+static void ext4_free_link(const void *bh)
 {
-	brelse(bh);
+	brelse((struct buffer_head *)bh);
 }
 
 static const char *ext4_get_link(struct dentry *dentry, struct inode *inode,
