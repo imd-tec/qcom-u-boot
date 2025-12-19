@@ -9,6 +9,7 @@
  * DO NOT use this file as a reference - these are temporary placeholders only.
  */
 
+#include "ext4_uboot.h"
 #include <linux/types.h>
 
 struct super_block;
@@ -33,18 +34,6 @@ unsigned long ext4_inode_bitmap(struct super_block *sb, void *gdp)
 }
 
 unsigned long ext4_inode_table(struct super_block *sb, void *gdp)
-{
-	return 0;
-}
-
-struct inode *__ext4_iget(struct super_block *sb, unsigned long ino,
-			  int flags, const char *func, unsigned int line)
-{
-	return NULL;
-}
-
-int ext4_map_blocks(void *handle, struct inode *inode,
-		    struct ext4_map_blocks *map, int flags)
 {
 	return 0;
 }
@@ -250,28 +239,9 @@ struct extent_status;
 
 /* ext4_es_cache_extent is now in extents_status.c */
 
-int ext4_issue_zeroout(struct inode *inode, unsigned long long lblk,
-		       unsigned long long pblk, unsigned long long len)
-{
-	return 0;
-}
-
 /* ext4_es_insert_extent is now in extents_status.c */
 
 /* ext4_remove_pending is now in extents_status.c */
-
-void ext4_da_release_space(struct inode *inode, int to_free)
-{
-}
-
-void ext4_da_update_reserve_space(struct inode *inode, int used, int quota_claim)
-{
-}
-
-int ext4_get_inode_loc(struct inode *inode, void *iloc)
-{
-	return -1;
-}
 
 void ext4_free_blocks(void *handle, struct inode *inode,
 		      struct buffer_head *bh, unsigned long long block,
@@ -279,54 +249,13 @@ void ext4_free_blocks(void *handle, struct inode *inode,
 {
 }
 
-int __ext4_mark_inode_dirty(void *handle, struct inode *inode, int flags)
-{
-	return 0;
-}
-
 void ext4_discard_preallocations(struct inode *inode, unsigned int needed)
 {
 }
 
-int ext4_check_map_extents_env(struct inode *inode)
-{
-	return 0;
-}
-
-int ext4_chunk_trans_extent(struct inode *inode, int nrblocks)
-{
-	return 0;
-}
-
-int ext4_chunk_trans_blocks(struct inode *inode, int nrblocks)
-{
-	return 0;
-}
-
 /* ext4_is_pending is now in extents_status.c */
 
-int ext4_meta_trans_blocks(struct inode *inode, int lblk, int pblk)
-{
-	return 0;
-}
-
-int ext4_zero_partial_blocks(void *handle, struct inode *inode,
-			     loff_t lstart, loff_t length)
-{
-	return 0;
-}
-
 int ext4_convert_inline_data(struct inode *inode)
-{
-	return 0;
-}
-
-int ext4_break_layouts(struct inode *inode)
-{
-	return 0;
-}
-
-int ext4_punch_hole(struct file *file, loff_t offset, loff_t length)
 {
 	return 0;
 }
@@ -335,19 +264,6 @@ void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
 			     void *handle)
 {
 }
-
-void ext4_update_disksize_before_punch(struct inode *inode, loff_t offset,
-				       loff_t len)
-{
-}
-
-void ext4_truncate_page_cache_block_range(struct inode *inode, loff_t start,
-					  loff_t len)
-{
-}
-
-/* ext4_iomap_report_ops - just a symbol needed for linking */
-char ext4_iomap_report_ops;
 
 /* ext4_es_lookup_extent is now in extents_status.c */
 
@@ -410,25 +326,8 @@ int ext4_xattr_set(struct inode *inode, int name_index, const char *name,
  */
 struct ext4_iloc;
 
-int ext4_reserve_inode_write(void *handle, struct inode *inode,
-			     struct ext4_iloc *iloc)
-{
-	return 0;
-}
-
 void ext4_superblock_csum_set(struct super_block *sb)
 {
-}
-
-int ext4_mark_iloc_dirty(void *handle, struct inode *inode,
-			 struct ext4_iloc *iloc)
-{
-	return 0;
-}
-
-int ext4_truncate(struct inode *inode)
-{
-	return 0;
 }
 
 int ext4_feature_set_ok(struct super_block *sb, int readonly)
@@ -436,8 +335,248 @@ int ext4_feature_set_ok(struct super_block *sb, int readonly)
 	return 1;
 }
 
-struct buffer_head *ext4_bread(void *handle, struct inode *inode,
-			       unsigned long long block, int create)
+/*
+ * Stubs for inode.c
+ */
+#include <linux/sched.h>
+
+/* JBD2 stubs for inode.c */
+int jbd2_journal_blocks_per_folio(struct inode *inode)
+{
+	return 1;
+}
+
+int jbd2_transaction_committed(void *journal, unsigned int tid)
+{
+	return 1;
+}
+
+
+void __ext4_warning_inode(struct inode *inode, const char *func,
+			  unsigned int line, const char *fmt, ...)
+{
+}
+
+
+/* Readahead */
+int ext4_mpage_readpages(void *mapping, void *rac, void *folio)
+{
+	return 0;
+}
+
+int ext4_readpage_inline(struct inode *inode, void *folio)
+{
+	return 0;
+}
+
+/* Xattr */
+int ext4_expand_extra_isize_ea(struct inode *inode, int new_extra_isize,
+			       void *raw_inode, void *handle)
+{
+	return 0;
+}
+
+void ext4_evict_ea_inode(struct inode *inode)
+{
+}
+
+
+/* More JBD2 stubs */
+int jbd2_journal_inode_ranged_write(void *handle, struct inode *inode,
+				    loff_t start, loff_t len)
+{
+	return 0;
+}
+
+
+int ext4_read_bh_lock(struct buffer_head *bh, int op_flags, int nowait)
+{
+	return 0;
+}
+
+
+/* Fast commit */
+int ext4_fc_commit(void *journal, unsigned int tid)
+{
+	return 0;
+}
+
+int ext4_force_commit(struct super_block *sb)
+{
+	return 0;
+}
+
+
+/* Inline data */
+int ext4_destroy_inline_data(void *handle, struct inode *inode)
+{
+	return 0;
+}
+
+/* I/O submit */
+void ext4_io_submit_init(void *io, void *wbc)
+{
+}
+
+
+void *ext4_init_io_end(struct inode *inode, int gfp)
 {
 	return NULL;
+}
+
+void ext4_io_submit(void *io)
+{
+}
+
+void ext4_put_io_end_defer(void *io_end)
+{
+}
+
+void ext4_put_io_end(void *io_end)
+{
+}
+
+void *ext4_alloc_io_end_vec(void *io_end, unsigned long num)
+{
+	return NULL;
+}
+
+
+/* JBD2 ordered truncate */
+int jbd2_journal_begin_ordered_truncate(void *ji, loff_t new_size)
+{
+	return 0;
+}
+
+void jbd2_journal_invalidate_folio(void *journal, void *folio,
+				   unsigned long off, unsigned int len)
+{
+}
+
+int jbd2_log_wait_commit(void *journal, unsigned int tid)
+{
+	return 0;
+}
+
+/* Fast commit */
+void ext4_fc_track_range(void *handle, struct inode *inode,
+			 unsigned long long start, unsigned long long end)
+{
+}
+
+
+/* JBD2 journal update locking */
+void jbd2_journal_lock_updates(void *journal)
+{
+}
+
+void jbd2_journal_unlock_updates(void *journal)
+{
+}
+
+int jbd2_journal_flush(void *journal, unsigned int flags)
+{
+	return 0;
+}
+
+
+/* Fast commit */
+void ext4_fc_track_inode(void *handle, struct inode *inode)
+{
+}
+
+void ext4_fc_init_inode(void **head, struct inode *inode)
+{
+}
+
+/* JBD2 */
+int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
+				   loff_t start, loff_t len)
+{
+	return 0;
+}
+
+/* Inline data */
+int ext4_inline_data_iomap(struct inode *inode, void *iomap)
+{
+	return 0;
+}
+
+
+/* xattr */
+int __xattr_check_inode(struct inode *inode, void *entry, void *end,
+			unsigned int size, int check_block)
+{
+	return 0;
+}
+
+int ext4_find_inline_data_nolock(struct inode *inode)
+{
+	return 0;
+}
+
+
+/* File and inode operations symbols */
+char ext4_file_inode_operations;
+char ext4_file_operations;
+char ext4_dir_inode_operations;
+char ext4_dir_operations;
+char ext4_special_inode_operations;
+char ext4_symlink_inode_operations;
+char ext4_fast_symlink_inode_operations;
+
+
+void ext4_update_dynamic_rev(struct super_block *sb)
+{
+}
+
+
+/* Inline data */
+int ext4_inline_data_truncate(struct inode *inode, int *has_inline)
+{
+	*has_inline = 0;
+	return 0;
+}
+
+int ext4_try_to_write_inline_data(struct address_space *mapping,
+				  struct inode *inode, loff_t pos,
+				  unsigned int len, struct folio **foliop)
+{
+	return 0;
+}
+
+int ext4_generic_write_inline_data(struct address_space *mapping,
+				   struct inode *inode, loff_t pos,
+				   unsigned int len, struct folio **foliop)
+{
+	return 0;
+}
+
+int ext4_write_inline_data_end(struct inode *inode, loff_t pos, unsigned int len,
+			       unsigned int copied, struct folio *folio)
+{
+	return copied;
+}
+
+/* xattr stubs for inode.c */
+int ext4_xattr_delete_inode(handle_t *handle, struct inode *inode,
+			    void **array, int extra_credits)
+{
+	return 0;
+}
+
+void ext4_xattr_inode_array_free(void *array)
+{
+}
+
+/* JBD2 stubs for inode.c */
+struct kmem_cache *jbd2_inode_cache;
+
+int jbd2_journal_try_to_free_buffers(journal_t *journal, struct folio *folio)
+{
+	return 1;
+}
+
+void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
+{
 }
