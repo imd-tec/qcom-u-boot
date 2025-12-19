@@ -181,6 +181,24 @@ struct file_ra_state {
 
 /* struct file is defined in linux/fs.h */
 
+/* kiocb - kernel I/O control block */
+struct iov_iter;
+
+struct kiocb {
+	int ki_flags;
+	struct file *ki_filp;
+	loff_t ki_pos;
+};
+
+#define IOCB_DIRECT		0x0001
+#define IOCB_NOWAIT		0x0002
+#define IOCB_ATOMIC		0x0004
+
+/* iov_iter stubs */
+#define iov_iter_truncate(i, count)	do { } while (0)
+#define iov_iter_count(i)		0
+#define iov_iter_alignment(iter)	0
+
 /* __counted_by attribute - not available in U-Boot */
 #define __counted_by(x)
 
@@ -378,10 +396,7 @@ extern struct user_namespace init_user_ns;
 #define fscrypt_prepare_new_inode(dir, i, e)	({ (void)(dir); (void)(i); (void)(e); 0; })
 #define fscrypt_set_context(inode, handle)	({ (void)(inode); (void)(handle); 0; })
 
-/* ACL and security stubs - only if acl.h won't be included */
-#ifndef _FS_EXT4_ACL_H
-#define ext4_init_acl(h, i, d)			({ (void)(h); (void)(i); (void)(d); 0; })
-#endif
+/* ext4_init_acl is provided by acl.h */
 /* xattr stubs for files that don't include xattr.h */
 struct super_block;
 struct buffer_head;
