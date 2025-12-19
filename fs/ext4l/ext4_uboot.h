@@ -124,6 +124,7 @@ typedef struct { unsigned int val; } kprojid_t;
 
 #define make_kprojid(ns, id)	((kprojid_t){ .val = (id) })
 #define from_kprojid(ns, kprojid)	((kprojid).val)
+#define projid_eq(a, b)		((a).val == (b).val)
 
 /* kobject - stub */
 struct kobject {
@@ -396,7 +397,7 @@ extern struct user_namespace init_user_ns;
 #define insert_inode_locked(inode)		(0)
 #define unlock_new_inode(inode)			do { } while (0)
 #define clear_nlink(inode)			do { } while (0)
-#define IS_DIRSYNC(inode)			(0)
+#define IS_DIRSYNC(inode)			({ (void)(inode); 0; })
 
 /* fscrypt stubs */
 #define fscrypt_prepare_new_inode(dir, i, e)	({ (void)(dir); (void)(i); (void)(e); 0; })
@@ -548,6 +549,7 @@ struct dentry {
 	struct qstr d_name;
 	struct inode *d_inode;
 	struct super_block *d_sb;
+	struct dentry *d_parent;
 };
 
 /* vm_fault_t - stub */
@@ -680,6 +682,18 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define S_ENCRYPTED	64
 #define S_CASEFOLD	128
 #define S_VERITY	256
+
+/* Permission mode constants */
+#define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
+
+/* Whiteout mode for overlayfs */
+#define WHITEOUT_DEV	0
+#define WHITEOUT_MODE	0
+
+/* Rename flags */
+#define RENAME_NOREPLACE	(1 << 0)
+#define RENAME_EXCHANGE		(1 << 1)
+#define RENAME_WHITEOUT		(1 << 2)
 
 /* Inode dirty state flags */
 #define I_DIRTY_TIME		(1 << 3)
@@ -850,6 +864,9 @@ static inline void simple_inode_init_ts(struct inode *inode)
 }
 
 #define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
+
+/* dotdot_name for ".." lookups */
+static const struct qstr dotdot_name = QSTR_INIT("..", 2);
 
 /*
  * Hash info structure - defined in ext4.h.
@@ -1035,6 +1052,10 @@ static inline vm_fault_t filemap_map_pages(struct vm_fault *vmf,
 
 /* IS_SYNC macro */
 #define IS_SYNC(inode)			(0)
+
+/* Case-folding stubs - not supported in U-Boot */
+#define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
+#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
 /* in_range helper - check if value is in range [start, start+len) */
 static inline int in_range(unsigned long val, unsigned long start,
@@ -1310,11 +1331,21 @@ typedef unsigned int projid_t;
 #define trace_ext4_journalled_write_end(...)	do { } while (0)
 #define trace_ext4_sync_file_enter(...)		do { } while (0)
 #define trace_ext4_sync_file_exit(...)		do { } while (0)
+#define trace_ext4_unlink_enter(...)		do { } while (0)
+#define trace_ext4_unlink_exit(...)		do { } while (0)
 
 /* Dentry operations - stubs */
 #define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
 #define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
 #define dput(d)					do { (void)(d); } while (0)
+#define d_splice_alias(i, d)			({ (void)(i); (void)(d); (struct dentry *)NULL; })
+#define d_obtain_alias(i)			({ (void)(i); (struct dentry *)NULL; })
+#define d_instantiate_new(d, i)			do { (void)(d); (void)(i); } while (0)
+#define d_instantiate(d, i)			do { (void)(d); (void)(i); } while (0)
+#define d_tmpfile(f, i)				do { (void)(f); (void)(i); } while (0)
+#define d_invalidate(d)				do { (void)(d); } while (0)
+#define finish_open_simple(f, e)		(e)
+#define ihold(i)				do { (void)(i); } while (0)
 
 /* Sync operations - stubs */
 #define sync_mapping_buffers(m)			({ (void)(m); 0; })
@@ -1435,6 +1466,22 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define fscrypt_limit_io_blocks(i, lb, l)	(l)
 #define fscrypt_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
 #define fscrypt_dio_supported(i)		(1)
+#define fscrypt_match_name(f, n, l)		({ (void)(f); (void)(n); (void)(l); 1; })
+#define fscrypt_has_permitted_context(p, c)	({ (void)(p); (void)(c); 1; })
+#define fscrypt_is_nokey_name(d)		({ (void)(d); 0; })
+#define fscrypt_prepare_symlink(d, s, l, m, dl)	({ (void)(d); (void)(s); (void)(l); (void)(m); (void)(dl); 0; })
+#define fscrypt_encrypt_symlink(i, s, l, d)	({ (void)(i); (void)(s); (void)(l); (void)(d); 0; })
+#define fscrypt_prepare_link(o, d, n)		({ (void)(o); (void)(d); (void)(n); 0; })
+#define fscrypt_prepare_rename(od, ode, nd, nde, f) ({ (void)(od); (void)(ode); (void)(nd); (void)(nde); (void)(f); 0; })
+
+/* fscrypt_name - stub structure for encrypted filenames */
+struct fscrypt_name {
+	const struct qstr *usr_fname;
+	struct fscrypt_str disk_name;
+	u32 hash;
+	u32 minor_hash;
+	bool is_nokey_name;
+};
 
 /* fsverity stubs */
 #define fsverity_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
@@ -1511,6 +1558,8 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 /* Inode allocation/state operations */
 #define iget_locked(sb, ino)		((struct inode *)NULL)
 #define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
+#define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
+#define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
 #define inode_set_cached_link(i, l, len) do { } while (0)
 #define init_special_inode(i, m, d)	do { } while (0)
 #define make_bad_inode(i)		do { } while (0)
@@ -1612,8 +1661,10 @@ static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
 
 /* inode_operations - for file and directory operations */
 struct inode_operations {
+	/* Symlink operations */
 	const char *(*get_link)(struct dentry *, struct inode *,
 				struct delayed_call *);
+	/* Common operations */
 	int (*getattr)(struct mnt_idmap *, const struct path *,
 		       struct kstat *, u32, unsigned int);
 	ssize_t (*listxattr)(struct dentry *, char *, size_t);
@@ -1625,6 +1676,23 @@ struct inode_operations {
 	int (*fileattr_get)(struct dentry *, struct file_kattr *);
 	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
 			    struct file_kattr *);
+	/* Directory operations */
+	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
+	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      umode_t, bool);
+	int (*link)(struct dentry *, struct inode *, struct dentry *);
+	int (*unlink)(struct inode *, struct dentry *);
+	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
+		       const char *);
+	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
+				struct dentry *, umode_t);
+	int (*rmdir)(struct inode *, struct dentry *);
+	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
+		     umode_t, dev_t);
+	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      struct inode *, struct dentry *, unsigned int);
+	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
+		       umode_t);
 };
 
 /* file open helper */

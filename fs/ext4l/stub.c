@@ -426,9 +426,9 @@ int ext4_find_inline_data_nolock(struct inode *inode)
 /* File and inode operations symbols */
 /* ext4_file_inode_operations is now in file.c */
 /* ext4_file_operations is now in file.c */
-char ext4_dir_inode_operations;
+/* ext4_dir_inode_operations is now in namei.c */
 /* ext4_dir_operations is now in dir.c */
-char ext4_special_inode_operations;
+/* ext4_special_inode_operations is now in namei.c */
 /* ext4_symlink_inode_operations is now in symlink.c */
 /* ext4_fast_symlink_inode_operations is now in symlink.c */
 
@@ -503,23 +503,104 @@ ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
 
 /* ext4_llseek is now in file.c */
 
-int ext4_htree_fill_tree(struct file *dir_file, unsigned long long pos,
-			 unsigned long long start_hash,
-			 unsigned long long start_minor_hash,
-			 unsigned long long *next_hash)
-{
-	return 0;
-}
+/* ext4_htree_fill_tree is now in namei.c */
 
 int ext4_read_inline_dir(struct file *file, void *ctx, void *f_pos)
 {
 	return 0;
 }
 
-int ext4_dirblock_csum_verify(struct inode *inode, struct buffer_head *bh)
+struct buffer_head *ext4_find_inline_entry(struct inode *dir, void *fname,
+					   void *res_dir, int *has_inline_data)
 {
+	*has_inline_data = 0;
+	return NULL;
+}
+
+int ext4_try_add_inline_entry(void *handle, void *fname, void *dentry)
+{
+	return -ENOENT;
+}
+
+int ext4_delete_inline_entry(void *handle, struct inode *dir,
+			     void *de_del, struct buffer_head *bh,
+			     int *has_inline_data)
+{
+	*has_inline_data = 0;
+	return -ENOENT;
+}
+
+void ext4_update_final_de(void *de, int de_len, int new_de_len)
+{
+}
+
+int ext4_try_create_inline_dir(void *handle, struct inode *parent,
+			       struct inode *inode)
+{
+	return -ENOENT;
+}
+
+int empty_inline_dir(struct inode *dir, int *has_inline_data)
+{
+	*has_inline_data = 0;
 	return 1;
 }
+
+/* Inline dir stubs */
+int ext4_get_first_inline_block(struct inode *inode, void **de,
+				int *inline_size)
+{
+	return 0;
+}
+
+int ext4_inlinedir_to_tree(struct file *dir, struct inode *inode,
+			   unsigned long long start_hash,
+			   unsigned long long *next_hash,
+			   int has_inline_data)
+{
+	return 0;
+}
+
+/* Fast commit stubs */
+void ext4_fc_track_unlink(void *handle, struct dentry *dentry)
+{
+}
+
+void ext4_fc_track_link(void *handle, struct dentry *dentry)
+{
+}
+
+void ext4_fc_track_create(void *handle, struct dentry *dentry)
+{
+}
+
+void __ext4_fc_track_link(void *handle, struct inode *inode,
+			  struct dentry *dentry)
+{
+}
+
+void __ext4_fc_track_unlink(void *handle, struct inode *inode,
+			    struct dentry *dentry)
+{
+}
+
+void __ext4_fc_track_create(void *handle, struct inode *inode,
+			    struct dentry *dentry)
+{
+}
+
+/* fileattr stubs */
+int ext4_fileattr_get(struct dentry *dentry, void *fa)
+{
+	return 0;
+}
+
+int ext4_fileattr_set(void *idmap, struct dentry *dentry, void *fa)
+{
+	return 0;
+}
+
+/* ext4_dirblock_csum_verify is now in namei.c */
 
 /* ext4_ioctl is now in super.c */
 
@@ -880,11 +961,7 @@ int ext4_register_sysfs(void *sb)
 
 /* timer_delete_sync is now a macro in linux/timer.h */
 
-/* Get parent */
-void *ext4_get_parent(void *dentry)
-{
-	return (void *)-ESTALE;
-}
+/* ext4_get_parent is now in namei.c */
 
 /* fsnotify */
 void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error)
