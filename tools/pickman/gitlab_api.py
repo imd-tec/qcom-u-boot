@@ -415,6 +415,43 @@ def update_mr_description(remote, mr_iid, desc):
         return False
 
 
+def update_mr_title(remote, mr_iid, title):
+    """Update a merge request's title
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        title (str): New title
+
+    Returns:
+        bool: True on success
+    """
+    if not check_available():
+        return False
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return False
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return False
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        merge_req = project.mergerequests.get(mr_iid)
+        merge_req.title = title
+        merge_req.save()
+        return True
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return False
+
+
 def push_and_create_mr(remote, branch, target, title, desc=''):
     """Push a branch and create a merge request
 

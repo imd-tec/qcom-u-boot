@@ -2055,6 +2055,59 @@ class TestPoll(unittest.TestCase):
         self.assertIn('returned 1', stderr.getvalue())
 
 
+class TestParseInstruction(unittest.TestCase):
+    """Tests for parse_instruction function."""
+
+    def test_pickman_skip(self):
+        """Test 'pickman skip' format."""
+        self.assertEqual(control.parse_instruction('pickman skip'), 'skip')
+
+    def test_pickman_colon_skip(self):
+        """Test 'pickman: skip' format."""
+        self.assertEqual(control.parse_instruction('pickman: skip'), 'skip')
+
+    def test_at_pickman_skip(self):
+        """Test '@pickman skip' format."""
+        self.assertEqual(control.parse_instruction('@pickman skip'), 'skip')
+
+    def test_at_pickman_colon_skip(self):
+        """Test '@pickman: skip' format."""
+        self.assertEqual(control.parse_instruction('@pickman: skip'), 'skip')
+
+    def test_pickman_unskip(self):
+        """Test 'pickman unskip' format."""
+        self.assertEqual(control.parse_instruction('pickman unskip'), 'unskip')
+
+    def test_at_pickman_unskip(self):
+        """Test '@pickman unskip' format."""
+        self.assertEqual(control.parse_instruction('@pickman unskip'), 'unskip')
+
+    def test_case_insensitive(self):
+        """Test case insensitivity."""
+        self.assertEqual(control.parse_instruction('PICKMAN SKIP'), 'skip')
+        self.assertEqual(control.parse_instruction('Pickman: Skip'), 'skip')
+
+    def test_in_longer_text(self):
+        """Test instruction embedded in longer comment."""
+        body = 'Please pickman skip this MR, it does not apply'
+        self.assertEqual(control.parse_instruction(body), 'skip')
+
+    def test_no_instruction(self):
+        """Test comment without pickman instruction."""
+        self.assertIsNone(control.parse_instruction('Just a regular comment'))
+
+    def test_pickman_without_command(self):
+        """Test 'pickman' alone without a command."""
+        self.assertIsNone(control.parse_instruction('pickman'))
+
+    def test_has_instruction(self):
+        """Test has_instruction helper."""
+        self.assertTrue(control.has_instruction('pickman skip', 'skip'))
+        self.assertTrue(control.has_instruction('@pickman: unskip', 'unskip'))
+        self.assertFalse(control.has_instruction('pickman skip', 'unskip'))
+        self.assertFalse(control.has_instruction('regular comment', 'skip'))
+
+
 class TestFormatHistorySummary(unittest.TestCase):
     """Tests for format_history_summary function."""
 
