@@ -107,6 +107,11 @@ int jbd2__journal_restart(void *handle, int nblocks, int revoke_records,
 	return 0;
 }
 
+int jbd2_trans_will_send_data_barrier(journal_t *journal, unsigned long tid)
+{
+	return 0;
+}
+
 /*
  * Stubs for balloc.c
  */
@@ -512,10 +517,7 @@ int ext4_dirblock_csum_verify(struct inode *inode, struct buffer_head *bh)
 
 /* ext4_ioctl is now in super.c */
 
-int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
-{
-	return 0;
-}
+/* ext4_sync_file is now in fsync.c */
 
 /*
  * Stubs for super.c

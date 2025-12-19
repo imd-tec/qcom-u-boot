@@ -1289,6 +1289,19 @@ typedef unsigned int projid_t;
 #define trace_ext4_write_begin(...)		do { } while (0)
 #define trace_ext4_write_end(...)		do { } while (0)
 #define trace_ext4_journalled_write_end(...)	do { } while (0)
+#define trace_ext4_sync_file_enter(...)		do { } while (0)
+#define trace_ext4_sync_file_exit(...)		do { } while (0)
+
+/* Dentry operations - stubs */
+#define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
+#define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
+
+/* Sync operations - stubs */
+#define sync_mapping_buffers(m)			({ (void)(m); 0; })
+#define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
+#define generic_buffers_fsync_noflush(f, s, e, d) ({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
+#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
+#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
 
 /* DAX stubs - DAX not supported in U-Boot */
 #define IS_DAX(inode)				(0)
