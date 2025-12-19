@@ -64,7 +64,7 @@ obj-$(CONFIG_$(PHASE_)EXPO_DUMP) += expo_dump.o
 obj-$(CONFIG_$(PHASE_)EXPO) += scene_menu.o scene_textline.o scene_textedit.o
 obj-$(CONFIG_$(PHASE_)EXPO_TEST) += expo_test.o
 ifdef CONFIG_COREBOOT_SYSINFO
-obj-$(CONFIG_$(SPL_TPL_)EXPO) += expo_build_cb.o
+obj-$(CONFIG_$(PHASE_)EXPO) += expo_build_cb.o
 endif
 
 obj-$(CONFIG_$(PHASE_)BOOTMETH_VBE) += vbe.o
