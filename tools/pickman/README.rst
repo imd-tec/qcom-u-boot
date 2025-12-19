@@ -35,6 +35,95 @@ For fully automated workflows, use ``poll`` which runs ``step`` in a loop. The
 This allows hands-off operation: just run ``poll`` and approve/merge MRs in
 GitLab as they come in.
 
+Commit Selection
+----------------
+
+When pickman creates an MR, it groups commits into logical sets based on merge
+commits in the source branch. Understanding this helps predict what will be
+included in each MR.
+
+**Algorithm**
+
+1. **Start from the last processed commit**: Pickman reads from its database the
+   hash of the last commit that was successfully cherry-picked from the source
+   branch.
+
+2. **Find the next merge on first-parent chain**: Walking forward from the last
+   processed commit along the first-parent chain (``git log --first-parent``),
+   pickman finds the next merge commit. The first-parent chain represents the
+   mainline history of the branch.
+
+3. **Include all commits up to that merge**: Using ``git log`` (without
+   ``--first-parent``), pickman collects ALL commits between the last processed
+   commit and the merge commit. This includes:
+
+   - Commits on the mainline leading up to the merge
+   - Commits brought in by the merge (from the merged branch)
+   - The merge commit itself
+
+**Example**
+
+Consider this history on the source branch::
+
+    * 5c8ef70 Merge tag 'xilinx-for-v2025.01-rc5-v2'
+    |\
+    | * 1b70b6c common: memtop: Fix the return type
+    |/
+    * c06705a Makefile: Match the full path to ccache
+    * 0b7f4c7 imx: Fix usable memory ranges
+    * ff1d5d8 Revert "configs: JH7110: enable EFI_LOADER"
+    * d701c6a net: lwip: check if network device is available
+    * b6691d0 net: lwip: do not return CMD_RET_USAGE
+    * 9378307 binman: Regenerate tools/binman/entries.rst  <-- last processed
+
+If the database shows ``9378307`` as the last processed commit, pickman will:
+
+1. Walk first-parent from ``9378307`` and find merge ``5c8ef70``
+2. Collect all commits in ``9378307..5c8ef70``:
+
+   - ``b6691d0`` net: lwip: do not return CMD_RET_USAGE
+   - ``d701c6a`` net: lwip: check if network device is available
+   - ``ff1d5d8`` Revert "configs: JH7110..."
+   - ``0b7f4c7`` imx: Fix usable memory ranges
+   - ``c06705a`` Makefile: Match the full path to ccache
+   - ``1b70b6c`` common: memtop: Fix the return type (from xilinx branch)
+   - ``5c8ef70`` Merge tag 'xilinx-for-v2025.01-rc5-v2'
+
+The resulting MR contains 7 commits. The branch name is derived from the first
+commit's short hash: ``cherry-b6691d0``.
+
+**Why merge-based grouping?**
+
+Merge commits typically represent logical units of work (e.g., a pull request
+or a subsystem update). By stopping at each merge, pickman:
+
+- Keeps MRs focused and reviewable
+- Preserves the original grouping from upstream
+- Makes it easier to identify and skip problematic sets
+
+**No merge found**
+
+If there are no merge commits between the last processed commit and the branch
+tip, pickman includes all remaining commits in a single set. This is noted in
+the output as "no merge found".
+
+Skipping MRs
+------------
+
+During review, if a set of commits should be skipped (e.g., not applicable to
+the target branch), a reviewer can comment:
+
+- ``pickman skip``
+- ``pickman: skip``
+- ``@pickman skip``
+- ``@pickman: skip``
+
+Pickman will add ``[skipped]`` to the MR title. Skipped MRs:
+
+- Are ignored when deciding whether to create new MRs
+- Don't block the ``step`` or ``poll`` commands from proceeding
+- Can be unskipped by commenting ``pickman unskip``
+
 Usage
 -----
 
