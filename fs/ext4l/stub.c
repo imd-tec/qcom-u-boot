@@ -236,6 +236,11 @@ int ext4_xattr_set(struct inode *inode, int name_index, const char *name,
 	return -1;
 }
 
+ssize_t ext4_listxattr(struct dentry *dentry, char *buffer, size_t buffer_size)
+{
+	return 0;
+}
+
 /*
  * Stubs for orphan.c
  */
@@ -414,8 +419,8 @@ int ext4_find_inline_data_nolock(struct inode *inode)
 
 
 /* File and inode operations symbols */
-char ext4_file_inode_operations;
-char ext4_file_operations;
+/* ext4_file_inode_operations is now in file.c */
+/* ext4_file_operations is now in file.c */
 char ext4_dir_inode_operations;
 /* ext4_dir_operations is now in dir.c */
 char ext4_special_inode_operations;
@@ -485,10 +490,7 @@ ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
 
 /* __ext4_error_file is now in super.c */
 
-loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
-{
-	return 0;
-}
+/* ext4_llseek is now in file.c */
 
 int ext4_htree_fill_tree(struct file *dir_file, unsigned long long pos,
 			 unsigned long long start_hash,

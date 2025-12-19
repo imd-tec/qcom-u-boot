@@ -237,6 +237,10 @@ struct iomap_ops {
 	int (*iomap_end)(struct inode *inode, loff_t pos, loff_t length,
 			 ssize_t written, unsigned flags, struct iomap *iomap);
 };
+
+/* iomap DIO flags */
+#define IOMAP_DIO_UNWRITTEN	(1 << 0)
+#define IOMAP_DIO_FORCE_WAIT	(1 << 1)
 #endif /* LINUX_IOMAP_H */
 
 /* fiemap types */
@@ -549,6 +553,22 @@ struct dentry {
 /* vm_fault_t - stub */
 typedef unsigned int vm_fault_t;
 
+/* VM flags */
+#define VM_SHARED		0x00000008
+#define VM_WRITE		0x00000002
+#define VM_HUGEPAGE		0x01000000
+#define FAULT_FLAG_WRITE	0x01
+
+/* pipe_inode_info - forward declaration */
+struct pipe_inode_info;
+
+/* vm_area_desc - for mmap_prepare */
+struct vm_area_desc {
+	struct file *file;
+	unsigned long vm_flags;
+	const struct vm_operations_struct *vm_ops;
+};
+
 /* Forward declarations for function prototypes */
 struct kstat;
 struct path;
@@ -698,11 +718,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define VM_FAULT_NOPAGE		0x0010
 #define VM_FAULT_LOCKED		0x0200
 
-/* struct path - filesystem path */
-struct path {
-	struct vfsmount *mnt;
-	struct dentry *dentry;
-};
+/* struct path is defined in linux/fs.h */
 
 /* struct kstat - stat buffer */
 struct kstat {
@@ -753,6 +769,15 @@ struct vm_fault {
 	struct page *page;
 };
 
+/* vm_operations_struct - virtual memory area operations */
+struct vm_operations_struct {
+	vm_fault_t (*fault)(struct vm_fault *vmf);
+	vm_fault_t (*huge_fault)(struct vm_fault *vmf, unsigned int order);
+	vm_fault_t (*page_mkwrite)(struct vm_fault *vmf);
+	vm_fault_t (*pfn_mkwrite)(struct vm_fault *vmf);
+	vm_fault_t (*map_pages)(struct vm_fault *vmf, pgoff_t start, pgoff_t end);
+};
+
 /* Forward declaration for swap */
 struct swap_info_struct;
 
@@ -789,6 +814,8 @@ struct inode {
 	dev_t i_rdev;
 	const struct inode_operations *i_op;
 	const struct file_operations *i_fop;
+	atomic_t i_writecount;		/* Count of writers */
+	struct rw_semaphore i_rwsem;	/* inode lock */
 };
 
 /* Inode time accessors */
@@ -941,17 +968,45 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define inode_unlock(inode)		do { } while (0)
 #define inode_lock_shared(inode)	do { } while (0)
 #define inode_unlock_shared(inode)	do { } while (0)
+#define inode_trylock(inode)		(1)
+#define inode_trylock_shared(inode)	(1)
 #define inode_dio_wait(inode)		do { } while (0)
+
+/* Lock debugging - no-ops in U-Boot */
+#define lockdep_assert_held_write(l)	do { } while (0)
+#define lockdep_assert_held(l)		do { } while (0)
 
 /* File operations */
 #define file_modified(file)		({ (void)(file); 0; })
+#define file_accessed(file)		do { (void)(file); } while (0)
+
+/* Security checks - no security in U-Boot */
+#define IS_NOSEC(inode)			(1)
 
 /* Filemap operations */
 #define filemap_invalidate_lock(m)	do { } while (0)
 #define filemap_invalidate_unlock(m)	do { } while (0)
+#define filemap_invalidate_lock_shared(m) do { } while (0)
+#define filemap_invalidate_unlock_shared(m) do { } while (0)
 #define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
 #define truncate_pagecache(i, s)	do { } while (0)
 #define pagecache_isize_extended(i, f, t) do { } while (0)
+#define invalidate_mapping_pages(m, s, e) do { (void)(m); (void)(s); (void)(e); } while (0)
+
+/* Filemap fault handlers - stubs */
+static inline vm_fault_t filemap_fault(struct vm_fault *vmf)
+{
+	return 0;
+}
+
+static inline vm_fault_t filemap_map_pages(struct vm_fault *vmf,
+					   pgoff_t start, pgoff_t end)
+{
+	return 0;
+}
+
+/* DAX device mapping check - always false in U-Boot */
+#define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
 /* Inode time/size operations */
 #define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
@@ -1245,8 +1300,24 @@ typedef unsigned int projid_t;
 /* Superblock freezing stubs */
 #define sb_start_intwrite(sb)			do { (void)(sb); } while (0)
 #define sb_end_intwrite(sb)			do { (void)(sb); } while (0)
+#define sb_start_intwrite_trylock(sb)		({ (void)(sb); 1; })
 #define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
 #define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
+
+/* d_path - get pathname - stub returns empty path */
+static inline char *d_path(const struct path *path, char *buf, int buflen)
+{
+	if (buflen > 0)
+		buf[0] = '\0';
+	return buf;
+}
+
+/* fscrypt/fsverity stubs */
+#define fscrypt_file_open(i, f)			({ (void)(i); (void)(f); 0; })
+#define fsverity_file_open(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* Quota file open - stub */
+#define dquot_file_open(i, f)			({ (void)(i); (void)(f); 0; })
 
 /* Inode I/O list management */
 #define inode_io_list_del(inode)		do { } while (0)
@@ -1428,6 +1499,15 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define file_update_time(f)		do { } while (0)
 #define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 
+/* VFS file operations for file.c */
+#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0; })
+#define filemap_splice_read(f, p, pipe, l, fl)	({ (void)(f); (void)(p); (void)(pipe); (void)(l); (void)(fl); 0; })
+#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
+#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); true; })
+#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
+
 /* iomap stubs */
 #define iomap_bmap(m, b, o)		({ (void)(m); (void)(b); (void)(o); 0UL; })
 #define iomap_swapfile_activate(s, f, sp, o) ({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
@@ -1483,6 +1563,21 @@ struct file_operations {
 	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
 	int (*fsync)(struct file *, loff_t, loff_t, int);
 	int (*release)(struct inode *, struct file *);
+};
+
+/* inode_operations - for file and directory operations */
+struct inode_operations {
+	int (*getattr)(struct mnt_idmap *, const struct path *,
+		       struct kstat *, u32, unsigned int);
+	ssize_t (*listxattr)(struct dentry *, char *, size_t);
+	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
+	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
+	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
+	int (*set_acl)(struct mnt_idmap *, struct dentry *,
+		       struct posix_acl *, int);
+	int (*fileattr_get)(struct dentry *, struct file_kattr *);
+	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
+			    struct file_kattr *);
 };
 
 /* file open helper */

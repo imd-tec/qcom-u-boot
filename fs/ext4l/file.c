@@ -952,36 +952,20 @@ loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
 	return vfs_setpos(file, offset, maxbytes);
 }
 
+/* U-Boot simplified file operations */
 const struct file_operations ext4_file_operations = {
 	.llseek		= ext4_llseek,
-	.read_iter	= ext4_file_read_iter,
-	.write_iter	= ext4_file_write_iter,
-	.iopoll		= iocb_bio_iopoll,
 	.unlocked_ioctl = ext4_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl	= ext4_compat_ioctl,
-#endif
-	.mmap_prepare	= ext4_file_mmap_prepare,
 	.open		= ext4_file_open,
 	.release	= ext4_release_file,
 	.fsync		= ext4_sync_file,
-	.get_unmapped_area = thp_get_unmapped_area,
-	.splice_read	= ext4_file_splice_read,
-	.splice_write	= iter_file_splice_write,
-	.fallocate	= ext4_fallocate,
-	.fop_flags	= FOP_MMAP_SYNC | FOP_BUFFER_RASYNC |
-			  FOP_DIO_PARALLEL_WRITE |
-			  FOP_DONTCACHE,
 };
 
+/* U-Boot simplified inode operations */
 const struct inode_operations ext4_file_inode_operations = {
 	.setattr	= ext4_setattr,
 	.getattr	= ext4_file_getattr,
 	.listxattr	= ext4_listxattr,
-	.get_inode_acl	= ext4_get_acl,
-	.set_acl	= ext4_set_acl,
 	.fiemap		= ext4_fiemap,
-	.fileattr_get	= ext4_fileattr_get,
-	.fileattr_set	= ext4_fileattr_set,
 };
 
