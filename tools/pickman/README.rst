@@ -307,6 +307,19 @@ Options for the poll command:
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
 
+To push a branch using the GitLab API token for authentication::
+
+    ./tools/pickman/pickman push-branch <branch-name>
+
+This is useful when you want commits to appear as coming from the token owner
+(e.g., a pickman bot account) rather than the user's configured git credentials.
+The agent uses this command automatically when pushing review changes.
+
+Options for the push-branch command:
+
+- ``-r, --remote``: Git remote (default: ci)
+- ``-f, --force``: Force push (overwrite remote branch)
+
 Requirements
 ------------
 
@@ -333,8 +346,9 @@ file or environment variable. Pickman checks in this order:
 3. ``GITLAB_API_TOKEN`` environment variable
 
 See `GitLab Personal Access Tokens`_ for instructions on creating a token.
-The token needs ``api`` scope. Using a dedicated bot account for pickman is
-recommended.
+The token needs ``api`` and ``write_repository`` scopes. Using a dedicated bot
+account for pickman is recommended - this ensures all commits pushed by pickman
+appear as coming from the bot account rather than individual users.
 
 .. _GitLab Personal Access Tokens:
    https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html

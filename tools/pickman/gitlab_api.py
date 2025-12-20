@@ -147,8 +147,36 @@ def parse_url(url):
     return None, None
 
 
+def get_push_url(remote):
+    """Get a push URL using the GitLab API token for authentication
+
+    This allows pushing as the token owner (e.g., a bot account) rather than
+    using the user's configured git credentials.
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        str: HTTPS URL with embedded token, or None if not available
+    """
+    token = get_token()
+    if not token:
+        return None
+
+    url = get_remote_url(remote)
+    host, proj_path = parse_url(url)
+    if not host or not proj_path:
+        return None
+
+    return f'https://oauth2:{token}@{host}/{proj_path}.git'
+
+
 def push_branch(remote, branch, force=False):
     """Push a branch to a remote
+
+    Uses the GitLab API token for authentication if available, so the push
+    comes from the token owner (e.g., a bot account) rather than the user's
+    configured git credentials.
 
     Args:
         remote (str): Remote name
@@ -159,11 +187,15 @@ def push_branch(remote, branch, force=False):
         bool: True on success
     """
     try:
+        # Use token-authenticated URL if available
+        push_url = get_push_url(remote)
+        push_target = push_url if push_url else remote
+
         # Skip push pipeline; MR pipeline will run when MR is created
         args = ['git', 'push', '-u', '-o', 'ci.skip']
         if force:
             args.append('--force-with-lease')
-        args.extend([remote, branch])
+        args.extend([push_target, f'HEAD:{branch}'])
         command.output(*args)
         return True
     except command.CommandExc as exc:

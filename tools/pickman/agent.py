@@ -234,7 +234,7 @@ Steps to follow:
 4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
 5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
 6. Force push to the ORIGINAL remote branch to update the MR:
-   git push --force-with-lease {remote} HEAD:{branch_name}
+   ./tools/pickman/pickman push-branch {branch_name} -r {remote} -f
    (this triggers a new pipeline to verify the changes)
 7. Report what was done and what reply should be posted to the MR
 

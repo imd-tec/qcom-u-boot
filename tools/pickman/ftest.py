@@ -1431,6 +1431,43 @@ class TestCheckAvailable(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestGetPushUrl(unittest.TestCase):
+    """Tests for get_push_url function."""
+
+    def test_get_push_url_success(self):
+        """Test successful push URL generation."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='git@gitlab.com:group/project.git'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+
+    def test_get_push_url_no_token(self):
+        """Test returns None when no token available."""
+        with mock.patch.object(gitlab_api, 'get_token', return_value=None):
+            url = gitlab_api.get_push_url('origin')
+        self.assertIsNone(url)
+
+    def test_get_push_url_invalid_remote(self):
+        """Test returns None for invalid remote URL."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='not-a-valid-url'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertIsNone(url)
+
+    def test_get_push_url_https_remote(self):
+        """Test with HTTPS remote URL."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='https://gitlab.com/group/project.git'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+
+
 class TestConfigFile(unittest.TestCase):
     """Tests for config file support."""
 
@@ -2764,6 +2801,45 @@ class TestDoCommitSourceResolveError(unittest.TestCase):
             ret = control.do_commit_source(args, None)
         self.assertEqual(ret, 1)
         self.assertIn('Could not resolve', stderr.getvalue())
+
+
+class TestDoPushBranch(unittest.TestCase):
+    """Tests for do_push_branch command."""
+
+    def test_push_branch_success(self):
+        """Test successful push."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='ci', force=False)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=True) as mock_push:
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 0)
+        mock_push.assert_called_once_with('ci', 'test-branch', False)
+
+    def test_push_branch_force(self):
+        """Test force push."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='origin', force=True)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=True) as mock_push:
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 0)
+        mock_push.assert_called_once_with('origin', 'test-branch', True)
+
+    def test_push_branch_failure(self):
+        """Test push failure."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='ci', force=False)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=False):
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 1)
 
 
 class TestDoPickmanUnknownCommand(unittest.TestCase):

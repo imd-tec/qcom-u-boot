@@ -775,6 +775,24 @@ def do_apply(args, dbs):
     return ret
 
 
+def do_push_branch(args, dbs):  # pylint: disable=unused-argument
+    """Push a branch using the GitLab API token for authentication
+
+    This allows pushing as the token owner (e.g., a bot account) rather than
+    using the user's configured git credentials. Useful for ensuring all
+    pickman commits come from the same account.
+
+    Args:
+        args (Namespace): Parsed arguments with 'remote', 'branch', 'force'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    success = gitlab_api.push_branch(args.remote, args.branch, args.force)
+    return 0 if success else 1
+
+
 def do_commit_source(args, dbs):
     """Update the database with the last cherry-picked commit
 
@@ -1228,6 +1246,7 @@ COMMANDS = {
     'next-merges': do_next_merges,
     'next-set': do_next_set,
     'poll': do_poll,
+    'push-branch': do_push_branch,
     'review': do_review,
     'step': do_step,
     'test': do_test,

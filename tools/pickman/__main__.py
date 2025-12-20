@@ -103,6 +103,14 @@ def parse_args(argv):
     poll_cmd.add_argument('-t', '--target', default='master',
                           help='Target branch for MR (default: master)')
 
+    push_cmd = subparsers.add_parser('push-branch',
+                                     help='Push branch using GitLab API token')
+    push_cmd.add_argument('branch', help='Branch name to push')
+    push_cmd.add_argument('-r', '--remote', default='ci',
+                          help='Git remote (default: ci)')
+    push_cmd.add_argument('-f', '--force', action='store_true',
+                          help='Force push (overwrite remote branch)')
+
     test_cmd = subparsers.add_parser('test', help='Run tests')
     test_cmd.add_argument('-P', '--processes', type=int,
                           help='Number of processes to run tests (default: all)')
