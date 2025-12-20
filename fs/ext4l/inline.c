@@ -4,11 +4,7 @@
  * Written by Tao Ma <boyu.mt@taobao.com>
  */
 
-#include <linux/iomap.h>
-#include <linux/fiemap.h>
-#include <linux/namei.h>
-#include <linux/iversion.h>
-#include <linux/sched/mm.h>
+#include "ext4_uboot.h"
 
 #include "ext4_jbd2.h"
 #include "ext4.h"

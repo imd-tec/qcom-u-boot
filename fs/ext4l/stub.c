@@ -183,11 +183,7 @@ void ext4_discard_preallocations(struct inode *inode, unsigned int needed)
 }
 
 /* ext4_is_pending is now in extents_status.c */
-
-int ext4_convert_inline_data(struct inode *inode)
-{
-	return 0;
-}
+/* ext4_convert_inline_data is now in inline.c */
 
 void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
 			     void *handle)
@@ -250,10 +246,7 @@ int ext4_mpage_readpages(void *mapping, void *rac, void *folio)
 	return 0;
 }
 
-int ext4_readpage_inline(struct inode *inode, void *folio)
-{
-	return 0;
-}
+/* ext4_readpage_inline is now in inline.c */
 
 /* Xattr functions are now in xattr.c */
 
@@ -275,11 +268,7 @@ int ext4_fc_commit(void *journal, unsigned int tid)
 
 /* ext4_force_commit is now in super.c */
 
-/* Inline data */
-int ext4_destroy_inline_data(void *handle, struct inode *inode)
-{
-	return 0;
-}
+/* Inline data is now in inline.c */
 
 /* I/O submit */
 void ext4_io_submit_init(void *io, void *wbc)
@@ -364,20 +353,9 @@ int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
 	return 0;
 }
 
-/* Inline data */
-int ext4_inline_data_iomap(struct inode *inode, void *iomap)
-{
-	return 0;
-}
-
+/* Inline data functions are now in inline.c */
 
 /* __xattr_check_inode is now in xattr.c */
-
-int ext4_find_inline_data_nolock(struct inode *inode)
-{
-	return 0;
-}
-
 
 /* File and inode operations symbols */
 /* ext4_file_inode_operations is now in file.c */
@@ -391,32 +369,7 @@ int ext4_find_inline_data_nolock(struct inode *inode)
 
 /* ext4_update_dynamic_rev is now in super.c */
 
-/* Inline data */
-int ext4_inline_data_truncate(struct inode *inode, int *has_inline)
-{
-	*has_inline = 0;
-	return 0;
-}
-
-int ext4_try_to_write_inline_data(struct address_space *mapping,
-				  struct inode *inode, loff_t pos,
-				  unsigned int len, struct folio **foliop)
-{
-	return 0;
-}
-
-int ext4_generic_write_inline_data(struct address_space *mapping,
-				   struct inode *inode, loff_t pos,
-				   unsigned int len, struct folio **foliop)
-{
-	return 0;
-}
-
-int ext4_write_inline_data_end(struct inode *inode, loff_t pos, unsigned int len,
-			       unsigned int copied, struct folio *folio)
-{
-	return copied;
-}
+/* Inline data stubs are now in inline.c */
 
 /* xattr stubs are now in xattr.c */
 
@@ -432,11 +385,7 @@ void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
 {
 }
 
-/* symlink.c stub */
-void *ext4_read_inline_link(struct inode *inode)
-{
-	return ERR_PTR(-EOPNOTSUPP);
-}
+/* ext4_read_inline_link is now in inline.c */
 
 /*
  * Stubs for dir.c
@@ -452,61 +401,7 @@ ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
 
 /* ext4_htree_fill_tree is now in namei.c */
 
-int ext4_read_inline_dir(struct file *file, void *ctx, void *f_pos)
-{
-	return 0;
-}
-
-struct buffer_head *ext4_find_inline_entry(struct inode *dir, void *fname,
-					   void *res_dir, int *has_inline_data)
-{
-	*has_inline_data = 0;
-	return NULL;
-}
-
-int ext4_try_add_inline_entry(void *handle, void *fname, void *dentry)
-{
-	return -ENOENT;
-}
-
-int ext4_delete_inline_entry(void *handle, struct inode *dir,
-			     void *de_del, struct buffer_head *bh,
-			     int *has_inline_data)
-{
-	*has_inline_data = 0;
-	return -ENOENT;
-}
-
-void ext4_update_final_de(void *de, int de_len, int new_de_len)
-{
-}
-
-int ext4_try_create_inline_dir(void *handle, struct inode *parent,
-			       struct inode *inode)
-{
-	return -ENOENT;
-}
-
-int empty_inline_dir(struct inode *dir, int *has_inline_data)
-{
-	*has_inline_data = 0;
-	return 1;
-}
-
-/* Inline dir stubs */
-int ext4_get_first_inline_block(struct inode *inode, void **de,
-				int *inline_size)
-{
-	return 0;
-}
-
-int ext4_inlinedir_to_tree(struct file *dir, struct inode *inode,
-			   unsigned long long start_hash,
-			   unsigned long long *next_hash,
-			   int has_inline_data)
-{
-	return 0;
-}
+/* Inline dir stubs are now in inline.c */
 
 /* Fast commit stubs */
 void ext4_fc_track_unlink(void *handle, struct dentry *dentry)

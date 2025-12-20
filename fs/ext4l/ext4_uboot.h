@@ -1309,6 +1309,18 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 #define FGP_NOWAIT	0x00000020
 #define FGP_FOR_MMAP	0x00000040
 #define FGP_STABLE	0x00000080
+#define FGP_WRITEBEGIN	(FGP_LOCK | FGP_WRITE | FGP_CREAT | FGP_STABLE)
+
+/* kmap/kunmap stubs for inline.c */
+#define kmap_local_folio(folio, off)	({ (void)(folio); (void)(off); (void *)NULL; })
+#define kunmap_local(addr)		do { (void)(addr); } while (0)
+
+/* Folio zeroing stubs for inline.c */
+#define folio_zero_tail(f, off, kaddr)	({ (void)(f); (void)(off); (void)(kaddr); (void *)NULL; })
+#define folio_zero_segment(f, s, e)	do { (void)(f); (void)(s); (void)(e); } while (0)
+
+/* mapping_gfp_mask stub */
+#define mapping_gfp_mask(m)		({ (void)(m); GFP_KERNEL; })
 
 /* __filemap_get_folio stub */
 static inline struct folio *__filemap_get_folio(struct address_space *mapping,
