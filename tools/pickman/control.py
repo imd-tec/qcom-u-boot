@@ -186,11 +186,14 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+# pylint: disable=too-many-locals,too-many-branches
 def get_next_commits(dbs, source):
     """Get the next set of commits to cherry-pick from a source
 
     Finds commits between the last cherry-picked commit and the next merge
     commit on the first-parent (mainline) chain of the source branch.
+    Skips merges whose commits are already tracked in the database (from
+    pending MRs).
 
     Args:
         dbs (Database): Database instance
@@ -208,8 +211,7 @@ def get_next_commits(dbs, source):
     if not last_commit:
         return None, False, f"Source '{source}' not found in database"
 
-    # First, find the next merge commit on the first-parent chain
-    # This ensures we follow the mainline and find merges in order
+    # Get all first-parent commits to find merges
     fp_output = run_git([
         'log', '--reverse', '--first-parent', '--format=%H|%h|%an|%s|%P',
         f'{last_commit}..{source}'
@@ -218,22 +220,56 @@ def get_next_commits(dbs, source):
     if not fp_output:
         return [], False, None
 
-    # Find the first merge on the first-parent chain
-    merge_hash = None
+    # Build list of merge hashes on the first-parent chain
+    merge_hashes = []
     for line in fp_output.split('\n'):
         if not line:
             continue
         parts = line.split('|')
         parents = parts[-1].split()
         if len(parents) > 1:
-            merge_hash = parts[0]
-            break
+            merge_hashes.append(parts[0])
 
-    # Now get all commits from last_commit to the merge (or end of branch)
-    # Without --first-parent to include commits from merged branches
+    # Try each merge in order until we find one with unprocessed commits
+    prev_commit = last_commit
+    for merge_hash in merge_hashes:
+        # Get all commits from prev_commit to this merge
+        log_output = run_git([
+            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+            f'{prev_commit}..{merge_hash}'
+        ])
+
+        if not log_output:
+            prev_commit = merge_hash
+            continue
+
+        # Parse commits, filtering out those already in database
+        commits = []
+        for line in log_output.split('\n'):
+            if not line:
+                continue
+            parts = line.split('|')
+            commit_hash = parts[0]
+            short_hash = parts[1]
+            author = parts[2]
+            subject = '|'.join(parts[3:-1])  # Subject may contain separator
+
+            # Skip commits already in the database (already in a pending MR)
+            if dbs.commit_get(commit_hash):
+                continue
+
+            commits.append(CommitInfo(commit_hash, short_hash, subject, author))
+
+        if commits:
+            return commits, True, None
+
+        # All commits in this merge are processed, skip to next
+        prev_commit = merge_hash
+
+    # No merges with unprocessed commits, check remaining commits
     log_output = run_git([
         'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'{last_commit}..{merge_hash or source}'
+        f'{prev_commit}..{source}'
     ])
 
     if not log_output:
@@ -247,11 +283,14 @@ def get_next_commits(dbs, source):
         commit_hash = parts[0]
         short_hash = parts[1]
         author = parts[2]
-        subject = '|'.join(parts[3:-1])  # Subject may contain separator
+        subject = '|'.join(parts[3:-1])
+
+        if dbs.commit_get(commit_hash):
+            continue
 
         commits.append(CommitInfo(commit_hash, short_hash, subject, author))
 
-    return commits, bool(merge_hash), None
+    return commits, False, None
 
 
 def do_next_set(args, dbs):
@@ -373,6 +412,129 @@ def do_count_merges(args, dbs):
 
 
 HISTORY_FILE = '.pickman-history'
+
+# Tag added to MR title when skipped
+SKIPPED_TAG = '[skipped]'
+
+
+def parse_instruction(body):
+    """Parse a pickman instruction from a comment body
+
+    Recognizes instructions in these formats:
+    - pickman <instruction>
+    - pickman: <instruction>
+    - @pickman <instruction>
+    - @pickman: <instruction>
+
+    Args:
+        body (str): Comment body text
+
+    Returns:
+        str: The instruction (e.g., 'skip', 'unskip'), or None if not found
+    """
+    # Pattern matches: optional @, 'pickman', optional colon, then the command
+    pattern = r'@?pickman:?\s+(\w+)'
+    match = re.search(pattern, body.lower())
+    if match:
+        return match.group(1)
+    return None
+
+
+def has_instruction(body, instruction):
+    """Check if a comment body contains a specific pickman instruction
+
+    Args:
+        body (str): Comment body text
+        instruction (str): Instruction to check for (e.g., 'skip', 'unskip')
+
+    Returns:
+        bool: True if the comment contains the specified instruction
+    """
+    return parse_instruction(body) == instruction
+
+
+def handle_unskip_comments(remote, mr_iid, title, unresolved, dbs):
+    """Handle unskip comments on an MR
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        title (str): Current MR title
+        unresolved (list): List of unresolved comments
+        dbs (Database): Database instance
+
+    Returns:
+        tuple: (handled, new_unresolved) where handled is True if unskip was
+            processed and new_unresolved is the filtered comment list
+    """
+    unskip_comments = [c for c in unresolved
+                       if has_instruction(c.body, 'unskip')]
+    if not unskip_comments:
+        return False, unresolved
+
+    tout.info(f'MR !{mr_iid} has unskip request')
+
+    # Update MR title to remove [skipped] tag
+    if SKIPPED_TAG in title:
+        new_title = title.replace(f'{SKIPPED_TAG} ', '')
+        new_title = new_title.replace(SKIPPED_TAG, '')
+        gitlab_api.update_mr_title(remote, mr_iid, new_title)
+        tout.info(f'MR !{mr_iid} unskipped, will resume processing')
+
+    # Mark unskip comments as processed
+    for comment in unskip_comments:
+        dbs.comment_mark_processed(mr_iid, comment.id)
+    dbs.commit()
+
+    # Reply to confirm the unskip
+    gitlab_api.reply_to_mr(
+        remote, mr_iid,
+        'MR unskipped. Processing will resume on next poll.'
+    )
+
+    # Remove unskip comments from unresolved list for further processing
+    new_unresolved = [c for c in unresolved
+                      if not has_instruction(c.body, 'unskip')]
+    return True, new_unresolved
+
+
+def handle_skip_comments(remote, mr_iid, title, unresolved, dbs):
+    """Handle skip comments on an MR
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        title (str): Current MR title
+        unresolved (list): List of unresolved comments
+        dbs (Database): Database instance
+
+    Returns:
+        bool: True if skip was processed
+    """
+    skip_comments = [c for c in unresolved
+                     if has_instruction(c.body, 'skip')]
+    if not skip_comments:
+        return False
+
+    tout.info(f'MR !{mr_iid} has skip request, marking as skipped')
+
+    # Update MR title to add [skipped] tag
+    if SKIPPED_TAG not in title:
+        new_title = f'{SKIPPED_TAG} {title}'
+        gitlab_api.update_mr_title(remote, mr_iid, new_title)
+
+    # Mark skip comments as processed
+    for comment in skip_comments:
+        dbs.comment_mark_processed(mr_iid, comment.id)
+    dbs.commit()
+
+    # Reply to confirm the skip
+    gitlab_api.reply_to_mr(
+        remote, mr_iid,
+        'MR marked as skipped. Use `pickman unskip` or manually '
+        'remove [skipped] from the title to resume processing.'
+    )
+    return True
 
 
 def format_history_summary(source, commits, branch_name):
@@ -613,6 +775,24 @@ def do_apply(args, dbs):
     return ret
 
 
+def do_push_branch(args, dbs):  # pylint: disable=unused-argument
+    """Push a branch using the GitLab API token for authentication
+
+    This allows pushing as the token owner (e.g., a bot account) rather than
+    using the user's configured git credentials. Useful for ensuring all
+    pickman commits come from the same account.
+
+    Args:
+        args (Namespace): Parsed arguments with 'remote', 'branch', 'force'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    success = gitlab_api.push_branch(args.remote, args.branch, args.force)
+    return 0 if success else 1
+
+
 def do_commit_source(args, dbs):
     """Update the database with the last cherry-picked commit
 
@@ -648,6 +828,104 @@ def do_commit_source(args, dbs):
     return 0
 
 
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def process_single_mr(remote, merge_req, dbs, target):
+    """Process review comments on a single MR
+
+    Args:
+        remote (str): Remote name
+        merge_req (PickmanMr): MR object from get_open_pickman_mrs()
+        dbs (Database): Database instance for tracking processed comments
+        target (str): Target branch for rebase operations
+
+    Returns:
+        int: 1 if MR was processed, 0 otherwise
+    """
+    mr_iid = merge_req.iid
+    comments = gitlab_api.get_mr_comments(remote, mr_iid)
+    if comments is None:
+        comments = []
+
+    # Filter to unresolved comments that haven't been processed
+    unresolved = []
+    for com in comments:
+        if com.resolved:
+            continue
+        if dbs.comment_is_processed(mr_iid, com.id):
+            continue
+        unresolved.append(com)
+
+    # Check for unskip comments first (takes precedence)
+    handled, unresolved = handle_unskip_comments(
+        remote, mr_iid, merge_req.title, unresolved, dbs)
+    processed = 1 if handled else 0
+
+    # Check for skip comments
+    if handle_skip_comments(remote, mr_iid, merge_req.title, unresolved, dbs):
+        return processed + 1
+
+    # If MR is currently skipped, don't process rebases or other comments
+    if SKIPPED_TAG in merge_req.title:
+        return processed
+
+    # Check if rebase is needed
+    needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
+
+    # Skip if no comments and no rebase needed
+    if not unresolved and not needs_rebase:
+        return processed
+
+    tout.info('')
+    if needs_rebase:
+        if merge_req.has_conflicts:
+            tout.info(f"MR !{mr_iid} has merge conflicts - rebasing...")
+        else:
+            tout.info(f"MR !{mr_iid} needs rebase...")
+    if unresolved:
+        tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
+        for comment in unresolved:
+            tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
+
+    # Run agent to handle comments and/or rebase
+    success, conversation_log = agent.handle_mr_comments(
+        mr_iid,
+        merge_req.source_branch,
+        unresolved,
+        remote,
+        target,
+        needs_rebase=needs_rebase,
+        has_conflicts=merge_req.has_conflicts,
+        mr_description=merge_req.description,
+    )
+
+    if success:
+        # Mark comments as processed
+        for comment in unresolved:
+            dbs.comment_mark_processed(mr_iid, comment.id)
+        dbs.commit()
+
+        # Update MR description with comments and conversation log
+        old_desc = merge_req.description
+        comment_summary = '\n'.join(
+            f"- [{c.author}]: {c.body}"
+            for c in unresolved
+        )
+        new_desc = (f"{old_desc}\n\n### Review response\n\n"
+                    f"**Comments addressed:**\n{comment_summary}\n\n"
+                    f"**Response:**\n{conversation_log}")
+        gitlab_api.update_mr_description(remote, mr_iid, new_desc)
+
+        # Update .pickman-history
+        update_history_with_review(merge_req.source_branch,
+                                   unresolved, conversation_log)
+
+        tout.info(f'Updated MR !{mr_iid} description and history')
+    else:
+        tout.error(f"Failed to handle comments for MR !{mr_iid}")
+
+    return processed + 1
+
+
 def process_mr_reviews(remote, mrs, dbs, target='master'):
     """Process review comments on open MRs
 
@@ -671,77 +949,8 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
     run_git(['fetch', remote])
 
     processed = 0
-
     for merge_req in mrs:
-        mr_iid = merge_req.iid
-        comments = gitlab_api.get_mr_comments(remote, mr_iid)
-        if comments is None:
-            comments = []
-
-        # Filter to unresolved comments that haven't been processed
-        unresolved = []
-        for com in comments:
-            if com.resolved:
-                continue
-            if dbs.comment_is_processed(mr_iid, com.id):
-                continue
-            unresolved.append(com)
-
-        # Check if rebase is needed
-        needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
-
-        # Skip if no comments and no rebase needed
-        if not unresolved and not needs_rebase:
-            continue
-
-        tout.info('')
-        if needs_rebase:
-            if merge_req.has_conflicts:
-                tout.info(f"MR !{mr_iid} has merge conflicts - rebasing...")
-            else:
-                tout.info(f"MR !{mr_iid} needs rebase...")
-        if unresolved:
-            tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
-            for comment in unresolved:
-                tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
-
-        # Run agent to handle comments and/or rebase
-        success, conversation_log = agent.handle_mr_comments(
-            mr_iid,
-            merge_req.source_branch,
-            unresolved,
-            remote,
-            target,
-            needs_rebase=needs_rebase,
-            has_conflicts=merge_req.has_conflicts,
-            mr_description=merge_req.description,
-        )
-
-        if success:
-            # Mark comments as processed
-            for comment in unresolved:
-                dbs.comment_mark_processed(mr_iid, comment.id)
-            dbs.commit()
-
-            # Update MR description with comments and conversation log
-            old_desc = merge_req.description
-            comment_summary = '\n'.join(
-                f"- [{c.author}]: {c.body}"
-                for c in unresolved
-            )
-            new_desc = (f"{old_desc}\n\n### Review response\n\n"
-                        f"**Comments addressed:**\n{comment_summary}\n\n"
-                        f"**Response:**\n{conversation_log}")
-            gitlab_api.update_mr_description(remote, mr_iid, new_desc)
-
-            # Update .pickman-history
-            update_history_with_review(merge_req.source_branch,
-                                       unresolved, conversation_log)
-
-            tout.info(f'Updated MR !{mr_iid} description and history')
-        else:
-            tout.error(f"Failed to handle comments for MR !{mr_iid}")
-        processed += 1
+        processed += process_single_mr(remote, merge_req, dbs, target)
 
     # Restore original branch
     if processed:
@@ -760,11 +969,11 @@ def update_history_with_review(branch_name, comments, conversation_log):
         conversation_log (str): Agent conversation log
     """
     comment_summary = '\n'.join(
-        f"- [{c.author}]: {c.body[:100]}..."
+        f'- [{c.author}]: {c.body[:100]}...'
         for c in comments
     )
 
-    entry = f"""### Review: {date.today()}
+    entry = f'''### Review: {date.today()}
 
 Branch: {branch_name}
 
@@ -776,7 +985,7 @@ Comments addressed:
 
 ---
 
-"""
+'''
 
     # Append to history file
     existing = ''
@@ -907,14 +1116,16 @@ def process_merged_mrs(remote, source, dbs):
 
 
 def do_step(args, dbs):
-    """Create an MR if none is pending
+    """Create an MR if below the max allowed
 
     Checks for merged pickman MRs and updates the database, then checks for
-    open pickman MRs. If open MRs exist, processes any review comments. If no
-    open MRs exist, runs apply with push to create a new one.
+    open pickman MRs. If open MRs exist, processes any review comments. If
+    the number of open MRs is below max_mrs, runs apply with push to create
+    a new one.
 
     Args:
-        args (Namespace): Parsed arguments with 'source', 'remote', 'target'
+        args (Namespace): Parsed arguments with 'source', 'remote', 'target',
+            'max_mrs'
         dbs (Database): Database instance
 
     Returns:
@@ -933,16 +1144,29 @@ def do_step(args, dbs):
     if mrs is None:
         return 1
 
-    if mrs:
-        tout.info(f'Found {len(mrs)} open pickman MR(s):')
-        for merge_req in mrs:
-            tout.info(f"  !{merge_req.iid}: {merge_req.title}")
+    # Separate skipped and active MRs
+    active_mrs = [m for m in mrs if SKIPPED_TAG not in m.title]
+    skipped_mrs = [m for m in mrs if SKIPPED_TAG in m.title]
 
-        # Process any review comments on open MRs
+    if mrs:
+        if active_mrs:
+            tout.info(f'Found {len(active_mrs)} open pickman MR(s):')
+            for merge_req in active_mrs:
+                tout.info(f"  !{merge_req.iid}: {merge_req.title}")
+        if skipped_mrs:
+            tout.info(f'Found {len(skipped_mrs)} skipped pickman MR(s):')
+            for merge_req in skipped_mrs:
+                tout.info(f"  !{merge_req.iid}: {merge_req.title}")
+
+        # Process any review comments on all open MRs (including skipped,
+        # in case they have an unskip request)
         process_mr_reviews(remote, mrs, dbs, args.target)
 
+    # Only block new MR creation if we've reached the max allowed open MRs
+    max_mrs = args.max_mrs
+    if len(active_mrs) >= max_mrs:
         tout.info('')
-        tout.info('Not creating new MR while others are pending')
+        tout.info(f'Already have {len(active_mrs)} open MR(s) (max: {max_mrs})')
         return 0
 
     # No pending MRs, run apply with push
@@ -950,7 +1174,10 @@ def do_step(args, dbs):
     tout.info(f'Fetching {remote}...')
     run_git(['fetch', remote])
 
-    tout.info('No pending pickman MRs, creating new one...')
+    if active_mrs:
+        tout.info('Creating another MR...')
+    else:
+        tout.info('No pending pickman MRs, creating new one...')
     args.push = True
     args.branch = None  # Let do_apply generate branch name
     return do_apply(args, dbs)
@@ -1019,6 +1246,7 @@ COMMANDS = {
     'next-merges': do_next_merges,
     'next-set': do_next_set,
     'poll': do_poll,
+    'push-branch': do_push_branch,
     'review': do_review,
     'step': do_step,
     'test': do_test,

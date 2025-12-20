@@ -1431,6 +1431,43 @@ class TestCheckAvailable(unittest.TestCase):
             self.assertTrue(result)
 
 
+class TestGetPushUrl(unittest.TestCase):
+    """Tests for get_push_url function."""
+
+    def test_get_push_url_success(self):
+        """Test successful push URL generation."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='git@gitlab.com:group/project.git'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+
+    def test_get_push_url_no_token(self):
+        """Test returns None when no token available."""
+        with mock.patch.object(gitlab_api, 'get_token', return_value=None):
+            url = gitlab_api.get_push_url('origin')
+        self.assertIsNone(url)
+
+    def test_get_push_url_invalid_remote(self):
+        """Test returns None for invalid remote URL."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='not-a-valid-url'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertIsNone(url)
+
+    def test_get_push_url_https_remote(self):
+        """Test with HTTPS remote URL."""
+        with mock.patch.object(gitlab_api, 'get_token',
+                               return_value='test-token'):
+            with mock.patch.object(gitlab_api, 'get_remote_url',
+                                   return_value='https://gitlab.com/group/project.git'):
+                url = gitlab_api.get_push_url('origin')
+        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+
+
 class TestConfigFile(unittest.TestCase):
     """Tests for config file support."""
 
@@ -1575,6 +1612,40 @@ class TestUpdateMrDescription(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestCreateMr(unittest.TestCase):
+    """Tests for create_mr function."""
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_create_mr_409_returns_existing(self, mock_token):
+        """Test that 409 error returns existing MR URL."""
+        tout.init(tout.INFO)
+        mock_token.return_value = 'test-token'
+
+        # Create mock existing MR
+        mock_existing_mr = mock.MagicMock()
+        mock_existing_mr.web_url = 'https://gitlab.com/group/project/-/merge_requests/42'
+
+        mock_project = mock.MagicMock()
+        mock_project.mergerequests.list.return_value = [mock_existing_mr]
+
+        # Simulate 409 Conflict error
+        mock_project.mergerequests.create.side_effect = \
+            gitlab_api.MrCreateError(response_code=409)
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            with terminal.capture():
+                result = gitlab_api.create_mr(
+                    'gitlab.com', 'group/project',
+                    'cherry-abc', 'master', 'Test MR')
+
+        self.assertEqual(result, mock_existing_mr.web_url)
+        mock_project.mergerequests.list.assert_called_once_with(
+            source_branch='cherry-abc', state='opened')
+
+
 class TestParseApplyWithPush(unittest.TestCase):
     """Tests for apply command with push options."""
 
@@ -1607,15 +1678,17 @@ class TestParseStep(unittest.TestCase):
         args = pickman.parse_args(['step', 'us/next'])
         self.assertEqual(args.cmd, 'step')
         self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.max_mrs, 5)
         self.assertEqual(args.remote, 'ci')
         self.assertEqual(args.target, 'master')
 
     def test_parse_step_with_options(self):
         """Test parsing step command with all options."""
-        args = pickman.parse_args(['step', 'us/next', '-r', 'origin',
-                                   '-t', 'main'])
+        args = pickman.parse_args(['step', 'us/next', '-m', '3',
+                                   '-r', 'origin', '-t', 'main'])
         self.assertEqual(args.cmd, 'step')
         self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.max_mrs, 3)
         self.assertEqual(args.remote, 'origin')
         self.assertEqual(args.target, 'main')
 
@@ -1704,7 +1777,8 @@ class TestStep(unittest.TestCase):
                 with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
                     args = argparse.Namespace(cmd='step', source='us/next',
-                                              remote='ci', target='master')
+                                              remote='ci', target='master',
+                                              max_mrs=1)
                     with terminal.capture():
                         ret = control.do_step(args, None)
 
@@ -1715,7 +1789,8 @@ class TestStep(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
-                                      remote='ci', target='master')
+                                      remote='ci', target='master',
+                                      max_mrs=5)
             with terminal.capture():
                 ret = control.do_step(args, None)
 
@@ -1728,11 +1803,66 @@ class TestStep(unittest.TestCase):
             with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                    return_value=None):
                 args = argparse.Namespace(cmd='step', source='us/next',
-                                          remote='ci', target='master')
+                                          remote='ci', target='master',
+                                          max_mrs=5)
                 with terminal.capture():
                     ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
+
+    def test_step_allows_below_max(self):
+        """Test step allows new MR when count is below max_mrs."""
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                       return_value=[mock_mr]):
+                    with mock.patch.object(control, 'do_apply',
+                                           return_value=0) as mock_apply:
+                        args = argparse.Namespace(cmd='step', source='us/next',
+                                                  remote='ci', target='master',
+                                                  max_mrs=5)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
+
+        # With 1 open MR and max_mrs=5, it should try to create a new one
+        self.assertEqual(ret, 0)
+        mock_apply.assert_called_once()
+
+    def test_step_blocks_at_max(self):
+        """Test step blocks new MR when at max_mrs limit."""
+        mock_mrs = [
+            gitlab_api.PickmanMr(
+                iid=i,
+                title=f'[pickman] Test MR {i}',
+                web_url=f'https://gitlab.com/mr/{i}',
+                source_branch=f'cherry-test-{i}',
+                description='Test',
+            )
+            for i in range(3)
+        ]
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                       return_value=mock_mrs):
+                    with mock.patch.object(control, 'do_apply') as mock_apply:
+                        args = argparse.Namespace(cmd='step', source='us/next',
+                                                  remote='ci', target='master',
+                                                  max_mrs=3)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
+
+        # With 3 open MRs and max_mrs=3, should not create new MR
+        self.assertEqual(ret, 0)
+        mock_apply.assert_not_called()
 
 
 class TestParseReview(unittest.TestCase):
@@ -1991,6 +2121,7 @@ class TestParsePoll(unittest.TestCase):
         self.assertEqual(args.cmd, 'poll')
         self.assertEqual(args.source, 'us/next')
         self.assertEqual(args.interval, 300)
+        self.assertEqual(args.max_mrs, 5)
         self.assertEqual(args.remote, 'ci')
         self.assertEqual(args.target, 'master')
 
@@ -1998,11 +2129,12 @@ class TestParsePoll(unittest.TestCase):
         """Test parsing poll command with all options."""
         args = pickman.parse_args([
             'poll', 'us/next',
-            '-i', '60', '-r', 'origin', '-t', 'main'
+            '-i', '60', '-m', '3', '-r', 'origin', '-t', 'main'
         ])
         self.assertEqual(args.cmd, 'poll')
         self.assertEqual(args.source, 'us/next')
         self.assertEqual(args.interval, 60)
+        self.assertEqual(args.max_mrs, 3)
         self.assertEqual(args.remote, 'origin')
         self.assertEqual(args.target, 'main')
 
@@ -2053,6 +2185,59 @@ class TestPoll(unittest.TestCase):
 
         self.assertEqual(ret, 0)
         self.assertIn('returned 1', stderr.getvalue())
+
+
+class TestParseInstruction(unittest.TestCase):
+    """Tests for parse_instruction function."""
+
+    def test_pickman_skip(self):
+        """Test 'pickman skip' format."""
+        self.assertEqual(control.parse_instruction('pickman skip'), 'skip')
+
+    def test_pickman_colon_skip(self):
+        """Test 'pickman: skip' format."""
+        self.assertEqual(control.parse_instruction('pickman: skip'), 'skip')
+
+    def test_at_pickman_skip(self):
+        """Test '@pickman skip' format."""
+        self.assertEqual(control.parse_instruction('@pickman skip'), 'skip')
+
+    def test_at_pickman_colon_skip(self):
+        """Test '@pickman: skip' format."""
+        self.assertEqual(control.parse_instruction('@pickman: skip'), 'skip')
+
+    def test_pickman_unskip(self):
+        """Test 'pickman unskip' format."""
+        self.assertEqual(control.parse_instruction('pickman unskip'), 'unskip')
+
+    def test_at_pickman_unskip(self):
+        """Test '@pickman unskip' format."""
+        self.assertEqual(control.parse_instruction('@pickman unskip'), 'unskip')
+
+    def test_case_insensitive(self):
+        """Test case insensitivity."""
+        self.assertEqual(control.parse_instruction('PICKMAN SKIP'), 'skip')
+        self.assertEqual(control.parse_instruction('Pickman: Skip'), 'skip')
+
+    def test_in_longer_text(self):
+        """Test instruction embedded in longer comment."""
+        body = 'Please pickman skip this MR, it does not apply'
+        self.assertEqual(control.parse_instruction(body), 'skip')
+
+    def test_no_instruction(self):
+        """Test comment without pickman instruction."""
+        self.assertIsNone(control.parse_instruction('Just a regular comment'))
+
+    def test_pickman_without_command(self):
+        """Test 'pickman' alone without a command."""
+        self.assertIsNone(control.parse_instruction('pickman'))
+
+    def test_has_instruction(self):
+        """Test has_instruction helper."""
+        self.assertTrue(control.has_instruction('pickman skip', 'skip'))
+        self.assertTrue(control.has_instruction('@pickman: unskip', 'unskip'))
+        self.assertFalse(control.has_instruction('pickman skip', 'unskip'))
+        self.assertFalse(control.has_instruction('regular comment', 'skip'))
 
 
 class TestFormatHistorySummary(unittest.TestCase):
@@ -2454,6 +2639,126 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertEqual(len(commits), 2)
             dbs.close()
 
+    def test_get_next_commits_skips_db_commits(self):
+        """Test get_next_commits skips commits already in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add first commit to database (simulating pending MR)
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit()
+
+            # Log output with two commits, first already in DB
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertFalse(merge_found)
+            # Only second commit should be returned (first is in DB)
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0].short_hash, 'bbb222b')
+            dbs.close()
+
+    def test_get_next_commits_all_in_db(self):
+        """Test get_next_commits returns empty when all commits in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add both commits to database
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit_add('bbb222', source_id, 'Second commit', 'Author 2',
+                           status='pending')
+            dbs.commit()
+
+            # Log output with two commits, both in DB
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertFalse(merge_found)
+            # No commits should be returned (all in DB)
+            self.assertEqual(len(commits), 0)
+            dbs.close()
+
+    def test_get_next_commits_skips_processed_merge(self):
+        """Test get_next_commits skips merge with all commits in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add commits from first merge to database (simulating pending MR)
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit_add('merge1', source_id, 'Merge branch', 'Author 2',
+                           status='pending')
+            dbs.commit()
+
+            # First-parent log shows two merges
+            fp_log = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'merge1|merge1m|Author 2|Merge branch|aaa111 side1\n'
+                'ccc333|ccc333c|Author 3|Third commit|merge1\n'
+                'merge2|merge2m|Author 4|Second merge|ccc333 side2\n'
+            )
+
+            # When asked for first merge's commits (all in DB)
+            merge1_log = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'merge1|merge1m|Author 2|Merge branch|aaa111 side1\n'
+            )
+
+            # When asked for second merge's commits (not in DB)
+            merge2_log = (
+                'ccc333|ccc333c|Author 3|Third commit|merge1\n'
+                'merge2|merge2m|Author 4|Second merge|ccc333 side2\n'
+            )
+
+            call_count = [0]
+
+            def mock_git(pipe_list):
+                call_count[0] += 1
+                _cmd = pipe_list[0] if pipe_list else []  # pylint: disable=unused-variable
+                # First call: get first-parent log
+                if call_count[0] == 1:
+                    return command.CommandResult(stdout=fp_log)
+                # Second call: get commits for first merge
+                if call_count[0] == 2:
+                    return command.CommandResult(stdout=merge1_log)
+                # Third call: get commits for second merge
+                return command.CommandResult(stdout=merge2_log)
+
+            command.TEST_RESULT = mock_git
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertTrue(merge_found)
+            # Should return commits from second merge (first was skipped)
+            self.assertEqual(len(commits), 2)
+            self.assertEqual(commits[0].short_hash, 'ccc333c')
+            self.assertEqual(commits[1].short_hash, 'merge2m')
+            dbs.close()
+
 
 class TestDoCommitSourceResolveError(unittest.TestCase):
     """Tests for do_commit_source error handling."""
@@ -2496,6 +2801,45 @@ class TestDoCommitSourceResolveError(unittest.TestCase):
             ret = control.do_commit_source(args, None)
         self.assertEqual(ret, 1)
         self.assertIn('Could not resolve', stderr.getvalue())
+
+
+class TestDoPushBranch(unittest.TestCase):
+    """Tests for do_push_branch command."""
+
+    def test_push_branch_success(self):
+        """Test successful push."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='ci', force=False)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=True) as mock_push:
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 0)
+        mock_push.assert_called_once_with('ci', 'test-branch', False)
+
+    def test_push_branch_force(self):
+        """Test force push."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='origin', force=True)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=True) as mock_push:
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 0)
+        mock_push.assert_called_once_with('origin', 'test-branch', True)
+
+    def test_push_branch_failure(self):
+        """Test push failure."""
+        tout.init(tout.INFO)
+        args = argparse.Namespace(cmd='push-branch', branch='test-branch',
+                                  remote='ci', force=False)
+        with mock.patch.object(gitlab_api, 'push_branch',
+                               return_value=False):
+            with terminal.capture():
+                ret = control.do_push_branch(args, None)
+        self.assertEqual(ret, 1)
 
 
 class TestDoPickmanUnknownCommand(unittest.TestCase):

@@ -35,6 +35,124 @@ For fully automated workflows, use ``poll`` which runs ``step`` in a loop. The
 This allows hands-off operation: just run ``poll`` and approve/merge MRs in
 GitLab as they come in.
 
+Commit Selection
+----------------
+
+When pickman creates an MR, it groups commits into logical sets based on merge
+commits in the source branch. Understanding this helps predict what will be
+included in each MR.
+
+**Algorithm**
+
+1. **Start from the last processed commit**: Pickman reads from its database the
+   hash of the last commit that was successfully cherry-picked from the source
+   branch.
+
+2. **Find the next merge on first-parent chain**: Walking forward from the last
+   processed commit along the first-parent chain (``git log --first-parent``),
+   pickman finds the next merge commit. The first-parent chain represents the
+   mainline history of the branch.
+
+3. **Include all commits up to that merge**: Using ``git log`` (without
+   ``--first-parent``), pickman collects ALL commits between the last processed
+   commit and the merge commit. This includes:
+
+   - Commits on the mainline leading up to the merge
+   - Commits brought in by the merge (from the merged branch)
+   - The merge commit itself
+
+**Example**
+
+Consider this history on the source branch::
+
+    * 5c8ef70 Merge tag 'xilinx-for-v2025.01-rc5-v2'
+    |\
+    | * 1b70b6c common: memtop: Fix the return type
+    |/
+    * c06705a Makefile: Match the full path to ccache
+    * 0b7f4c7 imx: Fix usable memory ranges
+    * ff1d5d8 Revert "configs: JH7110: enable EFI_LOADER"
+    * d701c6a net: lwip: check if network device is available
+    * b6691d0 net: lwip: do not return CMD_RET_USAGE
+    * 9378307 binman: Regenerate tools/binman/entries.rst  <-- last processed
+
+If the database shows ``9378307`` as the last processed commit, pickman will:
+
+1. Walk first-parent from ``9378307`` and find merge ``5c8ef70``
+2. Collect all commits in ``9378307..5c8ef70``:
+
+   - ``b6691d0`` net: lwip: do not return CMD_RET_USAGE
+   - ``d701c6a`` net: lwip: check if network device is available
+   - ``ff1d5d8`` Revert "configs: JH7110..."
+   - ``0b7f4c7`` imx: Fix usable memory ranges
+   - ``c06705a`` Makefile: Match the full path to ccache
+   - ``1b70b6c`` common: memtop: Fix the return type (from xilinx branch)
+   - ``5c8ef70`` Merge tag 'xilinx-for-v2025.01-rc5-v2'
+
+The resulting MR contains 7 commits. The branch name is derived from the first
+commit's short hash: ``cherry-b6691d0``.
+
+**Why merge-based grouping?**
+
+Merge commits typically represent logical units of work (e.g., a pull request
+or a subsystem update). By stopping at each merge, pickman:
+
+- Keeps MRs focused and reviewable
+- Preserves the original grouping from upstream
+- Makes it easier to identify and skip problematic sets
+
+**No merge found**
+
+If there are no merge commits between the last processed commit and the branch
+tip, pickman includes all remaining commits in a single set. This is noted in
+the output as "no merge found".
+
+Skipping MRs
+------------
+
+During review, if a set of commits should be skipped (e.g., not applicable to
+the target branch), a reviewer can comment:
+
+- ``pickman skip``
+- ``pickman: skip``
+- ``@pickman skip``
+- ``@pickman: skip``
+
+Pickman will add ``[skipped]`` to the MR title. Skipped MRs:
+
+- Are ignored when deciding whether to create new MRs
+- Don't block the ``step`` or ``poll`` commands from proceeding
+- Can be unskipped by commenting ``pickman unskip``
+
+CI Pipelines
+------------
+
+Pickman manages CI pipelines to avoid unnecessary runs while ensuring changes
+are properly verified.
+
+**Initial MR creation**
+
+When creating a new MR (via ``apply -p`` or ``step``), pickman pushes the
+branch with ``-o ci.skip``. This skips the push pipeline because GitLab
+automatically triggers an MR pipeline when the merge request is created.
+Without this, two pipelines would run: one for the push and one for the MR.
+
+**Review comment handling**
+
+When pushing changes after addressing review comments (via ``review``,
+``step``, or ``poll``), pickman does NOT skip the pipeline. A new pipeline
+is needed to verify that the changes made in response to review feedback
+are correct.
+
+**Summary**
+
+===============================  ================  =========================
+Action                           Pipeline Skipped  Reason
+===============================  ================  =========================
+Initial branch push for new MR   Yes               MR creation triggers one
+Push after review changes        No                Need to verify changes
+===============================  ================  =========================
+
 Usage
 -----
 
@@ -160,15 +278,18 @@ This command performs the following:
    cherry-picked commit from each merged MR
 2. Checks for open pickman MRs (those with ``[pickman]`` in the title)
 3. If open MRs exist, processes any review comments using Claude agent
-4. If no open MRs exist, runs ``apply`` with ``--push`` to create a new one
+4. If open MRs are below ``--max-mrs`` limit, runs ``apply`` with ``--push``
+   to create a new one
 
-This is useful for automated workflows where only one MR should be active at a
-time. The automatic database update on merge means you don't need to manually
-run ``commit-source`` after each MR is merged, and review comments are handled
-automatically.
+This is useful for automated workflows. The ``--max-mrs`` option controls how
+many MRs can be open simultaneously (default: 5), allowing parallel review of
+multiple cherry-pick sets. The automatic database update on merge means you
+don't need to manually run ``commit-source`` after each MR is merged, and
+review comments are handled automatically.
 
 Options for the step command:
 
+- ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
 
@@ -182,8 +303,22 @@ creating new MRs as previous ones are merged. Press Ctrl+C to stop.
 Options for the poll command:
 
 - ``-i, --interval``: Interval between steps in seconds (default: 300)
+- ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
+
+To push a branch using the GitLab API token for authentication::
+
+    ./tools/pickman/pickman push-branch <branch-name>
+
+This is useful when you want commits to appear as coming from the token owner
+(e.g., a pickman bot account) rather than the user's configured git credentials.
+The agent uses this command automatically when pushing review changes.
+
+Options for the push-branch command:
+
+- ``-r, --remote``: Git remote (default: ci)
+- ``-f, --force``: Force push (overwrite remote branch)
 
 Requirements
 ------------
@@ -211,8 +346,9 @@ file or environment variable. Pickman checks in this order:
 3. ``GITLAB_API_TOKEN`` environment variable
 
 See `GitLab Personal Access Tokens`_ for instructions on creating a token.
-The token needs ``api`` scope. Using a dedicated bot account for pickman is
-recommended.
+The token needs ``api`` and ``write_repository`` scopes. Using a dedicated bot
+account for pickman is recommended - this ensures all commits pushed by pickman
+appear as coming from the bot account rather than individual users.
 
 .. _GitLab Personal Access Tokens:
    https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html

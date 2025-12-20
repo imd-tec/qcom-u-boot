@@ -27,6 +27,17 @@ except ImportError:
     AVAILABLE = False
 
 
+class MrCreateError(Exception):
+    """Exception for MR creation failures, used for testing
+
+    This mirrors gitlab.exceptions.GitlabCreateError so tests don't need
+    to import the gitlab module.
+    """
+    def __init__(self, response_code=None, message=''):
+        self.response_code = response_code
+        super().__init__(message)
+
+
 # Merge request info returned by get_pickman_mrs()
 # Use defaults for new fields so existing code doesn't break
 PickmanMr = namedtuple('PickmanMr', [
@@ -136,8 +147,36 @@ def parse_url(url):
     return None, None
 
 
+def get_push_url(remote):
+    """Get a push URL using the GitLab API token for authentication
+
+    This allows pushing as the token owner (e.g., a bot account) rather than
+    using the user's configured git credentials.
+
+    Args:
+        remote (str): Remote name
+
+    Returns:
+        str: HTTPS URL with embedded token, or None if not available
+    """
+    token = get_token()
+    if not token:
+        return None
+
+    url = get_remote_url(remote)
+    host, proj_path = parse_url(url)
+    if not host or not proj_path:
+        return None
+
+    return f'https://oauth2:{token}@{host}/{proj_path}.git'
+
+
 def push_branch(remote, branch, force=False):
     """Push a branch to a remote
+
+    Uses the GitLab API token for authentication if available, so the push
+    comes from the token owner (e.g., a bot account) rather than the user's
+    configured git credentials.
 
     Args:
         remote (str): Remote name
@@ -148,11 +187,15 @@ def push_branch(remote, branch, force=False):
         bool: True on success
     """
     try:
+        # Use token-authenticated URL if available
+        push_url = get_push_url(remote)
+        push_target = push_url if push_url else remote
+
         # Skip push pipeline; MR pipeline will run when MR is created
         args = ['git', 'push', '-u', '-o', 'ci.skip']
         if force:
             args.append('--force-with-lease')
-        args.extend([remote, branch])
+        args.extend([push_target, f'HEAD:{branch}'])
         command.output(*args)
         return True
     except command.CommandExc as exc:
@@ -196,11 +239,22 @@ def create_mr(host, proj_path, source, target, title, desc=''):
         })
 
         return merge_req.web_url
+    except (gitlab.exceptions.GitlabCreateError, MrCreateError) as exc:
+        # 409 means MR already exists for this source branch
+        if exc.response_code == 409:
+            mrs = project.mergerequests.list(
+                source_branch=source, state='opened')
+            if mrs:
+                tout.info(f'MR already exists: {mrs[0].web_url}')
+                return mrs[0].web_url
+        tout.error(f'GitLab API error: {exc}')
+        return None
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
         return None
 
 
+# pylint: disable=too-many-locals
 def get_pickman_mrs(remote, state='opened'):
     """Get merge requests created by pickman
 
@@ -234,13 +288,23 @@ def get_pickman_mrs(remote, state='opened'):
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
-                # Check merge status - detailed_merge_status is newer API
-                detailed_status = getattr(merge_req, 'detailed_merge_status', '')
-                needs_rebase = detailed_status == 'need_rebase'
-                # Also check diverged_commits_count as fallback
-                if not needs_rebase:
-                    diverged = getattr(merge_req, 'diverged_commits_count', 0)
-                    needs_rebase = diverged and diverged > 0
+                needs_rebase = False
+                has_conflicts = False
+
+                # For open MRs, fetch full details since list() doesn't
+                # include accurate merge status fields
+                if state == 'opened':
+                    full_mr = project.mergerequests.get(merge_req.iid)
+                    has_conflicts = getattr(full_mr, 'has_conflicts', False)
+
+                    # Check merge status - detailed_merge_status is newer API
+                    detailed_status = getattr(full_mr,
+                                              'detailed_merge_status', '')
+                    needs_rebase = detailed_status == 'need_rebase'
+                    # Also check diverged_commits_count as fallback
+                    if not needs_rebase:
+                        diverged = getattr(full_mr, 'diverged_commits_count', 0)
+                        needs_rebase = diverged and diverged > 0
 
                 pickman_mrs.append(PickmanMr(
                     iid=merge_req.iid,
@@ -248,7 +312,7 @@ def get_pickman_mrs(remote, state='opened'):
                     web_url=merge_req.web_url,
                     source_branch=merge_req.source_branch,
                     description=merge_req.description or '',
-                    has_conflicts=getattr(merge_req, 'has_conflicts', False),
+                    has_conflicts=has_conflicts,
                     needs_rebase=needs_rebase,
                 ))
         return pickman_mrs
@@ -397,6 +461,43 @@ def update_mr_description(remote, mr_iid, desc):
         project = glab.projects.get(proj_path)
         merge_req = project.mergerequests.get(mr_iid)
         merge_req.description = desc
+        merge_req.save()
+        return True
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return False
+
+
+def update_mr_title(remote, mr_iid, title):
+    """Update a merge request's title
+
+    Args:
+        remote (str): Remote name
+        mr_iid (int): Merge request IID
+        title (str): New title
+
+    Returns:
+        bool: True on success
+    """
+    if not check_available():
+        return False
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return False
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return False
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        merge_req = project.mergerequests.get(mr_iid)
+        merge_req.title = title
         merge_req.save()
         return True
     except gitlab.exceptions.GitlabError as exc:
