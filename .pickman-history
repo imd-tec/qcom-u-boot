@@ -732,3 +732,46 @@ The build completed successfully. Let me provide a summary:
 
 ---
 
+## 2025-12-19: us/next
+
+Branch: cherry-118a10e1dde
+
+Commits:
+- 118a10e1dde ARM: renesas: Consistently enable ENV_OVERWRITE on Renesas R-Car
+- 70da4f28592 net: rswitch: Do not register disabled ports as ethernet devices
+- 0d05bd2058b Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Now the second commit:
+
+Second commit cherry-picked successfully. Now the third commit which is a merge commit:
+
+The merge commit is empty (expected since the parent commits were already cherry-picked). Let me commit it as an empty commit to preserve the merge message:
+
+All three commits cherry-picked successfully. Let me verify with git log:
+
+All 3 commits are present. Now let me run the build verification:
+
+## Final Status
+
+**Cherry-pick Summary:**
+- ✅ All 3 commits successfully cherry-picked to branch `cherry-118a10e1dde`
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 118a10e1dde | ARM: renesas: Consistently enable ENV_OVERWRITE on Renesas R-Car | ✅ Cherry-picked |
+| 70da4f28592 | net: rswitch: Do not register disabled ports as ethernet devices | ✅ Cherry-picked |
+| 0d05bd2058b | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh | ✅ Cherry-picked (empty commit) |
+
+**Build Result:** ✅ **OK** - 1 board built successfully, no warnings or errors
+
+**Fix-ups Made:** None - all cherry-picks applied cleanly
+
+**Branch Status:** `cherry-118a10e1dde` is ready for pushing, 3 commits ahead of `ci/master`
+
+---
+
