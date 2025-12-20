@@ -16,8 +16,8 @@ struct delayed_work {
 	struct work_struct work;
 };
 
-#define INIT_WORK(work, func)			do { } while (0)
-#define INIT_DELAYED_WORK(work, func)		do { } while (0)
+#define INIT_WORK(work, func)			do { (void)(func); } while (0)
+#define INIT_DELAYED_WORK(work, func)		do { (void)(func); } while (0)
 #define schedule_work(work)			do { } while (0)
 #define schedule_delayed_work(work, delay)	0
 #define cancel_work_sync(work)			0

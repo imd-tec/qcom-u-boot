@@ -9,8 +9,16 @@
 #ifndef __EXT4_UBOOT_H__
 #define __EXT4_UBOOT_H__
 
+/*
+ * Suppress warnings for unused static functions and variables in Linux ext4
+ * source files. These are used in code paths that are stubbed out in U-Boot.
+ */
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 #include <linux/types.h>
 #include <linux/bitops.h>
+#include <vsprintf.h>		/* For panic() */
 #include <linux/string.h>
 #include <linux/stat.h>
 #include <asm/byteorder.h>
@@ -22,6 +30,15 @@
 #include <linux/cred.h>
 #include <linux/fs.h>
 #include <linux/iomap.h>
+#include <linux/seq_file.h>
+
+/*
+ * Override no_printk to avoid format warnings in disabled debug prints.
+ * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
+ * This causes format mismatches with %llu that we want to ignore.
+ */
+#undef no_printk
+#define no_printk(fmt, ...)	({ 0; })
 
 /* Rotate left - not available in U-Boot */
 static inline u32 rol32(u32 word, unsigned int shift)
@@ -94,15 +111,8 @@ struct rb_root {
 
 #define RB_ROOT (struct rb_root) { NULL, }
 
-/* percpu_counter - stub */
-struct percpu_counter {
-	long count;
-};
-
-static inline long percpu_counter_sum(struct percpu_counter *fbc)
-{
-	return fbc->count;
-}
+/* percpu_counter - use Linux header */
+#include <linux/percpu_counter.h>
 
 /* name_snapshot - stub */
 struct name_snapshot {
@@ -280,7 +290,7 @@ struct user_namespace {
 };
 extern struct user_namespace init_user_ns;
 
-/* BUG_ON / BUG - stubs */
+/* BUG_ON / BUG - stubs (panic is in vsprintf.h) */
 #define BUG_ON(cond)	do { } while (0)
 #define BUG()		do { } while (0)
 
@@ -404,7 +414,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 /* Block device operations - stubs */
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
-#define blkdev_issue_flush(bdev)		do { (void)(bdev); } while (0)
+#define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
 
 /* do_div - divide u64 by u32 */
 #define do_div(n, base) ({			\
@@ -463,7 +473,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* RCU barrier - stub */
 #define rcu_barrier()		do { } while (0)
 
-/* inode operations - stubs */
+/* inode/dentry operations - stubs */
 #define iput(inode)		do { } while (0)
 
 /* current task - from linux/sched.h */
@@ -589,6 +599,17 @@ struct fstrim_range {
 
 /* Superblock flags */
 #define SB_RDONLY		(1 << 0)
+#define SB_I_VERSION		(1 << 26)	/* Update inode version */
+
+/* UUID type */
+typedef struct {
+	__u8 b[16];
+} uuid_t;
+
+/* Forward declarations for super_block */
+struct super_operations;
+struct export_operations;
+struct xattr_handler;
 
 /* super_block - minimal stub */
 struct super_block {
@@ -598,11 +619,21 @@ struct super_block {
 	unsigned long s_magic;
 	loff_t s_maxbytes;
 	unsigned long s_flags;
+	unsigned long s_iflags;		/* Internal flags */
 	struct rw_semaphore s_umount;
 	struct sb_writers s_writers;
 	struct block_device *s_bdev;
 	const char *s_id;
 	struct dentry *s_root;
+	uuid_t s_uuid;
+	struct file_system_type *s_type;
+	s32 s_time_gran;		/* Time granularity (ns) */
+	time64_t s_time_min;		/* Min supported time */
+	time64_t s_time_max;		/* Max supported time */
+	const struct super_operations *s_op;
+	const struct export_operations *s_export_op;
+	const struct xattr_handler * const *s_xattr;
+	struct dentry *d_sb;		/* Parent dentry - stub */
 };
 
 /* Block device read-only check - stub */
@@ -1222,6 +1253,12 @@ typedef unsigned int projid_t;
 #define inode_is_open_for_write(i)		(0)
 #define inode_is_dirtytime_only(i)		(0)
 
+/* Writeback stubs for super.c */
+#define writeback_iter(mapping, wbc, folio, error) \
+	({ (void)(mapping); (void)(wbc); (void)(error); (struct folio *)NULL; })
+#define folio_redirty_for_writepage(wbc, folio) \
+	({ (void)(wbc); (void)(folio); false; })
+
 /* Folio operations - additional stubs */
 #define folio_zero_segments(f, s1, e1, s2, e2)	do { } while (0)
 #define folio_zero_new_buffers(f, f2, t)	do { } while (0)
@@ -1450,5 +1487,573 @@ struct file_operations {
 
 /* file open helper */
 #define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+
+/*
+ * Additional stubs for super.c
+ */
+
+/* fs_context and fs_parser stubs */
+struct constant_table {
+	const char *name;
+	int value;
+};
+
+struct fs_parameter_spec {
+	const char *name;
+	int opt;
+	unsigned short type;
+	const struct constant_table *data;
+};
+
+/* fs_parameter spec types */
+#define fs_param_is_flag	0
+#define fs_param_is_u32		1
+#define fs_param_is_s32		2
+#define fs_param_is_u64		3
+#define fs_param_is_enum	4
+#define fs_param_is_string	5
+#define fs_param_is_blob	6
+#define fs_param_is_fd		7
+#define fs_param_is_uid		8
+#define fs_param_is_gid		9
+#define fs_param_is_blockdev	10
+
+/* fsparam_* macros for mount option parsing - use literal values */
+#define fsparam_flag(name, opt) \
+	{(name), (opt), 0, NULL}
+#define fsparam_u32(name, opt) \
+	{(name), (opt), 1, NULL}
+#define fsparam_s32(name, opt) \
+	{(name), (opt), 2, NULL}
+#define fsparam_u64(name, opt) \
+	{(name), (opt), 3, NULL}
+#define fsparam_string(name, opt) \
+	{(name), (opt), 5, NULL}
+#define fsparam_string_empty(name, opt) \
+	{(name), (opt), 5, NULL}
+#define fsparam_enum(name, opt, array) \
+	{(name), (opt), 4, (array)}
+#define fsparam_bdev(name, opt) \
+	{(name), (opt), 10, NULL}
+#define fsparam_uid(name, opt) \
+	{(name), (opt), 8, NULL}
+#define fsparam_gid(name, opt) \
+	{(name), (opt), 9, NULL}
+#define __fsparam(type, name, opt, flags, data) \
+	{(name), (opt), (type), (data)}
+
+/* Quota format constants */
+#define QFMT_VFS_OLD		1
+#define QFMT_VFS_V0		2
+#define QFMT_VFS_V1		4
+
+struct fs_context;
+struct fs_parameter;
+
+struct fs_context_operations {
+	int (*parse_param)(struct fs_context *, struct fs_parameter *);
+	int (*get_tree)(struct fs_context *);
+	int (*reconfigure)(struct fs_context *);
+	void (*free)(struct fs_context *);
+};
+
+struct file_system_type {
+	struct module *owner;
+	const char *name;
+	int (*init_fs_context)(struct fs_context *);
+	const struct fs_parameter_spec *parameters;
+	void (*kill_sb)(struct super_block *);
+	int fs_flags;
+	struct list_head fs_supers;
+};
+
+#define FS_REQUIRES_DEV		1
+#define FS_BINARY_MOUNTDATA	2
+#define FS_HAS_SUBTYPE		4
+#define FS_USERNS_MOUNT		8
+#define FS_DISALLOW_NOTIFY_PERM	16
+#define FS_ALLOW_IDMAP		32
+
+/* Buffer read sync */
+#define end_buffer_read_sync	NULL
+#define REQ_OP_READ		0
+
+/* Superblock flags */
+#define SB_ACTIVE		(1 << 30)
+
+/* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
+#define STAT_WRITE		0
+#define STAT_READ		0
+static u64 __attribute__((unused)) __ext4_sectors[2];
+#define sectors			__ext4_sectors
+#define part_stat_read(p, f)	({ (void)(p); (void)(f); 0ULL; })
+
+/* System state - U-Boot is always running */
+#define system_state		0
+#define SYSTEM_HALT		1
+#define SYSTEM_POWER_OFF	2
+#define SYSTEM_RESTART		3
+
+/* Hex dump */
+#define DUMP_PREFIX_ADDRESS	0
+#define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
+
+/* Slab flags */
+#define SLAB_RECLAIM_ACCOUNT	0
+#define SLAB_ACCOUNT		0
+
+/* Forward declarations for super_operations and export_operations */
+struct kstatfs;
+struct fid;
+
+/* super_operations - for VFS */
+struct super_operations {
+	struct inode *(*alloc_inode)(struct super_block *);
+	void (*free_inode)(struct inode *);
+	void (*destroy_inode)(struct inode *);
+	int (*write_inode)(struct inode *, struct writeback_control *);
+	void (*dirty_inode)(struct inode *, int);
+	int (*drop_inode)(struct inode *);
+	void (*evict_inode)(struct inode *);
+	void (*put_super)(struct super_block *);
+	int (*sync_fs)(struct super_block *, int);
+	int (*freeze_fs)(struct super_block *);
+	int (*unfreeze_fs)(struct super_block *);
+	int (*statfs)(struct dentry *, struct kstatfs *);
+	int (*show_options)(struct seq_file *, struct dentry *);
+	void (*shutdown)(struct super_block *);
+	ssize_t (*quota_read)(struct super_block *, int, char *, size_t, loff_t);
+	ssize_t (*quota_write)(struct super_block *, int, const char *, size_t, loff_t);
+	struct dentry *(*get_dquots)(struct inode *);
+};
+
+/* export_operations for NFS */
+struct export_operations {
+	int (*encode_fh)(struct inode *, __u32 *, int *, struct inode *);
+	struct dentry *(*fh_to_dentry)(struct super_block *, struct fid *, int, int);
+	struct dentry *(*fh_to_parent)(struct super_block *, struct fid *, int, int);
+	struct dentry *(*get_parent)(struct dentry *);
+	int (*commit_metadata)(struct inode *);
+};
+
+/* Generic file handle encoder for NFS exports - stub */
+static inline int generic_encode_ino32_fh(struct inode *inode, __u32 *fh,
+					  int *max_len, struct inode *parent)
+{
+	return 0;
+}
+
+/* fid for export_operations */
+struct fid {
+	union {
+		struct {
+			u32 ino;
+			u32 gen;
+			u32 parent_ino;
+			u32 parent_gen;
+		} i32;
+		__u32 raw[0];
+	};
+};
+
+/* __kernel_fsid_t - must be before kstatfs */
+typedef struct {
+	int val[2];
+} __kernel_fsid_t;
+
+/* uuid_to_fsid - convert UUID to fsid */
+static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
+{
+	__kernel_fsid_t fsid;
+
+	fsid.val[0] = (uuid[0] << 24) | (uuid[1] << 16) |
+		      (uuid[2] << 8) | uuid[3];
+	fsid.val[1] = (uuid[4] << 24) | (uuid[5] << 16) |
+		      (uuid[6] << 8) | uuid[7];
+	return fsid;
+}
+
+/* kstatfs for statfs */
+struct kstatfs {
+	long f_type;
+	long f_bsize;
+	u64 f_blocks;
+	u64 f_bfree;
+	u64 f_bavail;
+	u64 f_files;
+	u64 f_ffree;
+	__kernel_fsid_t f_fsid;
+	long f_namelen;
+	long f_frsize;
+	long f_flags;
+	long f_spare[4];
+};
+
+/* seq_file stubs */
+struct seq_file;
+#define seq_printf(m, fmt, ...)		do { } while (0)
+#define seq_puts(m, s)			do { } while (0)
+#define seq_putc(m, c)			do { } while (0)
+#define seq_escape(m, s, esc)		do { } while (0)
+
+/* Module stubs */
+struct module;
+#ifndef THIS_MODULE
+#define THIS_MODULE			NULL
+#endif
+#define MODULE_ALIAS_FS(name)
+
+/* register/unregister filesystem */
+#define register_filesystem(fs)		({ (void)(fs); 0; })
+#define unregister_filesystem(fs)	({ (void)(fs); 0; })
+
+/* EXT4_GOING flags */
+#define EXT4_GOING_FLAGS_DEFAULT	0
+#define EXT4_GOING_FLAGS_LOGFLUSH	1
+#define EXT4_GOING_FLAGS_NOLOGFLUSH	2
+
+/* fs_context stubs */
+/* fs_context_purpose - what the context is for */
+enum fs_context_purpose {
+	FS_CONTEXT_FOR_MOUNT,
+	FS_CONTEXT_FOR_SUBMOUNT,
+	FS_CONTEXT_FOR_RECONFIGURE,
+};
+
+struct fs_context {
+	const struct fs_context_operations *ops;
+	struct file_system_type *fs_type;
+	void *fs_private;
+	struct dentry *root;
+	struct user_namespace *user_ns;
+	void *s_fs_info;		/* Filesystem specific info */
+	unsigned int sb_flags;
+	unsigned int sb_flags_mask;
+	unsigned int lsm_flags;
+	enum fs_context_purpose purpose;
+	bool sloppy;
+	bool silent;
+};
+
+/* fs_parameter stubs */
+struct fs_parameter {
+	const char *key;
+	int type;
+	size_t size;
+	int dirfd;
+	union {
+		char *string;
+		int boolean;
+		int integer;
+	};
+};
+
+/* fs_value types - result type from parsing */
+enum fs_value_type {
+	fs_value_is_undefined,
+	fs_value_is_flag,
+	fs_value_is_string,
+	fs_value_is_blob,
+	fs_value_is_filename,
+	fs_value_is_file,
+};
+
+/* fs_parse_result - result of parsing a parameter */
+struct fs_parse_result {
+	bool negated;
+	union {
+		bool boolean;
+		int int_32;
+		unsigned int uint_32;
+		u64 uint_64;
+		kuid_t uid;
+		kgid_t gid;
+	};
+};
+
+/* fs_parse stubs */
+#define fs_parse(fc, desc, param, result) ({ (void)(fc); (void)(desc); (void)(param); (void)(result); -ENOPARAM; })
+#define ENOPARAM			519
+#define fs_lookup_param(fc, p, bdev, fl, path) ({ (void)(fc); (void)(p); (void)(bdev); (void)(fl); (void)(path); -EINVAL; })
+
+/* get_tree helpers */
+#define get_tree_bdev(fc, fill_super)	({ (void)(fc); (void)(fill_super); -ENODEV; })
+#define get_tree_nodev(fc, fill_super)	({ (void)(fc); (void)(fill_super); -ENODEV; })
+
+/* kill_sb helpers */
+#define kill_block_super(sb)		do { } while (0)
+
+/* prandom */
+#define get_random_u32()		0
+#define prandom_u32_max(max)		0
+
+/* ctype */
+#include <linux/ctype.h>
+
+/* crc16 */
+#define crc16(crc, buf, len)		(0)
+
+/* Timer and timing stubs */
+#define HZ				1000
+#define jiffies				0UL
+#ifndef time_before
+#define time_before(a, b)		((long)((a) - (b)) < 0)
+#endif
+#ifndef time_after
+#define time_after(a, b)		time_before(b, a)
+#endif
+#define msecs_to_jiffies(m)		((m) * HZ / 1000)
+
+/* Path lookup flags */
+#define LOOKUP_FOLLOW			0x0001
+
+/* I/O priority classes */
+#define IOPRIO_CLASS_BE			2
+
+/* Superblock flags */
+#define SB_INLINECRYPT			(1 << 27)
+#define SB_SILENT			(1 << 15)
+#define SB_POSIXACL			(1 << 16)
+#define SB_I_CGROUPWB			0
+#define SB_I_ALLOW_HSM			0
+
+/* Block open flags */
+#define BLK_OPEN_READ			(1 << 0)
+#define BLK_OPEN_WRITE			(1 << 1)
+#define BLK_OPEN_RESTRICT_WRITES	(1 << 2)
+
+/* Request flags */
+#define REQ_OP_WRITE			1
+#define REQ_SYNC			(1 << 0)
+#define REQ_FUA				(1 << 1)
+
+/* blk_holder_ops for block device */
+struct blk_holder_ops {
+	void (*mark_dead)(struct block_device *, bool);
+};
+static const struct blk_holder_ops fs_holder_ops;
+
+/* end_buffer_write_sync */
+#define end_buffer_write_sync		NULL
+
+/* File system management time flag */
+#define FS_MGTIME			0
+
+/* Block size */
+#define BLOCK_SIZE			1024
+
+/* Time constants */
+#define NSEC_PER_SEC			1000000000L
+
+/* EXT4 magic number */
+#define EXT4_SUPER_MAGIC		0xEF53
+
+/* Max file size for large files */
+#define MAX_LFS_FILESIZE		((loff_t)LLONG_MAX)
+
+/* blockgroup_lock for per-group locking */
+struct blockgroup_lock {
+	int num_locks;	/* U-Boot doesn't need real locking */
+};
+
+/* Buffer submission stubs - declarations for stub.c implementations */
+void submit_bh(int op_flags, struct buffer_head *bh);
+struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
+				unsigned int size, gfp_t gfp);
+int trylock_buffer(struct buffer_head *bh);
+
+/* Trace stubs for super.c - declaration for stub.c implementation */
+void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
+
+/* Ratelimiting - declaration for stub.c */
+int ___ratelimit(struct ratelimit_state *rs, const char *func);
+
+/* Filesystem notification - declaration for stub.c */
+void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
+
+/* File path operations - declaration for stub.c */
+char *file_path(struct file *file, char *buf, int buflen);
+struct block_device *file_bdev(struct file *file);
+
+/* Percpu rwsem - declarations for stub.c */
+int percpu_init_rwsem(struct percpu_rw_semaphore *sem);
+void percpu_free_rwsem(struct percpu_rw_semaphore *sem);
+
+/* Block device sync - declarations for stub.c */
+void sync_blockdev(struct block_device *bdev);
+void invalidate_bdev(struct block_device *bdev);
+
+/* Kobject - declarations for stub.c */
+void kobject_put(struct kobject *kobj);
+void wait_for_completion(struct completion *comp);
+
+/* DAX - declaration for stub.c */
+void fs_put_dax(void *dax, void *holder);
+
+/* fscrypt - declarations for stub.c */
+void fscrypt_free_dummy_policy(struct fscrypt_dummy_policy *policy);
+int fscrypt_drop_inode(struct inode *inode);
+void fscrypt_free_inode(struct inode *inode);
+
+/* Inode allocation - declaration for stub.c */
+void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
+		     gfp_t gfp);
+void inode_set_iversion(struct inode *inode, u64 version);
+int inode_generic_drop(struct inode *inode);
+
+/* Lock init - declaration for stub.c */
+void rwlock_init(rwlock_t *lock);
+
+/* Trace stubs */
+#define trace_ext4_drop_inode(i, d)		do { } while (0)
+#define trace_ext4_nfs_commit_metadata(i)	do { } while (0)
+#define trace_ext4_prefetch_bitmaps(...)	do { } while (0)
+#define trace_ext4_lazy_itable_init(...)	do { } while (0)
+
+/* slab usercopy - use regular kmem_cache_create */
+#define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
+	kmem_cache_create(n, sz, al, fl, c)
+
+/* Inode buffer operations */
+#define invalidate_inode_buffers(i)	do { } while (0)
+#define clear_inode(i)			do { } while (0)
+
+/* fscrypt/fsverity additional stubs */
+#define fscrypt_put_encryption_info(i)	do { } while (0)
+#define fsverity_cleanup_inode(i)	do { } while (0)
+#define fscrypt_parse_test_dummy_encryption(p, d) ({ (void)(p); (void)(d); 0; })
+
+/* NFS export helpers - declarations for stub.c */
+struct dentry *generic_fh_to_dentry(struct super_block *sb, struct fid *fid,
+				    int fh_len, int fh_type,
+				    struct inode *(*get_inode)(struct super_block *, u64, u32));
+struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
+				    int fh_len, int fh_type,
+				    struct inode *(*get_inode)(struct super_block *, u64, u32));
+
+/* Path operations */
+#define path_put(p)			do { } while (0)
+
+/* I/O priority - declaration for stub.c */
+int IOPRIO_PRIO_VALUE(int class, int data);
+
+/* String operations */
+char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
+#define strscpy_pad(dst, src)		strncpy(dst, src, sizeof(dst))
+
+/* fscrypt/fsverity declarations for stub.c */
+int fscrypt_is_dummy_policy_set(const struct fscrypt_dummy_policy *policy);
+int fscrypt_dummy_policies_equal(const struct fscrypt_dummy_policy *p1,
+				 const struct fscrypt_dummy_policy *p2);
+void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
+					struct super_block *sb);
+
+/* Memory allocation - declarations for stub.c */
+void *kvzalloc(size_t size, gfp_t flags);
+unsigned long roundup_pow_of_two(unsigned long n);
+
+/* Atomic operations - declarations for stub.c */
+void atomic_add(int val, atomic_t *v);
+void atomic64_add(s64 val, atomic64_t *v);
+
+/* Power of 2 check - declaration for stub.c */
+int is_power_of_2(unsigned long n);
+
+/* Time operations */
+#define ktime_get_ns()			(0ULL)
+#define nsecs_to_jiffies(ns)		((ns) / (NSEC_PER_SEC / HZ))
+
+/* Superblock write operations */
+#define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
+#define sb_end_write(sb)		do { } while (0)
+
+/* Scheduler stubs */
+#define schedule_timeout_interruptible(t)	do { } while (0)
+
+/* Page allocation - declarations for stub.c */
+unsigned long get_zeroed_page(gfp_t gfp);
+void free_page(unsigned long addr);
+
+/* DAX - declaration for stub.c */
+void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
+			 void *holder);
+
+/* Block device atomic write stubs */
+#define bdev_can_atomic_write(bdev)		({ (void)(bdev); 0; })
+#define bdev_atomic_write_unit_max_bytes(bdev)	({ (void)(bdev); (unsigned int)0; })
+#define bdev_atomic_write_unit_min_bytes(bdev)	({ (void)(bdev); 0UL; })
+
+/* Superblock blocksize - declaration for stub.c */
+int sb_set_blocksize(struct super_block *sb, int size);
+
+/* Superblock min blocksize - stub */
+static inline int sb_min_blocksize(struct super_block *sb, int size)
+{
+	return sb_set_blocksize(sb, size);
+}
+
+/* Block device size - declarations for stub.c */
+int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
+u64 sb_bdev_nr_blocks(struct super_block *sb);
+unsigned int bdev_max_discard_sectors(struct block_device *bdev);
+
+/* Blockgroup lock init - stub */
+#define bgl_lock_init(lock)		do { } while (0)
+
+/* Task I/O priority - declaration for stub.c */
+void set_task_ioprio(void *task, int ioprio);
+
+/* Superblock identity stubs */
+#define super_set_uuid(sb, uuid, len)		do { } while (0)
+#define super_set_sysfs_name_bdev(sb)		do { } while (0)
+
+/* Dentry operations - declarations for stub.c */
+void generic_set_sb_d_ops(struct super_block *sb);
+struct dentry *d_make_root(struct inode *inode);
+void dput(void *dentry);
+
+/* String operations - declarations for stub.c */
+char *strreplace(const char *str, char old, char new);
+
+/* strtomem_pad - copy string with padding (Linux kernel macro) */
+#define strtomem_pad(dest, src, pad) do { \
+	const char *__src = (src); \
+	size_t __len = strlen(__src); \
+	if (__len >= sizeof(dest)) { \
+		memcpy((dest), __src, sizeof(dest)); \
+	} else { \
+		memcpy((dest), __src, __len); \
+		memset((char *)(dest) + __len, (pad), sizeof(dest) - __len); \
+	} \
+} while (0)
+
+/* Ratelimit - declaration for stub.c */
+void ratelimit_state_init(void *rs, int interval, int burst);
+
+/* Block device operations - declarations for stub.c */
+void bdev_fput(void *file);
+void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
+			    const struct blk_holder_ops *ops);
+
+/* Filesystem sync - declaration for stub.c */
+int sync_filesystem(void *sb);
+
+/* Quota - declaration for stub.c */
+int dquot_suspend(void *sb, int flags);
+
+/* Block device file operations - stubs */
+#define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
+#define __bread(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+
+/* Trace stubs for super.c */
+#define trace_ext4_sync_fs(sb, wait)	do { (void)(sb); (void)(wait); } while (0)
+
+/* Workqueue operations - stubs */
+#define flush_workqueue(wq)		do { (void)(wq); } while (0)
+
+/* Quota stubs for super.c */
+#define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)
+#define dquot_resume(sb, type)		do { (void)(sb); (void)(type); } while (0)
+#define sb_any_quota_suspended(sb)	({ (void)(sb); 0; })
 
 #endif /* __EXT4_UBOOT_H__ */
