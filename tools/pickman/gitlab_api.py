@@ -27,6 +27,17 @@ except ImportError:
     AVAILABLE = False
 
 
+class MrCreateError(Exception):
+    """Exception for MR creation failures, used for testing
+
+    This mirrors gitlab.exceptions.GitlabCreateError so tests don't need
+    to import the gitlab module.
+    """
+    def __init__(self, response_code=None, message=''):
+        self.response_code = response_code
+        super().__init__(message)
+
+
 # Merge request info returned by get_pickman_mrs()
 # Use defaults for new fields so existing code doesn't break
 PickmanMr = namedtuple('PickmanMr', [
@@ -196,6 +207,16 @@ def create_mr(host, proj_path, source, target, title, desc=''):
         })
 
         return merge_req.web_url
+    except (gitlab.exceptions.GitlabCreateError, MrCreateError) as exc:
+        # 409 means MR already exists for this source branch
+        if exc.response_code == 409:
+            mrs = project.mergerequests.list(
+                source_branch=source, state='opened')
+            if mrs:
+                tout.info(f'MR already exists: {mrs[0].web_url}')
+                return mrs[0].web_url
+        tout.error(f'GitLab API error: {exc}')
+        return None
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
         return None

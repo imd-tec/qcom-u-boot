@@ -1575,6 +1575,40 @@ class TestUpdateMrDescription(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestCreateMr(unittest.TestCase):
+    """Tests for create_mr function."""
+
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_create_mr_409_returns_existing(self, mock_token):
+        """Test that 409 error returns existing MR URL."""
+        tout.init(tout.INFO)
+        mock_token.return_value = 'test-token'
+
+        # Create mock existing MR
+        mock_existing_mr = mock.MagicMock()
+        mock_existing_mr.web_url = 'https://gitlab.com/group/project/-/merge_requests/42'
+
+        mock_project = mock.MagicMock()
+        mock_project.mergerequests.list.return_value = [mock_existing_mr]
+
+        # Simulate 409 Conflict error
+        mock_project.mergerequests.create.side_effect = \
+            gitlab_api.MrCreateError(response_code=409)
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            with terminal.capture():
+                result = gitlab_api.create_mr(
+                    'gitlab.com', 'group/project',
+                    'cherry-abc', 'master', 'Test MR')
+
+        self.assertEqual(result, mock_existing_mr.web_url)
+        mock_project.mergerequests.list.assert_called_once_with(
+            source_branch='cherry-abc', state='opened')
+
+
 class TestParseApplyWithPush(unittest.TestCase):
     """Tests for apply command with push options."""
 
