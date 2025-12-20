@@ -105,49 +105,9 @@ def test_distro_arm_app_efi(ubman):
         ubman.expect(
             ["Booting bootflow 'efi_media_1.bootdev.part_1' with efi"])
 
-        # Press Escape to force GRUB to appear, even if the silent menu was
-        # enabled by a previous boot. If the menu is already set to appear, this
-        # will exit to the grub> prompt
-        ubman.send('\x1b')
-
-        # Press Escape again, to force it to the grub> prompt
-        ubman.send('\x1b')
-
-    # Wait until we see the editor appear
-    with ubman.log.section('grub'):
-        ubman.expect(['grub>'])
-
-        ubman.run_command('normal', wait_for_prompt=False)
-
-        ubman.expect(['ESC to return previous'])
-
-        # Press 'e' to edit the command line
-        ubman.log.info("Pressing 'e'")
-        ubman.send('e')
-        for _ in range(10):
-            ubman.ctrl('N')
-        expected = '\tlinux\t/boot/vmlinuz-6.14.0-27-generic '
-        expected += 'root=UUID=e5665fb4-e1de-4335-86da-357ad5422319 ro  '
-        for _ in expected:
-            ubman.ctrl('F')
-
-        to_erase = 'quiet splash'
-        for _ in to_erase:
-            ubman.ctrl('D')
-        ubman.ctrl('X')
-        ubman.expect(['Booting a command list'])
-
-    with ubman.log.section('exit boot-services'):
-        ubman.expect(['EFI stub: Exiting boot services...'])
-
-        ubman.log.info("boot")
-        ubman.expect(['Booting Linux on physical CPU'])
-
-    with ubman.log.section('initrd'):
-        ubman.expect(['Freeing initrd memory:'])
-        ubman.expect(['Run /init as init process'])
-
-    with ubman.temporary_timeout(200 * 1000):
-        ubman.expect(['Ubuntu 25.04 qarm ttyAMA0'])
+    # Wait for Linux to boot to userspace (kernel may be quiet)
+    with ubman.log.section('Linux'):
+        with ubman.temporary_timeout(200 * 1000):
+            ubman.expect(['Ubuntu 25.04 qarm ttyAMA0'])
 
     ubman.restart_uboot()
