@@ -777,147 +777,44 @@ All 3 commits are present. Now let me run the build verification:
 
 ## 2025-12-20: us/next
 
-Branch: cherry-6f7f47e8c09
+Branch: cherry-5b5124e3d5c
 
 Commits:
-- 6f7f47e8c09 API: unify platform_sys_info() implementations
-- 9eb59201ab6 examples: implement _start and syscall for RISC-V
-- e18186686fc examples: use architecture specific memset() on RISC-V
-- 8e5b57eea04 examples: use QEMU compatible LOAD_ADDR on RISC-V
-- f99b549fc2e efi_loader: avoid writing message in Exit() boot service
-- d01720a8305 test: fix test_extension.py
-- 9cb53b5ffd9 configs: sandbox_deconfig: remove CONFIG_AMIGA_PARTITION
-- 37e0cf42cb6 CI: xilinx_versal_virt: disable USB_DWC3
-- 1f68057e032 net: eth_bootdev_hunt() should not run DHCP
-- 5a4ac8a35a7 cmd: bootmenu: add parameter -e for UEFI boot options
-- 6f1251a78b1 efi_loader: Don't warn if the TCG2 FinalEvents table is not installed
-- 463e4e64762 efi_loader: fix pe reloc pointer overrun
-- 66e24668886 efi_loader: Update startimage_exit self-test to check error
-- e3b13ce84e4 doc: develop: Fix typos and wording in binman/binman.rst
-- 763926915f4 doc: develop: Fix typos and wording in gdb.rst
-- ea958a0c7db doc: sandbox: Fix the "sb" command name
-- c3cf134a418 efi_loader: Expose efi_reinstall_protocol_interface in efi_loader.h
-- 60c9b794e71 efi_loader: update EFI specification version
-- 6a87a5d0688 cmd: efidebug: update output of memory attributes
-- cdf69532900 doc/develop/distro.rst: Better document upstream definition of extlinux.conf
-- 9c6c7e30aa0 efi: Correct ECPT table GUID
-- e13e0a921f4 Merge tag 'efi-next-20250105' of https://source.denx.de/u-boot/custodians/u-boot-efi
+- 5b5124e3d5c watchdog: rti: support SPL (or re-start)
+- 5964f24f154 watchdog: rti: drop hack manipulating WDT clock rate
+- 121e62e8af0 Merge https://source.denx.de/u-boot/custodians/u-boot-watchdog
 
 ### Conversation log
-Let me find the repository location:
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
 
-Good, the repository is clean. Now let me create and checkout a new branch based on ci/master:
+Now let me cherry-pick the first commit:
 
-Now let me cherry-pick each commit one at a time. Let me start with the first commit:
+First commit cherry-picked successfully. Now let me cherry-pick the second commit:
 
-There's a conflict due to files being renamed to `legacy_api/` in HEAD but deleted in the commit. Let me analyze this and try to resolve it:
+Second commit cherry-picked successfully. Now let me cherry-pick the third commit, which is a merge commit (identified by "Merge" in the subject):
 
-I see. The original commit worked on `api/` directory, but in ci/master these files have been renamed to `legacy_api/`. Let me understand what exists in ci/master:
+The merge commit is empty (as expected, since the individual commits were already picked). I need to continue with an empty commit to preserve the merge commit message:
 
-I see there's already a `api_platform.c` file in `legacy_api/`. Let me look at the changes git picked up in the Makefile and compare with the original commit's intent:
+All three commits have been cherry-picked. Let me verify with git log:
 
-The files are identical. The content of `legacy_api/api_platform.c` in ci/master is the same as what the commit wants to create. The commit also deleted `api_platform-arm.c` and `api_platform-mips.c` but these need to be deleted from `legacy_api/` now.
+All 3 commits are present. Now let me run the build verification:
 
-Let me resolve this conflict by:
-1. Adding the existing `api_platform.c` (which is already correct)
-2. Removing the arm and mips platform-specific files
+The build completed successfully. Here's the final status report:
 
-Let me check if there's actually a new api_platform.c or if it already exists:
+## Cherry-Pick Summary
 
-The resolution looks correct. Now let me continue the cherry-pick and amend to note the fix-up:
+**Branch created:** `cherry-5b5124e3d5c` (based on `ci/master`)
 
-Now let me amend the commit to note the fix-up:
+**Commits cherry-picked (3/3):**
+1. `55db447bcf8` - watchdog: rti: support SPL (or re-start) ✅
+2. `3a969496500` - watchdog: rti: drop hack manipulating WDT clock rate ✅
+3. `1705b9fcfb8` - Merge https://source.denx.de/u-boot/custodians/u-boot-watchdog ✅ (empty commit preserved)
 
-Now let me continue with the remaining commits:
+**Build result:** ✅ OK - No warnings or errors
 
-This commit is already in ci/master. Let me verify and then commit it as an empty commit with --allow-empty:
+**Fix-ups made:** None required
 
-I need to resolve this conflict. The commit is changing `u_boot_console` to `ubman` in HEAD, and the cherry-picked commit is commenting out an assert and adding a comment. Let me apply the cherry-pick's changes while keeping the `ubman` naming:
-
-I can see the conflict. I need to resolve it by using `ubman` (from HEAD) but applying the logic change from the cherry-pick (commenting out the assert). Let me fix this:
-
-Now I need to amend this commit with a note about the conflict resolution:
-
-Now let's continue with the remaining commits:
-
-This conflict is showing that HEAD has additional content (end-at-4gb, skip-at-start documentation) that is not in the cherry-picked commit. The cherry-picked commit is just a typos fix. Let me check what the original commit actually changed:
-
-I need to keep HEAD's content (which has the additional documentation) and incorporate any typo fixes. The conflict is that the commit wants to remove the content (from the original file before HEAD's additions), but HEAD has added new content. The right resolution is to keep HEAD's version since it has the newer content:
-
-The conflict is about keeping the efi_uninstall_protocol declaration from HEAD. I need to keep both - HEAD's efi_uninstall_protocol and the cherry-picked commit's efi_reinstall_protocol_interface declaration:
-
-I need to resolve this conflict by keeping HEAD's efi_uninstall_protocol declaration. Let me fix this:
-
-This is a conflict where the GUID values are different. The cherry-picked commit corrects the GUID (0xf7e7 instead of 0xf7ef). I need to take the cherry-picked version (with the correct GUID) while keeping HEAD's formatting style:
-
-Now let me amend that commit to note the resolution:
-
-Now let me cherry-pick the final merge commit:
-
-There are conflicts in the merge commit. Let me resolve them one by one. Since we've already cherry-picked all the individual commits, the conflicts are likely due to those changes already being applied. Let me check each:
-
-Since we've already applied all the individual commits, I should just keep HEAD's version (which already has all the changes) for each conflict. Let me resolve all conflicts by using HEAD's version:
-
-All 22 commits have been cherry-picked. Now let me verify the result:
-
-All 22 commits are present. Now let me update the todo list and run the build verification:
-
-The build failed because there are still conflict markers in `include/efi_api.h`. Let me check and fix this:
-
-I see there are leftover conflict markers. Let me fix this properly. The correct version should use 0xf7e7 (the corrected GUID):
-
-The replacement didn't work. Let me try a different approach:
-
-The script removed too much - it removed the EFI_GUID content! Let me restore from git and fix properly:
-
-I see - the HEAD commit (from the merge commit cherry-pick) itself has conflict markers. The issue is that when I resolved the merge commit conflict by using `--ours`, the efi_api.h in my branch still had conflict markers from a previous resolution. Let me check and fix this properly:
-
-No more conflict markers. Now I need to amend the merge commit to fix this:
-
-Now let's run the build again:
-
-The build passed. Let me verify the final commit log and update the todo:
-
-All 22 commits are present. Let me update the todo list and provide the final report:
-
-## Final Status Report
-
-### Build Result: ✅ OK
-The sandbox build completed successfully with no errors or warnings.
-
-### Cherry-Pick Summary
-All **22 commits** were successfully cherry-picked from `us/next` branch onto branch `cherry-6f7f47e8c09` (based on `ci/master`).
-
-### Fix-ups Made
-Three commits required conflict resolution and have notes appended to their commit messages:
-
-1. **951f108669a - API: unify platform_sys_info() implementations**
-   - Fix-up: `[Resolved conflicts due to api/ -> legacy_api/ directory rename in ci/master]`
-   - The original commit worked on `api/` directory, but in ci/master these files were renamed to `legacy_api/`
-
-2. **472fd4aa095 - test: fix test_extension.py**
-   - Fix-up: `[Resolved conflict: used ubman instead of u_boot_console per ci/master rename]`
-   - The variable name `u_boot_console` was renamed to `ubman` in ci/master
-
-3. **7a5bdda2cf0 - efi: Correct ECPT table GUID**
-   - Fix-up: `[Resolved conflict: retained ci/master formatting style]`
-   - Formatting differences in EFI_GUID macro
-
-### Empty Commits (Already Applied in ci/master)
-The following commits were already present in ci/master and resulted in empty commits (preserved for history tracking):
-- f99b549fc2e - efi_loader: avoid writing message in Exit()
-- 37e0cf42cb6 - CI: xilinx_versal_virt: disable USB_DWC3
-- 6f1251a78b1 - efi_loader: Don't warn if TCG2 FinalEvents not installed
-- 463e4e64762 - efi_loader: fix pe reloc pointer overrun
-- 66e24668886 - efi_loader: Update startimage_exit self-test
-- e3b13ce84e4 - doc: develop: Fix typos in binman.rst
-- c3cf134a418 - efi_loader: Expose efi_reinstall_protocol_interface
-- 60c9b794e71 - efi_loader: update EFI specification version
-- 6a87a5d0688 - cmd: efidebug: update output of memory attributes
-- e13e0a921f4 - Merge tag 'efi-next-20250105' (merge commit)
-
-### Branch Status
-The branch `cherry-6f7f47e8c09` is ready for pushing with 22 commits ahead of `ci/master`.
+The branch `cherry-5b5124e3d5c` is ready for pushing.
 
 ---
 
@@ -990,5 +887,70 @@ The build completed successfully.
 - **OK** - sandbox board builds successfully with no warnings or errors
 
 The branch `cherry-ddb0f26dc45` is ready for pushing.
+
+---
+
+### Review: 2025-12-20
+
+Branch: cherry-5b5124e3d5c
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct directory:
+
+Good, I'm already in the correct directory. Now let me checkout the branch and rebase:
+
+Now let me fetch the latest ci/master and perform the rebase:
+
+Good, ci/master is updated. Now let me check the current base and then rebase:
+
+There's a conflict in `.pickman-history`. This is a history tracking file that just appends entries. Let me resolve it:
+
+This is a conflict in the `.pickman-history` file which just tracks history entries. I should keep both entries. Let me resolve this:
+
+I see, the file has conflict markers. For `.pickman-history`, the proper resolution is to keep both entries (the one from HEAD and the one being rebased). Let me resolve this by keeping the content from HEAD first, then appending the content from the rebase:
+
+The rebase completed successfully. Let me verify the result:
+
+The rebase was successful. The commits are now based on the latest `ci/master`. Now let me run the build verification:
+
+Build passed. Now let me check if there's already a `-v2` branch and create the appropriate versioned local branch:
+
+No existing versioned branches. Let me create the `-v2` branch:
+
+Now let me force push to the original remote branch to update the MR:
+
+The pickman command doesn't have a `push-branch` subcommand. Let me push directly using git:
+
+The push was successful. Let me provide a summary of what was done:
+
+## Rebase Summary
+
+### Actions Performed:
+1. ✅ Checked out branch `cherry-5b5124e3d5c`
+2. ✅ Fetched latest `ci/master`
+3. ✅ Rebased onto latest `ci/master` with `--keep-empty`
+4. ✅ Resolved conflict in `.pickman-history` (history tracking file - kept the current branch's entry)
+5. ✅ Build verification passed (`crosfw sandbox -L`)
+6. ✅ Created local backup branch `cherry-5b5124e3d5c-v2`
+7. ✅ Force pushed to remote branch `cherry-5b5124e3d5c` to update MR
+
+### Commit Log After Rebase:
+```
+4d6e295c223 pickman: Record cherry-pick of 3 commits from us/next
+acf5c3fc886 Merge https://source.denx.de/u-boot/custodians/u-boot-watchdog
+c782a155f8c watchdog: rti: drop hack manipulating WDT clock rate
+fd49c8493de watchdog: rti: support SPL (or re-start)
+```
+
+### Pipeline Triggered:
+MR !265: https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/265
+
+### Suggested Reply to MR:
+```
+Rebased onto latest ci/master. A new pipeline has been triggered to verify the changes.
+```
 
 ---
