@@ -782,17 +782,6 @@ pcduino3_nano:
     ROLE: pcduino3_nano
   <<: *lab_dfn
 
-samus:
-  variables:
-    ROLE: samus
-  <<: *lab_dfn
-
-# chromebook_samus_tpl
-samus_tpl:
-  variables:
-    ROLE: samus_tpl
-  <<: *lab_dfn
-
 link:
   variables:
     ROLE: link
@@ -925,11 +914,6 @@ rock5b:
 rpi5:
   variables:
     ROLE: rpi5
-  <<: *lab_dfn
-
-zybo:
-  variables:
-    ROLE: zybo
   <<: *lab_dfn
 
 qemu-x86_64:
