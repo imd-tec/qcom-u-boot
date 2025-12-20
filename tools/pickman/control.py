@@ -648,6 +648,7 @@ def do_commit_source(args, dbs):
     return 0
 
 
+# pylint: disable=too-many-locals,too-many-branches
 def process_mr_reviews(remote, mrs, dbs, target='master'):
     """Process review comments on open MRs
 

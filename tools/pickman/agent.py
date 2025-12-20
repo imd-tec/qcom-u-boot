@@ -185,6 +185,7 @@ Rebase instructions:
     return context_section, comment_section, rebase_section
 
 
+# pylint: disable=too-many-arguments
 def build_review_prompt(mr_iid, branch_name, task_desc, context_section,
                         comment_section, rebase_section, comments,
                         needs_rebase, remote, target):
@@ -246,6 +247,7 @@ Important:
 """
 
 
+# pylint: disable=too-many-arguments
 def build_full_review_prompt(mr_iid, branch_name, comments, remote, target,
                              needs_rebase, has_conflicts, mr_description):
     """Build complete prompt and task description for the review agent
@@ -287,6 +289,7 @@ def build_full_review_prompt(mr_iid, branch_name, comments, remote, target,
     return prompt, task_desc
 
 
+# pylint: disable=too-many-arguments,too-many-locals
 async def run_review_agent(mr_iid, branch_name, comments, remote,
                            target='master', needs_rebase=False,
                            has_conflicts=False, mr_description='',
@@ -339,6 +342,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote,
         return False, '\n\n'.join(conversation_log)
 
 
+# pylint: disable=too-many-arguments
 def handle_mr_comments(mr_iid, branch_name, comments, remote, target='master',
                        needs_rebase=False, has_conflicts=False,
                        mr_description='', repo_path=None):
