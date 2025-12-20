@@ -1612,6 +1612,58 @@ class TestUpdateMrDescription(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestGetPickmanMrs(unittest.TestCase):
+    """Tests for get_pickman_mrs function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_get_pickman_mrs_sorted_oldest_first(self, mock_token, mock_url):
+        """Test that MRs are requested sorted by created_at ascending."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        # Create mock MRs with [pickman] in the title
+        mock_mr1 = mock.MagicMock()
+        mock_mr1.iid = 1
+        mock_mr1.title = '[pickman] Older MR'
+        mock_mr1.web_url = 'https://gitlab.com/mr/1'
+        mock_mr1.source_branch = 'cherry-1'
+        mock_mr1.description = 'desc1'
+        mock_mr1.has_conflicts = False
+        mock_mr1.detailed_merge_status = 'mergeable'
+        mock_mr1.diverged_commits_count = 0
+
+        mock_mr2 = mock.MagicMock()
+        mock_mr2.iid = 2
+        mock_mr2.title = '[pickman] Newer MR'
+        mock_mr2.web_url = 'https://gitlab.com/mr/2'
+        mock_mr2.source_branch = 'cherry-2'
+        mock_mr2.description = 'desc2'
+        mock_mr2.has_conflicts = False
+        mock_mr2.detailed_merge_status = 'mergeable'
+        mock_mr2.diverged_commits_count = 0
+
+        mock_project = mock.MagicMock()
+        # Return MRs in the order they would come from GitLab (oldest first)
+        mock_project.mergerequests.list.return_value = [mock_mr1, mock_mr2]
+        mock_project.mergerequests.get.side_effect = [mock_mr1, mock_mr2]
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            result = gitlab_api.get_pickman_mrs('origin', state='opened')
+
+        # Verify the list call includes sorting parameters
+        mock_project.mergerequests.list.assert_called_once_with(
+            state='opened', order_by='created_at', sort='asc', get_all=True)
+
+        # Verify we got both MRs in order
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].iid, 1)
+        self.assertEqual(result[1].iid, 2)
+
+
 class TestCreateMr(unittest.TestCase):
     """Tests for create_mr function."""
 

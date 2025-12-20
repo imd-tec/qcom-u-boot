@@ -284,7 +284,9 @@ def get_pickman_mrs(remote, state='opened'):
         glab = gitlab.Gitlab(f'https://{host}', private_token=token)
         project = glab.projects.get(proj_path)
 
-        mrs = project.mergerequests.list(state=state, get_all=True)
+        # Sort by created_at ascending so oldest MRs are processed first
+        mrs = project.mergerequests.list(state=state, order_by='created_at',
+                                         sort='asc', get_all=True)
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:
