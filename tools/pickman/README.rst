@@ -249,15 +249,18 @@ This command performs the following:
    cherry-picked commit from each merged MR
 2. Checks for open pickman MRs (those with ``[pickman]`` in the title)
 3. If open MRs exist, processes any review comments using Claude agent
-4. If no open MRs exist, runs ``apply`` with ``--push`` to create a new one
+4. If open MRs are below ``--max-mrs`` limit, runs ``apply`` with ``--push``
+   to create a new one
 
-This is useful for automated workflows where only one MR should be active at a
-time. The automatic database update on merge means you don't need to manually
-run ``commit-source`` after each MR is merged, and review comments are handled
-automatically.
+This is useful for automated workflows. The ``--max-mrs`` option controls how
+many MRs can be open simultaneously (default: 5), allowing parallel review of
+multiple cherry-pick sets. The automatic database update on merge means you
+don't need to manually run ``commit-source`` after each MR is merged, and
+review comments are handled automatically.
 
 Options for the step command:
 
+- ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
 
@@ -271,6 +274,7 @@ creating new MRs as previous ones are merged. Press Ctrl+C to stop.
 Options for the poll command:
 
 - ``-i, --interval``: Interval between steps in seconds (default: 300)
+- ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
 

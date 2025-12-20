@@ -1641,15 +1641,17 @@ class TestParseStep(unittest.TestCase):
         args = pickman.parse_args(['step', 'us/next'])
         self.assertEqual(args.cmd, 'step')
         self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.max_mrs, 5)
         self.assertEqual(args.remote, 'ci')
         self.assertEqual(args.target, 'master')
 
     def test_parse_step_with_options(self):
         """Test parsing step command with all options."""
-        args = pickman.parse_args(['step', 'us/next', '-r', 'origin',
-                                   '-t', 'main'])
+        args = pickman.parse_args(['step', 'us/next', '-m', '3',
+                                   '-r', 'origin', '-t', 'main'])
         self.assertEqual(args.cmd, 'step')
         self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.max_mrs, 3)
         self.assertEqual(args.remote, 'origin')
         self.assertEqual(args.target, 'main')
 
@@ -1738,7 +1740,8 @@ class TestStep(unittest.TestCase):
                 with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
                     args = argparse.Namespace(cmd='step', source='us/next',
-                                              remote='ci', target='master')
+                                              remote='ci', target='master',
+                                              max_mrs=1)
                     with terminal.capture():
                         ret = control.do_step(args, None)
 
@@ -1749,7 +1752,8 @@ class TestStep(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
-                                      remote='ci', target='master')
+                                      remote='ci', target='master',
+                                      max_mrs=5)
             with terminal.capture():
                 ret = control.do_step(args, None)
 
@@ -1762,11 +1766,66 @@ class TestStep(unittest.TestCase):
             with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
                                    return_value=None):
                 args = argparse.Namespace(cmd='step', source='us/next',
-                                          remote='ci', target='master')
+                                          remote='ci', target='master',
+                                          max_mrs=5)
                 with terminal.capture():
                     ret = control.do_step(args, None)
 
         self.assertEqual(ret, 1)
+
+    def test_step_allows_below_max(self):
+        """Test step allows new MR when count is below max_mrs."""
+        mock_mr = gitlab_api.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+        )
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                       return_value=[mock_mr]):
+                    with mock.patch.object(control, 'do_apply',
+                                           return_value=0) as mock_apply:
+                        args = argparse.Namespace(cmd='step', source='us/next',
+                                                  remote='ci', target='master',
+                                                  max_mrs=5)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
+
+        # With 1 open MR and max_mrs=5, it should try to create a new one
+        self.assertEqual(ret, 0)
+        mock_apply.assert_called_once()
+
+    def test_step_blocks_at_max(self):
+        """Test step blocks new MR when at max_mrs limit."""
+        mock_mrs = [
+            gitlab_api.PickmanMr(
+                iid=i,
+                title=f'[pickman] Test MR {i}',
+                web_url=f'https://gitlab.com/mr/{i}',
+                source_branch=f'cherry-test-{i}',
+                description='Test',
+            )
+            for i in range(3)
+        ]
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                                       return_value=mock_mrs):
+                    with mock.patch.object(control, 'do_apply') as mock_apply:
+                        args = argparse.Namespace(cmd='step', source='us/next',
+                                                  remote='ci', target='master',
+                                                  max_mrs=3)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
+
+        # With 3 open MRs and max_mrs=3, should not create new MR
+        self.assertEqual(ret, 0)
+        mock_apply.assert_not_called()
 
 
 class TestParseReview(unittest.TestCase):
@@ -2025,6 +2084,7 @@ class TestParsePoll(unittest.TestCase):
         self.assertEqual(args.cmd, 'poll')
         self.assertEqual(args.source, 'us/next')
         self.assertEqual(args.interval, 300)
+        self.assertEqual(args.max_mrs, 5)
         self.assertEqual(args.remote, 'ci')
         self.assertEqual(args.target, 'master')
 
@@ -2032,11 +2092,12 @@ class TestParsePoll(unittest.TestCase):
         """Test parsing poll command with all options."""
         args = pickman.parse_args([
             'poll', 'us/next',
-            '-i', '60', '-r', 'origin', '-t', 'main'
+            '-i', '60', '-m', '3', '-r', 'origin', '-t', 'main'
         ])
         self.assertEqual(args.cmd, 'poll')
         self.assertEqual(args.source, 'us/next')
         self.assertEqual(args.interval, 60)
+        self.assertEqual(args.max_mrs, 3)
         self.assertEqual(args.remote, 'origin')
         self.assertEqual(args.target, 'main')
 

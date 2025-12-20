@@ -1098,14 +1098,16 @@ def process_merged_mrs(remote, source, dbs):
 
 
 def do_step(args, dbs):
-    """Create an MR if none is pending
+    """Create an MR if below the max allowed
 
     Checks for merged pickman MRs and updates the database, then checks for
-    open pickman MRs. If open MRs exist, processes any review comments. If no
-    open MRs exist, runs apply with push to create a new one.
+    open pickman MRs. If open MRs exist, processes any review comments. If
+    the number of open MRs is below max_mrs, runs apply with push to create
+    a new one.
 
     Args:
-        args (Namespace): Parsed arguments with 'source', 'remote', 'target'
+        args (Namespace): Parsed arguments with 'source', 'remote', 'target',
+            'max_mrs'
         dbs (Database): Database instance
 
     Returns:
@@ -1142,10 +1144,11 @@ def do_step(args, dbs):
         # in case they have an unskip request)
         process_mr_reviews(remote, mrs, dbs, args.target)
 
-    # Only block new MR creation if there are active (non-skipped) MRs
-    if active_mrs:
+    # Only block new MR creation if we've reached the max allowed open MRs
+    max_mrs = args.max_mrs
+    if len(active_mrs) >= max_mrs:
         tout.info('')
-        tout.info('Not creating new MR while others are pending')
+        tout.info(f'Already have {len(active_mrs)} open MR(s) (max: {max_mrs})')
         return 0
 
     # No pending MRs, run apply with push
@@ -1153,7 +1156,10 @@ def do_step(args, dbs):
     tout.info(f'Fetching {remote}...')
     run_git(['fetch', remote])
 
-    tout.info('No pending pickman MRs, creating new one...')
+    if active_mrs:
+        tout.info('Creating another MR...')
+    else:
+        tout.info('No pending pickman MRs, creating new one...')
     args.push = True
     args.branch = None  # Let do_apply generate branch name
     return do_apply(args, dbs)

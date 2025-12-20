@@ -84,6 +84,8 @@ def parse_args(argv):
     step_cmd = subparsers.add_parser('step',
                                      help='Create MR if none pending')
     step_cmd.add_argument('source', help='Source branch name')
+    step_cmd.add_argument('-m', '--max-mrs', type=int, default=5,
+                          help='Max open MRs allowed (default: 5)')
     step_cmd.add_argument('-r', '--remote', default='ci',
                           help='Git remote (default: ci)')
     step_cmd.add_argument('-t', '--target', default='master',
@@ -94,6 +96,8 @@ def parse_args(argv):
     poll_cmd.add_argument('source', help='Source branch name')
     poll_cmd.add_argument('-i', '--interval', type=int, default=300,
                           help='Interval between steps in seconds (default: 300)')
+    poll_cmd.add_argument('-m', '--max-mrs', type=int, default=5,
+                          help='Max open MRs allowed (default: 5)')
     poll_cmd.add_argument('-r', '--remote', default='ci',
                           help='Git remote (default: ci)')
     poll_cmd.add_argument('-t', '--target', default='master',
