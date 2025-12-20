@@ -921,3 +921,74 @@ The branch `cherry-6f7f47e8c09` is ready for pushing with 22 commits ahead of `c
 
 ---
 
+## 2025-12-20: us/next
+
+Branch: cherry-ddb0f26dc45
+
+Commits:
+- ddb0f26dc45 arm64: Convert core type check macros into inline functions
+- 2fca3cf7997 arm64: Add MIDR entries for Cortex-A57 and Cortex-A76
+- 46a7999160d arm64: renesas: Convert boards over to is_cortex_a() functions
+- 35d9b1d2547 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is clean. Let me create the new branch based on ci/master.
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Now the second commit:
+
+Second commit successful. Now the third commit:
+
+There's a conflict. The file was deleted in HEAD but modified in the commit being cherry-picked. Let me examine this conflict:
+
+The conflict is that `board/renesas/rcar-common/gen3-common.c` was deleted on the target branch but modified in the commit being cherry-picked. Let me see what changes the commit is trying to make to this file:
+
+I see! The file was renamed (commit 68abd1c3083 "Rename board/renesas/rcar-common to board/renesas/common"). This means the file still exists but under a different path. Let me check if the equivalent file exists:
+
+Interesting! The file actually exists - git is showing "deleted by us" but the file is present. Let me investigate further:
+
+I see the file exists and it already contains the `is_cortex_a57()` and `is_cortex_a53()` functions (at line 52-55). The cherry-pick is trying to convert from the old open-coded midr_el1 read to these functions, but this has already been done in ci/master. Let me see the original content from us/next to understand what the conflict is:
+
+The content in the original commit is exactly the same as what's currently on ci/master for this file. The conflict is a git merge tracking issue - git thinks the file was "deleted by us" but it actually exists. Let me check what's happening:
+
+Wait, the diff shows the file as "new file" - this is odd. Let me check what's going on with HEAD:
+
+Now I understand! The file exists on disk (from the cherry-pick) but is not tracked in HEAD (ci/master). The file was deleted/renamed in ci/master. Since the change we're cherry-picking (converting to is_cortex_a functions) is already present in the current file version on ci/master via other means, the resolution here is to **delete** the file since it's not supposed to exist in ci/master:
+
+Third commit successfully cherry-picked after resolving the conflict. Now let me amend the commit to add a note about the fix-up:
+
+Now let me cherry-pick the fourth commit (the merge commit):
+
+Same conflict for the merge commit. Let me resolve it the same way:
+
+As expected, the merge commit becomes empty. Let me commit it with --allow-empty as instructed:
+
+Now let me amend this commit to add a fix-up note:
+
+All 4 commits cherry-picked. Let me verify with git log:
+
+All 4 commits are present. Now let me run the build verification:
+
+The build completed successfully.
+
+## Summary
+
+**Cherry-pick completed successfully** for all 4 commits from `us/next` to new branch `cherry-ddb0f26dc45` (based on `ci/master`).
+
+### Commits cherry-picked:
+1. `2958d7bbbca` - arm64: Convert core type check macros into inline functions ✅
+2. `000dc696f65` - arm64: Add MIDR entries for Cortex-A57 and Cortex-A76 ✅
+3. `058ffd5f583` - arm64: renesas: Convert boards over to is_cortex_a() functions ✅ (with fix-up)
+4. `640a9f9e806` - Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh ✅ (with fix-up)
+
+### Fix-ups made:
+- **Commit 3** (`46a7999160d`): Conflict with `board/renesas/rcar-common/gen3-common.c` which was deleted/renamed in ci/master but modified in the source commit. Resolution: dropped changes to the deleted file since the target branch doesn't have it.
+- **Commit 4** (`35d9b1d2547`): Same conflict with `gen3-common.c`. Resolution: file deletion resulted in empty commit, preserved with `--allow-empty`.
+
+### Build result:
+- **OK** - sandbox board builds successfully with no warnings or errors
+
+The branch `cherry-ddb0f26dc45` is ready for pushing.
+
+---
