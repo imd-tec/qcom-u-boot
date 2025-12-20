@@ -772,6 +772,103 @@ def do_commit_source(args, dbs):
 
 
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def process_single_mr(remote, merge_req, dbs, target):
+    """Process review comments on a single MR
+
+    Args:
+        remote (str): Remote name
+        merge_req (PickmanMr): MR object from get_open_pickman_mrs()
+        dbs (Database): Database instance for tracking processed comments
+        target (str): Target branch for rebase operations
+
+    Returns:
+        int: 1 if MR was processed, 0 otherwise
+    """
+    mr_iid = merge_req.iid
+    comments = gitlab_api.get_mr_comments(remote, mr_iid)
+    if comments is None:
+        comments = []
+
+    # Filter to unresolved comments that haven't been processed
+    unresolved = []
+    for com in comments:
+        if com.resolved:
+            continue
+        if dbs.comment_is_processed(mr_iid, com.id):
+            continue
+        unresolved.append(com)
+
+    # Check for unskip comments first (takes precedence)
+    handled, unresolved = handle_unskip_comments(
+        remote, mr_iid, merge_req.title, unresolved, dbs)
+    processed = 1 if handled else 0
+
+    # Check for skip comments
+    if handle_skip_comments(remote, mr_iid, merge_req.title, unresolved, dbs):
+        return processed + 1
+
+    # If MR is currently skipped, don't process rebases or other comments
+    if SKIPPED_TAG in merge_req.title:
+        return processed
+
+    # Check if rebase is needed
+    needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
+
+    # Skip if no comments and no rebase needed
+    if not unresolved and not needs_rebase:
+        return processed
+
+    tout.info('')
+    if needs_rebase:
+        if merge_req.has_conflicts:
+            tout.info(f"MR !{mr_iid} has merge conflicts - rebasing...")
+        else:
+            tout.info(f"MR !{mr_iid} needs rebase...")
+    if unresolved:
+        tout.info(f"MR !{mr_iid} has {len(unresolved)} new comment(s):")
+        for comment in unresolved:
+            tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
+
+    # Run agent to handle comments and/or rebase
+    success, conversation_log = agent.handle_mr_comments(
+        mr_iid,
+        merge_req.source_branch,
+        unresolved,
+        remote,
+        target,
+        needs_rebase=needs_rebase,
+        has_conflicts=merge_req.has_conflicts,
+        mr_description=merge_req.description,
+    )
+
+    if success:
+        # Mark comments as processed
+        for comment in unresolved:
+            dbs.comment_mark_processed(mr_iid, comment.id)
+        dbs.commit()
+
+        # Update MR description with comments and conversation log
+        old_desc = merge_req.description
+        comment_summary = '\n'.join(
+            f"- [{c.author}]: {c.body}"
+            for c in unresolved
+        )
+        new_desc = (f"{old_desc}\n\n### Review response\n\n"
+                    f"**Comments addressed:**\n{comment_summary}\n\n"
+                    f"**Response:**\n{conversation_log}")
+        gitlab_api.update_mr_description(remote, mr_iid, new_desc)
+
+        # Update .pickman-history
+        update_history_with_review(merge_req.source_branch,
+                                   unresolved, conversation_log)
+
+        tout.info(f'Updated MR !{mr_iid} description and history')
+    else:
+        tout.error(f"Failed to handle comments for MR !{mr_iid}")
+
+    return processed + 1
+
+
 def process_mr_reviews(remote, mrs, dbs, target='master'):
     """Process review comments on open MRs
 
@@ -795,93 +892,8 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
     run_git(['fetch', remote])
 
     processed = 0
-
     for merge_req in mrs:
-        mr_iid = merge_req.iid
-        comments = gitlab_api.get_mr_comments(remote, mr_iid)
-        if comments is None:
-            comments = []
-
-        # Filter to unresolved comments that haven't been processed
-        unresolved = []
-        for com in comments:
-            if com.resolved:
-                continue
-            if dbs.comment_is_processed(mr_iid, com.id):
-                continue
-            unresolved.append(com)
-
-        # Check for unskip comments first (takes precedence)
-        handled, unresolved = handle_unskip_comments(
-            remote, mr_iid, merge_req.title, unresolved, dbs)
-        if handled:
-            processed += 1
-
-        # Check for skip comments
-        if handle_skip_comments(remote, mr_iid, merge_req.title, unresolved,
-                                dbs):
-            processed += 1
-            continue
-
-        # If MR is currently skipped, don't process rebases or other comments
-        if SKIPPED_TAG in merge_req.title:
-            continue
-
-        # Check if rebase is needed
-        needs_rebase = merge_req.needs_rebase or merge_req.has_conflicts
-
-        # Skip if no comments and no rebase needed
-        if not unresolved and not needs_rebase:
-            continue
-
-        tout.info('')
-        if needs_rebase:
-            if merge_req.has_conflicts:
-                tout.info(f'MR !{mr_iid} has merge conflicts - rebasing...')
-            else:
-                tout.info(f'MR !{mr_iid} needs rebase...')
-        if unresolved:
-            tout.info(f'MR !{mr_iid} has {len(unresolved)} new comment(s):')
-            for comment in unresolved:
-                tout.info(f'  [{comment.author}]: {comment.body[:80]}...')
-
-        # Run agent to handle comments and/or rebase
-        success, conversation_log = agent.handle_mr_comments(
-            mr_iid,
-            merge_req.source_branch,
-            unresolved,
-            remote,
-            target,
-            needs_rebase=needs_rebase,
-            has_conflicts=merge_req.has_conflicts,
-            mr_description=merge_req.description,
-        )
-
-        if success:
-            # Mark comments as processed
-            for comment in unresolved:
-                dbs.comment_mark_processed(mr_iid, comment.id)
-            dbs.commit()
-
-            # Update MR description with comments and conversation log
-            old_desc = merge_req.description
-            comment_summary = '\n'.join(
-                f'- [{c.author}]: {c.body}'
-                for c in unresolved
-            )
-            new_desc = (f'{old_desc}\n\n### Review response\n\n'
-                        f'**Comments addressed:**\n{comment_summary}\n\n'
-                        f'**Response:**\n{conversation_log}')
-            gitlab_api.update_mr_description(remote, mr_iid, new_desc)
-
-            # Update .pickman-history
-            update_history_with_review(merge_req.source_branch,
-                                       unresolved, conversation_log)
-
-            tout.info(f'Updated MR !{mr_iid} description and history')
-        else:
-            tout.error(f'Failed to handle comments for MR !{mr_iid}')
-        processed += 1
+        processed += process_single_mr(remote, merge_req, dbs, target)
 
     # Restore original branch
     if processed:
