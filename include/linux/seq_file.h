@@ -9,6 +9,7 @@
 
 struct seq_file {
 	void *private;
+	struct file *file;
 };
 
 #define seq_printf(m, fmt, ...)		do { } while (0)

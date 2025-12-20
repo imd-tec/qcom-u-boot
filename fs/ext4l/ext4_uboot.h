@@ -1193,8 +1193,13 @@ static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
 
 /* folio - memory page container stub */
 struct folio {
-	struct address_space *mapping;
+	struct page *page;
 	unsigned long index;
+	struct address_space *mapping;
+	unsigned long flags;
+	void *data;
+	struct buffer_head *private;
+	int _refcount;
 };
 
 /* folio_batch - batch of folios */
@@ -2363,5 +2368,201 @@ void dquot_free_block(struct inode *inode, loff_t nr);
 #define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)
 #define dquot_resume(sb, type)		do { (void)(sb); (void)(type); } while (0)
 #define sb_any_quota_suspended(sb)	({ (void)(sb); 0; })
+
+/*
+ * Stubs for mballoc.c
+ */
+
+/* XArray stub structure */
+struct xarray {
+	int dummy;
+};
+
+/* Per-CPU stubs - U-Boot is single-threaded */
+#define DEFINE_PER_CPU(type, name)	type name
+#define per_cpu(var, cpu)		(var)
+#define per_cpu_ptr(ptr, cpu)		(ptr)
+#define this_cpu_inc(var)		((var)++)
+#define this_cpu_read(var)		(var)
+#define for_each_possible_cpu(cpu)	for ((cpu) = 0; (cpu) < 1; (cpu)++)
+#define smp_processor_id()		0
+
+/* XArray function stubs */
+#define xa_init(xa)			do { } while (0)
+#define xa_destroy(xa)			do { } while (0)
+#define xa_load(xa, index)		((void *)NULL)
+#define xa_erase(xa, index)		do { (void)(xa); (void)(index); } while (0)
+#define xa_insert(xa, index, entry, gfp) ({ (void)(xa); (void)(index); (void)(entry); (void)(gfp); 0; })
+#define xa_empty(xa)			({ (void)(xa); 1; })
+
+/* XArray iteration stubs - iterate zero times */
+#define xa_for_each(xa, index, entry) \
+	for ((index) = 0, (entry) = NULL; 0; )
+
+#define xa_for_each_range(xa, index, entry, start, end) \
+	for ((index) = (start), (entry) = NULL; 0; )
+
+/* Bit operations for little-endian bitmaps */
+#define __clear_bit_le(bit, addr)	clear_bit_le(bit, addr)
+
+static inline void clear_bit_le(int nr, void *addr)
+{
+	unsigned char *p = (unsigned char *)addr + (nr >> 3);
+
+	*p &= ~(1 << (nr & 7));
+}
+
+#define find_next_bit_le(addr, size, offset) \
+	ext4_find_next_bit_le(addr, size, offset)
+
+static inline unsigned long ext4_find_next_bit_le(const void *addr,
+						  unsigned long size,
+						  unsigned long offset)
+{
+	const unsigned char *p = addr;
+	unsigned long bit;
+
+	for (bit = offset; bit < size; bit++) {
+		if (p[bit >> 3] & (1 << (bit & 7)))
+			return bit;
+	}
+	return size;
+}
+
+/* Atomic64 operations */
+#define atomic64_inc(v)			do { (void)(v); } while (0)
+#define atomic64_add(i, v)		do { (void)(i); (void)(v); } while (0)
+
+/* CPU cycle counter stub */
+#define get_cycles()			(0ULL)
+
+/* folio_address - get virtual address of folio data */
+#undef folio_address
+#define folio_address(folio)		((folio)->data)
+
+/* Trace stubs for mballoc.c */
+#define trace_ext4_mb_bitmap_load(sb, group) \
+	do { (void)(sb); (void)(group); } while (0)
+#define trace_ext4_mb_buddy_bitmap_load(sb, group) \
+	do { (void)(sb); (void)(group); } while (0)
+#define trace_ext4_mballoc_alloc(ac) \
+	do { (void)(ac); } while (0)
+#define trace_ext4_mballoc_prealloc(ac) \
+	do { (void)(ac); } while (0)
+#define trace_ext4_mballoc_discard(sb, inode, group, start, len) \
+	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
+#define trace_ext4_mballoc_free(sb, inode, group, start, len) \
+	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
+#define trace_ext4_mb_release_inode_pa(pa, block, count) \
+	do { (void)(pa); (void)(block); (void)(count); } while (0)
+#define trace_ext4_mb_release_group_pa(sb, pa) \
+	do { (void)(sb); (void)(pa); } while (0)
+#define trace_ext4_mb_new_inode_pa(ac, pa) \
+	do { (void)(ac); (void)(pa); } while (0)
+#define trace_ext4_mb_new_group_pa(ac, pa) \
+	do { (void)(ac); (void)(pa); } while (0)
+
+/* sb_end_intwrite stub */
+#define sb_end_intwrite(sb)		do { (void)(sb); } while (0)
+
+/* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
+#define WARN_RATELIMIT(condition, ...) (condition)
+
+/* folio_get - increment folio refcount (no-op in U-Boot) */
+#define folio_get(f)			do { (void)(f); } while (0)
+
+/* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
+#define array_index_nospec(index, size) (index)
+
+/* atomic_inc_return - increment and return new value */
+static inline int atomic_inc_return(atomic_t *v)
+{
+	return ++(v->counter);
+}
+
+/* pde_data - proc dir entry data (not supported in U-Boot) */
+#define pde_data(inode)			((void *)NULL)
+
+/* seq_operations for procfs iteration */
+struct seq_operations {
+	void *(*start)(struct seq_file *m, loff_t *pos);
+	void (*stop)(struct seq_file *m, void *v);
+	void *(*next)(struct seq_file *m, void *v, loff_t *pos);
+	int (*show)(struct seq_file *m, void *v);
+};
+
+/* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
+#define DEFINE_RAW_FLEX(type, name, member, count) \
+	type *name = NULL
+
+/* Block layer constants */
+#define BLK_MAX_SEGMENT_SIZE		65536
+
+/* order_base_2 - log2 rounded up */
+#define order_base_2(n)			ilog2(roundup_pow_of_two(n))
+
+/* num_possible_cpus - number of possible CPUs (always 1 in U-Boot) */
+#define num_possible_cpus()		1
+
+/* Per-CPU allocation stubs */
+#define alloc_percpu(type)		((type *)kzalloc(sizeof(type), GFP_KERNEL))
+#define free_percpu(ptr)		kfree(ptr)
+
+/* Block device properties */
+#define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
+
+/* Trace stub for discard */
+#define trace_ext4_discard_blocks(sb, blk, count) \
+	do { (void)(sb); (void)(blk); (void)(count); } while (0)
+
+/* sb_issue_discard - issue discard request (no-op in U-Boot) */
+#define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
+	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
+
+/* Atomic operations */
+#define atomic_sub(i, v)		((v)->counter -= (i))
+#define atomic64_sub(i, v)		((v)->counter -= (i))
+#define atomic_dec_and_test(v)		(--((v)->counter) == 0)
+
+/* RCU list operations - use regular list operations in U-Boot */
+#define list_for_each_entry_rcu(pos, head, member, ...) \
+	list_for_each_entry(pos, head, member)
+#define list_del_rcu(entry)		list_del(entry)
+#define list_add_rcu(new, head)		list_add(new, head)
+#define list_add_tail_rcu(new, head)	list_add_tail(new, head)
+#define rcu_read_lock()			do { } while (0)
+#define rcu_read_unlock()		do { } while (0)
+#define synchronize_rcu()		do { } while (0)
+#define rcu_assign_pointer(p, v)	((p) = (v))
+#define rcu_dereference(p)		(p)
+
+/* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
+#define raw_cpu_ptr(ptr)		(ptr)
+
+/* Scheduler stubs */
+#define schedule_timeout_uninterruptible(t) do { } while (0)
+#define need_resched()			(0)
+
+/* Trace stubs for mballoc.c */
+#define trace_ext4_discard_preallocations(inode, cnt) \
+	do { (void)(inode); (void)(cnt); } while (0)
+#define trace_ext4_mb_discard_preallocations(sb, needed) \
+	do { (void)(sb); (void)(needed); } while (0)
+#define trace_ext4_request_blocks(ar) \
+	do { (void)(ar); } while (0)
+#define trace_ext4_allocate_blocks(ar, block) \
+	do { (void)(ar); (void)(block); } while (0)
+#define trace_ext4_free_blocks(inode, block, count, flags) \
+	do { (void)(inode); (void)(block); (void)(count); (void)(flags); } while (0)
+#define trace_ext4_trim_extent(sb, group, start, count) \
+	do { (void)(sb); (void)(group); (void)(start); (void)(count); } while (0)
+#define trace_ext4_trim_all_free(sb, group, start, max) \
+	do { (void)(sb); (void)(group); (void)(start); (void)(max); } while (0)
+
+/* Block device operations */
+#define sb_find_get_block_nonatomic(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define bdev_discard_granularity(bdev) \
+	({ (void)(bdev); 0U; })
 
 #endif /* __EXT4_UBOOT_H__ */

@@ -90,7 +90,7 @@ struct kmem_cache {
 };
 
 struct kmem_cache *get_mem(int element_sz);
-#define kmem_cache_create(a, sz, c, d, e)	({ (void)(e); get_mem(sz); })
+#define kmem_cache_create(a, sz, c, d, e)	({ (void)(a); (void)(e); get_mem(sz); })
 void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag);
 
 static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)

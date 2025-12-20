@@ -118,11 +118,7 @@ int jbd2_trans_will_send_data_barrier(journal_t *journal, unsigned long tid)
 /* ext4_mark_group_bitmap_corrupted is now in super.c */
 /* __ext4_warning is now in super.c */
 
-unsigned long long ext4_mb_new_blocks(void *handle, void *ar, int *errp)
-{
-	*errp = -1;
-	return 0;
-}
+/* ext4_mb_new_blocks is now in mballoc.c */
 
 /* ext4_free_group_clusters is now in super.c */
 /* ext4_clear_inode is now in super.c */
@@ -172,15 +168,9 @@ struct extent_status;
 
 /* ext4_remove_pending is now in extents_status.c */
 
-void ext4_free_blocks(void *handle, struct inode *inode,
-		      struct buffer_head *bh, unsigned long long block,
-		      unsigned long count, int flags)
-{
-}
+/* ext4_free_blocks is now in mballoc.c */
 
-void ext4_discard_preallocations(struct inode *inode, unsigned int needed)
-{
-}
+/* ext4_discard_preallocations is now in mballoc.c */
 
 /* ext4_is_pending is now in extents_status.c */
 /* ext4_convert_inline_data is now in inline.c */
@@ -196,15 +186,17 @@ void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
 
 /* ext4_es_find_extent_range is now in extents_status.c */
 
-void ext4_mb_mark_bb(struct super_block *sb, unsigned long long block,
-		     int len, int state)
-{
-}
+/* ext4_mb_mark_bb is now in mballoc.c */
 
 void ext4_fc_record_regions(struct super_block *sb, int ino,
 			    unsigned long lblk, unsigned long long pblk,
 			    int len, int mapped)
 {
+}
+
+int ext4_fc_replay_check_excluded(struct super_block *sb, unsigned long long blk)
+{
+	return 0;
 }
 
 /* ext4_read_bh is now in super.c */
@@ -773,10 +765,7 @@ void atomic_add(int val, atomic_t *v)
 	v->counter += val;
 }
 
-void atomic64_add(s64 val, atomic64_t *v)
-{
-	v->counter += val;
-}
+/* atomic64_add is now a macro in ext4_uboot.h */
 
 /* Discard */
 unsigned int bdev_max_discard_sectors(struct block_device *bdev)
