@@ -309,6 +309,8 @@ class ConsoleBase():
         try:
             self.log.info('Waiting for U-Boot to be ready')
 
+            if self.lab_mode:
+                self.timeout = TIMEOUT_PREPARE_MS
             if not self.lab_mode:
                 self._wait_for_banner(loop_num)
                 self.u_boot_version_string = self.after
