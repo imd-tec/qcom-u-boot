@@ -8,7 +8,8 @@
 #define _LINUX_FREEZER_H
 
 #define set_freezable()			do { } while (0)
-#define try_to_freeze()			do { } while (0)
+
+static inline int try_to_freeze(void) { return 0; }
 #define freezing(task)			({ (void)(task); 0; })
 #define frozen(task)			({ (void)(task); 0; })
 #define freezable_schedule()		do { } while (0)
