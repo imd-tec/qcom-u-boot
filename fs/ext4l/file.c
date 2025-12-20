@@ -20,16 +20,8 @@
  */
 
 #include <linux/time.h>
-#include <linux/fs.h>
-#include <linux/iomap.h>
-#include <linux/mount.h>
-#include <linux/path.h>
-#include <linux/dax.h>
-#include <linux/quotaops.h>
-#include <linux/pagevec.h>
-#include <linux/uio.h>
+#include "ext4_uboot.h"
 #include <linux/mman.h>
-#include <linux/backing-dev.h>
 #include "ext4.h"
 #include "ext4_jbd2.h"
 #include "xattr.h"
@@ -69,7 +61,7 @@ static bool ext4_should_use_dio(struct kiocb *iocb, struct iov_iter *iter)
 static ssize_t ext4_dio_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
 	ssize_t ret;
-	struct inode *inode = file_inode(iocb->ki_filp);
+	struct inode *inode __maybe_unused = file_inode(iocb->ki_filp);
 
 	if (iocb->ki_flags & IOCB_NOWAIT) {
 		if (!inode_trylock_shared(inode))
@@ -286,7 +278,7 @@ static ssize_t ext4_buffered_write_iter(struct kiocb *iocb,
 					struct iov_iter *from)
 {
 	ssize_t ret;
-	struct inode *inode = file_inode(iocb->ki_filp);
+	struct inode *inode __maybe_unused = file_inode(iocb->ki_filp);
 
 	if (iocb->ki_flags & IOCB_NOWAIT)
 		return -EOPNOTSUPP;
@@ -402,7 +394,7 @@ static int ext4_dio_write_end_io(struct kiocb *iocb, ssize_t size,
 	return error < 0 ? error : 0;
 }
 
-static const struct iomap_dio_ops ext4_dio_write_ops = {
+static const struct iomap_dio_ops __maybe_unused ext4_dio_write_ops = {
 	.end_io = ext4_dio_write_end_io,
 };
 
@@ -809,7 +801,7 @@ static int ext4_file_mmap_prepare(struct vm_area_desc *desc)
 	int ret;
 	struct file *file = desc->file;
 	struct inode *inode = file->f_mapping->host;
-	struct dax_device *dax_dev = EXT4_SB(inode->i_sb)->s_daxdev;
+	struct dax_device *dax_dev __maybe_unused = EXT4_SB(inode->i_sb)->s_daxdev;
 
 	if (file->f_mode & FMODE_WRITE)
 		ret = ext4_emergency_state(inode->i_sb);
@@ -935,7 +927,7 @@ static int ext4_file_open(struct inode *inode, struct file *filp)
 loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
 {
 	struct inode *inode = file->f_mapping->host;
-	loff_t maxbytes = ext4_get_maxbytes(inode);
+	loff_t maxbytes __maybe_unused = ext4_get_maxbytes(inode);
 
 	switch (whence) {
 	default:

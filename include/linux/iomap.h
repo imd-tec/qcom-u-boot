@@ -5,6 +5,7 @@
 #include <linux/types.h>
 
 struct bio;
+struct dax_device;
 struct inode;
 struct iomap_iter;
 struct kiocb;
@@ -37,6 +38,13 @@ struct vm_fault;
 #define IOMAP_OVERWRITE_ONLY	(1 << 6)
 #define IOMAP_UNSHARE		(1 << 7)
 #define IOMAP_DAX		(1 << 8)
+#define IOMAP_ATOMIC		(1 << 9)
+
+/* IOMAP_NULL_ADDR indicates a hole/unwritten block address */
+#define IOMAP_NULL_ADDR		((u64)-1)
+
+/* Additional iomap flags */
+#define IOMAP_F_ATOMIC_BIO	(1U << 6)
 
 struct iomap {
 	u64			addr;

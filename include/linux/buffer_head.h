@@ -12,14 +12,10 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
-
-/* Simple atomic_inc/dec for U-Boot (single-threaded) */
-#ifndef atomic_inc
-#define atomic_inc(v)	((v)->counter++)
-#endif
-#ifndef atomic_dec
-#define atomic_dec(v)	((v)->counter--)
-#endif
+/*
+ * Note: atomic_t and sector_t are expected to be defined by the including
+ * file (ext4_uboot.h) before including this header.
+ */
 
 enum bh_state_bits {
 	BH_Uptodate,	/* Contains valid data */

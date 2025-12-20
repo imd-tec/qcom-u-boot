@@ -12,8 +12,8 @@
 #define _LINUX_INIT_H
 
 /* Section markers - these are no-ops in U-Boot */
-#define __init
-#define __exit
+#define __init		__maybe_unused
+#define __exit		__maybe_unused
 #define __initdata
 #define __exitdata
 #define __initconst

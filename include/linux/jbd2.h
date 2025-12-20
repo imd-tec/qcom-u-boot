@@ -33,6 +33,9 @@
 #include <linux/init.h>
 #endif
 
+/* Transaction ID type */
+typedef unsigned int tid_t;
+
 #define journal_oom_retry 1
 
 /*

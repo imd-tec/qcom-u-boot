@@ -11,10 +11,17 @@
 
 #include <linux/types.h>
 
+/* io_context for I/O scheduling */
+struct io_context {
+	unsigned int ioprio;
+};
+
 struct task_struct {
 	int pid;
 	char comm[16];
 	void *journal_info;	/* For jbd2 */
+	unsigned int flags;	/* PF_* flags */
+	struct io_context *io_context;	/* For I/O scheduling */
 };
 
 extern struct task_struct *current;

@@ -18,7 +18,7 @@ struct mutex {
 };
 
 /* No-op macros that don't reference argument - for backward compatibility */
-#define DEFINE_MUTEX(name)	struct mutex name = { .locked = 0 }
+#define DEFINE_MUTEX(name)	struct mutex name __maybe_unused = { .locked = 0 }
 #define mutex_init(lock)	do { } while (0)
 #define mutex_lock(lock)	do { } while (0)
 #define mutex_unlock(lock)	do { } while (0)

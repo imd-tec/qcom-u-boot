@@ -10,9 +10,9 @@
 struct task_struct;
 
 #define kthread_create(fn, data, fmt, ...)	\
-	((struct task_struct *)__builtin_return_address(0))
+	({ (void)(fn); (struct task_struct *)__builtin_return_address(0); })
 #define kthread_run(fn, data, fmt, ...)		\
-	((struct task_struct *)__builtin_return_address(0))
+	({ (void)(fn); (struct task_struct *)__builtin_return_address(0); })
 #define kthread_stop(task)		do { } while (0)
 #define kthread_should_stop()		0
 #define kthread_should_park()		0

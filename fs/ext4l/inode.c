@@ -19,29 +19,7 @@
  *  Assorted race fixes, rewrite of ext4_get_block() by Al Viro, 2000
  */
 
-#include <linux/fs.h>
-#include <linux/mount.h>
-#include <linux/time.h>
-#include <linux/highuid.h>
-#include <linux/pagemap.h>
-#include <linux/dax.h>
-#include <linux/quotaops.h>
-#include <linux/string.h>
-#include <linux/buffer_head.h>
-#include <linux/writeback.h>
-#include <linux/pagevec.h>
-#include <linux/mpage.h>
-#include <linux/rmap.h>
-#include <linux/namei.h>
-#include <linux/uio.h>
-#include <linux/bio.h>
-#include <linux/workqueue.h>
-#include <linux/kernel.h>
-#include <linux/printk.h>
-#include <linux/slab.h>
-#include <linux/bitops.h>
-#include <linux/iomap.h>
-#include <linux/iversion.h>
+#include "ext4_uboot.h"
 
 #include "ext4_jbd2.h"
 #include "xattr.h"
@@ -1763,9 +1741,9 @@ static void mpage_release_unused_pages(struct mpage_da_data *mpd,
 
 static void ext4_print_free_blocks(struct inode *inode)
 {
-	struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
+	struct ext4_sb_info *sbi __maybe_unused = EXT4_SB(inode->i_sb);
 	struct super_block *sb = inode->i_sb;
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	struct ext4_inode_info *ei __maybe_unused = EXT4_I(inode);
 
 	ext4_msg(sb, KERN_CRIT, "Total free blocks count %lld",
 	       EXT4_C2B(EXT4_SB(inode->i_sb),
@@ -2758,7 +2736,7 @@ static int ext4_do_writepages(struct mpage_da_data *mpd)
 {
 	struct writeback_control *wbc = mpd->wbc;
 	pgoff_t	writeback_index = 0;
-	long nr_to_write = wbc->nr_to_write;
+	__maybe_unused long nr_to_write = wbc->nr_to_write;
 	int range_whole = 0;
 	int cycled = 1;
 	handle_t *handle = NULL;
@@ -3055,7 +3033,7 @@ static int ext4_dax_writepages(struct address_space *mapping,
 			       struct writeback_control *wbc)
 {
 	int ret;
-	long nr_to_write = wbc->nr_to_write;
+	__maybe_unused long nr_to_write = wbc->nr_to_write;
 	struct inode *inode = mapping->host;
 	int alloc_ctx;
 
@@ -4541,7 +4519,7 @@ int ext4_inode_attach_jinode(struct inode *inode)
  */
 int ext4_truncate(struct inode *inode)
 {
-	struct ext4_inode_info *ei = EXT4_I(inode);
+	__maybe_unused struct ext4_inode_info *ei = EXT4_I(inode);
 	unsigned int credits;
 	int err = 0, err2;
 	handle_t *handle;
@@ -4646,7 +4624,7 @@ out_trace:
 
 static inline u64 ext4_inode_peek_iversion(const struct inode *inode)
 {
-	if (unlikely(EXT4_I(inode)->i_flags & EXT4_EA_INODE_FL))
+	if (unlikely(EXT4_I((struct inode *)inode)->i_flags & EXT4_EA_INODE_FL))
 		return inode_peek_iversion_raw(inode);
 	else
 		return inode_peek_iversion(inode);
@@ -6094,7 +6072,8 @@ int ext4_getattr(struct mnt_idmap *idmap, const struct path *path,
 
 		stat->result_mask |= STATX_DIOALIGN;
 		if (dio_align == 1) {
-			struct block_device *bdev = inode->i_sb->s_bdev;
+			__maybe_unused struct block_device *bdev =
+				inode->i_sb->s_bdev;
 
 			/* iomap defaults */
 			stat->dio_mem_align = bdev_dma_alignment(bdev) + 1;

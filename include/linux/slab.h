@@ -67,6 +67,16 @@ static inline void kfree(const void *block)
 	free((void *)block);
 }
 
+static inline void kvfree(const void *addr)
+{
+	kfree(addr);
+}
+
+static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
+{
+	return kmalloc_array(n, size, flags);
+}
+
 static inline void *krealloc(const void *p, size_t new_size, gfp_t flags)
 {
 	return realloc((void *)p, new_size);
@@ -80,7 +90,7 @@ struct kmem_cache {
 };
 
 struct kmem_cache *get_mem(int element_sz);
-#define kmem_cache_create(a, sz, c, d, e)	get_mem(sz)
+#define kmem_cache_create(a, sz, c, d, e)	({ (void)(e); get_mem(sz); })
 void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag);
 
 static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)

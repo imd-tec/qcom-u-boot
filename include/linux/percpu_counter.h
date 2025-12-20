@@ -14,12 +14,14 @@
 
 struct percpu_counter {
 	s64 count;
+	s64 counter;	/* Alias for count - some code uses this name */
 };
 
 static inline int percpu_counter_init(struct percpu_counter *fbc, s64 amount,
 				      gfp_t gfp)
 {
 	fbc->count = amount;
+	fbc->counter = amount;
 	return 0;
 }
 

@@ -22,11 +22,7 @@
  *
  */
 
-#include <linux/fs.h>
-#include <linux/buffer_head.h>
-#include <linux/slab.h>
-#include <linux/iversion.h>
-#include <linux/unicode.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "xattr.h"
 

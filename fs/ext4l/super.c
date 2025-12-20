@@ -17,37 +17,7 @@
  *        David S. Miller (davem@caip.rutgers.edu), 1995
  */
 
-#include <linux/module.h>
-#include <linux/string.h>
-#include <linux/fs.h>
-#include <linux/time.h>
-#include <linux/vmalloc.h>
-#include <linux/slab.h>
-#include <linux/init.h>
-#include <linux/blkdev.h>
-#include <linux/backing-dev.h>
-#include <linux/parser.h>
-#include <linux/buffer_head.h>
-#include <linux/exportfs.h>
-#include <linux/vfs.h>
-#include <linux/random.h>
-#include <linux/mount.h>
-#include <linux/namei.h>
-#include <linux/quotaops.h>
-#include <linux/seq_file.h>
-#include <linux/ctype.h>
-#include <linux/log2.h>
-#include <linux/crc16.h>
-#include <linux/dax.h>
-#include <linux/uaccess.h>
-#include <linux/iversion.h>
-#include <linux/unicode.h>
-#include <linux/part_stat.h>
-#include <linux/kthread.h>
-#include <linux/freezer.h>
-#include <linux/fsnotify.h>
-#include <linux/fs_context.h>
-#include <linux/fs_parser.h>
+#include "ext4_uboot.h"
 
 #include "ext4.h"
 #include "ext4_extents.h"	/* Needed for trace points definition */

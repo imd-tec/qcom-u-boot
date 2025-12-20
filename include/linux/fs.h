@@ -15,6 +15,7 @@
 struct inode;
 struct super_block;
 struct buffer_head;
+struct address_space_operations;
 
 /* errseq_t - error sequence type */
 typedef u32 errseq_t;
@@ -29,16 +30,21 @@ typedef unsigned int fmode_t;
 
 /* Buffer operations are in buffer_head.h */
 
-/* address_space - minimal stub */
+/* address_space - extended for inode.c */
 struct address_space {
 	struct inode *host;
-	errseq_t wb_err;	/* For jbd2 error tracking */
+	errseq_t wb_err;
+	unsigned long nrpages;
+	unsigned long writeback_index;
+	struct list_head i_private_list;
+	const struct address_space_operations *a_ops;
 };
 
 /* block_device - minimal stub */
 struct block_device {
 	struct address_space *bd_mapping;
 	void *bd_disk;
+	struct super_block *bd_super;
 };
 
 /* errseq functions - stubs */
@@ -52,12 +58,24 @@ static inline int errseq_check_and_advance(errseq_t *eseq, errseq_t *since)
 	return 0;
 }
 
+/* File readahead state - stub */
+struct file_ra_state {
+	unsigned long start;
+	unsigned int size;
+	unsigned int async_size;
+	unsigned int ra_pages;
+	unsigned int mmap_miss;
+	long long prev_pos;
+};
+
 /* file - minimal stub */
 struct file {
 	fmode_t f_mode;
 	struct inode *f_inode;
 	unsigned int f_flags;
 	struct address_space *f_mapping;
+	void *private_data;
+	struct file_ra_state f_ra;
 };
 
 /* Get inode from file */

@@ -27,6 +27,9 @@
 #define XATTR_SYSTEM_PREFIX	"system."
 #define XATTR_SYSTEM_PREFIX_LEN	7
 
+#define XATTR_HURD_PREFIX	"gnu."
+#define XATTR_HURD_PREFIX_LEN	4
+
 /* Maximum size of an xattr value */
 #define XATTR_SIZE_MAX		65536
 
