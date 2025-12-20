@@ -2507,6 +2507,126 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertEqual(len(commits), 2)
             dbs.close()
 
+    def test_get_next_commits_skips_db_commits(self):
+        """Test get_next_commits skips commits already in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add first commit to database (simulating pending MR)
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit()
+
+            # Log output with two commits, first already in DB
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertFalse(merge_found)
+            # Only second commit should be returned (first is in DB)
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0].short_hash, 'bbb222b')
+            dbs.close()
+
+    def test_get_next_commits_all_in_db(self):
+        """Test get_next_commits returns empty when all commits in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add both commits to database
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit_add('bbb222', source_id, 'Second commit', 'Author 2',
+                           status='pending')
+            dbs.commit()
+
+            # Log output with two commits, both in DB
+            log_output = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'bbb222|bbb222b|Author 2|Second commit|aaa111\n'
+            )
+            command.TEST_RESULT = command.CommandResult(stdout=log_output)
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertFalse(merge_found)
+            # No commits should be returned (all in DB)
+            self.assertEqual(len(commits), 0)
+            dbs.close()
+
+    def test_get_next_commits_skips_processed_merge(self):
+        """Test get_next_commits skips merge with all commits in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+
+            # Add commits from first merge to database (simulating pending MR)
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa111', source_id, 'First commit', 'Author 1',
+                           status='pending')
+            dbs.commit_add('merge1', source_id, 'Merge branch', 'Author 2',
+                           status='pending')
+            dbs.commit()
+
+            # First-parent log shows two merges
+            fp_log = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'merge1|merge1m|Author 2|Merge branch|aaa111 side1\n'
+                'ccc333|ccc333c|Author 3|Third commit|merge1\n'
+                'merge2|merge2m|Author 4|Second merge|ccc333 side2\n'
+            )
+
+            # When asked for first merge's commits (all in DB)
+            merge1_log = (
+                'aaa111|aaa111a|Author 1|First commit|abc123\n'
+                'merge1|merge1m|Author 2|Merge branch|aaa111 side1\n'
+            )
+
+            # When asked for second merge's commits (not in DB)
+            merge2_log = (
+                'ccc333|ccc333c|Author 3|Third commit|merge1\n'
+                'merge2|merge2m|Author 4|Second merge|ccc333 side2\n'
+            )
+
+            call_count = [0]
+
+            def mock_git(pipe_list):
+                call_count[0] += 1
+                _cmd = pipe_list[0] if pipe_list else []  # pylint: disable=unused-variable
+                # First call: get first-parent log
+                if call_count[0] == 1:
+                    return command.CommandResult(stdout=fp_log)
+                # Second call: get commits for first merge
+                if call_count[0] == 2:
+                    return command.CommandResult(stdout=merge1_log)
+                # Third call: get commits for second merge
+                return command.CommandResult(stdout=merge2_log)
+
+            command.TEST_RESULT = mock_git
+
+            commits, merge_found, error = control.get_next_commits(dbs,
+                                                                   'us/next')
+            self.assertIsNone(error)
+            self.assertTrue(merge_found)
+            # Should return commits from second merge (first was skipped)
+            self.assertEqual(len(commits), 2)
+            self.assertEqual(commits[0].short_hash, 'ccc333c')
+            self.assertEqual(commits[1].short_hash, 'merge2m')
+            dbs.close()
+
 
 class TestDoCommitSourceResolveError(unittest.TestCase):
     """Tests for do_commit_source error handling."""

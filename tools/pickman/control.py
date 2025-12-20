@@ -186,11 +186,14 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+# pylint: disable=too-many-locals,too-many-branches
 def get_next_commits(dbs, source):
     """Get the next set of commits to cherry-pick from a source
 
     Finds commits between the last cherry-picked commit and the next merge
     commit on the first-parent (mainline) chain of the source branch.
+    Skips merges whose commits are already tracked in the database (from
+    pending MRs).
 
     Args:
         dbs (Database): Database instance
@@ -208,8 +211,7 @@ def get_next_commits(dbs, source):
     if not last_commit:
         return None, False, f"Source '{source}' not found in database"
 
-    # First, find the next merge commit on the first-parent chain
-    # This ensures we follow the mainline and find merges in order
+    # Get all first-parent commits to find merges
     fp_output = run_git([
         'log', '--reverse', '--first-parent', '--format=%H|%h|%an|%s|%P',
         f'{last_commit}..{source}'
@@ -218,22 +220,56 @@ def get_next_commits(dbs, source):
     if not fp_output:
         return [], False, None
 
-    # Find the first merge on the first-parent chain
-    merge_hash = None
+    # Build list of merge hashes on the first-parent chain
+    merge_hashes = []
     for line in fp_output.split('\n'):
         if not line:
             continue
         parts = line.split('|')
         parents = parts[-1].split()
         if len(parents) > 1:
-            merge_hash = parts[0]
-            break
+            merge_hashes.append(parts[0])
 
-    # Now get all commits from last_commit to the merge (or end of branch)
-    # Without --first-parent to include commits from merged branches
+    # Try each merge in order until we find one with unprocessed commits
+    prev_commit = last_commit
+    for merge_hash in merge_hashes:
+        # Get all commits from prev_commit to this merge
+        log_output = run_git([
+            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+            f'{prev_commit}..{merge_hash}'
+        ])
+
+        if not log_output:
+            prev_commit = merge_hash
+            continue
+
+        # Parse commits, filtering out those already in database
+        commits = []
+        for line in log_output.split('\n'):
+            if not line:
+                continue
+            parts = line.split('|')
+            commit_hash = parts[0]
+            short_hash = parts[1]
+            author = parts[2]
+            subject = '|'.join(parts[3:-1])  # Subject may contain separator
+
+            # Skip commits already in the database (already in a pending MR)
+            if dbs.commit_get(commit_hash):
+                continue
+
+            commits.append(CommitInfo(commit_hash, short_hash, subject, author))
+
+        if commits:
+            return commits, True, None
+
+        # All commits in this merge are processed, skip to next
+        prev_commit = merge_hash
+
+    # No merges with unprocessed commits, check remaining commits
     log_output = run_git([
         'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'{last_commit}..{merge_hash or source}'
+        f'{prev_commit}..{source}'
     ])
 
     if not log_output:
@@ -247,11 +283,14 @@ def get_next_commits(dbs, source):
         commit_hash = parts[0]
         short_hash = parts[1]
         author = parts[2]
-        subject = '|'.join(parts[3:-1])  # Subject may contain separator
+        subject = '|'.join(parts[3:-1])
+
+        if dbs.commit_get(commit_hash):
+            continue
 
         commits.append(CommitInfo(commit_hash, short_hash, subject, author))
 
-    return commits, bool(merge_hash), None
+    return commits, False, None
 
 
 def do_next_set(args, dbs):
