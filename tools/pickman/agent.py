@@ -234,8 +234,8 @@ Steps to follow:
 4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
 5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
 6. Force push to the ORIGINAL remote branch to update the MR:
-   git push -o ci.skip --force-with-lease {remote} HEAD:{branch_name}
-   (ci.skip prevents a duplicate pipeline; the MR pipeline will run automatically)
+   git push --force-with-lease {remote} HEAD:{branch_name}
+   (this triggers a new pipeline to verify the changes)
 7. Report what was done and what reply should be posted to the MR
 
 Important:
@@ -243,7 +243,6 @@ Important:
 - If a comment is unclear or cannot be addressed, note this in your report
 - Local branch: {branch_name}-v2 (or -v3, -v4 etc.)
 - Remote push: always to '{branch_name}' to update the existing MR
-- Always use -o ci.skip when pushing to avoid duplicate pipelines
 """
 
 

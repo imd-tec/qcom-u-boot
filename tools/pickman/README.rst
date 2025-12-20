@@ -124,6 +124,35 @@ Pickman will add ``[skipped]`` to the MR title. Skipped MRs:
 - Don't block the ``step`` or ``poll`` commands from proceeding
 - Can be unskipped by commenting ``pickman unskip``
 
+CI Pipelines
+------------
+
+Pickman manages CI pipelines to avoid unnecessary runs while ensuring changes
+are properly verified.
+
+**Initial MR creation**
+
+When creating a new MR (via ``apply -p`` or ``step``), pickman pushes the
+branch with ``-o ci.skip``. This skips the push pipeline because GitLab
+automatically triggers an MR pipeline when the merge request is created.
+Without this, two pipelines would run: one for the push and one for the MR.
+
+**Review comment handling**
+
+When pushing changes after addressing review comments (via ``review``,
+``step``, or ``poll``), pickman does NOT skip the pipeline. A new pipeline
+is needed to verify that the changes made in response to review feedback
+are correct.
+
+**Summary**
+
+===============================  ================  =========================
+Action                           Pipeline Skipped  Reason
+===============================  ================  =========================
+Initial branch push for new MR   Yes               MR creation triggers one
+Push after review changes        No                Need to verify changes
+===============================  ================  =========================
+
 Usage
 -----
 
