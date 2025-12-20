@@ -605,7 +605,10 @@ typedef void bh_end_io_t(struct buffer_head *bh, int uptodate);
 #define DT_WHT		14
 
 /* mnt_idmap - stub */
-struct mnt_idmap;
+struct mnt_idmap {
+	int dummy;
+};
+extern struct mnt_idmap nop_mnt_idmap;
 
 /* fstrim_range - stub */
 struct fstrim_range {
@@ -854,6 +857,34 @@ static inline time_t inode_get_atime_sec(const struct inode *inode)
 	return inode->i_atime.tv_sec;
 }
 
+static inline time_t inode_get_ctime_sec(const struct inode *inode)
+{
+	return inode->i_ctime.tv_sec;
+}
+
+static inline time_t inode_get_mtime_sec(const struct inode *inode)
+{
+	return inode->i_mtime.tv_sec;
+}
+
+static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_ctime.tv_sec = sec;
+	inode->i_ctime.tv_nsec = nsec;
+}
+
+static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_atime.tv_sec = sec;
+	inode->i_atime.tv_nsec = nsec;
+}
+
+static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_mtime.tv_sec = sec;
+	inode->i_mtime.tv_nsec = nsec;
+}
+
 static inline void simple_inode_init_ts(struct inode *inode)
 {
 	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
@@ -933,6 +964,11 @@ static inline u64 fscrypt_fname_siphash(const struct inode *dir,
 /* Warning macros - stubs */
 #define WARN_ON_ONCE(cond) ({ (void)(cond); 0; })
 #define WARN_ON(cond) ({ (void)(cond); 0; })
+#define WARN_ONCE(cond, fmt, ...) ({ (void)(cond); 0; })
+#define pr_warn_once(fmt, ...) do { } while (0)
+
+/* lockdep stubs */
+#define lockdep_assert_held_read(l)	do { (void)(l); } while (0)
 
 /* strtomem_pad - copy string to fixed-size buffer with padding */
 #define strtomem_pad(dest, src, pad) do { \
@@ -1048,7 +1084,7 @@ static inline vm_fault_t filemap_map_pages(struct vm_fault *vmf,
 #define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
 #define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
 #define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
-#define i_blocksize(i)			(1UL << (i)->i_blkbits)
+#define i_blocksize(i)			(1U << (i)->i_blkbits)
 
 /* IS_SYNC macro */
 #define IS_SYNC(inode)			(0)
@@ -2172,6 +2208,7 @@ void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
 
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
+#define kvmalloc(size, flags)	kvzalloc(size, flags)
 unsigned long roundup_pow_of_two(unsigned long n);
 
 /* Atomic operations - declarations for stub.c */
@@ -2229,6 +2266,52 @@ void set_task_ioprio(void *task, int ioprio);
 #define super_set_uuid(sb, uuid, len)		do { } while (0)
 #define super_set_sysfs_name_bdev(sb)		do { } while (0)
 
+/*
+ * mb_cache - metadata block cache stubs for xattr.c
+ * Not supported in U-Boot - xattr caching disabled
+ */
+struct mb_cache {
+	int dummy;
+};
+
+struct mb_cache_entry {
+	u64 e_value;
+	unsigned long e_flags;
+};
+
+/* MB cache flags */
+#define MBE_REUSABLE_B	0
+
+#define mb_cache_create(bits)			((struct mb_cache *)NULL)
+#define mb_cache_destroy(cache)			do { (void)(cache); } while (0)
+#define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_get(c, k, v)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_put(c, e)		do { (void)(c); (void)(e); } while (0)
+#define mb_cache_entry_create(c, f, k, v, r)	({ (void)(c); (void)(f); (void)(k); (void)(v); (void)(r); 0; })
+#define mb_cache_entry_delete(c, k, v)		do { (void)(c); (void)(k); (void)(v); } while (0)
+#define mb_cache_entry_touch(c, e)		do { (void)(c); (void)(e); } while (0)
+#define mb_cache_entry_wait_unused(e)		do { (void)(e); } while (0)
+
+/* xattr helper stubs for xattr.c */
+#define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
+#define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
+
+/* Inode lock mutex classes */
+#define I_MUTEX_XATTR		5
+#define I_MUTEX_CHILD		4
+#define I_MUTEX_PARENT		3
+#define I_MUTEX_NORMAL		2
+
+/* Nested inode locking stub */
+#define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
+
+/* Process flags */
+#ifndef PF_MEMALLOC_NOFS
+#define PF_MEMALLOC_NOFS	0x00040000
+#endif
+
 /* Dentry operations - declarations for stub.c */
 void generic_set_sb_d_ops(struct super_block *sb);
 struct dentry *d_make_root(struct inode *inode);
@@ -2249,6 +2332,10 @@ int sync_filesystem(void *sb);
 
 /* Quota - declaration for stub.c */
 int dquot_suspend(void *sb, int flags);
+int dquot_alloc_space_nodirty(struct inode *inode, loff_t size);
+void dquot_free_space_nodirty(struct inode *inode, loff_t size);
+int dquot_alloc_block(struct inode *inode, loff_t nr);
+void dquot_free_block(struct inode *inode, loff_t nr);
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })

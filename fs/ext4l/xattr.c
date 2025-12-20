@@ -51,12 +51,8 @@
  * by the buffer lock.
  */
 
-#include <linux/init.h>
-#include <linux/fs.h>
-#include <linux/slab.h>
-#include <linux/mbcache.h>
-#include <linux/quotaops.h>
-#include <linux/iversion.h>
+#include "ext4_uboot.h"
+
 #include "ext4_jbd2.h"
 #include "ext4.h"
 #include "xattr.h"

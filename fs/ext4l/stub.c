@@ -214,37 +214,8 @@ void ext4_fc_record_regions(struct super_block *sb, int ino,
 /* ext4_read_bh is now in super.c */
 /* ext4_sb_bread_nofail is now in super.c */
 
-/*
- * Stubs for ialloc.c - xattr functions
- */
-int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-			     struct buffer_head *block_bh, size_t value_len,
-			     bool is_create)
-{
-	return 0;
-}
-
 /* ext4_init_security stub is provided by xattr.h */
-
-/*
- * Stubs for xattr_trusted.c
- */
-int ext4_xattr_get(struct inode *inode, int name_index, const char *name,
-		   void *buffer, size_t buffer_size)
-{
-	return -1;
-}
-
-int ext4_xattr_set(struct inode *inode, int name_index, const char *name,
-		   const void *value, size_t value_len, int flags)
-{
-	return -1;
-}
-
-ssize_t ext4_listxattr(struct dentry *dentry, char *buffer, size_t buffer_size)
-{
-	return 0;
-}
+/* xattr functions are now in xattr.c */
 
 /*
  * Stubs for orphan.c
@@ -284,17 +255,7 @@ int ext4_readpage_inline(struct inode *inode, void *folio)
 	return 0;
 }
 
-/* Xattr */
-int ext4_expand_extra_isize_ea(struct inode *inode, int new_extra_isize,
-			       void *raw_inode, void *handle)
-{
-	return 0;
-}
-
-void ext4_evict_ea_inode(struct inode *inode)
-{
-}
-
+/* Xattr functions are now in xattr.c */
 
 /* More JBD2 stubs */
 int jbd2_journal_inode_ranged_write(void *handle, struct inode *inode,
@@ -410,12 +371,7 @@ int ext4_inline_data_iomap(struct inode *inode, void *iomap)
 }
 
 
-/* xattr */
-int __xattr_check_inode(struct inode *inode, void *entry, void *end,
-			unsigned int size, int check_block)
-{
-	return 0;
-}
+/* __xattr_check_inode is now in xattr.c */
 
 int ext4_find_inline_data_nolock(struct inode *inode)
 {
@@ -462,16 +418,7 @@ int ext4_write_inline_data_end(struct inode *inode, loff_t pos, unsigned int len
 	return copied;
 }
 
-/* xattr stubs for inode.c */
-int ext4_xattr_delete_inode(handle_t *handle, struct inode *inode,
-			    void **array, int extra_credits)
-{
-	return 0;
-}
-
-void ext4_xattr_inode_array_free(void *array)
-{
-}
+/* xattr stubs are now in xattr.c */
 
 /* JBD2 stubs for inode.c */
 struct kmem_cache *jbd2_inode_cache;
@@ -844,10 +791,7 @@ struct block_device *file_bdev(struct file *file)
 	return NULL;
 }
 
-/* xattr cache */
-void ext4_xattr_destroy_cache(void *cache)
-{
-}
+/* xattr cache is now in xattr.c */
 
 /* kobject */
 void kobject_put(struct kobject *kobj)
@@ -899,8 +843,7 @@ u64 sb_bdev_nr_blocks(struct super_block *sb)
 
 /* bgl_lock_init is now a macro in ext4_uboot.h */
 
-/* xattr handlers */
-const void *ext4_xattr_handlers[] = { NULL };
+/* xattr handlers are now in xattr.c */
 
 /* super_set_uuid is now a macro in ext4_uboot.h */
 /* super_set_sysfs_name_bdev is now a macro in ext4_uboot.h */
@@ -1003,5 +946,27 @@ void jbd2_journal_abort(void *journal, int error)
 
 /* JBD2 journal inode release */
 void jbd2_journal_release_jbd_inode(void *journal, void *jinode)
+{
+}
+
+/* nop_mnt_idmap - no-op mount ID map for xattr.c */
+struct mnt_idmap nop_mnt_idmap;
+
+/* Quota stubs for xattr.c */
+int dquot_alloc_space_nodirty(struct inode *inode, loff_t size)
+{
+	return 0;
+}
+
+void dquot_free_space_nodirty(struct inode *inode, loff_t size)
+{
+}
+
+int dquot_alloc_block(struct inode *inode, loff_t nr)
+{
+	return 0;
+}
+
+void dquot_free_block(struct inode *inode, loff_t nr)
 {
 }
