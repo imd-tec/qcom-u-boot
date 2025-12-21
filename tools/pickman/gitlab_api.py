@@ -171,7 +171,7 @@ def get_push_url(remote):
     return f'https://oauth2:{token}@{host}/{proj_path}.git'
 
 
-def push_branch(remote, branch, force=False):
+def push_branch(remote, branch, force=False, skip_ci=True):
     """Push a branch to a remote
 
     Uses the GitLab API token for authentication if available, so the push
@@ -182,6 +182,9 @@ def push_branch(remote, branch, force=False):
         remote (str): Remote name
         branch (str): Branch name
         force (bool): Force push (overwrite remote branch)
+        skip_ci (bool): Skip CI pipeline (default True for new MRs where
+            MR pipeline runs automatically; set False for updates that
+            need pipeline verification)
 
     Returns:
         bool: True on success
@@ -191,10 +194,26 @@ def push_branch(remote, branch, force=False):
         push_url = get_push_url(remote)
         push_target = push_url if push_url else remote
 
-        # Skip push pipeline; MR pipeline will run when MR is created
-        args = ['git', 'push', '-u', '-o', 'ci.skip']
+        # When using --force-with-lease with an HTTPS URL (not remote name),
+        # git can't find tracking refs automatically. Try to fetch first to
+        # update the tracking ref. If fetch fails (branch doesn't exist on
+        # remote yet), use regular --force instead of --force-with-lease.
+        have_remote_ref = False
+        if force and push_url:
+            try:
+                command.output('git', 'fetch', remote, branch)
+                have_remote_ref = True
+            except command.CommandExc:
+                pass  # Branch doesn't exist on remote, will use --force
+
+        args = ['git', 'push', '-u']
+        if skip_ci:
+            args.extend(['-o', 'ci.skip'])
         if force:
-            args.append('--force-with-lease')
+            if have_remote_ref:
+                args.append(f'--force-with-lease=refs/remotes/{remote}/{branch}')
+            else:
+                args.append('--force')
         args.extend([push_target, f'HEAD:{branch}'])
         command.output(*args)
         return True
@@ -284,7 +303,9 @@ def get_pickman_mrs(remote, state='opened'):
         glab = gitlab.Gitlab(f'https://{host}', private_token=token)
         project = glab.projects.get(proj_path)
 
-        mrs = project.mergerequests.list(state=state, get_all=True)
+        # Sort by created_at ascending so oldest MRs are processed first
+        mrs = project.mergerequests.list(state=state, order_by='created_at',
+                                         sort='asc', get_all=True)
         pickman_mrs = []
         for merge_req in mrs:
             if '[pickman]' in merge_req.title:

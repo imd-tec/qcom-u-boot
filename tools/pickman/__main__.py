@@ -110,6 +110,8 @@ def parse_args(argv):
                           help='Git remote (default: ci)')
     push_cmd.add_argument('-f', '--force', action='store_true',
                           help='Force push (overwrite remote branch)')
+    push_cmd.add_argument('--run-ci', action='store_true',
+                          help='Run CI pipeline (default: skip for new MRs)')
 
     test_cmd = subparsers.add_parser('test', help='Run tests')
     test_cmd.add_argument('-P', '--processes', type=int,

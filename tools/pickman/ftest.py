@@ -1468,6 +1468,61 @@ class TestGetPushUrl(unittest.TestCase):
         self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
 
 
+class TestPushBranch(unittest.TestCase):
+    """Tests for push_branch function."""
+
+    def test_push_branch_force_with_remote_ref(self):
+        """Test force push when remote branch exists uses --force-with-lease."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                result = gitlab_api.push_branch('ci', 'test-branch', force=True)
+
+        self.assertTrue(result)
+        # Should fetch first, then push with --force-with-lease
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci', 'test-branch'))
+        push_args = calls[1][0]
+        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch', push_args)
+
+    def test_push_branch_force_no_remote_ref(self):
+        """Test force push when remote branch doesn't exist uses --force."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                # Fetch fails (branch doesn't exist on remote)
+                mock_output.side_effect = [
+                    command.CommandExc('fetch failed',
+                                       command.CommandResult()),  # fetch fails
+                    None,  # push succeeds
+                ]
+                result = gitlab_api.push_branch('ci', 'new-branch', force=True)
+
+        self.assertTrue(result)
+        # Should try fetch, fail, then push with --force (not --force-with-lease)
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 2)
+        push_args = calls[1][0]
+        self.assertIn('--force', push_args)
+        self.assertNotIn('--force-with-lease', ' '.join(push_args))
+
+    def test_push_branch_no_force(self):
+        """Test regular push without force doesn't fetch or use force flags."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                result = gitlab_api.push_branch('ci', 'test-branch', force=False)
+
+        self.assertTrue(result)
+        # Should only push, no fetch, no force flags
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 1)
+        push_args = calls[0][0]
+        self.assertNotIn('--force', ' '.join(push_args))
+        self.assertNotIn('fetch', ' '.join(push_args))
+
+
 class TestConfigFile(unittest.TestCase):
     """Tests for config file support."""
 
@@ -1610,6 +1665,58 @@ class TestUpdateMrDescription(unittest.TestCase):
         with terminal.capture():
             result = gitlab_api.update_mr_description('origin', 123, 'desc')
         self.assertFalse(result)
+
+
+class TestGetPickmanMrs(unittest.TestCase):
+    """Tests for get_pickman_mrs function."""
+
+    @mock.patch.object(gitlab_api, 'get_remote_url')
+    @mock.patch.object(gitlab_api, 'get_token')
+    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    def test_get_pickman_mrs_sorted_oldest_first(self, mock_token, mock_url):
+        """Test that MRs are requested sorted by created_at ascending."""
+        mock_token.return_value = 'test-token'
+        mock_url.return_value = 'git@gitlab.com:group/project.git'
+
+        # Create mock MRs with [pickman] in the title
+        mock_mr1 = mock.MagicMock()
+        mock_mr1.iid = 1
+        mock_mr1.title = '[pickman] Older MR'
+        mock_mr1.web_url = 'https://gitlab.com/mr/1'
+        mock_mr1.source_branch = 'cherry-1'
+        mock_mr1.description = 'desc1'
+        mock_mr1.has_conflicts = False
+        mock_mr1.detailed_merge_status = 'mergeable'
+        mock_mr1.diverged_commits_count = 0
+
+        mock_mr2 = mock.MagicMock()
+        mock_mr2.iid = 2
+        mock_mr2.title = '[pickman] Newer MR'
+        mock_mr2.web_url = 'https://gitlab.com/mr/2'
+        mock_mr2.source_branch = 'cherry-2'
+        mock_mr2.description = 'desc2'
+        mock_mr2.has_conflicts = False
+        mock_mr2.detailed_merge_status = 'mergeable'
+        mock_mr2.diverged_commits_count = 0
+
+        mock_project = mock.MagicMock()
+        # Return MRs in the order they would come from GitLab (oldest first)
+        mock_project.mergerequests.list.return_value = [mock_mr1, mock_mr2]
+        mock_project.mergerequests.get.side_effect = [mock_mr1, mock_mr2]
+
+        with mock.patch('gitlab.Gitlab') as mock_gitlab:
+            mock_gitlab.return_value.projects.get.return_value = mock_project
+
+            result = gitlab_api.get_pickman_mrs('origin', state='opened')
+
+        # Verify the list call includes sorting parameters
+        mock_project.mergerequests.list.assert_called_once_with(
+            state='opened', order_by='created_at', sort='asc', get_all=True)
+
+        # Verify we got both MRs in order
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].iid, 1)
+        self.assertEqual(result[1].iid, 2)
 
 
 class TestCreateMr(unittest.TestCase):
@@ -2508,8 +2615,10 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'conversation log')):
-                ret, success, conv_log = control.execute_apply(
-                    dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    ret, success, conv_log = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 0)
             self.assertTrue(success)
@@ -2561,10 +2670,12 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'log')):
-                with mock.patch.object(gitlab_api, 'push_and_create_mr',
-                                       return_value='https://mr/url'):
-                    ret, success, _ = control.execute_apply(
-                        dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                           return_value='https://mr/url'):
+                        ret, success, _ = control.execute_apply(
+                            dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 0)
             self.assertTrue(success)
@@ -2585,13 +2696,44 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'log')):
-                with mock.patch.object(gitlab_api, 'push_and_create_mr',
-                                       return_value=None):
-                    ret, success, _ = control.execute_apply(
-                        dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                           return_value=None):
+                        ret, success, _ = control.execute_apply(
+                            dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 1)
             self.assertTrue(success)  # cherry-pick succeeded, MR failed
+            dbs.close()
+
+    def test_execute_apply_agent_aborted(self):
+        """Test execute_apply when agent aborts and branch doesn't exist."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('fff666', 'fff666f', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            # Agent reports success but branch doesn't exist (agent aborted)
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'aborted log')):
+                with mock.patch.object(control, 'run_git',
+                                       side_effect=Exception('branch not found')):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            # Should detect failure since branch doesn't exist
+            self.assertEqual(ret, 1)
+            self.assertFalse(success)
+
+            # Check commit status is conflict (not applied)
+            commit_rec = dbs.commit_get('fff666')
+            self.assertEqual(commit_rec[6], 'conflict')
             dbs.close()
 
 
@@ -2810,25 +2952,27 @@ class TestDoPushBranch(unittest.TestCase):
         """Test successful push."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='ci', force=False)
+                                  remote='ci', force=False, run_ci=False)
         with mock.patch.object(gitlab_api, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 0)
-        mock_push.assert_called_once_with('ci', 'test-branch', False)
+        mock_push.assert_called_once_with('ci', 'test-branch', False,
+                                          skip_ci=True)
 
     def test_push_branch_force(self):
         """Test force push."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='origin', force=True)
+                                  remote='origin', force=True, run_ci=False)
         with mock.patch.object(gitlab_api, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 0)
-        mock_push.assert_called_once_with('origin', 'test-branch', True)
+        mock_push.assert_called_once_with('origin', 'test-branch', True,
+                                          skip_ci=True)
 
     def test_push_branch_failure(self):
         """Test push failure."""
