@@ -80,11 +80,7 @@ int jbd2_journal_forget(handle_t *handle, struct buffer_head *bh)
 	return 0;
 }
 
-int jbd2_journal_revoke(handle_t *handle, unsigned long long blocknr,
-			struct buffer_head *bh)
-{
-	return 0;
-}
+/* jbd2_journal_revoke is now in revoke.c */
 
 int jbd2_journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 {
@@ -784,18 +780,9 @@ void jbd2_journal_refile_buffer(void *journal, void *jh)
 {
 }
 
-void jbd2_clear_buffer_revoked_flags(void *journal)
-{
-}
-
-void jbd2_journal_switch_revoke_table(void *journal)
-{
-}
-
-void jbd2_journal_write_revoke_records(void *journal, void *transaction,
-				       int write_flags)
-{
-}
+/* jbd2_clear_buffer_revoked_flags is now in revoke.c */
+/* jbd2_journal_switch_revoke_table is now in revoke.c */
+/* jbd2_journal_write_revoke_records is now in revoke.c */
 
 void jbd2_buffer_abort_trigger(void *jh, void *triggers)
 {
@@ -817,39 +804,17 @@ void __jbd2_journal_refile_buffer(void *jh)
 /* cond_resched_lock is now a macro in ext4_uboot.h */
 
 /*
- * JBD2 stubs for journal.c - functions from recovery.c, revoke.c, transaction.c
+ * JBD2 stubs for journal.c - functions from transaction.c
  */
-int jbd2_journal_destroy_revoke(void *journal)
-{
-	return 0;
-}
 
 /* jbd2_journal_recover is now in recovery.c */
 /* jbd2_journal_skip_recovery is now in recovery.c */
-
-/* JBD2 stubs for recovery.c - functions from revoke.c */
-int jbd2_journal_init_revoke_table(void *journal)
-{
-	return 0;
-}
-
-int jbd2_journal_test_revoke(void *journal, unsigned long blocknr, unsigned int tid)
-{
-	return 0;
-}
-
-int jbd2_journal_set_revoke(void *journal, unsigned long blocknr, unsigned int tid)
-{
-	return 0;
-}
-
-void jbd2_journal_clear_revoke(void *journal)
-{
-}
-
-void jbd2_journal_destroy_revoke_table(void *table)
-{
-}
+/* jbd2_journal_destroy_revoke is now in revoke.c */
+/* jbd2_journal_init_revoke_table is now in revoke.c */
+/* jbd2_journal_test_revoke is now in revoke.c */
+/* jbd2_journal_set_revoke is now in revoke.c */
+/* jbd2_journal_clear_revoke is now in revoke.c */
+/* jbd2_journal_destroy_revoke_table is now in revoke.c */
 
 void jbd2_buffer_frozen_trigger(void *jh, void *mapped_data, void *triggers)
 {

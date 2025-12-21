@@ -1365,6 +1365,9 @@ typedef unsigned int projid_t;
 #include <log.h>
 #define ilog2(n) (fls(n) - 1)
 
+/* hash_64 - simple 64-bit hash */
+#define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
+
 /* Trace stubs for inode.c */
 #define trace_ext4_begin_ordered_truncate(...)	do { } while (0)
 #define trace_ext4_evict_inode(...)		do { } while (0)
@@ -2569,6 +2572,8 @@ struct seq_operations {
 /* Block device operations */
 #define sb_find_get_block_nonatomic(sb, block) \
 	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define __find_get_block_nonatomic(bdev, block, size) \
+	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
 #define bdev_discard_granularity(bdev) \
 	({ (void)(bdev); 0U; })
 

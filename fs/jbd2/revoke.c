@@ -77,20 +77,8 @@
  * needed.
  */
 
-#ifndef __KERNEL__
-#include "jfs_user.h"
-#else
-#include <linux/time.h>
-#include <linux/fs.h>
+#include "../ext4l/ext4_uboot.h"
 #include <linux/jbd2.h>
-#include <linux/errno.h>
-#include <linux/slab.h>
-#include <linux/list.h>
-#include <linux/init.h>
-#include <linux/bio.h>
-#include <linux/log2.h>
-#include <linux/hash.h>
-#endif
 
 static struct kmem_cache *jbd2_revoke_record_cache;
 static struct kmem_cache *jbd2_revoke_table_cache;
