@@ -35,7 +35,7 @@
 
 #define pr_emerg(fmt, ...)						\
 ({									\
-	CONFIG_LOGLEVEL > 0 ? log_emerg(fmt, ##__VA_ARGS__) : 0;	\
+	CONFIG_LOGLEVEL > 0 ? log_emer(fmt, ##__VA_ARGS__) : 0;		\
 })
 #define pr_alert(fmt, ...)						\
 ({									\
