@@ -10,17 +10,8 @@
  * part of the ext2fs journaling system.
  */
 
-#ifndef __KERNEL__
-#include "jfs_user.h"
-#else
-#include <linux/time.h>
-#include <linux/fs.h>
+#include "../ext4l/ext4_uboot.h"
 #include <linux/jbd2.h>
-#include <linux/errno.h>
-#include <linux/crc32.h>
-#include <linux/blkdev.h>
-#include <linux/string_choices.h>
-#endif
 
 /*
  * Maintain information about the progress of the recovery job, so that
@@ -628,7 +619,7 @@ static int do_one_pass(journal_t *journal,
 			 * filesystems.
 			 */
 			hash_size = min(roundup_pow_of_two(info->nr_revokes / 8),
-					1U << 20);
+					1UL << 20);
 			journal->j_revoke =
 				jbd2_journal_init_revoke_table(hash_size);
 			if (!journal->j_revoke) {

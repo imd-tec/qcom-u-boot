@@ -576,8 +576,9 @@ void percpu_free_rwsem(struct percpu_rw_semaphore *sem)
 }
 
 /* Block device ops */
-void sync_blockdev(struct block_device *bdev)
+int sync_blockdev(struct block_device *bdev)
 {
+	return 0;
 }
 
 void invalidate_bdev(struct block_device *bdev)
@@ -823,14 +824,31 @@ int jbd2_journal_destroy_revoke(void *journal)
 	return 0;
 }
 
-int jbd2_journal_recover(void *journal)
+/* jbd2_journal_recover is now in recovery.c */
+/* jbd2_journal_skip_recovery is now in recovery.c */
+
+/* JBD2 stubs for recovery.c - functions from revoke.c */
+int jbd2_journal_init_revoke_table(void *journal)
 {
 	return 0;
 }
 
-int jbd2_journal_skip_recovery(void *journal)
+int jbd2_journal_test_revoke(void *journal, unsigned long blocknr, unsigned int tid)
 {
 	return 0;
+}
+
+int jbd2_journal_set_revoke(void *journal, unsigned long blocknr, unsigned int tid)
+{
+	return 0;
+}
+
+void jbd2_journal_clear_revoke(void *journal)
+{
+}
+
+void jbd2_journal_destroy_revoke_table(void *table)
+{
 }
 
 void jbd2_buffer_frozen_trigger(void *jh, void *mapped_data, void *triggers)

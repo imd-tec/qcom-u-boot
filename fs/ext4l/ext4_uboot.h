@@ -2162,7 +2162,7 @@ int percpu_init_rwsem(struct percpu_rw_semaphore *sem);
 void percpu_free_rwsem(struct percpu_rw_semaphore *sem);
 
 /* Block device sync - declarations for stub.c */
-void sync_blockdev(struct block_device *bdev);
+int sync_blockdev(struct block_device *bdev);
 void invalidate_bdev(struct block_device *bdev);
 
 /* Kobject - declarations for stub.c */
@@ -2867,6 +2867,8 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* Block device operations for journal.c */
 #define bh_read(bh, flags)		({ (void)(bh); (void)(flags); 0; })
+#define bh_read_nowait(bh, flags)	do { (void)(bh); (void)(flags); } while (0)
+#define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
 #define truncate_inode_pages_range(m, s, e) \
 	do { (void)(m); (void)(s); (void)(e); } while (0)
 #define blkdev_issue_discard(bdev, s, n, gfp) \
