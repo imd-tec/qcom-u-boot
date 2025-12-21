@@ -979,6 +979,6 @@ trigger_snap_builds:
       cd $CI_PROJECT_DIR
       git remote add github git@github.com:sjg20/u-boot-concept.git || true
       git fetch github master --depth=1
-      git fetch origin --shallow-since=$(git log -1 --format=%ci github/master)
+      git fetch origin "--shallow-since=$(git log -1 --format=%ci github/master)"
       git push github HEAD:master --force
       echo "GitHub push completed"
