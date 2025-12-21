@@ -28,6 +28,9 @@ static struct blk_desc *ext4l_blk_dev;
 static struct disk_partition ext4l_partition;
 static int ext4l_mounted;
 
+/* Global super_block pointer for filesystem operations */
+static struct super_block *ext4l_sb;
+
 /**
  * ext4l_get_blk_dev() - Get the current block device
  * Return: Block device descriptor or NULL if not mounted
@@ -89,9 +92,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	if (!fs_dev_desc)
 		return -EINVAL;
 
-	/* Set up block device for buffer I/O */
-	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
-
+	/* Initialise CRC32C table for checksum verification */
 	ext4l_crc32c_init();
 
 	/* Initialise journal subsystem if enabled */
@@ -112,6 +113,11 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	ret = ext4_init_es();
 	if (ret)
 		return ret;
+
+	/* Initialise system zone for block validity checking */
+	ret = ext4_init_system_zone();
+	if (ret)
+		goto err_exit_es;
 
 	/* Allocate super_block */
 	sb = kzalloc(sizeof(struct super_block), GFP_KERNEL);
@@ -193,11 +199,18 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	if (fs_partition)
 		memcpy(&ext4l_part, fs_partition, sizeof(ext4l_part));
 
+	/* Set block device for buffer I/O */
+	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
+
 	/* Mount the filesystem */
 	ret = ext4_fill_super(sb, fc);
-	if (ret)
+	if (ret) {
+		printf("ext4l: ext4_fill_super failed: %d\n", ret);
 		goto err_free_ctx;
+	}
 
+	/* Store super_block for later operations */
+	ext4l_sb = sb;
 	return 0;
 
 err_free_buf:
@@ -219,6 +232,7 @@ err_exit_es:
 
 void ext4l_close(void)
 {
-	ext4l_clear_blk_dev();
 	ext4l_dev_desc = NULL;
+	ext4l_sb = NULL;
+	ext4l_clear_blk_dev();
 }

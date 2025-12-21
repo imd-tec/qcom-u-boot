@@ -20,6 +20,13 @@
 #include "ext4.h"
 
 /*
+ * Global task_struct for U-Boot.
+ * This must be a single global instance shared across all translation units,
+ * so that journal_info remains consistent.
+ */
+struct task_struct ext4l_current_task = { .comm = "u-boot", .pid = 1 };
+
+/*
  * CRC32C support - uses Castagnoli polynomial 0x82F63B78
  * Table is initialised on first mount
  */

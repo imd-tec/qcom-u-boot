@@ -561,9 +561,30 @@ void generic_set_sb_d_ops(struct super_block *sb)
 {
 }
 
+/**
+ * d_make_root() - Create a root dentry for an inode
+ * @inode: Inode to create dentry for
+ * Return: Allocated dentry or NULL on failure
+ */
 struct dentry *d_make_root(struct inode *inode)
 {
-	return NULL;
+	struct dentry *de;
+
+	if (!inode)
+		return NULL;
+
+	de = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!de) {
+		iput(inode);
+		return NULL;
+	}
+
+	de->d_inode = inode;
+	de->d_sb = inode->i_sb;
+	de->d_name.name = "/";
+	de->d_name.len = 1;
+
+	return de;
 }
 
 /* percpu init rwsem */

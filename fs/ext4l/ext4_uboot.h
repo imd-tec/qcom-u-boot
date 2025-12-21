@@ -58,16 +58,14 @@ struct timespec64 {
 };
 
 /*
- * ktime_t, sector_t are in linux/types.h
- * atomic_t, atomic64_t are in asm-generic/atomic.h
- * MAX_JIFFY_OFFSET is in linux/jiffies.h
- * BDEVNAME_SIZE is in linux/blkdev.h
+ * ktime_t, atomic_t, atomic64_t, sector_t are now in linux/types.h
+ * MAX_JIFFY_OFFSET is now in linux/jiffies.h
+ * BDEVNAME_SIZE is now in linux/blkdev.h
  */
-#include <asm-generic/atomic.h>
 #include <linux/jiffies.h>
 #include <linux/blkdev.h>
 
-/* Extra atomic operations not in asm-generic/atomic.h */
+/* Extra atomic operation not in linux/types.h */
 #define atomic_dec_if_positive(v)	(--(v)->counter)
 
 /* SMP stubs - U-Boot is single-threaded */
@@ -1138,7 +1136,10 @@ struct shrinker {
 static inline struct shrinker *shrinker_alloc(unsigned int flags,
 					      const char *fmt, ...)
 {
-	return NULL;
+	/* Return static dummy - U-Boot doesn't need memory reclamation */
+	static struct shrinker dummy_shrinker;
+
+	return &dummy_shrinker;
 }
 
 static inline void shrinker_register(struct shrinker *s)
@@ -1506,7 +1507,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define filemap_splice_read(i, p, pi, l, f)	({ (void)(i); (void)(p); (void)(pi); (void)(l); (void)(f); 0L; })
 
 /* Buffer operations - additional */
-#define getblk_unmovable(bd, b, s)		((struct buffer_head *)NULL)
+#define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
 #define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
 #define bh_offset(bh)				(0UL)
 #define block_invalidate_folio(f, o, l)		do { } while (0)
@@ -2314,8 +2315,8 @@ struct mb_cache_entry {
 /* MB cache flags */
 #define MBE_REUSABLE_B	0
 
-#define mb_cache_create(bits)			((struct mb_cache *)NULL)
-#define mb_cache_destroy(cache)			do { (void)(cache); } while (0)
+#define mb_cache_create(bits)			kzalloc(sizeof(struct mb_cache), GFP_KERNEL)
+#define mb_cache_destroy(cache)			do { kfree(cache); } while (0)
 #define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
 #define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
 #define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)

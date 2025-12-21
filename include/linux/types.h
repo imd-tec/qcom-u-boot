@@ -165,6 +165,28 @@ typedef s64	ktime_t;
 typedef u64 sector_t;
 typedef u64 blkcnt_t;
 
+/* Atomic types - stubs for single-threaded U-Boot */
+typedef struct {
+	int counter;
+} atomic_t;
+
+#ifdef CONFIG_64BIT
+typedef struct {
+	s64 counter;
+} atomic64_t;
+#else
+typedef struct {
+	long counter;
+} atomic64_t;
+#endif
+
+#define atomic_read(v)		((v)->counter)
+#define atomic_set(v, i)	((v)->counter = (i))
+#define atomic_inc(v)		((v)->counter++)
+#define atomic_dec(v)		((v)->counter--)
+#define atomic64_read(v)	((v)->counter)
+#define atomic64_set(v, i)	((v)->counter = (i))
+
 #ifdef __linux__
 struct ustat {
 	__kernel_daddr_t	f_tfree;
