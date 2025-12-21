@@ -96,10 +96,7 @@ int jbd2_journal_dirty_metadata(handle_t *handle, struct buffer_head *bh)
 	return 0;
 }
 
-int jbd2_journal_force_commit_nested(journal_t *journal)
-{
-	return 0;
-}
+/* jbd2_journal_force_commit_nested is now in journal.c */
 
 int jbd2__journal_restart(void *handle, int nblocks, int revoke_records,
 			  int gfp_mask)
@@ -107,10 +104,7 @@ int jbd2__journal_restart(void *handle, int nblocks, int revoke_records,
 	return 0;
 }
 
-int jbd2_trans_will_send_data_barrier(journal_t *journal, unsigned long tid)
-{
-	return 0;
-}
+/* jbd2_trans_will_send_data_barrier is now in journal.c */
 
 /*
  * Stubs for balloc.c
@@ -189,53 +183,15 @@ struct extent_status;
 
 /* ext4_fc_replay_check_excluded is now in fast_commit.c */
 
-/*
- * JBD2 fast commit stubs
- */
-int jbd2_fc_get_buf(void *journal, struct buffer_head **bh_out)
-{
-	*bh_out = NULL;
-	return -ENOSPC;
-}
-
-void jbd2_fc_release_bufs(void *journal)
-{
-}
-
-int jbd2_fc_begin_commit(void *journal, unsigned int tid)
-{
-	return -EOPNOTSUPP;
-}
-
-int jbd2_fc_end_commit(void *journal)
-{
-	return 0;
-}
-
-int jbd2_fc_end_commit_fallback(void *journal)
-{
-	return 0;
-}
-
-int jbd2_submit_inode_data(void *journal, void *jinode)
-{
-	return 0;
-}
-
-int jbd2_wait_inode_data(void *journal, void *jinode)
-{
-	return 0;
-}
-
-int jbd2_fc_wait_bufs(void *journal, int num)
-{
-	return 0;
-}
-
-int jbd2_complete_transaction(void *journal, unsigned int tid)
-{
-	return 0;
-}
+/* jbd2_submit_inode_data is now in commit.c */
+/* jbd2_wait_inode_data is now in commit.c */
+/* jbd2_fc_get_buf is now in journal.c */
+/* jbd2_fc_release_bufs is now in journal.c */
+/* jbd2_fc_begin_commit is now in journal.c */
+/* jbd2_fc_end_commit is now in journal.c */
+/* jbd2_fc_end_commit_fallback is now in journal.c */
+/* jbd2_fc_wait_bufs is now in journal.c */
+/* jbd2_complete_transaction is now in journal.c */
 
 void ext4_reset_inode_seed(struct inode *inode)
 {
@@ -268,16 +224,8 @@ struct ext4_iloc;
  */
 #include <linux/sched.h>
 
-/* JBD2 stubs for inode.c */
-int jbd2_journal_blocks_per_folio(struct inode *inode)
-{
-	return 1;
-}
-
-int jbd2_transaction_committed(void *journal, unsigned int tid)
-{
-	return 1;
-}
+/* jbd2_journal_blocks_per_folio is now in journal.c */
+/* jbd2_transaction_committed is now in journal.c */
 
 
 /* __ext4_warning_inode is now in super.c */
@@ -318,10 +266,7 @@ void jbd2_journal_invalidate_folio(void *journal, void *folio,
 {
 }
 
-int jbd2_log_wait_commit(void *journal, unsigned int tid)
-{
-	return 0;
-}
+/* jbd2_log_wait_commit is now in journal.c */
 
 /* ext4_fc_track_range is now in fast_commit.c */
 
@@ -334,10 +279,7 @@ void jbd2_journal_unlock_updates(void *journal)
 {
 }
 
-int jbd2_journal_flush(void *journal, unsigned int flags)
-{
-	return 0;
-}
+/* jbd2_journal_flush is now in journal.c */
 
 
 /* ext4_fc_track_inode is now in fast_commit.c */
@@ -370,17 +312,14 @@ int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
 
 /* xattr stubs are now in xattr.c */
 
-/* JBD2 stubs for inode.c */
-struct kmem_cache *jbd2_inode_cache;
+/* jbd2_inode_cache is now in journal.c */
 
 int jbd2_journal_try_to_free_buffers(journal_t *journal, struct folio *folio)
 {
 	return 1;
 }
 
-void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
-{
-}
+/* jbd2_journal_init_jbd_inode is now in journal.c */
 
 /* ext4_read_inline_link is now in inline.c */
 
@@ -629,11 +568,7 @@ void ext4_unregister_sysfs(void *sb)
 {
 }
 
-/* Journal destroy */
-int jbd2_journal_destroy(void *journal)
-{
-	return 0;
-}
+/* jbd2_journal_destroy is now in journal.c */
 
 /* percpu rwsem */
 void percpu_free_rwsem(struct percpu_rw_semaphore *sem)
@@ -771,11 +706,7 @@ void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error)
 {
 }
 
-/* JBD2 force commit */
-int jbd2_journal_force_commit(void *journal)
-{
-	return 0;
-}
+/* jbd2_journal_force_commit is now in journal.c */
 
 /* File path */
 char *file_path(struct file *file, char *buf, int buflen)
@@ -796,15 +727,9 @@ long ext4_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return -ENOTSUPP;
 }
 
-/* JBD2 journal abort */
-void jbd2_journal_abort(void *journal, int error)
-{
-}
+/* jbd2_journal_abort is now in journal.c */
 
-/* JBD2 journal inode release */
-void jbd2_journal_release_jbd_inode(void *journal, void *jinode)
-{
-}
+/* jbd2_journal_release_jbd_inode is now in journal.c */
 
 /* nop_mnt_idmap - no-op mount ID map for xattr.c */
 struct mnt_idmap nop_mnt_idmap;
@@ -833,30 +758,85 @@ void dquot_free_block(struct inode *inode, loff_t nr)
  * Note: These use void* to avoid pulling in jbd2.h types which would conflict
  */
 
-int jbd2_journal_get_log_tail(void *journal, void *tid, unsigned long *block)
-{
-	return 0;
-}
-
-int __jbd2_update_log_tail(void *journal, unsigned int tid, unsigned long block)
-{
-	return 0;
-}
-
-void *jbd2_journal_grab_journal_head(struct buffer_head *bh)
-{
-	return NULL;
-}
-
-void jbd2_journal_put_journal_head(void *jh)
-{
-}
+/* jbd2_journal_get_log_tail is now in journal.c */
+/* __jbd2_update_log_tail is now in journal.c */
+/* jbd2_journal_grab_journal_head is now in journal.c */
+/* jbd2_journal_put_journal_head is now in journal.c */
 
 void jbd2_journal_free_transaction(void *transaction)
 {
 }
 
-int jbd2_log_start_commit(void *journal, unsigned int tid)
+/* jbd2_log_start_commit is now in journal.c */
+
+/* jbd2_journal_get_descriptor_buffer is now in journal.c */
+/* jbd2_journal_update_sb_log_tail is now in journal.c */
+/* jbd2_free is now in journal.c */
+
+/* journal_tag_bytes is now in journal.c */
+
+void jbd2_journal_wait_updates(void *journal)
+{
+}
+
+void jbd2_journal_refile_buffer(void *journal, void *jh)
+{
+}
+
+void jbd2_clear_buffer_revoked_flags(void *journal)
+{
+}
+
+void jbd2_journal_switch_revoke_table(void *journal)
+{
+}
+
+void jbd2_journal_write_revoke_records(void *journal, void *transaction,
+				       int write_flags)
+{
+}
+
+void jbd2_buffer_abort_trigger(void *jh, void *triggers)
+{
+}
+
+/* jbd2_journal_next_log_block is now in journal.c */
+/* jbd2_journal_write_metadata_buffer is now in journal.c */
+/* jbd2_descriptor_block_csum_set is now in journal.c */
+/* jbd2_update_log_tail is now in journal.c */
+
+void jbd2_journal_file_buffer(void *jh, void *transaction, int type)
+{
+}
+
+void __jbd2_journal_refile_buffer(void *jh)
+{
+}
+
+/* cond_resched_lock is now a macro in ext4_uboot.h */
+
+/*
+ * JBD2 stubs for journal.c - functions from recovery.c, revoke.c, transaction.c
+ */
+int jbd2_journal_destroy_revoke(void *journal)
 {
 	return 0;
+}
+
+int jbd2_journal_recover(void *journal)
+{
+	return 0;
+}
+
+int jbd2_journal_skip_recovery(void *journal)
+{
+	return 0;
+}
+
+void jbd2_buffer_frozen_trigger(void *jh, void *mapped_data, void *triggers)
+{
+}
+
+void __jbd2_journal_file_buffer(void *jh, void *transaction, int type)
+{
 }

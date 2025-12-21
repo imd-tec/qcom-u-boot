@@ -126,6 +126,12 @@ struct kobject {
 	const char *name;
 };
 
+/* lockdep stubs - needed before jbd2.h is included */
+struct lockdep_map { int dummy; };
+struct lock_class_key { int dummy; };
+#define rwsem_acquire(l, s, t, i)	do { } while (0)
+#define rwsem_release(l, i)		do { } while (0)
+
 /* completion - stub */
 struct completion {
 	unsigned int done;
@@ -1211,8 +1217,11 @@ struct folio_batch {
 
 /* folio operations - stubs */
 #define folio_mark_dirty(f)			do { (void)(f); } while (0)
-#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((p) & (PAGE_SIZE - 1)); })
+#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((unsigned long)(p) & (PAGE_SIZE - 1)); })
 #define folio_buffers(f)			({ (void)(f); (struct buffer_head *)NULL; })
+#define virt_to_folio(p)			({ (void)(p); (struct folio *)NULL; })
+#define folio_set_bh(bh, f, off)		do { (void)(bh); (void)(f); (void)(off); } while (0)
+#define memcpy_from_folio(dst, f, off, len)	do { (void)(dst); (void)(f); (void)(off); (void)(len); } while (0)
 #define folio_test_uptodate(f)			({ (void)(f); 1; })
 #define folio_pos(f)				({ (void)(f); 0LL; })
 #define folio_size(f)				({ (void)(f); PAGE_SIZE; })
@@ -2781,5 +2790,100 @@ struct wait_bit_entry {
 	do { (void)(d); (void)(tid); (void)(stats); } while (0)
 #define trace_jbd2_drop_transaction(j, t) \
 	do { (void)(j); (void)(t); } while (0)
+
+/* JBD2 commit.c stubs */
+#define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
+#define smp_mb__after_atomic()		do { } while (0)
+#define folio_trylock(f)		({ (void)(f); 1; })
+#define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
+#define filemap_fdatawait_range_keep_errors(m, s, e) \
+	({ (void)(m); (void)(s); (void)(e); 0; })
+#define crc32_be(crc, p, len)		crc32(crc, p, len)
+#define free_buffer_head(bh)		kfree(bh)
+#define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
+
+/* DEFINE_WAIT stub - creates a wait queue entry */
+#define DEFINE_WAIT(name)		int name = 0
+
+/* cond_resched_lock - conditionally reschedule while holding a lock */
+#define cond_resched_lock(lock)		do { (void)(lock); } while (0)
+
+/* More JBD2 trace stubs for commit.c */
+#define trace_jbd2_submit_inode_data(i)	do { (void)(i); } while (0)
+#define trace_jbd2_start_commit(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_locking(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_flushing(j, t) do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_logging(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_run_stats(d, tid, stats) \
+	do { (void)(d); (void)(tid); (void)(stats); } while (0)
+#define trace_jbd2_end_commit(j, t)	do { (void)(j); (void)(t); } while (0)
+
+/* JBD2 journal.c stubs */
+#define alloc_buffer_head(gfp)		((struct buffer_head *)kzalloc(sizeof(struct buffer_head), gfp))
+#define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+#define bmap(inode, block)		({ (void)(inode); (void)(block); 0; })
+#define trace_jbd2_update_log_tail(j, t, b, f) \
+	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
+
+/* seq_file operations for /proc - stubs */
+#define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
+#define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* proc_ops structure for journal.c */
+struct proc_ops {
+	int (*proc_open)(struct inode *, struct file *);
+	ssize_t (*proc_read)(struct file *, char *, size_t, loff_t *);
+	loff_t (*proc_lseek)(struct file *, loff_t, int);
+	int (*proc_release)(struct inode *, struct file *);
+};
+
+/* seq_read and seq_lseek declarations (defined in stub.c) */
+ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
+loff_t seq_lseek(struct file *f, loff_t o, int w);
+
+/* S_IRUGO file mode if not defined */
+#ifndef S_IRUGO
+#define S_IRUGO		(S_IRUSR | S_IRGRP | S_IROTH)
+#endif
+
+/* procfs stubs */
+#define proc_mkdir(name, parent)	({ (void)(name); (void)(parent); (struct proc_dir_entry *)NULL; })
+#define proc_create_data(n, m, p, ops, d) \
+	({ (void)(n); (void)(m); (void)(p); (void)(ops); (void)(d); (struct proc_dir_entry *)NULL; })
+#define remove_proc_entry(n, p)		do { (void)(n); (void)(p); } while (0)
+
+/* lockdep stubs (struct lock_class_key defined earlier) */
+#define lockdep_init_map(...)	do { } while (0)
+
+/* More JBD2 trace stubs for journal.c */
+#define trace_jbd2_shrink_scan_enter(j, n, c) \
+	do { (void)(j); (void)(n); (void)(c); } while (0)
+#define trace_jbd2_shrink_scan_exit(j, n, s, c) \
+	do { (void)(j); (void)(n); (void)(s); (void)(c); } while (0)
+#define trace_jbd2_shrink_count(j, n, c) \
+	do { (void)(j); (void)(n); (void)(c); } while (0)
+#define trace_jbd2_write_superblock(j, f) \
+	do { (void)(j); (void)(f); } while (0)
+
+/* Block device operations for journal.c */
+#define bh_read(bh, flags)		({ (void)(bh); (void)(flags); 0; })
+#define truncate_inode_pages_range(m, s, e) \
+	do { (void)(m); (void)(s); (void)(e); } while (0)
+#define blkdev_issue_discard(bdev, s, n, gfp) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
+#define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
+#ifndef SECTOR_SHIFT
+#define SECTOR_SHIFT	9
+#endif
+#define mapping_max_folio_order(m)	({ (void)(m); 0; })
+
+/* Memory allocation for journal.c */
+#define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
+#define free_pages(addr, order)		free((void *)(addr))
+#define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
+
+/* Ratelimited printk for journal.c */
+#define pr_notice_ratelimited(fmt, ...)	pr_notice(fmt, ##__VA_ARGS__)
 
 #endif /* __EXT4_UBOOT_H__ */

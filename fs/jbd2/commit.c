@@ -10,21 +10,8 @@
  * part of the ext2fs journaling system.
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
+#include "../ext4l/ext4_uboot.h"
 #include <linux/jbd2.h>
-#include <linux/errno.h>
-#include <linux/slab.h>
-#include <linux/mm.h>
-#include <linux/pagemap.h>
-#include <linux/jiffies.h>
-#include <linux/crc32.h>
-#include <linux/writeback.h>
-#include <linux/backing-dev.h>
-#include <linux/bio.h>
-#include <linux/blkdev.h>
-#include <linux/bitops.h>
-#include <trace/events/jbd2.h>
 
 /*
  * IO end handler for temporary buffer_heads handling writes to the journal.
