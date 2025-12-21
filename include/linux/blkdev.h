@@ -12,6 +12,9 @@
 struct block_device;
 struct gendisk;
 
+/* Largest string for a blockdev identifier */
+#define BDEVNAME_SIZE	32
+
 /* Block size helpers */
 #define bdev_logical_block_size(bdev)	512
 
