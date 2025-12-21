@@ -2960,6 +2960,8 @@ extern ext4_fsblk_t ext4_mb_new_blocks(handle_t *,
 extern void ext4_discard_preallocations(struct inode *);
 extern int __init ext4_init_mballoc(void);
 extern void ext4_exit_mballoc(void);
+extern int __init ext4_init_es(void);
+extern void ext4_exit_es(void);
 extern ext4_group_t ext4_mb_prefetch(struct super_block *sb,
 				     ext4_group_t group,
 				     unsigned int nr, int *cnt);

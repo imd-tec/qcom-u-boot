@@ -48,6 +48,11 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 			return ret;
 	}
 
+	/* Initialise extent status cache */
+	ret = ext4_init_es();
+	if (ret)
+		return ret;
+
 	buf = malloc(BLOCK_SIZE + 512);
 	if (!buf)
 		return -ENOMEM;
