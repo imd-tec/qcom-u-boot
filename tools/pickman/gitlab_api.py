@@ -194,11 +194,17 @@ def push_branch(remote, branch, force=False, skip_ci=True):
         push_url = get_push_url(remote)
         push_target = push_url if push_url else remote
 
+        # When using --force-with-lease with an HTTPS URL (not remote name),
+        # git can't find tracking refs automatically. Fetch first to update
+        # the tracking ref, then explicitly specify which ref to check.
+        if force and push_url:
+            command.output('git', 'fetch', remote, branch)
+
         args = ['git', 'push', '-u']
         if skip_ci:
             args.extend(['-o', 'ci.skip'])
         if force:
-            args.append('--force-with-lease')
+            args.append(f'--force-with-lease=refs/remotes/{remote}/{branch}')
         args.extend([push_target, f'HEAD:{branch}'])
         command.output(*args)
         return True
