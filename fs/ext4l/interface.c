@@ -27,6 +27,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		struct disk_partition *fs_partition)
 {
 	struct super_block *sb;
+	struct fs_context *fc;
 	loff_t part_offset;
 	__le16 *magic;
 	u8 *buf;
@@ -74,10 +75,17 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		goto err_free_bdev;
 	}
 
+	/* Allocate fs_context */
+	fc = kzalloc(sizeof(struct fs_context), GFP_KERNEL);
+	if (!fc) {
+		ret = -ENOMEM;
+		goto err_free_mapping;
+	}
+
 	buf = malloc(BLOCK_SIZE + 512);
 	if (!buf) {
 		ret = -ENOMEM;
-		goto err_free_mapping;
+		goto err_free_fc;
 	}
 
 	/* Calculate partition offset in bytes */
@@ -105,6 +113,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		memcpy(&ext4l_part, fs_partition, sizeof(ext4l_part));
 
 	free(buf);
+	kfree(fc);
 	kfree(sb->s_bdev->bd_mapping);
 	kfree(sb->s_bdev);
 	kfree(sb);
@@ -113,6 +122,8 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 err_free_buf:
 	free(buf);
+err_free_fc:
+	kfree(fc);
 err_free_mapping:
 	kfree(sb->s_bdev->bd_mapping);
 err_free_bdev:
