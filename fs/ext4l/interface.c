@@ -13,6 +13,7 @@
 #include <malloc.h>
 #include <asm/byteorder.h>
 #include <linux/errno.h>
+#include <linux/jbd2.h>
 #include <linux/types.h>
 
 #include "ext4_uboot.h"
@@ -32,6 +33,13 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	if (!fs_dev_desc)
 		return -EINVAL;
+
+	/* Initialise journal subsystem if enabled */
+	if (IS_ENABLED(CONFIG_EXT4_JOURNAL)) {
+		ret = jbd2_journal_init_global();
+		if (ret)
+			return ret;
+	}
 
 	buf = malloc(BLOCK_SIZE + 512);
 	if (!buf)

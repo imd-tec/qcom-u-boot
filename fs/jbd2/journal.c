@@ -3118,6 +3118,28 @@ static int __init journal_init(void)
 	return ret;
 }
 
+/**
+ * jbd2_journal_init_global() - Initialize JBD2 global state
+ *
+ * This must be called before any journal operations. It initializes
+ * the journal caches and other global state.
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+int jbd2_journal_init_global(void)
+{
+	static bool initialized;
+
+	if (initialized)
+		return 0;
+
+	if (journal_init())
+		return -ENOMEM;
+
+	initialized = true;
+	return 0;
+}
+
 static void __exit journal_exit(void)
 {
 #ifdef CONFIG_JBD2_DEBUG
