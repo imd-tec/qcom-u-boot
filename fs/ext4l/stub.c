@@ -827,3 +827,36 @@ int dquot_alloc_block(struct inode *inode, loff_t nr)
 void dquot_free_block(struct inode *inode, loff_t nr)
 {
 }
+
+/*
+ * JBD2 stubs - temporary stubs until other jbd2 files are added
+ * Note: These use void* to avoid pulling in jbd2.h types which would conflict
+ */
+
+int jbd2_journal_get_log_tail(void *journal, void *tid, unsigned long *block)
+{
+	return 0;
+}
+
+int __jbd2_update_log_tail(void *journal, unsigned int tid, unsigned long block)
+{
+	return 0;
+}
+
+void *jbd2_journal_grab_journal_head(struct buffer_head *bh)
+{
+	return NULL;
+}
+
+void jbd2_journal_put_journal_head(void *jh)
+{
+}
+
+void jbd2_journal_free_transaction(void *transaction)
+{
+}
+
+int jbd2_log_start_commit(void *journal, unsigned int tid)
+{
+	return 0;
+}

@@ -14,13 +14,8 @@
  * reused.
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
+#include "../ext4l/ext4_uboot.h"
 #include <linux/jbd2.h>
-#include <linux/errno.h>
-#include <linux/slab.h>
-#include <linux/blkdev.h>
-#include <trace/events/jbd2.h>
 
 /*
  * Unlink a buffer from a transaction checkpoint list.

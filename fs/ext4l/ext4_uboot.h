@@ -2768,4 +2768,18 @@ struct wait_bit_entry {
 /* get_current_ioprio - I/O priority (not used in U-Boot) */
 #define get_current_ioprio()		(0)
 
+/* JBD2 checkpoint.c stubs */
+#define mutex_lock_io(m)		mutex_lock(m)
+#define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
+#define spin_needbreak(l)		({ (void)(l); 0; })
+
+/* JBD2 trace stubs */
+#define trace_jbd2_checkpoint(j, r)	do { (void)(j); (void)(r); } while (0)
+#define trace_jbd2_shrink_checkpoint_list(j, f, t, l, n, d) \
+	do { (void)(j); (void)(f); (void)(t); (void)(l); (void)(n); (void)(d); } while (0)
+#define trace_jbd2_checkpoint_stats(d, tid, stats) \
+	do { (void)(d); (void)(tid); (void)(stats); } while (0)
+#define trace_jbd2_drop_transaction(j, t) \
+	do { (void)(j); (void)(t); } while (0)
+
 #endif /* __EXT4_UBOOT_H__ */
