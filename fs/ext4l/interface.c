@@ -41,6 +41,13 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 			return ret;
 	}
 
+	/* Initialise multi-block allocator for write support */
+	if (IS_ENABLED(CONFIG_EXT4_WRITE)) {
+		ret = ext4_init_mballoc();
+		if (ret)
+			return ret;
+	}
+
 	buf = malloc(BLOCK_SIZE + 512);
 	if (!buf)
 		return -ENOMEM;
