@@ -76,6 +76,15 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		goto err_free_bdev;
 	}
 
+	/* Initialise super_block fields */
+	sb->s_bdev->bd_super = sb;
+	sb->s_blocksize = 1024;
+	sb->s_blocksize_bits = 10;
+	snprintf(sb->s_id, sizeof(sb->s_id), "ext4l_mmc%d",
+		 fs_dev_desc->devnum);
+	sb->s_flags = 0;
+	sb->s_fs_info = NULL;
+
 	/* Allocate fs_context */
 	fc = kzalloc(sizeof(struct fs_context), GFP_KERNEL);
 	if (!fc) {
@@ -93,6 +102,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	/* Initialise fs_context fields */
 	fc->fs_private = ctx;
 	fc->sb_flags |= SB_I_VERSION;
+	fc->root = (struct dentry *)sb;	/* Hack: store sb for ext4_fill_super */
 
 	buf = malloc(BLOCK_SIZE + 512);
 	if (!buf) {
@@ -119,17 +129,17 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		goto err_free_buf;
 	}
 
+	free(buf);
+
 	/* Save device info for later operations */
 	ext4l_dev_desc = fs_dev_desc;
 	if (fs_partition)
 		memcpy(&ext4l_part, fs_partition, sizeof(ext4l_part));
 
-	free(buf);
-	kfree(ctx);
-	kfree(fc);
-	kfree(sb->s_bdev->bd_mapping);
-	kfree(sb->s_bdev);
-	kfree(sb);
+	/* Mount the filesystem */
+	ret = ext4_fill_super(sb, fc);
+	if (ret)
+		goto err_free_ctx;
 
 	return 0;
 

@@ -457,8 +457,8 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Memory allocation - use linux/slab.h which is already available */
 #include <linux/slab.h>
 
-/* KMEM_CACHE macro - not in U-Boot's slab.h */
-#define KMEM_CACHE(s, flags)		((struct kmem_cache *)1)
+/* KMEM_CACHE macro - use kmem_cache_create */
+#define KMEM_CACHE(s, flags)		kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
 
 /* RB tree operations - stubs */
 #define rb_entry(ptr, type, member) \
@@ -650,7 +650,7 @@ struct super_block {
 	struct rw_semaphore s_umount;
 	struct sb_writers s_writers;
 	struct block_device *s_bdev;
-	const char *s_id;
+	char s_id[32];
 	struct dentry *s_root;
 	uuid_t s_uuid;
 	struct file_system_type *s_type;
@@ -2025,6 +2025,9 @@ struct fs_context {
 	bool sloppy;
 	bool silent;
 };
+
+/* ext4 superblock initialisation */
+int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 
 /* fs_parameter stubs */
 struct fs_parameter {

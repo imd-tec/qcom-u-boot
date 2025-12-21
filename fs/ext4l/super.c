@@ -526,7 +526,7 @@ static int ext4_journalled_submit_inode_data_buffers(struct jbd2_inode *jinode)
 		.range_end = jinode->i_dirty_end,
         };
 	struct folio *folio = NULL;
-	int error;
+	int error = 0;
 
 	/*
 	 * writeback_iter() already checks for dirty pages and calls
@@ -5654,7 +5654,7 @@ out_fail:
 	return err;
 }
 
-static int ext4_fill_super(struct super_block *sb, struct fs_context *fc)
+int ext4_fill_super(struct super_block *sb, struct fs_context *fc)
 {
 	struct ext4_fs_context *ctx = fc->fs_private;
 	struct ext4_sb_info *sbi;
