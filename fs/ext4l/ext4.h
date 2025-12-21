@@ -2962,6 +2962,35 @@ extern int __init ext4_init_mballoc(void);
 extern void ext4_exit_mballoc(void);
 extern int __init ext4_init_es(void);
 extern void ext4_exit_es(void);
+
+struct ext4_fs_context {
+	char		*s_qf_names[EXT4_MAXQUOTAS];
+	struct fscrypt_dummy_policy dummy_enc_policy;
+	int		s_jquota_fmt;
+	unsigned short	qname_spec;
+	unsigned long	vals_s_flags;
+	unsigned long	mask_s_flags;
+	unsigned long	journal_devnum;
+	unsigned long	s_commit_interval;
+	unsigned long	s_stripe;
+	unsigned int	s_inode_readahead_blks;
+	unsigned int	s_want_extra_isize;
+	unsigned int	s_li_wait_mult;
+	unsigned int	s_max_dir_size_kb;
+	unsigned int	journal_ioprio;
+	unsigned int	vals_s_mount_opt;
+	unsigned int	mask_s_mount_opt;
+	unsigned int	vals_s_mount_opt2;
+	unsigned int	mask_s_mount_opt2;
+	unsigned int	opt_flags;
+	unsigned int	spec;
+	u32		s_max_batch_time;
+	u32		s_min_batch_time;
+	kuid_t		s_resuid;
+	kgid_t		s_resgid;
+	ext4_fsblk_t	s_sb_block;
+};
+
 extern ext4_group_t ext4_mb_prefetch(struct super_block *sb,
 				     ext4_group_t group,
 				     unsigned int nr, int *cnt);

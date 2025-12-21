@@ -1926,36 +1926,7 @@ ext4_sb_read_encoding(const struct ext4_super_block *es)
 #define EXT4_SPEC_s_sb_block			(1 << 18)
 #define EXT4_SPEC_mb_optimize_scan		(1 << 19)
 
-struct ext4_fs_context {
-	char		*s_qf_names[EXT4_MAXQUOTAS];
-	struct fscrypt_dummy_policy dummy_enc_policy;
-	int		s_jquota_fmt;	/* Format of quota to use */
-#ifdef CONFIG_EXT4_DEBUG
-	int s_fc_debug_max_replay;
-#endif
-	unsigned short	qname_spec;
-	unsigned long	vals_s_flags;	/* Bits to set in s_flags */
-	unsigned long	mask_s_flags;	/* Bits changed in s_flags */
-	unsigned long	journal_devnum;
-	unsigned long	s_commit_interval;
-	unsigned long	s_stripe;
-	unsigned int	s_inode_readahead_blks;
-	unsigned int	s_want_extra_isize;
-	unsigned int	s_li_wait_mult;
-	unsigned int	s_max_dir_size_kb;
-	unsigned int	journal_ioprio;
-	unsigned int	vals_s_mount_opt;
-	unsigned int	mask_s_mount_opt;
-	unsigned int	vals_s_mount_opt2;
-	unsigned int	mask_s_mount_opt2;
-	unsigned int	opt_flags;	/* MOPT flags */
-	unsigned int	spec;
-	u32		s_max_batch_time;
-	u32		s_min_batch_time;
-	kuid_t		s_resuid;
-	kgid_t		s_resgid;
-	ext4_fsblk_t	s_sb_block;
-};
+/* struct ext4_fs_context is defined in ext4.h */
 
 static void ext4_fc_free(struct fs_context *fc)
 {
