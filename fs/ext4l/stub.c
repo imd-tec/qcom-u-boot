@@ -240,11 +240,7 @@ int jbd2_transaction_committed(void *journal, unsigned int tid)
 
 /* __ext4_warning_inode is now in super.c */
 
-/* Readahead */
-int ext4_mpage_readpages(void *mapping, void *rac, void *folio)
-{
-	return 0;
-}
+/* ext4_mpage_readpages is now in readpage.c */
 
 /* ext4_readpage_inline is now in inline.c */
 

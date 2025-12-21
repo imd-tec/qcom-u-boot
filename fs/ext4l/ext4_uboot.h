@@ -2664,4 +2664,44 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 #define bio_add_folio(bio, folio, len, off) \
 	({ (void)(bio); (void)(folio); (void)(len); (void)(off); 1; })
 
+/*
+ * Stubs for readpage.c
+ */
+
+/* mempool - memory pool stubs */
+typedef void *mempool_t;
+#define mempool_alloc(pool, gfp)	({ (void)(pool); (void)(gfp); (void *)NULL; })
+#define mempool_free(elem, pool)	do { (void)(elem); (void)(pool); } while (0)
+#define mempool_create_slab_pool(n, c)	({ (void)(n); (void)(c); (mempool_t *)NULL; })
+#define mempool_destroy(pool)		do { (void)(pool); } while (0)
+
+/* folio read operations */
+#define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
+#define folio_set_mappedtodisk(f)	do { (void)(f); } while (0)
+
+/* fscrypt stubs for readpage.c */
+#define fscrypt_decrypt_bio(bio)	({ (void)(bio); 0; })
+#define fscrypt_enqueue_decrypt_work(work) do { (void)(work); } while (0)
+#define fscrypt_mergeable_bio(bio, inode, blk) \
+	({ (void)(bio); (void)(inode); (void)(blk); 1; })
+#define fscrypt_set_bio_crypt_ctx(bio, inode, blk, gfp) \
+	do { (void)(bio); (void)(inode); (void)(blk); (void)(gfp); } while (0)
+
+/* fsverity stubs */
+#define fsverity_verify_bio(bio)	do { (void)(bio); } while (0)
+#define fsverity_enqueue_verify_work(work) do { (void)(work); } while (0)
+#define fsverity_verify_folio(f)	({ (void)(f); 1; })
+#define IS_VERITY(inode)		(0)
+
+/* readahead operations */
+#define readahead_count(rac)		({ (void)(rac); 0UL; })
+#define readahead_folio(rac)		({ (void)(rac); (struct folio *)NULL; })
+
+/* prefetch operations */
+#define prefetchw(addr)			do { (void)(addr); } while (0)
+
+/* block read operations */
+#define block_read_full_folio(folio, get_block) \
+	({ (void)(folio); (void)(get_block); 0; })
+
 #endif /* __EXT4_UBOOT_H__ */
