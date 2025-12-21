@@ -126,6 +126,14 @@ struct kobject {
 	const char *name;
 };
 
+/* lockdep stubs - needed before jbd2.h is included */
+struct lockdep_map { int dummy; };
+struct lock_class_key { int dummy; };
+#define rwsem_acquire(l, s, t, i)	do { } while (0)
+#define rwsem_acquire_read(l, s, t, i)	do { } while (0)
+#define rwsem_release(l, i)		do { } while (0)
+#define _THIS_IP_			((unsigned long)0)
+
 /* completion - stub */
 struct completion {
 	unsigned int done;
@@ -133,6 +141,10 @@ struct completion {
 
 /* Cache alignment - stub */
 #define ____cacheline_aligned_in_smp
+
+/* Pointer check macros */
+#define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
+#define data_race(expr)			(expr)
 
 /* Block I/O request flags - stubs */
 #define REQ_META	0
@@ -315,6 +327,8 @@ extern struct user_namespace init_user_ns;
 #define lock_buffer(bh)			do { } while (0)
 #define unlock_buffer(bh)		do { } while (0)
 #define sb_getblk(sb, block)		((struct buffer_head *)NULL)
+#define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
+#define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
 
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
@@ -1062,6 +1076,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define filemap_invalidate_lock_shared(m) do { } while (0)
 #define filemap_invalidate_unlock_shared(m) do { } while (0)
 #define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
+#define filemap_fdatawrite_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
 #define truncate_pagecache(i, s)	do { } while (0)
 #define pagecache_isize_extended(i, f, t) do { } while (0)
 #define invalidate_mapping_pages(m, s, e) do { (void)(m); (void)(s); (void)(e); } while (0)
@@ -1175,6 +1190,15 @@ static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
 	return a - b;
 }
 
+static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
+{
+	return kt + ns;
+}
+
+/* hrtimer stubs */
+#define HRTIMER_MODE_ABS		0
+#define schedule_hrtimeout(exp, mode)	({ (void)(exp); (void)(mode); 0; })
+
 /* write lock variants */
 #define write_trylock(lock)		({ (void)(lock); 1; })
 
@@ -1211,8 +1235,11 @@ struct folio_batch {
 
 /* folio operations - stubs */
 #define folio_mark_dirty(f)			do { (void)(f); } while (0)
-#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((p) & (PAGE_SIZE - 1)); })
+#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((unsigned long)(p) & (PAGE_SIZE - 1)); })
 #define folio_buffers(f)			({ (void)(f); (struct buffer_head *)NULL; })
+#define virt_to_folio(p)			({ (void)(p); (struct folio *)NULL; })
+#define folio_set_bh(bh, f, off)		do { (void)(bh); (void)(f); (void)(off); } while (0)
+#define memcpy_from_folio(dst, f, off, len)	do { (void)(dst); (void)(f); (void)(off); (void)(len); } while (0)
 #define folio_test_uptodate(f)			({ (void)(f); 1; })
 #define folio_pos(f)				({ (void)(f); 0LL; })
 #define folio_size(f)				({ (void)(f); PAGE_SIZE; })
@@ -1355,6 +1382,9 @@ typedef unsigned int projid_t;
 /* ilog2 - log base 2 */
 #include <log.h>
 #define ilog2(n) (fls(n) - 1)
+
+/* hash_64 - simple 64-bit hash */
+#define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
 
 /* Trace stubs for inode.c */
 #define trace_ext4_begin_ordered_truncate(...)	do { } while (0)
@@ -2076,6 +2106,8 @@ struct fs_parse_result {
 #define time_after(a, b)		time_before(b, a)
 #endif
 #define msecs_to_jiffies(m)		((m) * HZ / 1000)
+#define jiffies_to_msecs(j)		((j) * 1000 / HZ)
+#define round_jiffies_up(j)		(j)
 
 /* Path lookup flags */
 #define LOOKUP_FOLLOW			0x0001
@@ -2153,7 +2185,7 @@ int percpu_init_rwsem(struct percpu_rw_semaphore *sem);
 void percpu_free_rwsem(struct percpu_rw_semaphore *sem);
 
 /* Block device sync - declarations for stub.c */
-void sync_blockdev(struct block_device *bdev);
+int sync_blockdev(struct block_device *bdev);
 void invalidate_bdev(struct block_device *bdev);
 
 /* Kobject - declarations for stub.c */
@@ -2239,10 +2271,11 @@ int is_power_of_2(unsigned long n);
 
 /* Superblock write operations */
 #define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
+#define sb_start_write(sb)		do { } while (0)
 #define sb_end_write(sb)		do { } while (0)
 
 /* Scheduler stubs */
-#define schedule_timeout_interruptible(t)	do { } while (0)
+#define schedule_timeout_interruptible(t)	({ (void)(t); 0; })
 
 /* Page allocation - declarations for stub.c */
 unsigned long get_zeroed_page(gfp_t gfp);
@@ -2478,6 +2511,12 @@ static inline int atomic_inc_return(atomic_t *v)
 	return ++(v->counter);
 }
 
+/* atomic_add_return - add and return new value */
+static inline int atomic_add_return(int i, atomic_t *v)
+{
+	return (v->counter += i);
+}
+
 /* pde_data - proc dir entry data (not supported in U-Boot) */
 #define pde_data(inode)			((void *)NULL)
 
@@ -2560,6 +2599,8 @@ struct seq_operations {
 /* Block device operations */
 #define sb_find_get_block_nonatomic(sb, block) \
 	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define __find_get_block_nonatomic(bdev, block, size) \
+	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
 #define bdev_discard_granularity(bdev) \
 	({ (void)(bdev); 0U; })
 
@@ -2714,6 +2755,8 @@ struct wait_bit_entry {
 	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
 #define prepare_to_wait(wq, wait, state) \
 	do { (void)(wq); (void)(wait); (void)(state); } while (0)
+#define prepare_to_wait_exclusive(wq, wait, state) \
+	do { (void)(wq); (void)(wait); (void)(state); } while (0)
 #define finish_wait(wq, wait) \
 	do { (void)(wq); (void)(wait); } while (0)
 
@@ -2767,5 +2810,214 @@ struct wait_bit_entry {
 
 /* get_current_ioprio - I/O priority (not used in U-Boot) */
 #define get_current_ioprio()		(0)
+
+/* JBD2 checkpoint.c stubs */
+#define mutex_lock_io(m)		mutex_lock(m)
+#define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
+#define spin_needbreak(l)		({ (void)(l); 0; })
+
+/* JBD2 trace stubs */
+#define trace_jbd2_checkpoint(j, r)	do { (void)(j); (void)(r); } while (0)
+#define trace_jbd2_shrink_checkpoint_list(j, f, t, l, n, d) \
+	do { (void)(j); (void)(f); (void)(t); (void)(l); (void)(n); (void)(d); } while (0)
+#define trace_jbd2_checkpoint_stats(d, tid, stats) \
+	do { (void)(d); (void)(tid); (void)(stats); } while (0)
+#define trace_jbd2_drop_transaction(j, t) \
+	do { (void)(j); (void)(t); } while (0)
+
+/* JBD2 commit.c stubs */
+#define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
+#define smp_mb__after_atomic()		do { } while (0)
+#define folio_trylock(f)		({ (void)(f); 1; })
+#define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
+#define filemap_fdatawait_range_keep_errors(m, s, e) \
+	({ (void)(m); (void)(s); (void)(e); 0; })
+#define crc32_be(crc, p, len)		crc32(crc, p, len)
+#define free_buffer_head(bh)		kfree(bh)
+#define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
+
+/* DEFINE_WAIT stub - creates a wait queue entry */
+#define DEFINE_WAIT(name)		int name = 0
+
+/* cond_resched_lock - conditionally reschedule while holding a lock */
+#define cond_resched_lock(lock)		do { (void)(lock); } while (0)
+
+/* More JBD2 trace stubs for commit.c */
+#define trace_jbd2_submit_inode_data(i)	do { (void)(i); } while (0)
+#define trace_jbd2_start_commit(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_locking(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_flushing(j, t) do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_commit_logging(j, t)	do { (void)(j); (void)(t); } while (0)
+#define trace_jbd2_run_stats(d, tid, stats) \
+	do { (void)(d); (void)(tid); (void)(stats); } while (0)
+#define trace_jbd2_end_commit(j, t)	do { (void)(j); (void)(t); } while (0)
+
+/* JBD2 transaction.c trace stubs */
+#define trace_jbd2_handle_start(...)		do { } while (0)
+#define trace_jbd2_handle_extend(...)		do { } while (0)
+#define trace_jbd2_handle_restart(...)		do { } while (0)
+#define trace_jbd2_handle_stats(...)		do { } while (0)
+#define trace_jbd2_lock_buffer_stall(...)	do { } while (0)
+
+/* JBD2 journal.c stubs */
+#define alloc_buffer_head(gfp)		((struct buffer_head *)kzalloc(sizeof(struct buffer_head), gfp))
+#define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+#define bmap(inode, block)		({ (void)(inode); (void)(block); 0; })
+#define trace_jbd2_update_log_tail(j, t, b, f) \
+	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
+
+/* seq_file operations for /proc - stubs */
+#define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
+#define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* proc_ops structure for journal.c */
+struct proc_ops {
+	int (*proc_open)(struct inode *, struct file *);
+	ssize_t (*proc_read)(struct file *, char *, size_t, loff_t *);
+	loff_t (*proc_lseek)(struct file *, loff_t, int);
+	int (*proc_release)(struct inode *, struct file *);
+};
+
+/* seq_read and seq_lseek declarations (defined in stub.c) */
+ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
+loff_t seq_lseek(struct file *f, loff_t o, int w);
+
+/* S_IRUGO file mode if not defined */
+#ifndef S_IRUGO
+#define S_IRUGO		(S_IRUSR | S_IRGRP | S_IROTH)
+#endif
+
+/* procfs stubs */
+#define proc_mkdir(name, parent)	({ (void)(name); (void)(parent); (struct proc_dir_entry *)NULL; })
+#define proc_create_data(n, m, p, ops, d) \
+	({ (void)(n); (void)(m); (void)(p); (void)(ops); (void)(d); (struct proc_dir_entry *)NULL; })
+#define remove_proc_entry(n, p)		do { (void)(n); (void)(p); } while (0)
+
+/* lockdep stubs (struct lock_class_key defined earlier) */
+#define lockdep_init_map(...)	do { } while (0)
+
+/* More JBD2 trace stubs for journal.c */
+#define trace_jbd2_shrink_scan_enter(j, n, c) \
+	do { (void)(j); (void)(n); (void)(c); } while (0)
+#define trace_jbd2_shrink_scan_exit(j, n, s, c) \
+	do { (void)(j); (void)(n); (void)(s); (void)(c); } while (0)
+#define trace_jbd2_shrink_count(j, n, c) \
+	do { (void)(j); (void)(n); (void)(c); } while (0)
+#define trace_jbd2_write_superblock(j, f) \
+	do { (void)(j); (void)(f); } while (0)
+
+/* Block device operations for journal.c */
+#define bh_read(bh, flags)		({ (void)(bh); (void)(flags); 0; })
+#define bh_read_nowait(bh, flags)	do { (void)(bh); (void)(flags); } while (0)
+#define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
+#define truncate_inode_pages_range(m, s, e) \
+	do { (void)(m); (void)(s); (void)(e); } while (0)
+#define blkdev_issue_discard(bdev, s, n, gfp) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
+#define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
+#ifndef SECTOR_SHIFT
+#define SECTOR_SHIFT	9
+#endif
+#define mapping_max_folio_order(m)	({ (void)(m); 0; })
+
+/* Memory allocation for journal.c */
+#define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
+#define free_pages(addr, order)		free((void *)(addr))
+#define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
+
+/* Ratelimited printk for journal.c */
+#define pr_notice_ratelimited(fmt, ...)	pr_notice(fmt, ##__VA_ARGS__)
+
+/*
+ * Stubs for mmp.c
+ */
+
+/* init_utsname - returns pointer to system name structure */
+struct new_utsname {
+	char nodename[65];
+};
+static inline struct new_utsname *init_utsname(void)
+{
+	static struct new_utsname uts = { .nodename = "u-boot" };
+	return &uts;
+}
+
+/*
+ * Stubs for move_extent.c
+ */
+
+/* down_write_nested - nested write lock acquisition */
+#define down_write_nested(sem, subclass) \
+	do { (void)(sem); (void)(subclass); } while (0)
+
+/* filemap_release_folio - try to release a folio */
+#define filemap_release_folio(folio, gfp) \
+	({ (void)(folio); (void)(gfp); 1; })
+
+/* IS_SWAPFILE - check if inode is a swap file */
+#define IS_SWAPFILE(inode)	({ (void)(inode); 0; })
+
+/* PAGE_MASK - mask for page alignment */
+#ifndef PAGE_MASK
+#define PAGE_MASK	(~(PAGE_SIZE - 1))
+#endif
+
+/* lock_two_nondirectories - lock two inodes in order */
+#define lock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+#define unlock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+
+/*
+ * Stubs for resize.c
+ */
+
+/* test_and_set_bit_lock - test and set a bit atomically */
+#define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
+
+/* div64_u64 - 64-bit by 64-bit division */
+static inline u64 div64_u64(u64 dividend, u64 divisor)
+{
+	return dividend / divisor;
+}
+
+/* time_is_before_jiffies - check if time is before current jiffies */
+#define time_is_before_jiffies(a)	({ (void)(a); 0; })
+
+/* ext4_update_overhead - declaration for stub.c */
+int ext4_update_overhead(struct super_block *sb, bool force);
+
+/*
+ * Stubs for fsmap.c
+ */
+
+/* fsmap.c stubs - struct fsmap from linux/fsmap.h */
+struct fsmap {
+	__u32	fmr_device;	/* device id */
+	__u32	fmr_flags;	/* mapping flags */
+	__u64	fmr_physical;	/* device offset of segment */
+	__u64	fmr_owner;	/* owner id */
+	__u64	fmr_offset;	/* file offset of segment */
+	__u64	fmr_length;	/* length of segment */
+	__u64	fmr_reserved[3]; /* must be zero */
+};
+
+#define FMR_OWN_FREE		(-1ULL)
+#define FMR_OWN_UNKNOWN		(-2ULL)
+#define FMR_OWNER(type, code)	(((__u64)(type) << 32) | (__u64)(code))
+#define FMR_OF_SPECIAL_OWNER	(1 << 0)
+#define FMH_IF_VALID		0
+#define FMH_OF_DEV_T		(1 << 0)
+
+#define trace_ext4_fsmap_mapping(sb, d, a, p, l, o)	do { } while (0)
+#define trace_ext4_fsmap_low_key(sb, d, a, p, l, o)	do { } while (0)
+#define trace_ext4_fsmap_high_key(sb, d, a, p, l, o)	do { } while (0)
+
+/* list_sort and sort stubs for fsmap.c */
+#define list_sort(priv, head, cmp) \
+	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
+#define sort(base, num, size, cmp, swap) \
+	do { (void)(base); (void)(num); (void)(size); (void)(cmp); (void)(swap); } while (0)
 
 #endif /* __EXT4_UBOOT_H__ */

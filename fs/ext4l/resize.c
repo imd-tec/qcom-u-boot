@@ -9,11 +9,7 @@
  * This could probably be made into a module, because it is not often in use.
  */
 
-
-#include <linux/errno.h>
-#include <linux/slab.h>
-#include <linux/jiffies.h>
-
+#include "ext4_uboot.h"
 #include "ext4_jbd2.h"
 
 struct ext4_rcu_ptr {

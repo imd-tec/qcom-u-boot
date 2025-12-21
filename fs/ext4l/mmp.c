@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
-#include <linux/fs.h>
-#include <linux/random.h>
-#include <linux/buffer_head.h>
-#include <linux/utsname.h>
-#include <linux/kthread.h>
 
+#include "ext4_uboot.h"
 #include "ext4.h"
 
 /* Checksumming functions */
