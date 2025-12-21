@@ -171,7 +171,7 @@ def get_push_url(remote):
     return f'https://oauth2:{token}@{host}/{proj_path}.git'
 
 
-def push_branch(remote, branch, force=False):
+def push_branch(remote, branch, force=False, skip_ci=True):
     """Push a branch to a remote
 
     Uses the GitLab API token for authentication if available, so the push
@@ -182,6 +182,9 @@ def push_branch(remote, branch, force=False):
         remote (str): Remote name
         branch (str): Branch name
         force (bool): Force push (overwrite remote branch)
+        skip_ci (bool): Skip CI pipeline (default True for new MRs where
+            MR pipeline runs automatically; set False for updates that
+            need pipeline verification)
 
     Returns:
         bool: True on success
@@ -191,8 +194,9 @@ def push_branch(remote, branch, force=False):
         push_url = get_push_url(remote)
         push_target = push_url if push_url else remote
 
-        # Skip push pipeline; MR pipeline will run when MR is created
-        args = ['git', 'push', '-u', '-o', 'ci.skip']
+        args = ['git', 'push', '-u']
+        if skip_ci:
+            args.extend(['-o', 'ci.skip'])
         if force:
             args.append('--force-with-lease')
         args.extend([push_target, f'HEAD:{branch}'])

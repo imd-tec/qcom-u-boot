@@ -2862,25 +2862,27 @@ class TestDoPushBranch(unittest.TestCase):
         """Test successful push."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='ci', force=False)
+                                  remote='ci', force=False, run_ci=False)
         with mock.patch.object(gitlab_api, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 0)
-        mock_push.assert_called_once_with('ci', 'test-branch', False)
+        mock_push.assert_called_once_with('ci', 'test-branch', False,
+                                          skip_ci=True)
 
     def test_push_branch_force(self):
         """Test force push."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='origin', force=True)
+                                  remote='origin', force=True, run_ci=False)
         with mock.patch.object(gitlab_api, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 0)
-        mock_push.assert_called_once_with('origin', 'test-branch', True)
+        mock_push.assert_called_once_with('origin', 'test-branch', True,
+                                          skip_ci=True)
 
     def test_push_branch_failure(self):
         """Test push failure."""

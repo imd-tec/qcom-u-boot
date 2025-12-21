@@ -783,13 +783,16 @@ def do_push_branch(args, dbs):  # pylint: disable=unused-argument
     pickman commits come from the same account.
 
     Args:
-        args (Namespace): Parsed arguments with 'remote', 'branch', 'force'
+        args (Namespace): Parsed arguments with 'remote', 'branch', 'force',
+            'run_ci'
         dbs (Database): Database instance
 
     Returns:
         int: 0 on success, 1 on failure
     """
-    success = gitlab_api.push_branch(args.remote, args.branch, args.force)
+    skip_ci = not getattr(args, 'run_ci', False)
+    success = gitlab_api.push_branch(args.remote, args.branch, args.force,
+                                     skip_ci=skip_ci)
     return 0 if success else 1
 
 
