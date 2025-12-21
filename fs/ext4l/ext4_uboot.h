@@ -2271,10 +2271,11 @@ int is_power_of_2(unsigned long n);
 
 /* Superblock write operations */
 #define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
+#define sb_start_write(sb)		do { } while (0)
 #define sb_end_write(sb)		do { } while (0)
 
 /* Scheduler stubs */
-#define schedule_timeout_interruptible(t)	do { } while (0)
+#define schedule_timeout_interruptible(t)	({ (void)(t); 0; })
 
 /* Page allocation - declarations for stub.c */
 unsigned long get_zeroed_page(gfp_t gfp);
@@ -2927,5 +2928,19 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* Ratelimited printk for journal.c */
 #define pr_notice_ratelimited(fmt, ...)	pr_notice(fmt, ##__VA_ARGS__)
+
+/*
+ * Stubs for mmp.c
+ */
+
+/* init_utsname - returns pointer to system name structure */
+struct new_utsname {
+	char nodename[65];
+};
+static inline struct new_utsname *init_utsname(void)
+{
+	static struct new_utsname uts = { .nodename = "u-boot" };
+	return &uts;
+}
 
 #endif /* __EXT4_UBOOT_H__ */

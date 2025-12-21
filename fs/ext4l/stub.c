@@ -461,10 +461,7 @@ int dquot_suspend(void *sb, int flags)
 	return 0;
 }
 
-/* MMP daemon */
-void ext4_stop_mmpd(void *sbi)
-{
-}
+/* MMP daemon - now in mmp.c */
 
 /* Sysfs */
 void ext4_unregister_sysfs(void *sb)
@@ -552,11 +549,7 @@ u64 sb_bdev_nr_blocks(struct super_block *sb)
 /* bdev_can_atomic_write is now a macro in ext4_uboot.h */
 /* bdev_atomic_write_unit_max_bytes is now a macro in ext4_uboot.h */
 
-/* Multi-mount protection */
-int ext4_multi_mount_protect(void *sb, unsigned long long mmp_block)
-{
-	return 0;
-}
+/* Multi-mount protection - now in mmp.c */
 
 /* Generic dentry ops */
 void generic_set_sb_d_ops(struct super_block *sb)
