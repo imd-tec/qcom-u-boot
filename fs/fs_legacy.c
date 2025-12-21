@@ -18,6 +18,7 @@
 #include <mapmem.h>
 #include <part.h>
 #include <ext4fs.h>
+#include <ext4l.h>
 #include <fat.h>
 #include <fs_legacy.h>
 #include <sandboxfs.h>
@@ -262,8 +263,8 @@ static struct fstype_info fstypes[] = {
 		.fstype = FS_TYPE_EXT,
 		.name = "ext4",
 		.null_dev_desc_ok = false,
-		.probe = fs_probe_unsupported,
-		.close = fs_close_unsupported,
+		.probe = ext4l_probe,
+		.close = ext4l_close,
 		.ls = fs_ls_unsupported,
 		.exists = fs_exists_unsupported,
 		.size = fs_size_unsupported,
