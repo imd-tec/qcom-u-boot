@@ -1227,3 +1227,57 @@ Rebased onto latest ci/master. Build verified OK.
 
 ---
 
+## 2025-12-20: us/next
+
+Branch: cherry-eda65fa42b9
+
+Commits:
+- eda65fa42b9 power: regulator: replace printf() with pr_err()
+- 7e261a05a50 power: replace magic numbers with macros
+- b9fe3ec8a23 power: pmic: tps65941: Fix TI TPS65224 PMIC compatiable
+- ecc2bd711a3 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
+
+### Conversation log
+The repository state is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Now the second commit:
+
+Second commit cherry-picked successfully. Now the third commit:
+
+Third commit cherry-picked successfully. Now the fourth commit - this is a merge commit, so I need to use special flags:
+
+The merge commit is empty (as expected since changes are already included). Let me commit it with --allow-empty to preserve the merge history:
+
+All 4 commits have been cherry-picked. Let me verify with git log:
+
+All 4 commits are present. Now let me run the build verification:
+
+The build completed successfully with no warnings or errors.
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+### Commits cherry-picked (4 of 4):
+1. `363c60e3bae` - power: regulator: replace printf() with pr_err()
+2. `be28b481e1f` - power: replace magic numbers with macros
+3. `e336f09708e` - power: pmic: tps65941: Fix TI TPS65224 PMIC compatiable
+4. `c5b960baaed` - Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-pmic
+
+### Build result: **OK**
+- No warnings
+- No errors
+
+### Fix-ups made: **None**
+- All commits applied cleanly without conflicts
+
+### Branch status:
+- Current branch: `cherry-eda65fa42b9`
+- Based on: `ci/master`
+- 4 commits ahead of `ci/master`
+- Ready for pushing
+
+---
+
