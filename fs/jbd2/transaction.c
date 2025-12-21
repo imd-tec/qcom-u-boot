@@ -14,21 +14,8 @@
  * filesystem).
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
+#include "../ext4l/ext4_uboot.h"
 #include <linux/jbd2.h>
-#include <linux/errno.h>
-#include <linux/slab.h>
-#include <linux/timer.h>
-#include <linux/mm.h>
-#include <linux/highmem.h>
-#include <linux/hrtimer.h>
-#include <linux/backing-dev.h>
-#include <linux/bug.h>
-#include <linux/module.h>
-#include <linux/sched/mm.h>
-
-#include <trace/events/jbd2.h>
 
 static void __jbd2_journal_temp_unlink_buffer(struct journal_head *jh);
 static void __jbd2_journal_unfile_buffer(struct journal_head *jh);

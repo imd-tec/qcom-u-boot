@@ -130,7 +130,9 @@ struct kobject {
 struct lockdep_map { int dummy; };
 struct lock_class_key { int dummy; };
 #define rwsem_acquire(l, s, t, i)	do { } while (0)
+#define rwsem_acquire_read(l, s, t, i)	do { } while (0)
 #define rwsem_release(l, i)		do { } while (0)
+#define _THIS_IP_			((unsigned long)0)
 
 /* completion - stub */
 struct completion {
@@ -139,6 +141,10 @@ struct completion {
 
 /* Cache alignment - stub */
 #define ____cacheline_aligned_in_smp
+
+/* Pointer check macros */
+#define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
+#define data_race(expr)			(expr)
 
 /* Block I/O request flags - stubs */
 #define REQ_META	0
@@ -321,6 +327,8 @@ extern struct user_namespace init_user_ns;
 #define lock_buffer(bh)			do { } while (0)
 #define unlock_buffer(bh)		do { } while (0)
 #define sb_getblk(sb, block)		((struct buffer_head *)NULL)
+#define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
+#define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
 
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
@@ -1068,6 +1076,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define filemap_invalidate_lock_shared(m) do { } while (0)
 #define filemap_invalidate_unlock_shared(m) do { } while (0)
 #define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
+#define filemap_fdatawrite_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
 #define truncate_pagecache(i, s)	do { } while (0)
 #define pagecache_isize_extended(i, f, t) do { } while (0)
 #define invalidate_mapping_pages(m, s, e) do { (void)(m); (void)(s); (void)(e); } while (0)
@@ -1180,6 +1189,15 @@ static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
 {
 	return a - b;
 }
+
+static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
+{
+	return kt + ns;
+}
+
+/* hrtimer stubs */
+#define HRTIMER_MODE_ABS		0
+#define schedule_hrtimeout(exp, mode)	({ (void)(exp); (void)(mode); 0; })
 
 /* write lock variants */
 #define write_trylock(lock)		({ (void)(lock); 1; })
@@ -2088,6 +2106,8 @@ struct fs_parse_result {
 #define time_after(a, b)		time_before(b, a)
 #endif
 #define msecs_to_jiffies(m)		((m) * HZ / 1000)
+#define jiffies_to_msecs(j)		((j) * 1000 / HZ)
+#define round_jiffies_up(j)		(j)
 
 /* Path lookup flags */
 #define LOOKUP_FOLLOW			0x0001
@@ -2490,6 +2510,12 @@ static inline int atomic_inc_return(atomic_t *v)
 	return ++(v->counter);
 }
 
+/* atomic_add_return - add and return new value */
+static inline int atomic_add_return(int i, atomic_t *v)
+{
+	return (v->counter += i);
+}
+
 /* pde_data - proc dir entry data (not supported in U-Boot) */
 #define pde_data(inode)			((void *)NULL)
 
@@ -2728,6 +2754,8 @@ struct wait_bit_entry {
 	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
 #define prepare_to_wait(wq, wait, state) \
 	do { (void)(wq); (void)(wait); (void)(state); } while (0)
+#define prepare_to_wait_exclusive(wq, wait, state) \
+	do { (void)(wq); (void)(wait); (void)(state); } while (0)
 #define finish_wait(wq, wait) \
 	do { (void)(wq); (void)(wait); } while (0)
 
@@ -2822,6 +2850,13 @@ struct wait_bit_entry {
 #define trace_jbd2_run_stats(d, tid, stats) \
 	do { (void)(d); (void)(tid); (void)(stats); } while (0)
 #define trace_jbd2_end_commit(j, t)	do { (void)(j); (void)(t); } while (0)
+
+/* JBD2 transaction.c trace stubs */
+#define trace_jbd2_handle_start(...)		do { } while (0)
+#define trace_jbd2_handle_extend(...)		do { } while (0)
+#define trace_jbd2_handle_restart(...)		do { } while (0)
+#define trace_jbd2_handle_stats(...)		do { } while (0)
+#define trace_jbd2_lock_buffer_stall(...)	do { } while (0)
 
 /* JBD2 journal.c stubs */
 #define alloc_buffer_head(gfp)		((struct buffer_head *)kzalloc(sizeof(struct buffer_head), gfp))
