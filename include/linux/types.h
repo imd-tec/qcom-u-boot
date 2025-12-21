@@ -151,6 +151,20 @@ typedef __u32 __bitwise __wsum;
 
 typedef unsigned __bitwise__	gfp_t;
 
+/* Nanosecond scalar representation for kernel time values */
+typedef s64	ktime_t;
+
+/**
+ * The type used for indexing onto a disc or disc partition.
+ *
+ * Linux always considers sectors to be 512 bytes long independently
+ * of the devices real block size.
+ *
+ * blkcnt_t is the type of the inode's block count.
+ */
+typedef u64 sector_t;
+typedef u64 blkcnt_t;
+
 #ifdef __linux__
 struct ustat {
 	__kernel_daddr_t	f_tfree;

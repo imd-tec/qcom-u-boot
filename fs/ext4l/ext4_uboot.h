@@ -2,6 +2,9 @@
 /*
  * U-Boot compatibility header for ext4l filesystem
  *
+ * Copyright 2025 Canonical Ltd
+ * Written by Simon Glass <simon.glass@canonical.com>
+ *
  * This provides minimal definitions to allow Linux ext4 code to compile
  * in U-Boot.
  */
@@ -52,8 +55,11 @@ struct timespec64 {
 	long tv_nsec;
 };
 
-/* ktime_t - kernel time type */
-typedef s64 ktime_t;
+/*
+ * ktime_t, sector_t are in linux/types.h
+ * atomic_t, atomic64_t are in asm-generic/atomic.h
+ */
+#include <asm-generic/atomic.h>
 
 /* Jiffy constants */
 #define MAX_JIFFY_OFFSET	((~0UL >> 1) - 1)
@@ -61,16 +67,7 @@ typedef s64 ktime_t;
 /* Block device name size */
 #define BDEVNAME_SIZE		32
 
-/* Atomic types - stubs for single-threaded U-Boot */
-typedef struct { int counter; } atomic_t;
-typedef struct { long counter; } atomic64_t;
-
-#define atomic_read(v)		((v)->counter)
-#define atomic_set(v, i)	((v)->counter = (i))
-#define atomic_inc(v)		((v)->counter++)
-#define atomic_dec(v)		((v)->counter--)
-#define atomic64_read(v)	((v)->counter)
-#define atomic64_set(v, i)	((v)->counter = (i))
+/* Extra atomic operations not in asm-generic/atomic.h */
 #define atomic_dec_if_positive(v)	(--(v)->counter)
 
 /* SMP stubs - U-Boot is single-threaded */
@@ -510,8 +507,7 @@ struct sb_writers {
 /* mapping_large_folio_support stub */
 #define mapping_large_folio_support(m)	(0)
 
-/* sector_t - needed before buffer_head.h */
-typedef unsigned long sector_t;
+/* sector_t is now in linux/types.h */
 
 /* Buffer head - from linux/buffer_head.h */
 #include <linux/buffer_head.h>
