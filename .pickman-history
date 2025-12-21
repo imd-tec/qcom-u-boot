@@ -1345,3 +1345,60 @@ The branch `cherry-8ff96fb6d01` is ready for pushing.
 
 ---
 
+## 2025-12-21: us/next
+
+Branch: cherry-e44098d1aa5
+
+Commits:
+- e44098d1aa5 arm: mach-k3: am62p: Fixup CPU core, CAN-FD and Video-codec nodes in fdt
+- a226a6422c9 arm: mach-k3: am62p: Fixup thermal zone critical points
+- 8d05cbef73a arm: mach-k3: am62p: Fixup a53 max cpu frequency by speed-grade
+- 969f43c563b arm: mach-k3: am62p: Set a53 cpu freq based on speed-grade
+- e26a9ac4c69 Merge patch series "Add fdt-fixups for AM62P variants"
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Now cherry-pick the second commit:
+
+Second commit successful. Now cherry-pick the third commit:
+
+Third commit successful. Now cherry-pick the fourth commit:
+
+Fourth commit successful. Now cherry-pick the fifth commit (the merge commit - needs -m 1 --allow-empty):
+
+The merge commit is empty (as expected since we already cherry-picked all the individual commits). Let me commit it with --allow-empty to preserve the merge commit message:
+
+All 5 commits have been cherry-picked. Let me verify with git log:
+
+All 5 commits are present. Now let me run the build verification:
+
+The build completed successfully. Let me provide the final summary:
+
+## Cherry-pick Summary
+
+### Commits Cherry-picked (5 total):
+| Commit | Subject |
+|--------|---------|
+| 5f40cb915d8 | arm: mach-k3: am62p: Fixup CPU core, CAN-FD and Video-codec nodes in fdt |
+| fec54c227bf | arm: mach-k3: am62p: Fixup thermal zone critical points |
+| 02156be5da9 | arm: mach-k3: am62p: Fixup a53 max cpu frequency by speed-grade |
+| f1ec3f59e22 | arm: mach-k3: am62p: Set a53 cpu freq based on speed-grade |
+| 42106518f28 | Merge patch series "Add fdt-fixups for AM62P variants" |
+
+### Build Result: ✅ OK
+- Build completed successfully with no warnings or errors
+- Duration: 4 seconds
+- Board: sandbox
+
+### Fix-ups Made: None
+- All commits applied cleanly without conflicts
+
+### Branch Status:
+- Branch `cherry-e44098d1aa5` is ready for pushing
+- Currently ahead of `ci/master` by 5 commits
+
+---
+
