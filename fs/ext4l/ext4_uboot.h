@@ -2988,4 +2988,36 @@ static inline u64 div64_u64(u64 dividend, u64 divisor)
 /* ext4_update_overhead - declaration for stub.c */
 int ext4_update_overhead(struct super_block *sb, bool force);
 
+/*
+ * Stubs for fsmap.c
+ */
+
+/* fsmap.c stubs - struct fsmap from linux/fsmap.h */
+struct fsmap {
+	__u32	fmr_device;	/* device id */
+	__u32	fmr_flags;	/* mapping flags */
+	__u64	fmr_physical;	/* device offset of segment */
+	__u64	fmr_owner;	/* owner id */
+	__u64	fmr_offset;	/* file offset of segment */
+	__u64	fmr_length;	/* length of segment */
+	__u64	fmr_reserved[3]; /* must be zero */
+};
+
+#define FMR_OWN_FREE		(-1ULL)
+#define FMR_OWN_UNKNOWN		(-2ULL)
+#define FMR_OWNER(type, code)	(((__u64)(type) << 32) | (__u64)(code))
+#define FMR_OF_SPECIAL_OWNER	(1 << 0)
+#define FMH_IF_VALID		0
+#define FMH_OF_DEV_T		(1 << 0)
+
+#define trace_ext4_fsmap_mapping(sb, d, a, p, l, o)	do { } while (0)
+#define trace_ext4_fsmap_low_key(sb, d, a, p, l, o)	do { } while (0)
+#define trace_ext4_fsmap_high_key(sb, d, a, p, l, o)	do { } while (0)
+
+/* list_sort and sort stubs for fsmap.c */
+#define list_sort(priv, head, cmp) \
+	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
+#define sort(base, num, size, cmp, swap) \
+	do { (void)(base); (void)(num); (void)(size); (void)(cmp); (void)(swap); } while (0)
+
 #endif /* __EXT4_UBOOT_H__ */
