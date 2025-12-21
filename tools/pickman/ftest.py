@@ -1468,6 +1468,61 @@ class TestGetPushUrl(unittest.TestCase):
         self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
 
 
+class TestPushBranch(unittest.TestCase):
+    """Tests for push_branch function."""
+
+    def test_push_branch_force_with_remote_ref(self):
+        """Test force push when remote branch exists uses --force-with-lease."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                result = gitlab_api.push_branch('ci', 'test-branch', force=True)
+
+        self.assertTrue(result)
+        # Should fetch first, then push with --force-with-lease
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci', 'test-branch'))
+        push_args = calls[1][0]
+        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch', push_args)
+
+    def test_push_branch_force_no_remote_ref(self):
+        """Test force push when remote branch doesn't exist uses --force."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                # Fetch fails (branch doesn't exist on remote)
+                mock_output.side_effect = [
+                    command.CommandExc('fetch failed',
+                                       command.CommandResult()),  # fetch fails
+                    None,  # push succeeds
+                ]
+                result = gitlab_api.push_branch('ci', 'new-branch', force=True)
+
+        self.assertTrue(result)
+        # Should try fetch, fail, then push with --force (not --force-with-lease)
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 2)
+        push_args = calls[1][0]
+        self.assertIn('--force', push_args)
+        self.assertNotIn('--force-with-lease', ' '.join(push_args))
+
+    def test_push_branch_no_force(self):
+        """Test regular push without force doesn't fetch or use force flags."""
+        with mock.patch.object(gitlab_api, 'get_push_url',
+                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+            with mock.patch.object(command, 'output') as mock_output:
+                result = gitlab_api.push_branch('ci', 'test-branch', force=False)
+
+        self.assertTrue(result)
+        # Should only push, no fetch, no force flags
+        calls = mock_output.call_args_list
+        self.assertEqual(len(calls), 1)
+        push_args = calls[0][0]
+        self.assertNotIn('--force', ' '.join(push_args))
+        self.assertNotIn('fetch', ' '.join(push_args))
+
+
 class TestConfigFile(unittest.TestCase):
     """Tests for config file support."""
 
@@ -2560,8 +2615,10 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'conversation log')):
-                ret, success, conv_log = control.execute_apply(
-                    dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    ret, success, conv_log = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 0)
             self.assertTrue(success)
@@ -2613,10 +2670,12 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'log')):
-                with mock.patch.object(gitlab_api, 'push_and_create_mr',
-                                       return_value='https://mr/url'):
-                    ret, success, _ = control.execute_apply(
-                        dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                           return_value='https://mr/url'):
+                        ret, success, _ = control.execute_apply(
+                            dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 0)
             self.assertTrue(success)
@@ -2637,13 +2696,44 @@ class TestExecuteApply(unittest.TestCase):
 
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'log')):
-                with mock.patch.object(gitlab_api, 'push_and_create_mr',
-                                       return_value=None):
-                    ret, success, _ = control.execute_apply(
-                        dbs, 'us/next', commits, 'cherry-branch', args)
+                with mock.patch.object(control, 'run_git',
+                                       return_value='abc123'):
+                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                                           return_value=None):
+                        ret, success, _ = control.execute_apply(
+                            dbs, 'us/next', commits, 'cherry-branch', args)
 
             self.assertEqual(ret, 1)
             self.assertTrue(success)  # cherry-pick succeeded, MR failed
+            dbs.close()
+
+    def test_execute_apply_agent_aborted(self):
+        """Test execute_apply when agent aborts and branch doesn't exist."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('fff666', 'fff666f', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            # Agent reports success but branch doesn't exist (agent aborted)
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'aborted log')):
+                with mock.patch.object(control, 'run_git',
+                                       side_effect=Exception('branch not found')):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            # Should detect failure since branch doesn't exist
+            self.assertEqual(ret, 1)
+            self.assertFalse(success)
+
+            # Check commit status is conflict (not applied)
+            commit_rec = dbs.commit_get('fff666')
+            self.assertEqual(commit_rec[6], 'conflict')
             dbs.close()
 
 

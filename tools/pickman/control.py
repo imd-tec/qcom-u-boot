@@ -709,6 +709,15 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     success, conv_log = agent.cherry_pick_commits(commit_tuples, source,
                                                           branch_name)
 
+    # Verify the branch actually exists - agent may have aborted and deleted it
+    if success:
+        try:
+            run_git(['rev-parse', '--verify', branch_name])
+        except Exception:  # pylint: disable=broad-except
+            tout.warning(f'Branch {branch_name} does not exist - '
+                         'agent may have aborted')
+            success = False
+
     # Update commit status based on result
     status = 'applied' if success else 'conflict'
     for commit in commits:
