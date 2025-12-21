@@ -12,8 +12,8 @@ struct seq_file {
 	struct file *file;
 };
 
-#define seq_printf(m, fmt, ...)		do { } while (0)
-#define seq_puts(m, s)			do { } while (0)
-#define seq_putc(m, c)			do { } while (0)
+#define seq_printf(m, fmt, ...)		do { (void)(m); } while (0)
+#define seq_puts(m, s)			do { (void)(m); (void)(s); } while (0)
+#define seq_putc(m, c)			do { (void)(m); (void)(c); } while (0)
 
 #endif /* _LINUX_SEQ_FILE_H */

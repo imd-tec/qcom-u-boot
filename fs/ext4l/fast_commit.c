@@ -7,12 +7,12 @@
  *
  * Ext4 fast commits routines.
  */
+#include "ext4_uboot.h"
+
 #include "ext4.h"
 #include "ext4_jbd2.h"
 #include "ext4_extents.h"
 #include "mballoc.h"
-
-#include <linux/lockdep.h>
 /*
  * Ext4 Fast Commits
  * -----------------
@@ -2291,7 +2291,7 @@ void ext4_fc_init(struct super_block *sb, journal_t *journal)
 	journal->j_fc_cleanup_callback = ext4_fc_cleanup;
 }
 
-static const char * const fc_ineligible_reasons[] = {
+static __maybe_unused const char * const fc_ineligible_reasons[] = {
 	[EXT4_FC_REASON_XATTR] = "Extended attributes changed",
 	[EXT4_FC_REASON_CROSS_RENAME] = "Cross rename",
 	[EXT4_FC_REASON_JOURNAL_FLAG_CHANGE] = "Journal flag changed",

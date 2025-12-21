@@ -114,11 +114,6 @@ struct rb_root {
 /* percpu_counter - use Linux header */
 #include <linux/percpu_counter.h>
 
-/* name_snapshot - stub */
-struct name_snapshot {
-	const char *name;
-};
-
 /* Project ID type */
 typedef struct { unsigned int val; } kprojid_t;
 
@@ -550,6 +545,11 @@ struct dentry {
 	struct inode *d_inode;
 	struct super_block *d_sb;
 	struct dentry *d_parent;
+};
+
+/* name_snapshot - for dentry name snapshots */
+struct name_snapshot {
+	struct qstr name;
 };
 
 /* vm_fault_t - stub */
@@ -1968,10 +1968,6 @@ struct kstatfs {
 
 /* seq_file stubs */
 struct seq_file;
-#define seq_printf(m, fmt, ...)		do { } while (0)
-#define seq_puts(m, s)			do { } while (0)
-#define seq_putc(m, c)			do { } while (0)
-#define seq_escape(m, s, esc)		do { } while (0)
 
 /* Module stubs */
 struct module;
@@ -2703,5 +2699,73 @@ typedef void *mempool_t;
 /* block read operations */
 #define block_read_full_folio(folio, get_block) \
 	({ (void)(folio); (void)(get_block); 0; })
+
+/*
+ * Stubs for fast_commit.c
+ */
+
+/* Wait bit operations - stubbed for single-threaded U-Boot */
+struct wait_bit_entry {
+	struct list_head wq_entry;
+};
+#define DEFINE_WAIT_BIT(name, word, bit) \
+	struct wait_bit_entry name = { }
+#define bit_waitqueue(word, bit) \
+	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
+#define prepare_to_wait(wq, wait, state) \
+	do { (void)(wq); (void)(wait); (void)(state); } while (0)
+#define finish_wait(wq, wait) \
+	do { (void)(wq); (void)(wait); } while (0)
+
+/* Dentry name snapshot operations */
+#define take_dentry_name_snapshot(snap, dentry) \
+	do { (snap)->name = (dentry)->d_name; } while (0)
+#define release_dentry_name_snapshot(snap) \
+	do { (void)(snap); } while (0)
+
+/* Fast commit trace stubs */
+#define trace_ext4_fc_track_unlink(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_link(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_create(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_inode(handle, inode, ret) \
+	do { (void)(handle); (void)(inode); (void)(ret); } while (0)
+#define trace_ext4_fc_track_range(handle, inode, start, end, ret) \
+	do { (void)(handle); (void)(inode); (void)(start); (void)(end); (void)(ret); } while (0)
+
+/* lockdep stubs */
+#define lockdep_assert_not_held(lock)	do { (void)(lock); } while (0)
+
+/* Request flags for block I/O */
+#define REQ_IDLE		0
+#define REQ_PREFLUSH		0
+
+/* Fast commit trace stubs */
+#define trace_ext4_fc_cleanup(sb, full, reason) \
+	do { (void)(sb); (void)(full); (void)(reason); } while (0)
+#define trace_ext4_fc_stats(sb) \
+	do { (void)(sb); } while (0)
+#define trace_ext4_fc_commit_start(sb, tid) \
+	do { (void)(sb); (void)(tid); } while (0)
+#define trace_ext4_fc_commit_stop(sb, nblks, status, tid) \
+	do { (void)(sb); (void)(nblks); (void)(status); (void)(tid); } while (0)
+
+/* wake_up_bit - wake up threads waiting on a bit */
+#define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
+
+/* Dentry allocation stubs */
+#define d_alloc(parent, name)		({ (void)(parent); (void)(name); (struct dentry *)NULL; })
+#define d_drop(dentry)			do { (void)(dentry); } while (0)
+
+/* More fast commit trace stubs */
+#define trace_ext4_fc_replay_scan(sb, err, off) \
+	do { (void)(sb); (void)(err); (void)(off); } while (0)
+#define trace_ext4_fc_replay(sb, tag, ino, priv1, priv2) \
+	do { (void)(sb); (void)(tag); (void)(ino); (void)(priv1); (void)(priv2); } while (0)
+
+/* get_current_ioprio - I/O priority (not used in U-Boot) */
+#define get_current_ioprio()		(0)
 
 #endif /* __EXT4_UBOOT_H__ */

@@ -175,10 +175,7 @@ struct extent_status;
 /* ext4_is_pending is now in extents_status.c */
 /* ext4_convert_inline_data is now in inline.c */
 
-void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
-			     void *handle)
-{
-}
+/* ext4_fc_mark_ineligible is now in fast_commit.c */
 
 /* ext4_es_lookup_extent is now in extents_status.c */
 
@@ -188,15 +185,60 @@ void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
 
 /* ext4_mb_mark_bb is now in mballoc.c */
 
-void ext4_fc_record_regions(struct super_block *sb, int ino,
-			    unsigned long lblk, unsigned long long pblk,
-			    int len, int mapped)
+/* ext4_fc_record_regions is now in fast_commit.c */
+
+/* ext4_fc_replay_check_excluded is now in fast_commit.c */
+
+/*
+ * JBD2 fast commit stubs
+ */
+int jbd2_fc_get_buf(void *journal, struct buffer_head **bh_out)
+{
+	*bh_out = NULL;
+	return -ENOSPC;
+}
+
+void jbd2_fc_release_bufs(void *journal)
 {
 }
 
-int ext4_fc_replay_check_excluded(struct super_block *sb, unsigned long long blk)
+int jbd2_fc_begin_commit(void *journal, unsigned int tid)
+{
+	return -EOPNOTSUPP;
+}
+
+int jbd2_fc_end_commit(void *journal)
 {
 	return 0;
+}
+
+int jbd2_fc_end_commit_fallback(void *journal)
+{
+	return 0;
+}
+
+int jbd2_submit_inode_data(void *journal, void *jinode)
+{
+	return 0;
+}
+
+int jbd2_wait_inode_data(void *journal, void *jinode)
+{
+	return 0;
+}
+
+int jbd2_fc_wait_bufs(void *journal, int num)
+{
+	return 0;
+}
+
+int jbd2_complete_transaction(void *journal, unsigned int tid)
+{
+	return 0;
+}
+
+void ext4_reset_inode_seed(struct inode *inode)
+{
 }
 
 /*
@@ -257,10 +299,7 @@ int jbd2_journal_inode_ranged_write(void *handle, struct inode *inode,
 /* ext4_read_bh_lock is now in super.c */
 
 /* Fast commit */
-int ext4_fc_commit(void *journal, unsigned int tid)
-{
-	return 0;
-}
+/* ext4_fc_commit is now in fast_commit.c */
 
 /* ext4_force_commit is now in super.c */
 
@@ -284,12 +323,7 @@ int jbd2_log_wait_commit(void *journal, unsigned int tid)
 	return 0;
 }
 
-/* Fast commit */
-void ext4_fc_track_range(void *handle, struct inode *inode,
-			 unsigned long long start, unsigned long long end)
-{
-}
-
+/* ext4_fc_track_range is now in fast_commit.c */
 
 /* JBD2 journal update locking */
 void jbd2_journal_lock_updates(void *journal)
@@ -306,14 +340,8 @@ int jbd2_journal_flush(void *journal, unsigned int flags)
 }
 
 
-/* Fast commit */
-void ext4_fc_track_inode(void *handle, struct inode *inode)
-{
-}
-
-void ext4_fc_init_inode(void **head, struct inode *inode)
-{
-}
+/* ext4_fc_track_inode is now in fast_commit.c */
+/* ext4_fc_init_inode is now in fast_commit.c */
 
 /* JBD2 */
 int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
@@ -372,33 +400,7 @@ ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
 
 /* Inline dir stubs are now in inline.c */
 
-/* Fast commit stubs */
-void ext4_fc_track_unlink(void *handle, struct dentry *dentry)
-{
-}
-
-void ext4_fc_track_link(void *handle, struct dentry *dentry)
-{
-}
-
-void ext4_fc_track_create(void *handle, struct dentry *dentry)
-{
-}
-
-void __ext4_fc_track_link(void *handle, struct inode *inode,
-			  struct dentry *dentry)
-{
-}
-
-void __ext4_fc_track_unlink(void *handle, struct inode *inode,
-			    struct dentry *dentry)
-{
-}
-
-void __ext4_fc_track_create(void *handle, struct inode *inode,
-			    struct dentry *dentry)
-{
-}
+/* Fast commit stubs are now in fast_commit.c */
 
 /* fileattr stubs */
 int ext4_fileattr_get(struct dentry *dentry, void *fa)
@@ -603,10 +605,7 @@ void set_task_ioprio(void *task, int ioprio)
 {
 }
 
-/* Fast commit */
-void ext4_fc_init(void *sb, void *journal)
-{
-}
+/* ext4_fc_init is now in fast_commit.c */
 
 /* Filesystem sync */
 int sync_filesystem(void *sb)
@@ -784,10 +783,7 @@ char *file_path(struct file *file, char *buf, int buflen)
 	return buf;
 }
 
-/* Fast commit delete */
-void ext4_fc_del(struct inode *inode)
-{
-}
+/* ext4_fc_del is now in fast_commit.c */
 
 /* invalidate_inode_buffers is now a macro in ext4_uboot.h */
 /* clear_inode is now a macro in ext4_uboot.h */
