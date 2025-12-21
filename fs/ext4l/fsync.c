@@ -23,17 +23,10 @@
  * we can depend on generic_block_fdatasync() to sync the data blocks.
  */
 
-#include <linux/time.h>
-#include <linux/fs.h>
-#include <linux/sched.h>
-#include <linux/writeback.h>
-#include <linux/blkdev.h>
-#include <linux/buffer_head.h>
+#include "ext4_uboot.h"
 
 #include "ext4.h"
 #include "ext4_jbd2.h"
-
-#include <trace/events/ext4.h>
 
 /*
  * If we're not journaling and this is a just-created file, we have to

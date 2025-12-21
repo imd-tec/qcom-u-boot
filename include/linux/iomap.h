@@ -46,6 +46,14 @@ struct vm_fault;
 /* Additional iomap flags */
 #define IOMAP_F_ATOMIC_BIO	(1U << 6)
 
+/* iomap DIO end_io flags */
+#define IOMAP_DIO_UNWRITTEN	(1 << 0)
+#define IOMAP_DIO_COW		(1 << 1)
+
+/* iomap_dio_rw flags */
+#define IOMAP_DIO_FORCE_WAIT	(1 << 0)
+#define IOMAP_DIO_OVERWRITE_ONLY (1 << 1)
+
 struct iomap {
 	u64			addr;
 	loff_t			offset;

@@ -9,16 +9,10 @@
  * mballoc.c contains the multiblocks allocation routines
  */
 
+#include "ext4_uboot.h"
+
 #include "ext4_jbd2.h"
 #include "mballoc.h"
-#include <linux/log2.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/nospec.h>
-#include <linux/backing-dev.h>
-#include <linux/freezer.h>
-#include <trace/events/ext4.h>
-#include <kunit/static_stub.h>
 
 /*
  * MUSTDO:

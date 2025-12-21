@@ -107,17 +107,18 @@ int jbd2__journal_restart(void *handle, int nblocks, int revoke_records,
 	return 0;
 }
 
+int jbd2_trans_will_send_data_barrier(journal_t *journal, unsigned long tid)
+{
+	return 0;
+}
+
 /*
  * Stubs for balloc.c
  */
 /* ext4_mark_group_bitmap_corrupted is now in super.c */
 /* __ext4_warning is now in super.c */
 
-unsigned long long ext4_mb_new_blocks(void *handle, void *ar, int *errp)
-{
-	*errp = -1;
-	return 0;
-}
+/* ext4_mb_new_blocks is now in mballoc.c */
 
 /* ext4_free_group_clusters is now in super.c */
 /* ext4_clear_inode is now in super.c */
@@ -167,27 +168,14 @@ struct extent_status;
 
 /* ext4_remove_pending is now in extents_status.c */
 
-void ext4_free_blocks(void *handle, struct inode *inode,
-		      struct buffer_head *bh, unsigned long long block,
-		      unsigned long count, int flags)
-{
-}
+/* ext4_free_blocks is now in mballoc.c */
 
-void ext4_discard_preallocations(struct inode *inode, unsigned int needed)
-{
-}
+/* ext4_discard_preallocations is now in mballoc.c */
 
 /* ext4_is_pending is now in extents_status.c */
+/* ext4_convert_inline_data is now in inline.c */
 
-int ext4_convert_inline_data(struct inode *inode)
-{
-	return 0;
-}
-
-void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
-			     void *handle)
-{
-}
+/* ext4_fc_mark_ineligible is now in fast_commit.c */
 
 /* ext4_es_lookup_extent is now in extents_status.c */
 
@@ -195,46 +183,77 @@ void ext4_fc_mark_ineligible(struct super_block *sb, int reason,
 
 /* ext4_es_find_extent_range is now in extents_status.c */
 
-void ext4_mb_mark_bb(struct super_block *sb, unsigned long long block,
-		     int len, int state)
+/* ext4_mb_mark_bb is now in mballoc.c */
+
+/* ext4_fc_record_regions is now in fast_commit.c */
+
+/* ext4_fc_replay_check_excluded is now in fast_commit.c */
+
+/*
+ * JBD2 fast commit stubs
+ */
+int jbd2_fc_get_buf(void *journal, struct buffer_head **bh_out)
+{
+	*bh_out = NULL;
+	return -ENOSPC;
+}
+
+void jbd2_fc_release_bufs(void *journal)
 {
 }
 
-void ext4_fc_record_regions(struct super_block *sb, int ino,
-			    unsigned long lblk, unsigned long long pblk,
-			    int len, int mapped)
+int jbd2_fc_begin_commit(void *journal, unsigned int tid)
 {
+	return -EOPNOTSUPP;
+}
+
+int jbd2_fc_end_commit(void *journal)
+{
+	return 0;
+}
+
+int jbd2_fc_end_commit_fallback(void *journal)
+{
+	return 0;
+}
+
+int jbd2_submit_inode_data(void *journal, void *jinode)
+{
+	return 0;
+}
+
+int jbd2_wait_inode_data(void *journal, void *jinode)
+{
+	return 0;
+}
+
+int jbd2_fc_wait_bufs(void *journal, int num)
+{
+	return 0;
+}
+
+int jbd2_complete_transaction(void *journal, unsigned int tid)
+{
+	return 0;
+}
+
+void ext4_reset_inode_seed(struct inode *inode)
+{
+}
+
+/*
+ * Stubs for page-io.c
+ */
+bool __folio_start_writeback(struct folio *folio, bool keep_write)
+{
+	return false;
 }
 
 /* ext4_read_bh is now in super.c */
 /* ext4_sb_bread_nofail is now in super.c */
 
-/*
- * Stubs for ialloc.c - xattr functions
- */
-int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-			     struct buffer_head *block_bh, size_t value_len,
-			     bool is_create)
-{
-	return 0;
-}
-
 /* ext4_init_security stub is provided by xattr.h */
-
-/*
- * Stubs for xattr_trusted.c
- */
-int ext4_xattr_get(struct inode *inode, int name_index, const char *name,
-		   void *buffer, size_t buffer_size)
-{
-	return -1;
-}
-
-int ext4_xattr_set(struct inode *inode, int name_index, const char *name,
-		   const void *value, size_t value_len, int flags)
-{
-	return -1;
-}
+/* xattr functions are now in xattr.c */
 
 /*
  * Stubs for orphan.c
@@ -263,28 +282,11 @@ int jbd2_transaction_committed(void *journal, unsigned int tid)
 
 /* __ext4_warning_inode is now in super.c */
 
-/* Readahead */
-int ext4_mpage_readpages(void *mapping, void *rac, void *folio)
-{
-	return 0;
-}
+/* ext4_mpage_readpages is now in readpage.c */
 
-int ext4_readpage_inline(struct inode *inode, void *folio)
-{
-	return 0;
-}
+/* ext4_readpage_inline is now in inline.c */
 
-/* Xattr */
-int ext4_expand_extra_isize_ea(struct inode *inode, int new_extra_isize,
-			       void *raw_inode, void *handle)
-{
-	return 0;
-}
-
-void ext4_evict_ea_inode(struct inode *inode)
-{
-}
-
+/* Xattr functions are now in xattr.c */
 
 /* More JBD2 stubs */
 int jbd2_journal_inode_ranged_write(void *handle, struct inode *inode,
@@ -297,47 +299,13 @@ int jbd2_journal_inode_ranged_write(void *handle, struct inode *inode,
 /* ext4_read_bh_lock is now in super.c */
 
 /* Fast commit */
-int ext4_fc_commit(void *journal, unsigned int tid)
-{
-	return 0;
-}
+/* ext4_fc_commit is now in fast_commit.c */
 
 /* ext4_force_commit is now in super.c */
 
-/* Inline data */
-int ext4_destroy_inline_data(void *handle, struct inode *inode)
-{
-	return 0;
-}
+/* Inline data is now in inline.c */
 
-/* I/O submit */
-void ext4_io_submit_init(void *io, void *wbc)
-{
-}
-
-
-void *ext4_init_io_end(struct inode *inode, int gfp)
-{
-	return NULL;
-}
-
-void ext4_io_submit(void *io)
-{
-}
-
-void ext4_put_io_end_defer(void *io_end)
-{
-}
-
-void ext4_put_io_end(void *io_end)
-{
-}
-
-void *ext4_alloc_io_end_vec(void *io_end, unsigned long num)
-{
-	return NULL;
-}
-
+/* I/O submit stubs are now in page-io.c */
 
 /* JBD2 ordered truncate */
 int jbd2_journal_begin_ordered_truncate(void *ji, loff_t new_size)
@@ -355,12 +323,7 @@ int jbd2_log_wait_commit(void *journal, unsigned int tid)
 	return 0;
 }
 
-/* Fast commit */
-void ext4_fc_track_range(void *handle, struct inode *inode,
-			 unsigned long long start, unsigned long long end)
-{
-}
-
+/* ext4_fc_track_range is now in fast_commit.c */
 
 /* JBD2 journal update locking */
 void jbd2_journal_lock_updates(void *journal)
@@ -377,14 +340,8 @@ int jbd2_journal_flush(void *journal, unsigned int flags)
 }
 
 
-/* Fast commit */
-void ext4_fc_track_inode(void *handle, struct inode *inode)
-{
-}
-
-void ext4_fc_init_inode(void **head, struct inode *inode)
-{
-}
+/* ext4_fc_track_inode is now in fast_commit.c */
+/* ext4_fc_init_inode is now in fast_commit.c */
 
 /* JBD2 */
 int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
@@ -393,75 +350,25 @@ int jbd2_journal_inode_ranged_wait(void *handle, struct inode *inode,
 	return 0;
 }
 
-/* Inline data */
-int ext4_inline_data_iomap(struct inode *inode, void *iomap)
-{
-	return 0;
-}
+/* Inline data functions are now in inline.c */
 
-
-/* xattr */
-int __xattr_check_inode(struct inode *inode, void *entry, void *end,
-			unsigned int size, int check_block)
-{
-	return 0;
-}
-
-int ext4_find_inline_data_nolock(struct inode *inode)
-{
-	return 0;
-}
-
+/* __xattr_check_inode is now in xattr.c */
 
 /* File and inode operations symbols */
-char ext4_file_inode_operations;
-char ext4_file_operations;
-char ext4_dir_inode_operations;
+/* ext4_file_inode_operations is now in file.c */
+/* ext4_file_operations is now in file.c */
+/* ext4_dir_inode_operations is now in namei.c */
 /* ext4_dir_operations is now in dir.c */
-char ext4_special_inode_operations;
-char ext4_symlink_inode_operations;
-char ext4_fast_symlink_inode_operations;
+/* ext4_special_inode_operations is now in namei.c */
+/* ext4_symlink_inode_operations is now in symlink.c */
+/* ext4_fast_symlink_inode_operations is now in symlink.c */
 
 
 /* ext4_update_dynamic_rev is now in super.c */
 
-/* Inline data */
-int ext4_inline_data_truncate(struct inode *inode, int *has_inline)
-{
-	*has_inline = 0;
-	return 0;
-}
+/* Inline data stubs are now in inline.c */
 
-int ext4_try_to_write_inline_data(struct address_space *mapping,
-				  struct inode *inode, loff_t pos,
-				  unsigned int len, struct folio **foliop)
-{
-	return 0;
-}
-
-int ext4_generic_write_inline_data(struct address_space *mapping,
-				   struct inode *inode, loff_t pos,
-				   unsigned int len, struct folio **foliop)
-{
-	return 0;
-}
-
-int ext4_write_inline_data_end(struct inode *inode, loff_t pos, unsigned int len,
-			       unsigned int copied, struct folio *folio)
-{
-	return copied;
-}
-
-/* xattr stubs for inode.c */
-int ext4_xattr_delete_inode(handle_t *handle, struct inode *inode,
-			    void **array, int extra_credits)
-{
-	return 0;
-}
-
-void ext4_xattr_inode_array_free(void *array)
-{
-}
+/* xattr stubs are now in xattr.c */
 
 /* JBD2 stubs for inode.c */
 struct kmem_cache *jbd2_inode_cache;
@@ -475,6 +382,8 @@ void jbd2_journal_init_jbd_inode(void *jinode, struct inode *inode)
 {
 }
 
+/* ext4_read_inline_link is now in inline.c */
+
 /*
  * Stubs for dir.c
  */
@@ -485,35 +394,30 @@ ssize_t generic_read_dir(struct file *f, char *buf, size_t count, loff_t *ppos)
 
 /* __ext4_error_file is now in super.c */
 
-loff_t ext4_llseek(struct file *file, loff_t offset, int whence)
+/* ext4_llseek is now in file.c */
+
+/* ext4_htree_fill_tree is now in namei.c */
+
+/* Inline dir stubs are now in inline.c */
+
+/* Fast commit stubs are now in fast_commit.c */
+
+/* fileattr stubs */
+int ext4_fileattr_get(struct dentry *dentry, void *fa)
 {
 	return 0;
 }
 
-int ext4_htree_fill_tree(struct file *dir_file, unsigned long long pos,
-			 unsigned long long start_hash,
-			 unsigned long long start_minor_hash,
-			 unsigned long long *next_hash)
+int ext4_fileattr_set(void *idmap, struct dentry *dentry, void *fa)
 {
 	return 0;
 }
 
-int ext4_read_inline_dir(struct file *file, void *ctx, void *f_pos)
-{
-	return 0;
-}
-
-int ext4_dirblock_csum_verify(struct inode *inode, struct buffer_head *bh)
-{
-	return 1;
-}
+/* ext4_dirblock_csum_verify is now in namei.c */
 
 /* ext4_ioctl is now in super.c */
 
-int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
-{
-	return 0;
-}
+/* ext4_sync_file is now in fsync.c */
 
 /*
  * Stubs for super.c
@@ -701,10 +605,7 @@ void set_task_ioprio(void *task, int ioprio)
 {
 }
 
-/* Fast commit */
-void ext4_fc_init(void *sb, void *journal)
-{
-}
+/* ext4_fc_init is now in fast_commit.c */
 
 /* Filesystem sync */
 int sync_filesystem(void *sb)
@@ -753,10 +654,7 @@ struct block_device *file_bdev(struct file *file)
 	return NULL;
 }
 
-/* xattr cache */
-void ext4_xattr_destroy_cache(void *cache)
-{
-}
+/* xattr cache is now in xattr.c */
 
 /* kobject */
 void kobject_put(struct kobject *kobj)
@@ -808,8 +706,7 @@ u64 sb_bdev_nr_blocks(struct super_block *sb)
 
 /* bgl_lock_init is now a macro in ext4_uboot.h */
 
-/* xattr handlers */
-const void *ext4_xattr_handlers[] = { NULL };
+/* xattr handlers are now in xattr.c */
 
 /* super_set_uuid is now a macro in ext4_uboot.h */
 /* super_set_sysfs_name_bdev is now a macro in ext4_uboot.h */
@@ -844,10 +741,7 @@ void atomic_add(int val, atomic_t *v)
 	v->counter += val;
 }
 
-void atomic64_add(s64 val, atomic64_t *v)
-{
-	v->counter += val;
-}
+/* atomic64_add is now a macro in ext4_uboot.h */
 
 /* Discard */
 unsigned int bdev_max_discard_sectors(struct block_device *bdev)
@@ -866,18 +760,11 @@ int ext4_register_sysfs(void *sb)
 	return 0;
 }
 
-/* dentry put */
-void dput(void *dentry)
-{
-}
+/* dput - now provided as macro in ext4_uboot.h */
 
 /* timer_delete_sync is now a macro in linux/timer.h */
 
-/* Get parent */
-void *ext4_get_parent(void *dentry)
-{
-	return (void *)-ESTALE;
-}
+/* ext4_get_parent is now in namei.c */
 
 /* fsnotify */
 void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error)
@@ -896,10 +783,7 @@ char *file_path(struct file *file, char *buf, int buflen)
 	return buf;
 }
 
-/* Fast commit delete */
-void ext4_fc_del(struct inode *inode)
-{
-}
+/* ext4_fc_del is now in fast_commit.c */
 
 /* invalidate_inode_buffers is now a macro in ext4_uboot.h */
 /* clear_inode is now a macro in ext4_uboot.h */
@@ -919,5 +803,27 @@ void jbd2_journal_abort(void *journal, int error)
 
 /* JBD2 journal inode release */
 void jbd2_journal_release_jbd_inode(void *journal, void *jinode)
+{
+}
+
+/* nop_mnt_idmap - no-op mount ID map for xattr.c */
+struct mnt_idmap nop_mnt_idmap;
+
+/* Quota stubs for xattr.c */
+int dquot_alloc_space_nodirty(struct inode *inode, loff_t size)
+{
+	return 0;
+}
+
+void dquot_free_space_nodirty(struct inode *inode, loff_t size)
+{
+}
+
+int dquot_alloc_block(struct inode *inode, loff_t nr)
+{
+	return 0;
+}
+
+void dquot_free_block(struct inode *inode, loff_t nr)
 {
 }

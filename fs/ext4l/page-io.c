@@ -7,24 +7,11 @@
  * Written by Theodore Ts'o, 2010.
  */
 
-#include <linux/fs.h>
+#include "ext4_uboot.h"
 #include <linux/time.h>
-#include <linux/highuid.h>
-#include <linux/pagemap.h>
-#include <linux/quotaops.h>
 #include <linux/string.h>
-#include <linux/buffer_head.h>
-#include <linux/writeback.h>
-#include <linux/pagevec.h>
 #include <linux/mpage.h>
-#include <linux/namei.h>
-#include <linux/uio.h>
-#include <linux/bio.h>
-#include <linux/workqueue.h>
 #include <linux/kernel.h>
-#include <linux/slab.h>
-#include <linux/mm.h>
-#include <linux/sched/mm.h>
 
 #include "ext4_jbd2.h"
 #include "xattr.h"

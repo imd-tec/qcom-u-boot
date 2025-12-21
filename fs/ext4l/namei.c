@@ -25,24 +25,11 @@
  *	Theodore Ts'o, 2002
  */
 
-#include <linux/fs.h>
-#include <linux/pagemap.h>
-#include <linux/time.h>
-#include <linux/fcntl.h>
-#include <linux/stat.h>
-#include <linux/string.h>
-#include <linux/quotaops.h>
-#include <linux/buffer_head.h>
-#include <linux/bio.h>
-#include <linux/iversion.h>
-#include <linux/unicode.h>
+#include "ext4_uboot.h"
 #include "ext4.h"
 #include "ext4_jbd2.h"
-
 #include "xattr.h"
 #include "acl.h"
-
-#include <trace/events/ext4.h>
 /*
  * define how far ahead to read directories while searching them.
  */

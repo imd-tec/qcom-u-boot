@@ -114,16 +114,12 @@ struct rb_root {
 /* percpu_counter - use Linux header */
 #include <linux/percpu_counter.h>
 
-/* name_snapshot - stub */
-struct name_snapshot {
-	const char *name;
-};
-
 /* Project ID type */
 typedef struct { unsigned int val; } kprojid_t;
 
 #define make_kprojid(ns, id)	((kprojid_t){ .val = (id) })
 #define from_kprojid(ns, kprojid)	((kprojid).val)
+#define projid_eq(a, b)		((a).val == (b).val)
 
 /* kobject - stub */
 struct kobject {
@@ -237,6 +233,10 @@ struct iomap_ops {
 	int (*iomap_end)(struct inode *inode, loff_t pos, loff_t length,
 			 ssize_t written, unsigned flags, struct iomap *iomap);
 };
+
+/* iomap DIO flags */
+#define IOMAP_DIO_UNWRITTEN	(1 << 0)
+#define IOMAP_DIO_FORCE_WAIT	(1 << 1)
 #endif /* LINUX_IOMAP_H */
 
 /* fiemap types */
@@ -392,7 +392,7 @@ extern struct user_namespace init_user_ns;
 #define insert_inode_locked(inode)		(0)
 #define unlock_new_inode(inode)			do { } while (0)
 #define clear_nlink(inode)			do { } while (0)
-#define IS_DIRSYNC(inode)			(0)
+#define IS_DIRSYNC(inode)			({ (void)(inode); 0; })
 
 /* fscrypt stubs */
 #define fscrypt_prepare_new_inode(dir, i, e)	({ (void)(dir); (void)(i); (void)(e); 0; })
@@ -544,10 +544,32 @@ struct dentry {
 	struct qstr d_name;
 	struct inode *d_inode;
 	struct super_block *d_sb;
+	struct dentry *d_parent;
+};
+
+/* name_snapshot - for dentry name snapshots */
+struct name_snapshot {
+	struct qstr name;
 };
 
 /* vm_fault_t - stub */
 typedef unsigned int vm_fault_t;
+
+/* VM flags */
+#define VM_SHARED		0x00000008
+#define VM_WRITE		0x00000002
+#define VM_HUGEPAGE		0x01000000
+#define FAULT_FLAG_WRITE	0x01
+
+/* pipe_inode_info - forward declaration */
+struct pipe_inode_info;
+
+/* vm_area_desc - for mmap_prepare */
+struct vm_area_desc {
+	struct file *file;
+	unsigned long vm_flags;
+	const struct vm_operations_struct *vm_ops;
+};
 
 /* Forward declarations for function prototypes */
 struct kstat;
@@ -583,7 +605,10 @@ typedef void bh_end_io_t(struct buffer_head *bh, int uptodate);
 #define DT_WHT		14
 
 /* mnt_idmap - stub */
-struct mnt_idmap;
+struct mnt_idmap {
+	int dummy;
+};
+extern struct mnt_idmap nop_mnt_idmap;
 
 /* fstrim_range - stub */
 struct fstrim_range {
@@ -661,6 +686,18 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define S_CASEFOLD	128
 #define S_VERITY	256
 
+/* Permission mode constants */
+#define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
+
+/* Whiteout mode for overlayfs */
+#define WHITEOUT_DEV	0
+#define WHITEOUT_MODE	0
+
+/* Rename flags */
+#define RENAME_NOREPLACE	(1 << 0)
+#define RENAME_EXCHANGE		(1 << 1)
+#define RENAME_WHITEOUT		(1 << 2)
+
 /* Inode dirty state flags */
 #define I_DIRTY_TIME		(1 << 3)
 
@@ -698,11 +735,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define VM_FAULT_NOPAGE		0x0010
 #define VM_FAULT_LOCKED		0x0200
 
-/* struct path - filesystem path */
-struct path {
-	struct vfsmount *mnt;
-	struct dentry *dentry;
-};
+/* struct path is defined in linux/fs.h */
 
 /* struct kstat - stat buffer */
 struct kstat {
@@ -753,6 +786,15 @@ struct vm_fault {
 	struct page *page;
 };
 
+/* vm_operations_struct - virtual memory area operations */
+struct vm_operations_struct {
+	vm_fault_t (*fault)(struct vm_fault *vmf);
+	vm_fault_t (*huge_fault)(struct vm_fault *vmf, unsigned int order);
+	vm_fault_t (*page_mkwrite)(struct vm_fault *vmf);
+	vm_fault_t (*pfn_mkwrite)(struct vm_fault *vmf);
+	vm_fault_t (*map_pages)(struct vm_fault *vmf, pgoff_t start, pgoff_t end);
+};
+
 /* Forward declaration for swap */
 struct swap_info_struct;
 
@@ -789,6 +831,10 @@ struct inode {
 	dev_t i_rdev;
 	const struct inode_operations *i_op;
 	const struct file_operations *i_fop;
+	atomic_t i_writecount;		/* Count of writers */
+	struct rw_semaphore i_rwsem;	/* inode lock */
+	const char *i_link;		/* Symlink target for fast symlinks */
+	unsigned short i_write_hint;	/* Write life time hint */
 };
 
 /* Inode time accessors */
@@ -812,6 +858,34 @@ static inline time_t inode_get_atime_sec(const struct inode *inode)
 	return inode->i_atime.tv_sec;
 }
 
+static inline time_t inode_get_ctime_sec(const struct inode *inode)
+{
+	return inode->i_ctime.tv_sec;
+}
+
+static inline time_t inode_get_mtime_sec(const struct inode *inode)
+{
+	return inode->i_mtime.tv_sec;
+}
+
+static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_ctime.tv_sec = sec;
+	inode->i_ctime.tv_nsec = nsec;
+}
+
+static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_atime.tv_sec = sec;
+	inode->i_atime.tv_nsec = nsec;
+}
+
+static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_mtime.tv_sec = sec;
+	inode->i_mtime.tv_nsec = nsec;
+}
+
 static inline void simple_inode_init_ts(struct inode *inode)
 {
 	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
@@ -822,6 +896,9 @@ static inline void simple_inode_init_ts(struct inode *inode)
 }
 
 #define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
+
+/* dotdot_name for ".." lookups */
+static const struct qstr dotdot_name = QSTR_INIT("..", 2);
 
 /*
  * Hash info structure - defined in ext4.h.
@@ -888,6 +965,21 @@ static inline u64 fscrypt_fname_siphash(const struct inode *dir,
 /* Warning macros - stubs */
 #define WARN_ON_ONCE(cond) ({ (void)(cond); 0; })
 #define WARN_ON(cond) ({ (void)(cond); 0; })
+#define WARN_ONCE(cond, fmt, ...) ({ (void)(cond); 0; })
+#define pr_warn_once(fmt, ...) do { } while (0)
+
+/* lockdep stubs */
+#define lockdep_assert_held_read(l)	do { (void)(l); } while (0)
+
+/* strtomem_pad - copy string to fixed-size buffer with padding */
+#define strtomem_pad(dest, src, pad) do { \
+	size_t _len = strlen(src); \
+	if (_len >= sizeof(dest)) \
+		_len = sizeof(dest); \
+	memcpy(dest, src, _len); \
+	if (_len < sizeof(dest)) \
+		memset((char *)(dest) + _len, (pad), sizeof(dest) - _len); \
+} while (0)
 
 /* Memory weight - count set bits */
 static inline unsigned long memweight(const void *ptr, size_t bytes)
@@ -941,26 +1033,66 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define inode_unlock(inode)		do { } while (0)
 #define inode_lock_shared(inode)	do { } while (0)
 #define inode_unlock_shared(inode)	do { } while (0)
+#define inode_trylock(inode)		(1)
+#define inode_trylock_shared(inode)	(1)
 #define inode_dio_wait(inode)		do { } while (0)
+
+/* Lock debugging - no-ops in U-Boot */
+#define lockdep_assert_held_write(l)	do { } while (0)
+#define lockdep_assert_held(l)		do { } while (0)
 
 /* File operations */
 #define file_modified(file)		({ (void)(file); 0; })
+#define file_accessed(file)		do { (void)(file); } while (0)
+
+/* Generic file operations - stubs for file.c */
+#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
+#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
+#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
+
+/* Security checks - no security in U-Boot */
+#define IS_NOSEC(inode)			(1)
 
 /* Filemap operations */
 #define filemap_invalidate_lock(m)	do { } while (0)
 #define filemap_invalidate_unlock(m)	do { } while (0)
+#define filemap_invalidate_lock_shared(m) do { } while (0)
+#define filemap_invalidate_unlock_shared(m) do { } while (0)
 #define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
 #define truncate_pagecache(i, s)	do { } while (0)
 #define pagecache_isize_extended(i, f, t) do { } while (0)
+#define invalidate_mapping_pages(m, s, e) do { (void)(m); (void)(s); (void)(e); } while (0)
+
+/* Filemap fault handlers - stubs */
+static inline vm_fault_t filemap_fault(struct vm_fault *vmf)
+{
+	return 0;
+}
+
+static inline vm_fault_t filemap_map_pages(struct vm_fault *vmf,
+					   pgoff_t start, pgoff_t end)
+{
+	return 0;
+}
+
+/* DAX device mapping check - always false in U-Boot */
+#define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
 /* Inode time/size operations */
 #define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
 #define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
 #define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
-#define i_blocksize(i)			(1UL << (i)->i_blkbits)
+#define i_blocksize(i)			(1U << (i)->i_blkbits)
 
 /* IS_SYNC macro */
 #define IS_SYNC(inode)			(0)
+
+/* Case-folding stubs - not supported in U-Boot */
+#define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
+#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
 /* in_range helper - check if value is in range [start, start+len) */
 static inline int in_range(unsigned long val, unsigned long start,
@@ -1062,8 +1194,13 @@ static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
 
 /* folio - memory page container stub */
 struct folio {
-	struct address_space *mapping;
+	struct page *page;
 	unsigned long index;
+	struct address_space *mapping;
+	unsigned long flags;
+	void *data;
+	struct buffer_head *private;
+	int _refcount;
 };
 
 /* folio_batch - batch of folios */
@@ -1178,6 +1315,18 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 #define FGP_NOWAIT	0x00000020
 #define FGP_FOR_MMAP	0x00000040
 #define FGP_STABLE	0x00000080
+#define FGP_WRITEBEGIN	(FGP_LOCK | FGP_WRITE | FGP_CREAT | FGP_STABLE)
+
+/* kmap/kunmap stubs for inline.c */
+#define kmap_local_folio(folio, off)	({ (void)(folio); (void)(off); (void *)NULL; })
+#define kunmap_local(addr)		do { (void)(addr); } while (0)
+
+/* Folio zeroing stubs for inline.c */
+#define folio_zero_tail(f, off, kaddr)	({ (void)(f); (void)(off); (void)(kaddr); (void *)NULL; })
+#define folio_zero_segment(f, s, e)	do { (void)(f); (void)(s); (void)(e); } while (0)
+
+/* mapping_gfp_mask stub */
+#define mapping_gfp_mask(m)		({ (void)(m); GFP_KERNEL; })
 
 /* __filemap_get_folio stub */
 static inline struct folio *__filemap_get_folio(struct address_space *mapping,
@@ -1234,6 +1383,30 @@ typedef unsigned int projid_t;
 #define trace_ext4_write_begin(...)		do { } while (0)
 #define trace_ext4_write_end(...)		do { } while (0)
 #define trace_ext4_journalled_write_end(...)	do { } while (0)
+#define trace_ext4_sync_file_enter(...)		do { } while (0)
+#define trace_ext4_sync_file_exit(...)		do { } while (0)
+#define trace_ext4_unlink_enter(...)		do { } while (0)
+#define trace_ext4_unlink_exit(...)		do { } while (0)
+
+/* Dentry operations - stubs */
+#define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
+#define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
+#define dput(d)					do { (void)(d); } while (0)
+#define d_splice_alias(i, d)			({ (void)(i); (void)(d); (struct dentry *)NULL; })
+#define d_obtain_alias(i)			({ (void)(i); (struct dentry *)NULL; })
+#define d_instantiate_new(d, i)			do { (void)(d); (void)(i); } while (0)
+#define d_instantiate(d, i)			do { (void)(d); (void)(i); } while (0)
+#define d_tmpfile(f, i)				do { (void)(f); (void)(i); } while (0)
+#define d_invalidate(d)				do { (void)(d); } while (0)
+#define finish_open_simple(f, e)		(e)
+#define ihold(i)				do { (void)(i); } while (0)
+
+/* Sync operations - stubs */
+#define sync_mapping_buffers(m)			({ (void)(m); 0; })
+#define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
+#define generic_buffers_fsync_noflush(f, s, e, d) ({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
+#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
+#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
 
 /* DAX stubs - DAX not supported in U-Boot */
 #define IS_DAX(inode)				(0)
@@ -1245,8 +1418,24 @@ typedef unsigned int projid_t;
 /* Superblock freezing stubs */
 #define sb_start_intwrite(sb)			do { (void)(sb); } while (0)
 #define sb_end_intwrite(sb)			do { (void)(sb); } while (0)
+#define sb_start_intwrite_trylock(sb)		({ (void)(sb); 1; })
 #define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
 #define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
+
+/* d_path - get pathname - stub returns empty path */
+static inline char *d_path(const struct path *path, char *buf, int buflen)
+{
+	if (buflen > 0)
+		buf[0] = '\0';
+	return buf;
+}
+
+/* fscrypt/fsverity stubs */
+#define fscrypt_file_open(i, f)			({ (void)(i); (void)(f); 0; })
+#define fsverity_file_open(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* Quota file open - stub */
+#define dquot_file_open(i, f)			({ (void)(i); (void)(f); 0; })
 
 /* Inode I/O list management */
 #define inode_io_list_del(inode)		do { } while (0)
@@ -1309,6 +1498,7 @@ typedef unsigned int projid_t;
 #define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
 #define mapping_gfp_constraint(m, g)		(g)
 #define mapping_set_folio_order_range(m, l, h)	do { } while (0)
+#define filemap_splice_read(i, p, pi, l, f)	({ (void)(i); (void)(p); (void)(pi); (void)(l); (void)(f); 0L; })
 
 /* Buffer operations - additional */
 #define getblk_unmovable(bd, b, s)		((struct buffer_head *)NULL)
@@ -1326,10 +1516,27 @@ typedef unsigned int projid_t;
 /* fscrypt stubs - additional */
 #define fscrypt_inode_uses_fs_layer_crypto(i)	(0)
 #define fscrypt_decrypt_pagecache_blocks(f, l, o) ({ (void)(f); (void)(l); (void)(o); 0; })
+#define fscrypt_encrypt_pagecache_blocks(f, l, o, g) ({ (void)(f); (void)(l); (void)(o); (void)(g); (struct page *)NULL; })
 #define fscrypt_zeroout_range(i, lb, pb, l)	({ (void)(i); (void)(lb); (void)(pb); (void)(l); 0; })
 #define fscrypt_limit_io_blocks(i, lb, l)	(l)
 #define fscrypt_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
 #define fscrypt_dio_supported(i)		(1)
+#define fscrypt_match_name(f, n, l)		({ (void)(f); (void)(n); (void)(l); 1; })
+#define fscrypt_has_permitted_context(p, c)	({ (void)(p); (void)(c); 1; })
+#define fscrypt_is_nokey_name(d)		({ (void)(d); 0; })
+#define fscrypt_prepare_symlink(d, s, l, m, dl)	({ (void)(d); (void)(s); (void)(l); (void)(m); (void)(dl); 0; })
+#define fscrypt_encrypt_symlink(i, s, l, d)	({ (void)(i); (void)(s); (void)(l); (void)(d); 0; })
+#define fscrypt_prepare_link(o, d, n)		({ (void)(o); (void)(d); (void)(n); 0; })
+#define fscrypt_prepare_rename(od, ode, nd, nde, f) ({ (void)(od); (void)(ode); (void)(nd); (void)(nde); (void)(f); 0; })
+
+/* fscrypt_name - stub structure for encrypted filenames */
+struct fscrypt_name {
+	const struct qstr *usr_fname;
+	struct fscrypt_str disk_name;
+	u32 hash;
+	u32 minor_hash;
+	bool is_nokey_name;
+};
 
 /* fsverity stubs */
 #define fsverity_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
@@ -1406,6 +1613,8 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 /* Inode allocation/state operations */
 #define iget_locked(sb, ino)		((struct inode *)NULL)
 #define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
+#define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
+#define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
 #define inode_set_cached_link(i, l, len) do { } while (0)
 #define init_special_inode(i, m, d)	do { } while (0)
 #define make_bad_inode(i)		do { } while (0)
@@ -1485,8 +1694,76 @@ struct file_operations {
 	int (*release)(struct inode *, struct file *);
 };
 
+/* delayed_call - for delayed freeing of symlink data */
+typedef void (*delayed_call_func_t)(const void *);
+struct delayed_call {
+	delayed_call_func_t fn;
+	const void *arg;
+};
+
+#define set_delayed_call(dc, func, data) do { \
+	(dc)->fn = (func); \
+	(dc)->arg = (data); \
+} while (0)
+
+#define kfree_link		kfree
+
+/* nd_terminate_link - terminate symlink string */
+static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
+{
+	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
+}
+
+/* inode_operations - for file and directory operations */
+struct inode_operations {
+	/* Symlink operations */
+	const char *(*get_link)(struct dentry *, struct inode *,
+				struct delayed_call *);
+	/* Common operations */
+	int (*getattr)(struct mnt_idmap *, const struct path *,
+		       struct kstat *, u32, unsigned int);
+	ssize_t (*listxattr)(struct dentry *, char *, size_t);
+	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
+	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
+	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
+	int (*set_acl)(struct mnt_idmap *, struct dentry *,
+		       struct posix_acl *, int);
+	int (*fileattr_get)(struct dentry *, struct file_kattr *);
+	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
+			    struct file_kattr *);
+	/* Directory operations */
+	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
+	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      umode_t, bool);
+	int (*link)(struct dentry *, struct inode *, struct dentry *);
+	int (*unlink)(struct inode *, struct dentry *);
+	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
+		       const char *);
+	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
+				struct dentry *, umode_t);
+	int (*rmdir)(struct inode *, struct dentry *);
+	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
+		     umode_t, dev_t);
+	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      struct inode *, struct dentry *, unsigned int);
+	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
+		       umode_t);
+};
+
 /* file open helper */
 #define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* simple_get_link - for fast symlinks stored in inode */
+static inline const char *simple_get_link(struct dentry *dentry,
+					  struct inode *inode,
+					  struct delayed_call *callback)
+{
+	return inode->i_link;
+}
+
+/* fscrypt symlink stubs */
+#define fscrypt_get_symlink(i, c, m, d)	({ (void)(i); (void)(c); (void)(m); (void)(d); ERR_PTR(-EOPNOTSUPP); })
+#define fscrypt_symlink_getattr(p, s)	({ (void)(p); (void)(s); 0; })
 
 /*
  * Additional stubs for super.c
@@ -1691,10 +1968,6 @@ struct kstatfs {
 
 /* seq_file stubs */
 struct seq_file;
-#define seq_printf(m, fmt, ...)		do { } while (0)
-#define seq_puts(m, s)			do { } while (0)
-#define seq_putc(m, c)			do { } while (0)
-#define seq_escape(m, s, esc)		do { } while (0)
 
 /* Module stubs */
 struct module;
@@ -1950,6 +2223,7 @@ void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
 
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
+#define kvmalloc(size, flags)	kvzalloc(size, flags)
 unsigned long roundup_pow_of_two(unsigned long n);
 
 /* Atomic operations - declarations for stub.c */
@@ -2007,25 +2281,58 @@ void set_task_ioprio(void *task, int ioprio);
 #define super_set_uuid(sb, uuid, len)		do { } while (0)
 #define super_set_sysfs_name_bdev(sb)		do { } while (0)
 
+/*
+ * mb_cache - metadata block cache stubs for xattr.c
+ * Not supported in U-Boot - xattr caching disabled
+ */
+struct mb_cache {
+	int dummy;
+};
+
+struct mb_cache_entry {
+	u64 e_value;
+	unsigned long e_flags;
+};
+
+/* MB cache flags */
+#define MBE_REUSABLE_B	0
+
+#define mb_cache_create(bits)			((struct mb_cache *)NULL)
+#define mb_cache_destroy(cache)			do { (void)(cache); } while (0)
+#define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_get(c, k, v)		((struct mb_cache_entry *)NULL)
+#define mb_cache_entry_put(c, e)		do { (void)(c); (void)(e); } while (0)
+#define mb_cache_entry_create(c, f, k, v, r)	({ (void)(c); (void)(f); (void)(k); (void)(v); (void)(r); 0; })
+#define mb_cache_entry_delete(c, k, v)		do { (void)(c); (void)(k); (void)(v); } while (0)
+#define mb_cache_entry_touch(c, e)		do { (void)(c); (void)(e); } while (0)
+#define mb_cache_entry_wait_unused(e)		do { (void)(e); } while (0)
+
+/* xattr helper stubs for xattr.c */
+#define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
+#define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
+
+/* Inode lock mutex classes */
+#define I_MUTEX_XATTR		5
+#define I_MUTEX_CHILD		4
+#define I_MUTEX_PARENT		3
+#define I_MUTEX_NORMAL		2
+
+/* Nested inode locking stub */
+#define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
+
+/* Process flags */
+#ifndef PF_MEMALLOC_NOFS
+#define PF_MEMALLOC_NOFS	0x00040000
+#endif
+
 /* Dentry operations - declarations for stub.c */
 void generic_set_sb_d_ops(struct super_block *sb);
 struct dentry *d_make_root(struct inode *inode);
-void dput(void *dentry);
 
 /* String operations - declarations for stub.c */
 char *strreplace(const char *str, char old, char new);
-
-/* strtomem_pad - copy string with padding (Linux kernel macro) */
-#define strtomem_pad(dest, src, pad) do { \
-	const char *__src = (src); \
-	size_t __len = strlen(__src); \
-	if (__len >= sizeof(dest)) { \
-		memcpy((dest), __src, sizeof(dest)); \
-	} else { \
-		memcpy((dest), __src, __len); \
-		memset((char *)(dest) + __len, (pad), sizeof(dest) - __len); \
-	} \
-} while (0)
 
 /* Ratelimit - declaration for stub.c */
 void ratelimit_state_init(void *rs, int interval, int burst);
@@ -2040,6 +2347,10 @@ int sync_filesystem(void *sb);
 
 /* Quota - declaration for stub.c */
 int dquot_suspend(void *sb, int flags);
+int dquot_alloc_space_nodirty(struct inode *inode, loff_t size);
+void dquot_free_space_nodirty(struct inode *inode, loff_t size);
+int dquot_alloc_block(struct inode *inode, loff_t nr);
+void dquot_free_block(struct inode *inode, loff_t nr);
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
@@ -2055,5 +2366,406 @@ int dquot_suspend(void *sb, int flags);
 #define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)
 #define dquot_resume(sb, type)		do { (void)(sb); (void)(type); } while (0)
 #define sb_any_quota_suspended(sb)	({ (void)(sb); 0; })
+
+/*
+ * Stubs for mballoc.c
+ */
+
+/* XArray stub structure */
+struct xarray {
+	int dummy;
+};
+
+/* Per-CPU stubs - U-Boot is single-threaded */
+#define DEFINE_PER_CPU(type, name)	type name
+#define per_cpu(var, cpu)		(var)
+#define per_cpu_ptr(ptr, cpu)		(ptr)
+#define this_cpu_inc(var)		((var)++)
+#define this_cpu_read(var)		(var)
+#define for_each_possible_cpu(cpu)	for ((cpu) = 0; (cpu) < 1; (cpu)++)
+#define smp_processor_id()		0
+
+/* XArray function stubs */
+#define xa_init(xa)			do { } while (0)
+#define xa_destroy(xa)			do { } while (0)
+#define xa_load(xa, index)		((void *)NULL)
+#define xa_erase(xa, index)		do { (void)(xa); (void)(index); } while (0)
+#define xa_insert(xa, index, entry, gfp) ({ (void)(xa); (void)(index); (void)(entry); (void)(gfp); 0; })
+#define xa_empty(xa)			({ (void)(xa); 1; })
+
+/* XArray iteration stubs - iterate zero times */
+#define xa_for_each(xa, index, entry) \
+	for ((index) = 0, (entry) = NULL; 0; )
+
+#define xa_for_each_range(xa, index, entry, start, end) \
+	for ((index) = (start), (entry) = NULL; 0; )
+
+/* Bit operations for little-endian bitmaps */
+#define __clear_bit_le(bit, addr)	clear_bit_le(bit, addr)
+
+static inline void clear_bit_le(int nr, void *addr)
+{
+	unsigned char *p = (unsigned char *)addr + (nr >> 3);
+
+	*p &= ~(1 << (nr & 7));
+}
+
+#define find_next_bit_le(addr, size, offset) \
+	ext4_find_next_bit_le(addr, size, offset)
+
+static inline unsigned long ext4_find_next_bit_le(const void *addr,
+						  unsigned long size,
+						  unsigned long offset)
+{
+	const unsigned char *p = addr;
+	unsigned long bit;
+
+	for (bit = offset; bit < size; bit++) {
+		if (p[bit >> 3] & (1 << (bit & 7)))
+			return bit;
+	}
+	return size;
+}
+
+/* Atomic64 operations */
+#define atomic64_inc(v)			do { (void)(v); } while (0)
+#define atomic64_add(i, v)		do { (void)(i); (void)(v); } while (0)
+
+/* CPU cycle counter stub */
+#define get_cycles()			(0ULL)
+
+/* folio_address - get virtual address of folio data */
+#undef folio_address
+#define folio_address(folio)		((folio)->data)
+
+/* Trace stubs for mballoc.c */
+#define trace_ext4_mb_bitmap_load(sb, group) \
+	do { (void)(sb); (void)(group); } while (0)
+#define trace_ext4_mb_buddy_bitmap_load(sb, group) \
+	do { (void)(sb); (void)(group); } while (0)
+#define trace_ext4_mballoc_alloc(ac) \
+	do { (void)(ac); } while (0)
+#define trace_ext4_mballoc_prealloc(ac) \
+	do { (void)(ac); } while (0)
+#define trace_ext4_mballoc_discard(sb, inode, group, start, len) \
+	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
+#define trace_ext4_mballoc_free(sb, inode, group, start, len) \
+	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
+#define trace_ext4_mb_release_inode_pa(pa, block, count) \
+	do { (void)(pa); (void)(block); (void)(count); } while (0)
+#define trace_ext4_mb_release_group_pa(sb, pa) \
+	do { (void)(sb); (void)(pa); } while (0)
+#define trace_ext4_mb_new_inode_pa(ac, pa) \
+	do { (void)(ac); (void)(pa); } while (0)
+#define trace_ext4_mb_new_group_pa(ac, pa) \
+	do { (void)(ac); (void)(pa); } while (0)
+
+/* sb_end_intwrite stub */
+#define sb_end_intwrite(sb)		do { (void)(sb); } while (0)
+
+/* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
+#define WARN_RATELIMIT(condition, ...) (condition)
+
+/* folio_get - increment folio refcount (no-op in U-Boot) */
+#define folio_get(f)			do { (void)(f); } while (0)
+
+/* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
+#define array_index_nospec(index, size) (index)
+
+/* atomic_inc_return - increment and return new value */
+static inline int atomic_inc_return(atomic_t *v)
+{
+	return ++(v->counter);
+}
+
+/* pde_data - proc dir entry data (not supported in U-Boot) */
+#define pde_data(inode)			((void *)NULL)
+
+/* seq_operations for procfs iteration */
+struct seq_operations {
+	void *(*start)(struct seq_file *m, loff_t *pos);
+	void (*stop)(struct seq_file *m, void *v);
+	void *(*next)(struct seq_file *m, void *v, loff_t *pos);
+	int (*show)(struct seq_file *m, void *v);
+};
+
+/* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
+#define DEFINE_RAW_FLEX(type, name, member, count) \
+	type *name = NULL
+
+/* Block layer constants */
+#define BLK_MAX_SEGMENT_SIZE		65536
+
+/* order_base_2 - log2 rounded up */
+#define order_base_2(n)			ilog2(roundup_pow_of_two(n))
+
+/* num_possible_cpus - number of possible CPUs (always 1 in U-Boot) */
+#define num_possible_cpus()		1
+
+/* Per-CPU allocation stubs */
+#define alloc_percpu(type)		((type *)kzalloc(sizeof(type), GFP_KERNEL))
+#define free_percpu(ptr)		kfree(ptr)
+
+/* Block device properties */
+#define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
+
+/* Trace stub for discard */
+#define trace_ext4_discard_blocks(sb, blk, count) \
+	do { (void)(sb); (void)(blk); (void)(count); } while (0)
+
+/* sb_issue_discard - issue discard request (no-op in U-Boot) */
+#define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
+	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
+
+/* Atomic operations */
+#define atomic_sub(i, v)		((v)->counter -= (i))
+#define atomic64_sub(i, v)		((v)->counter -= (i))
+#define atomic_dec_and_test(v)		(--((v)->counter) == 0)
+
+/* RCU list operations - use regular list operations in U-Boot */
+#define list_for_each_entry_rcu(pos, head, member, ...) \
+	list_for_each_entry(pos, head, member)
+#define list_del_rcu(entry)		list_del(entry)
+#define list_add_rcu(new, head)		list_add(new, head)
+#define list_add_tail_rcu(new, head)	list_add_tail(new, head)
+#define rcu_read_lock()			do { } while (0)
+#define rcu_read_unlock()		do { } while (0)
+#define synchronize_rcu()		do { } while (0)
+#define rcu_assign_pointer(p, v)	((p) = (v))
+#define rcu_dereference(p)		(p)
+
+/* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
+#define raw_cpu_ptr(ptr)		(ptr)
+
+/* Scheduler stubs */
+#define schedule_timeout_uninterruptible(t) do { } while (0)
+#define need_resched()			(0)
+
+/* Trace stubs for mballoc.c */
+#define trace_ext4_discard_preallocations(inode, cnt) \
+	do { (void)(inode); (void)(cnt); } while (0)
+#define trace_ext4_mb_discard_preallocations(sb, needed) \
+	do { (void)(sb); (void)(needed); } while (0)
+#define trace_ext4_request_blocks(ar) \
+	do { (void)(ar); } while (0)
+#define trace_ext4_allocate_blocks(ar, block) \
+	do { (void)(ar); (void)(block); } while (0)
+#define trace_ext4_free_blocks(inode, block, count, flags) \
+	do { (void)(inode); (void)(block); (void)(count); (void)(flags); } while (0)
+#define trace_ext4_trim_extent(sb, group, start, count) \
+	do { (void)(sb); (void)(group); (void)(start); (void)(count); } while (0)
+#define trace_ext4_trim_all_free(sb, group, start, max) \
+	do { (void)(sb); (void)(group); (void)(start); (void)(max); } while (0)
+
+/* Block device operations */
+#define sb_find_get_block_nonatomic(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define bdev_discard_granularity(bdev) \
+	({ (void)(bdev); 0U; })
+
+/*
+ * Stubs for page-io.c
+ */
+
+/* bio_vec - segment in a bio */
+struct bio_vec {
+	struct page *bv_page;
+	unsigned int bv_len;
+	unsigned int bv_offset;
+};
+
+/* bvec_iter - iterator for bio_vec */
+struct bvec_iter {
+	sector_t bi_sector;
+	unsigned int bi_size;
+	unsigned int bi_idx;
+	unsigned int bi_bvec_done;
+};
+
+/* bio - block I/O structure */
+struct bio {
+	struct bio *bi_next;
+	struct block_device *bi_bdev;
+	unsigned long bi_opf;
+	unsigned short bi_flags;
+	unsigned short bi_ioprio;
+	unsigned short bi_write_hint;
+	int bi_status;
+	struct bvec_iter bi_iter;
+	atomic_t __bi_remaining;
+	void *bi_private;
+	void (*bi_end_io)(struct bio *);
+};
+
+/* folio_iter for bio iteration */
+struct folio_iter {
+	int i;
+	struct folio *folio;
+	size_t offset;
+	size_t length;
+};
+
+/* bio operations - stubs */
+#define bio_for_each_folio_all(fi, bio) \
+	for ((fi).i = 0; (fi).i < 0; (fi).i++)
+#define bio_put(bio)			free(bio)
+#define bio_alloc(bdev, vecs, op, gfp)	((struct bio *)calloc(1, sizeof(struct bio)))
+#define submit_bio(bio)			do { } while (0)
+#define BIO_MAX_VECS			256
+
+/* refcount operations - map to atomic */
+#define refcount_set(r, v)		atomic_set((atomic_t *)(r), v)
+#define refcount_dec_and_test(r)	atomic_dec_and_test((atomic_t *)(r))
+#define refcount_inc(r)			atomic_inc((atomic_t *)(r))
+
+/* xchg - exchange value atomically */
+#define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
+
+/* printk_ratelimited - just use regular printk */
+#define printk_ratelimited(fmt, ...)	do { } while (0)
+
+/* mapping_set_error - record error in address_space */
+#define mapping_set_error(m, e)		do { (void)(m); (void)(e); } while (0)
+
+/* blk_status_to_errno - convert block status to errno */
+#define blk_status_to_errno(status)	(-(status))
+
+/* atomic_inc - increment atomic */
+#define atomic_inc(v)			((v)->counter++)
+
+/* GFP_NOIO - allocation without I/O */
+#define GFP_NOIO			0
+
+/* fscrypt stubs for page-io.c */
+#define fscrypt_is_bounce_folio(f)	({ (void)(f); 0; })
+#define fscrypt_pagecache_folio(f)	(f)
+#define fscrypt_free_bounce_page(p)	do { (void)(p); } while (0)
+#define fscrypt_set_bio_crypt_ctx_bh(bio, bh, gfp) \
+	do { (void)(bio); (void)(bh); (void)(gfp); } while (0)
+#define fscrypt_mergeable_bio_bh(bio, bh) \
+	({ (void)(bio); (void)(bh); 1; })
+
+/* folio writeback operations */
+#define folio_end_writeback(f)		do { (void)(f); } while (0)
+#define folio_start_writeback(f)	do { (void)(f); } while (0)
+#define folio_start_writeback_keepwrite(f) do { (void)(f); } while (0)
+bool __folio_start_writeback(struct folio *folio, bool keep_write);
+
+/* writeback control stubs */
+#define wbc_init_bio(wbc, bio)		do { (void)(wbc); (void)(bio); } while (0)
+#define wbc_account_cgroup_owner(wbc, folio, bytes) \
+	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
+
+/* bio operations */
+#define bio_add_folio(bio, folio, len, off) \
+	({ (void)(bio); (void)(folio); (void)(len); (void)(off); 1; })
+
+/*
+ * Stubs for readpage.c
+ */
+
+/* mempool - memory pool stubs */
+typedef void *mempool_t;
+#define mempool_alloc(pool, gfp)	({ (void)(pool); (void)(gfp); (void *)NULL; })
+#define mempool_free(elem, pool)	do { (void)(elem); (void)(pool); } while (0)
+#define mempool_create_slab_pool(n, c)	({ (void)(n); (void)(c); (mempool_t *)NULL; })
+#define mempool_destroy(pool)		do { (void)(pool); } while (0)
+
+/* folio read operations */
+#define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
+#define folio_set_mappedtodisk(f)	do { (void)(f); } while (0)
+
+/* fscrypt stubs for readpage.c */
+#define fscrypt_decrypt_bio(bio)	({ (void)(bio); 0; })
+#define fscrypt_enqueue_decrypt_work(work) do { (void)(work); } while (0)
+#define fscrypt_mergeable_bio(bio, inode, blk) \
+	({ (void)(bio); (void)(inode); (void)(blk); 1; })
+#define fscrypt_set_bio_crypt_ctx(bio, inode, blk, gfp) \
+	do { (void)(bio); (void)(inode); (void)(blk); (void)(gfp); } while (0)
+
+/* fsverity stubs */
+#define fsverity_verify_bio(bio)	do { (void)(bio); } while (0)
+#define fsverity_enqueue_verify_work(work) do { (void)(work); } while (0)
+#define fsverity_verify_folio(f)	({ (void)(f); 1; })
+#define IS_VERITY(inode)		(0)
+
+/* readahead operations */
+#define readahead_count(rac)		({ (void)(rac); 0UL; })
+#define readahead_folio(rac)		({ (void)(rac); (struct folio *)NULL; })
+
+/* prefetch operations */
+#define prefetchw(addr)			do { (void)(addr); } while (0)
+
+/* block read operations */
+#define block_read_full_folio(folio, get_block) \
+	({ (void)(folio); (void)(get_block); 0; })
+
+/*
+ * Stubs for fast_commit.c
+ */
+
+/* Wait bit operations - stubbed for single-threaded U-Boot */
+struct wait_bit_entry {
+	struct list_head wq_entry;
+};
+#define DEFINE_WAIT_BIT(name, word, bit) \
+	struct wait_bit_entry name = { }
+#define bit_waitqueue(word, bit) \
+	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
+#define prepare_to_wait(wq, wait, state) \
+	do { (void)(wq); (void)(wait); (void)(state); } while (0)
+#define finish_wait(wq, wait) \
+	do { (void)(wq); (void)(wait); } while (0)
+
+/* Dentry name snapshot operations */
+#define take_dentry_name_snapshot(snap, dentry) \
+	do { (snap)->name = (dentry)->d_name; } while (0)
+#define release_dentry_name_snapshot(snap) \
+	do { (void)(snap); } while (0)
+
+/* Fast commit trace stubs */
+#define trace_ext4_fc_track_unlink(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_link(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_create(handle, inode, dentry, ret) \
+	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
+#define trace_ext4_fc_track_inode(handle, inode, ret) \
+	do { (void)(handle); (void)(inode); (void)(ret); } while (0)
+#define trace_ext4_fc_track_range(handle, inode, start, end, ret) \
+	do { (void)(handle); (void)(inode); (void)(start); (void)(end); (void)(ret); } while (0)
+
+/* lockdep stubs */
+#define lockdep_assert_not_held(lock)	do { (void)(lock); } while (0)
+
+/* Request flags for block I/O */
+#define REQ_IDLE		0
+#define REQ_PREFLUSH		0
+
+/* Fast commit trace stubs */
+#define trace_ext4_fc_cleanup(sb, full, reason) \
+	do { (void)(sb); (void)(full); (void)(reason); } while (0)
+#define trace_ext4_fc_stats(sb) \
+	do { (void)(sb); } while (0)
+#define trace_ext4_fc_commit_start(sb, tid) \
+	do { (void)(sb); (void)(tid); } while (0)
+#define trace_ext4_fc_commit_stop(sb, nblks, status, tid) \
+	do { (void)(sb); (void)(nblks); (void)(status); (void)(tid); } while (0)
+
+/* wake_up_bit - wake up threads waiting on a bit */
+#define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
+
+/* Dentry allocation stubs */
+#define d_alloc(parent, name)		({ (void)(parent); (void)(name); (struct dentry *)NULL; })
+#define d_drop(dentry)			do { (void)(dentry); } while (0)
+
+/* More fast commit trace stubs */
+#define trace_ext4_fc_replay_scan(sb, err, off) \
+	do { (void)(sb); (void)(err); (void)(off); } while (0)
+#define trace_ext4_fc_replay(sb, tag, ino, priv1, priv2) \
+	do { (void)(sb); (void)(tag); (void)(ino); (void)(priv1); (void)(priv2); } while (0)
+
+/* get_current_ioprio - I/O priority (not used in U-Boot) */
+#define get_current_ioprio()		(0)
 
 #endif /* __EXT4_UBOOT_H__ */

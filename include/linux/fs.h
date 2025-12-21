@@ -27,6 +27,26 @@ typedef unsigned int fmode_t;
 #define FMODE_READ		((__force fmode_t)(1 << 0))
 #define FMODE_WRITE		((__force fmode_t)(1 << 1))
 #define FMODE_LSEEK		((__force fmode_t)(1 << 2))
+#define FMODE_NOWAIT		((__force fmode_t)(1 << 20))
+#define FMODE_CAN_ODIRECT	((__force fmode_t)(1 << 21))
+#define FMODE_CAN_ATOMIC_WRITE	((__force fmode_t)(1 << 22))
+
+/* Seek constants */
+#ifndef SEEK_HOLE
+#define SEEK_HOLE	4
+#define SEEK_DATA	3
+#endif
+
+/* vfsmount - mount point */
+struct vfsmount {
+	struct dentry *mnt_root;
+};
+
+/* path - pathname components */
+struct path {
+	struct vfsmount *mnt;
+	struct dentry *dentry;
+};
 
 /* Buffer operations are in buffer_head.h */
 
@@ -76,6 +96,7 @@ struct file {
 	struct address_space *f_mapping;
 	void *private_data;
 	struct file_ra_state f_ra;
+	struct path f_path;
 };
 
 /* Get inode from file */
