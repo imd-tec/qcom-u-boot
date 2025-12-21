@@ -26,6 +26,7 @@ static struct disk_partition ext4l_part;
 int ext4l_probe(struct blk_desc *fs_dev_desc,
 		struct disk_partition *fs_partition)
 {
+	struct super_block *sb;
 	loff_t part_offset;
 	__le16 *magic;
 	u8 *buf;
@@ -53,9 +54,31 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	if (ret)
 		return ret;
 
+	/* Allocate super_block */
+	sb = kzalloc(sizeof(struct super_block), GFP_KERNEL);
+	if (!sb) {
+		ret = -ENOMEM;
+		goto err_exit_es;
+	}
+
+	/* Allocate block_device */
+	sb->s_bdev = kzalloc(sizeof(struct block_device), GFP_KERNEL);
+	if (!sb->s_bdev) {
+		ret = -ENOMEM;
+		goto err_free_sb;
+	}
+
+	sb->s_bdev->bd_mapping = kzalloc(sizeof(struct address_space), GFP_KERNEL);
+	if (!sb->s_bdev->bd_mapping) {
+		ret = -ENOMEM;
+		goto err_free_bdev;
+	}
+
 	buf = malloc(BLOCK_SIZE + 512);
-	if (!buf)
-		return -ENOMEM;
+	if (!buf) {
+		ret = -ENOMEM;
+		goto err_free_mapping;
+	}
 
 	/* Calculate partition offset in bytes */
 	part_offset = fs_partition ? (loff_t)fs_partition->start * fs_dev_desc->blksz : 0;
@@ -65,7 +88,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		      (part_offset + BLOCK_SIZE) / fs_dev_desc->blksz,
 		      2, buf) != 2) {
 		ret = -EIO;
-		goto out;
+		goto err_free_buf;
 	}
 
 	/* Check magic number within superblock */
@@ -73,7 +96,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 			   offsetof(struct ext4_super_block, s_magic));
 	if (le16_to_cpu(*magic) != EXT4_SUPER_MAGIC) {
 		ret = -EINVAL;
-		goto out;
+		goto err_free_buf;
 	}
 
 	/* Save device info for later operations */
@@ -81,9 +104,23 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	if (fs_partition)
 		memcpy(&ext4l_part, fs_partition, sizeof(ext4l_part));
 
-	ret = 0;
-out:
 	free(buf);
+	kfree(sb->s_bdev->bd_mapping);
+	kfree(sb->s_bdev);
+	kfree(sb);
+
+	return 0;
+
+err_free_buf:
+	free(buf);
+err_free_mapping:
+	kfree(sb->s_bdev->bd_mapping);
+err_free_bdev:
+	kfree(sb->s_bdev);
+err_free_sb:
+	kfree(sb);
+err_exit_es:
+	ext4_exit_es();
 	return ret;
 }
 
