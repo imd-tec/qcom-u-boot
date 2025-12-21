@@ -2,6 +2,9 @@
 /*
  * Stub functions for ext4l filesystem
  *
+ * Copyright 2025 Canonical Ltd
+ * Written by Simon Glass <simon.glass@canonical.com>
+ *
  * These stubs allow the ext4l code to link during development while not all
  * source files are present. They will be removed once the full ext4l
  * implementation is complete.
@@ -352,10 +355,7 @@ void inode_set_iversion(struct inode *inode, u64 version)
 {
 }
 
-/* rwlock stubs */
-void rwlock_init(rwlock_t *lock)
-{
-}
+/* rwlock_init is now a macro in linux/spinlock.h */
 
 /* trace_ext4_drop_inode is now a macro in ext4_uboot.h */
 

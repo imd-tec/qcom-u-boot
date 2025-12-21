@@ -58,14 +58,12 @@ struct timespec64 {
 /*
  * ktime_t, sector_t are in linux/types.h
  * atomic_t, atomic64_t are in asm-generic/atomic.h
+ * MAX_JIFFY_OFFSET is in linux/jiffies.h
+ * BDEVNAME_SIZE is in linux/blkdev.h
  */
 #include <asm-generic/atomic.h>
-
-/* Jiffy constants */
-#define MAX_JIFFY_OFFSET	((~0UL >> 1) - 1)
-
-/* Block device name size */
-#define BDEVNAME_SIZE		32
+#include <linux/jiffies.h>
+#include <linux/blkdev.h>
 
 /* Extra atomic operations not in asm-generic/atomic.h */
 #define atomic_dec_if_positive(v)	(--(v)->counter)
@@ -86,14 +84,8 @@ struct timespec64 {
 /* Reference count type */
 typedef struct { atomic_t refs; } refcount_t;
 
-/* Lock types - stubs for single-threaded U-Boot */
-typedef int rwlock_t;
-/* spinlock_t is defined in linux/compat.h */
-
-#define read_lock(l)		do { } while (0)
-#define read_unlock(l)		do { } while (0)
-#define write_lock(l)		do { } while (0)
-#define write_unlock(l)		do { } while (0)
+/* rwlock_t and read_lock/read_unlock are now in linux/spinlock.h */
+#include <linux/spinlock.h>
 
 /* RB tree types - stubs */
 struct rb_node {
@@ -2202,8 +2194,7 @@ void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 void inode_set_iversion(struct inode *inode, u64 version);
 int inode_generic_drop(struct inode *inode);
 
-/* Lock init - declaration for stub.c */
-void rwlock_init(rwlock_t *lock);
+/* rwlock_init is a macro in linux/spinlock.h */
 
 /* Trace stubs */
 #define trace_ext4_drop_inode(i, d)		do { } while (0)
