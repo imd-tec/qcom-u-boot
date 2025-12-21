@@ -975,6 +975,7 @@ trigger_snap_builds:
       echo "Snap build triggers completed"
 
       echo "Pushing to GitHub u-boot-concept for ReadTheDocs..."
+      git config --global --add safe.directory $CI_PROJECT_DIR
       cd $CI_PROJECT_DIR
       git remote add github git@github.com:sjg20/u-boot-concept.git || true
       git push github HEAD:master --force
