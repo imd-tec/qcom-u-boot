@@ -2969,4 +2969,23 @@ static inline struct new_utsname *init_utsname(void)
 #define unlock_two_nondirectories(i1, i2) \
 	do { (void)(i1); (void)(i2); } while (0)
 
+/*
+ * Stubs for resize.c
+ */
+
+/* test_and_set_bit_lock - test and set a bit atomically */
+#define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
+
+/* div64_u64 - 64-bit by 64-bit division */
+static inline u64 div64_u64(u64 dividend, u64 divisor)
+{
+	return dividend / divisor;
+}
+
+/* time_is_before_jiffies - check if time is before current jiffies */
+#define time_is_before_jiffies(a)	({ (void)(a); 0; })
+
+/* ext4_update_overhead - declaration for stub.c */
+int ext4_update_overhead(struct super_block *sb, bool force);
+
 #endif /* __EXT4_UBOOT_H__ */

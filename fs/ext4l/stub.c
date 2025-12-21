@@ -379,9 +379,12 @@ void *kvzalloc(size_t size, gfp_t flags)
 	return calloc(1, size);
 }
 
-void ext4_kvfree_array_rcu(void *p)
+/* ext4_kvfree_array_rcu - now in resize.c */
+
+/* ext4_update_overhead - stub for resize.c */
+int ext4_update_overhead(struct super_block *sb, bool force)
 {
-	free(p);
+	return 0;
 }
 
 /* String stubs */
