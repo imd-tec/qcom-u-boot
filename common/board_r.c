@@ -254,7 +254,7 @@ static int initr_dm(void)
 	if (ret)
 		return ret;
 
-	return 0;
+	return dm_autoprobe();
 }
 #endif
 
