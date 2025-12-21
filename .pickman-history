@@ -1281,3 +1281,67 @@ The build completed successfully with no warnings or errors.
 
 ---
 
+## 2025-12-21: us/next
+
+Branch: cherry-8ff96fb6d01
+
+Commits:
+- 8ff96fb6d01 arm: dts: k3-*-ddr: Add ss_cfg reg entry
+- fed3b1eb9bf ram: k3-ddrss: Use the DDR controller BIST engine for ECC priming
+- 22ce56a3ebd ram: k3-ddrss: Add k3_ddrss_ddr_bank_base_size_calc() to solve 'calculations restricted to 32 bits' issue
+- 39d66893ef2 ram: k3-ddrss: Setup ECC region start and range
+- 42957c3a8ba ram: k3-ddrss: Enable ECC interrupts
+- 98dd3c126e3 drivers: ram: Kconfig: Add CONFIG_K3_INLINE_ECC
+- 7a84969dcb8 ram: k3-ddrss: Remove 'ti,ecc-enable' support
+- 01fa91bd5bb arm: mach-k3: Set NR_DRAM_BANKS to 2
+- bc07851897b board: ti: Pull redundant DDR functions to a common location and Fixup DDR size when ECC is enabled
+- 08733bf3138 Merge patch series "Inline ECC Series"
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick each commit in order. I'll start with the first one:
+
+Now for the merge commit - I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (which is expected since all changes were already applied). I need to commit it with --allow-empty to preserve the merge commit message:
+
+All 10 commits have been cherry-picked. Now let me verify with `git log --oneline -n 12`:
+
+All 10 commits are present. Now let me run the build verification:
+
+Excellent! The build completed successfully. Let me provide a final summary:
+
+## Cherry-pick Summary
+
+### Status: ✅ SUCCESS
+
+**Branch created:** `cherry-8ff96fb6d01` (based on `ci/master`)
+
+### Commits cherry-picked (10 total):
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 8ff96fb6d01 | 85552b44dad | arm: dts: k3-*-ddr: Add ss_cfg reg entry |
+| 2 | fed3b1eb9bf | dd66f11e71a | ram: k3-ddrss: Use the DDR controller BIST engine for ECC priming |
+| 3 | 22ce56a3ebd | 1717d982d29 | ram: k3-ddrss: Add k3_ddrss_ddr_bank_base_size_calc() to solve 'calculations restricted to 32 bits' issue |
+| 4 | 39d66893ef2 | 3242b505bc9 | ram: k3-ddrss: Setup ECC region start and range |
+| 5 | 42957c3a8ba | 781e6e0c5da | ram: k3-ddrss: Enable ECC interrupts |
+| 6 | 98dd3c126e3 | a4fbb6d1d98 | drivers: ram: Kconfig: Add CONFIG_K3_INLINE_ECC |
+| 7 | 7a84969dcb8 | dc4ba985ad9 | ram: k3-ddrss: Remove 'ti,ecc-enable' support |
+| 8 | 01fa91bd5bb | 3ad4b71887d | arm: mach-k3: Set NR_DRAM_BANKS to 2 |
+| 9 | bc07851897b | de285bc3a63 | board: ti: Pull redundant DDR functions to a common location and Fixup DDR size when ECC is enabled |
+| 10 | 08733bf3138 | a95f049572f | Merge patch series "Inline ECC Series" (empty merge) |
+
+### Build Result: ✅ OK
+- Board: sandbox
+- Duration: 4 seconds
+- No warnings or errors
+
+### Fix-ups Made: None
+All commits applied cleanly with auto-merge.
+
+The branch `cherry-8ff96fb6d01` is ready for pushing.
+
+---
+
