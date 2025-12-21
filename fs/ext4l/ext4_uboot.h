@@ -834,6 +834,7 @@ struct inode {
 	atomic_t i_writecount;		/* Count of writers */
 	struct rw_semaphore i_rwsem;	/* inode lock */
 	const char *i_link;		/* Symlink target for fast symlinks */
+	unsigned short i_write_hint;	/* Write life time hint */
 };
 
 /* Inode time accessors */
@@ -1515,6 +1516,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 /* fscrypt stubs - additional */
 #define fscrypt_inode_uses_fs_layer_crypto(i)	(0)
 #define fscrypt_decrypt_pagecache_blocks(f, l, o) ({ (void)(f); (void)(l); (void)(o); 0; })
+#define fscrypt_encrypt_pagecache_blocks(f, l, o, g) ({ (void)(f); (void)(l); (void)(o); (void)(g); (struct page *)NULL; })
 #define fscrypt_zeroout_range(i, lb, pb, l)	({ (void)(i); (void)(lb); (void)(pb); (void)(l); 0; })
 #define fscrypt_limit_io_blocks(i, lb, l)	(l)
 #define fscrypt_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
@@ -2564,5 +2566,102 @@ struct seq_operations {
 	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
 #define bdev_discard_granularity(bdev) \
 	({ (void)(bdev); 0U; })
+
+/*
+ * Stubs for page-io.c
+ */
+
+/* bio_vec - segment in a bio */
+struct bio_vec {
+	struct page *bv_page;
+	unsigned int bv_len;
+	unsigned int bv_offset;
+};
+
+/* bvec_iter - iterator for bio_vec */
+struct bvec_iter {
+	sector_t bi_sector;
+	unsigned int bi_size;
+	unsigned int bi_idx;
+	unsigned int bi_bvec_done;
+};
+
+/* bio - block I/O structure */
+struct bio {
+	struct bio *bi_next;
+	struct block_device *bi_bdev;
+	unsigned long bi_opf;
+	unsigned short bi_flags;
+	unsigned short bi_ioprio;
+	unsigned short bi_write_hint;
+	int bi_status;
+	struct bvec_iter bi_iter;
+	atomic_t __bi_remaining;
+	void *bi_private;
+	void (*bi_end_io)(struct bio *);
+};
+
+/* folio_iter for bio iteration */
+struct folio_iter {
+	int i;
+	struct folio *folio;
+	size_t offset;
+	size_t length;
+};
+
+/* bio operations - stubs */
+#define bio_for_each_folio_all(fi, bio) \
+	for ((fi).i = 0; (fi).i < 0; (fi).i++)
+#define bio_put(bio)			free(bio)
+#define bio_alloc(bdev, vecs, op, gfp)	((struct bio *)calloc(1, sizeof(struct bio)))
+#define submit_bio(bio)			do { } while (0)
+#define BIO_MAX_VECS			256
+
+/* refcount operations - map to atomic */
+#define refcount_set(r, v)		atomic_set((atomic_t *)(r), v)
+#define refcount_dec_and_test(r)	atomic_dec_and_test((atomic_t *)(r))
+#define refcount_inc(r)			atomic_inc((atomic_t *)(r))
+
+/* xchg - exchange value atomically */
+#define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
+
+/* printk_ratelimited - just use regular printk */
+#define printk_ratelimited(fmt, ...)	do { } while (0)
+
+/* mapping_set_error - record error in address_space */
+#define mapping_set_error(m, e)		do { (void)(m); (void)(e); } while (0)
+
+/* blk_status_to_errno - convert block status to errno */
+#define blk_status_to_errno(status)	(-(status))
+
+/* atomic_inc - increment atomic */
+#define atomic_inc(v)			((v)->counter++)
+
+/* GFP_NOIO - allocation without I/O */
+#define GFP_NOIO			0
+
+/* fscrypt stubs for page-io.c */
+#define fscrypt_is_bounce_folio(f)	({ (void)(f); 0; })
+#define fscrypt_pagecache_folio(f)	(f)
+#define fscrypt_free_bounce_page(p)	do { (void)(p); } while (0)
+#define fscrypt_set_bio_crypt_ctx_bh(bio, bh, gfp) \
+	do { (void)(bio); (void)(bh); (void)(gfp); } while (0)
+#define fscrypt_mergeable_bio_bh(bio, bh) \
+	({ (void)(bio); (void)(bh); 1; })
+
+/* folio writeback operations */
+#define folio_end_writeback(f)		do { (void)(f); } while (0)
+#define folio_start_writeback(f)	do { (void)(f); } while (0)
+#define folio_start_writeback_keepwrite(f) do { (void)(f); } while (0)
+bool __folio_start_writeback(struct folio *folio, bool keep_write);
+
+/* writeback control stubs */
+#define wbc_init_bio(wbc, bio)		do { (void)(wbc); (void)(bio); } while (0)
+#define wbc_account_cgroup_owner(wbc, folio, bytes) \
+	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
+
+/* bio operations */
+#define bio_add_folio(bio, folio, len, off) \
+	({ (void)(bio); (void)(folio); (void)(len); (void)(off); 1; })
 
 #endif /* __EXT4_UBOOT_H__ */

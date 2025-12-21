@@ -199,6 +199,14 @@ int ext4_fc_replay_check_excluded(struct super_block *sb, unsigned long long blk
 	return 0;
 }
 
+/*
+ * Stubs for page-io.c
+ */
+bool __folio_start_writeback(struct folio *folio, bool keep_write)
+{
+	return false;
+}
+
 /* ext4_read_bh is now in super.c */
 /* ext4_sb_bread_nofail is now in super.c */
 
@@ -262,34 +270,7 @@ int ext4_fc_commit(void *journal, unsigned int tid)
 
 /* Inline data is now in inline.c */
 
-/* I/O submit */
-void ext4_io_submit_init(void *io, void *wbc)
-{
-}
-
-
-void *ext4_init_io_end(struct inode *inode, int gfp)
-{
-	return NULL;
-}
-
-void ext4_io_submit(void *io)
-{
-}
-
-void ext4_put_io_end_defer(void *io_end)
-{
-}
-
-void ext4_put_io_end(void *io_end)
-{
-}
-
-void *ext4_alloc_io_end_vec(void *io_end, unsigned long num)
-{
-	return NULL;
-}
-
+/* I/O submit stubs are now in page-io.c */
 
 /* JBD2 ordered truncate */
 int jbd2_journal_begin_ordered_truncate(void *ji, loff_t new_size)
