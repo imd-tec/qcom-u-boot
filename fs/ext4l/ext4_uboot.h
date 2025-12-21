@@ -2943,4 +2943,30 @@ static inline struct new_utsname *init_utsname(void)
 	return &uts;
 }
 
+/*
+ * Stubs for move_extent.c
+ */
+
+/* down_write_nested - nested write lock acquisition */
+#define down_write_nested(sem, subclass) \
+	do { (void)(sem); (void)(subclass); } while (0)
+
+/* filemap_release_folio - try to release a folio */
+#define filemap_release_folio(folio, gfp) \
+	({ (void)(folio); (void)(gfp); 1; })
+
+/* IS_SWAPFILE - check if inode is a swap file */
+#define IS_SWAPFILE(inode)	({ (void)(inode); 0; })
+
+/* PAGE_MASK - mask for page alignment */
+#ifndef PAGE_MASK
+#define PAGE_MASK	(~(PAGE_SIZE - 1))
+#endif
+
+/* lock_two_nondirectories - lock two inodes in order */
+#define lock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+#define unlock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+
 #endif /* __EXT4_UBOOT_H__ */
