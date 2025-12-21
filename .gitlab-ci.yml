@@ -955,6 +955,7 @@ trigger_snap_builds:
     - echo "$LAUNCHPAD_SSH_KEY" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan git.launchpad.net >> ~/.ssh/known_hosts
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
     - eval "$(ssh-agent -s)"
     - ssh-add ~/.ssh/id_rsa
     - git config --global user.name "GitLab CI"
@@ -972,3 +973,9 @@ trigger_snap_builds:
       git commit --allow-empty -m "Trigger build: U-Boot updated to $CI_COMMIT_SHORT_SHA"
       git push origin master
       echo "Snap build triggers completed"
+
+      echo "Pushing to GitHub u-boot-concept for ReadTheDocs..."
+      cd $CI_PROJECT_DIR
+      git remote add github git@github.com:sjg20/u-boot-concept.git || true
+      git push github HEAD:master --force
+      echo "GitHub push completed"
