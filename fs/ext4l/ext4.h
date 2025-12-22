@@ -3237,7 +3237,7 @@ void __ext4_grp_locked_error(const char *, unsigned int,
 #define ext4_abort(sb, err, fmt, a...)					\
 	__ext4_error((sb), __func__, __LINE__, true, (err), 0, (fmt), ## a)
 
-#ifdef CONFIG_PRINTK
+#ifdef EXT4L_PRINTF
 
 #define ext4_error_inode(inode, func, line, block, fmt, ...)		\
 	__ext4_error_inode(inode, func, line, block, 0, fmt, ##__VA_ARGS__)

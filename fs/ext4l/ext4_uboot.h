@@ -38,6 +38,17 @@
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
+ * Enable ext4_msg() and other diagnostic macros to print full messages.
+ * This is needed for CONFIG_EXT4L_DEBUG to show useful error messages.
+ *
+ * Use EXT4L_PRINTF instead of CONFIG_PRINTK since U-Boot requires CONFIG_
+ * options to be defined in Kconfig.
+ */
+#ifdef CONFIG_EXT4L_DEBUG
+#define EXT4L_PRINTF		1
+#endif
+
+/*
  * Override no_printk to avoid format warnings in disabled debug prints.
  * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
  * This causes format mismatches with %llu that we want to ignore.
