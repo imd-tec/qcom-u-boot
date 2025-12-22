@@ -2736,6 +2736,88 @@ class TestExecuteApply(unittest.TestCase):
             self.assertEqual(commit_rec[6], 'conflict')
             dbs.close()
 
+    def test_execute_apply_already_applied(self):
+        """Test execute_apply when agent detects commits already applied."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            commits = [control.CommitInfo('ggg777', 'ggg777g', 'Test commit',
+                                          'Author'),
+                       control.CommitInfo('hhh888', 'hhh888h', 'Merge commit',
+                                          'Author')]
+            args = argparse.Namespace(push=False)
+
+            # Agent returns success but leaves signal file
+            with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                   return_value=(True, 'already applied log')):
+                with mock.patch.object(control.agent, 'read_signal_file',
+                                       return_value=(agent.SIGNAL_ALREADY_APPLIED,
+                                                     'hhh888')):
+                    ret, success, _ = control.execute_apply(
+                        dbs, 'us/next', commits, 'cherry-branch', args)
+
+            # Should return success (skip MR created), but success=False
+            self.assertEqual(ret, 0)
+            self.assertFalse(success)
+
+            # Check commits are marked as skipped
+            commit_rec = dbs.commit_get('ggg777')
+            self.assertEqual(commit_rec[6], 'skipped')
+            commit_rec = dbs.commit_get('hhh888')
+            self.assertEqual(commit_rec[6], 'skipped')
+
+            # Check source was updated
+            source_commit = dbs.source_get('us/next')
+            self.assertEqual(source_commit, 'hhh888')
+            dbs.close()
+
+
+class TestSignalFile(unittest.TestCase):
+    """Tests for signal file handling."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_dir = tempfile.mkdtemp()
+        self.signal_path = os.path.join(self.test_dir, agent.SIGNAL_FILE)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.signal_path):
+            os.unlink(self.signal_path)
+        os.rmdir(self.test_dir)
+
+    def test_read_signal_file_not_exists(self):
+        """Test read_signal_file when file doesn't exist."""
+        status, commit = agent.read_signal_file(self.test_dir)
+        self.assertIsNone(status)
+        self.assertIsNone(commit)
+
+    def test_read_signal_file_already_applied(self):
+        """Test read_signal_file with already_applied status."""
+        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('already_applied\nabc123def456\n')
+
+        status, commit = agent.read_signal_file(self.test_dir)
+        self.assertEqual(status, 'already_applied')
+        self.assertEqual(commit, 'abc123def456')
+
+        # File should be removed after reading
+        self.assertFalse(os.path.exists(self.signal_path))
+
+    def test_read_signal_file_status_only(self):
+        """Test read_signal_file with only status line."""
+        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
+            fhandle.write('conflict\n')
+
+        status, commit = agent.read_signal_file(self.test_dir)
+        self.assertEqual(status, 'conflict')
+        self.assertIsNone(commit)
+
+        self.assertFalse(os.path.exists(self.signal_path))
+
 
 class TestGetNextCommitsEmptyLine(unittest.TestCase):
     """Tests for get_next_commits with empty lines."""

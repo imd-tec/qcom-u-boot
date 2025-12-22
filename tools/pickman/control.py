@@ -683,6 +683,72 @@ def prepare_apply(dbs, source, branch):
     return ApplyInfo(commits, branch_name, original_branch, merge_found), 0
 
 
+# pylint: disable=too-many-arguments
+def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
+                           signal_commit):
+    """Handle the case where commits are already applied to the target branch
+
+    Creates an MR with [skip] prefix to record the attempt and updates the
+    source position in the database.
+
+    Args:
+        dbs (Database): Database instance
+        source (str): Source branch name
+        commits (list): List of CommitInfo namedtuples
+        branch_name (str): Branch name that was attempted
+        conv_log (str): Conversation log from the agent
+        args (Namespace): Parsed arguments with 'push', 'remote', 'target'
+        signal_commit (str): Last commit hash from signal file
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    tout.info('Commits already applied to target branch - creating skip MR')
+
+    # Mark commits as 'skipped' in database
+    for commit in commits:
+        dbs.commit_set_status(commit.hash, 'skipped')
+    dbs.commit()
+
+    # Update source position to the last commit (or signal_commit if provided)
+    last_hash = signal_commit if signal_commit else commits[-1].hash
+    dbs.source_set(source, last_hash)
+    dbs.commit()
+    tout.info(f"Updated source '{source}' to {last_hash[:12]}")
+
+    # Push and create MR with [skip] prefix if requested
+    if args.push:
+        remote = args.remote
+        target = args.target
+
+        # Create a skip branch from ci/master (no changes)
+        try:
+            run_git(['checkout', '-b', branch_name, f'{remote}/{target}'])
+        except Exception:  # pylint: disable=broad-except
+            # Branch may already exist from failed attempt
+            try:
+                run_git(['checkout', branch_name])
+            except Exception:  # pylint: disable=broad-except
+                tout.error(f'Could not create/checkout branch {branch_name}')
+                return 1
+
+        # Use merge commit subject as title with [skip] prefix
+        title = f'{SKIPPED_TAG} [pickman] {commits[-1].subject}'
+        summary = format_history_summary(source, commits, branch_name)
+        description = (f'{summary}\n\n'
+                       f'**Status:** Commits already applied to {target} '
+                       f'with different hashes.\n\n'
+                       f'### Conversation log\n{conv_log}')
+
+        mr_url = gitlab_api.push_and_create_mr(
+            remote, branch_name, target, title, description
+        )
+        if not mr_url:
+            return 1
+
+    return 0
+
+
 def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=too-many-locals
     """Execute the apply operation: run agent, update database, push MR
 
@@ -708,6 +774,13 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     commit_tuples = [(c.hash, c.short_hash, c.subject) for c in commits]
     success, conv_log = agent.cherry_pick_commits(commit_tuples, source,
                                                           branch_name)
+
+    # Check for signal file from agent
+    signal_status, signal_commit = agent.read_signal_file()
+    if signal_status == agent.SIGNAL_ALREADY_APPLIED:
+        ret = handle_already_applied(dbs, source, commits, branch_name,
+                                     conv_log, args, signal_commit)
+        return ret, False, conv_log
 
     # Verify the branch actually exists - agent may have aborted and deleted it
     if success:

@@ -124,34 +124,66 @@ Pickman will add ``[skipped]`` to the MR title. Skipped MRs:
 - Don't block the ``step`` or ``poll`` commands from proceeding
 - Can be unskipped by commenting ``pickman unskip``
 
+Already-Applied Detection
+-------------------------
+
+Sometimes commits have already been applied to the target branch through a
+different path (e.g., directly merged or cherry-picked with different hashes).
+Pickman's Claude agent detects this situation automatically.
+
+**How it works**
+
+When the first cherry-pick fails with conflicts, the agent checks if the
+commits are already present in the target branch by searching for matching
+commit subjects::
+
+    git log --oneline ci/master --grep="<subject>" -1
+
+If all commits in the set are found (same subjects, different hashes), the
+agent:
+
+1. Aborts the cherry-pick
+2. Writes a signal file (``.pickman-signal``) with status ``already_applied``
+3. Reports the situation
+
+**What pickman does**
+
+When pickman detects the ``already_applied`` signal:
+
+1. Marks all commits as 'skipped' in the database
+2. Updates the source position to advance past these commits
+3. Creates an MR with ``[skipped]`` prefix to record the attempt
+4. The MR description explains that commits were already applied
+
+This ensures:
+
+- There's a record of what was attempted
+- The source position advances so the next ``poll`` iteration processes new
+  commits
+- No manual intervention is required to continue
+
 CI Pipelines
 ------------
 
-Pickman manages CI pipelines to avoid unnecessary runs while ensuring changes
-are properly verified.
+Pickman manages CI pipelines to avoid unnecessary duplicate runs. GitLab
+automatically triggers an MR pipeline whenever the source branch is updated,
+so pickman skips the push pipeline to avoid running two pipelines.
 
-**Initial MR creation**
+**How it works**
 
-When creating a new MR (via ``apply -p`` or ``step``), pickman pushes the
-branch with ``-o ci.skip``. This skips the push pipeline because GitLab
-automatically triggers an MR pipeline when the merge request is created.
-Without this, two pipelines would run: one for the push and one for the MR.
-
-**Review comment handling**
-
-When pushing changes after addressing review comments (via ``review``,
-``step``, or ``poll``), pickman does NOT skip the pipeline. A new pipeline
-is needed to verify that the changes made in response to review feedback
-are correct.
+When pushing a branch (for new MRs or updates), pickman uses ``-o ci.skip``
+to skip the push pipeline. GitLab then triggers an MR pipeline when it
+detects the branch update on the merge request. This ensures exactly one
+pipeline runs for each push.
 
 **Summary**
 
-===============================  ================  =========================
+===============================  ================  ==============================
 Action                           Pipeline Skipped  Reason
-===============================  ================  =========================
-Initial branch push for new MR   Yes               MR creation triggers one
-Push after review changes        No                Need to verify changes
-===============================  ================  =========================
+===============================  ================  ==============================
+Initial branch push for new MR   Yes               MR creation triggers pipeline
+Push after rebase/review         Yes               MR update triggers pipeline
+===============================  ================  ==============================
 
 Usage
 -----
