@@ -3907,9 +3907,9 @@ void ext4_mb_release(struct super_block *sb)
 				atomic_read(&sbi->s_bal_breaks),
 				atomic_read(&sbi->s_mb_lost_chunks));
 		ext4_msg(sb, KERN_INFO,
-		       "mballoc: %u generated and it took %llu",
+		       "mballoc: %u generated and it took %lld",
 				atomic_read(&sbi->s_mb_buddies_generated),
-				atomic64_read(&sbi->s_mb_generation_time));
+				(long long)atomic64_read(&sbi->s_mb_generation_time));
 		ext4_msg(sb, KERN_INFO,
 		       "mballoc: %u preallocated, %u discarded",
 				atomic_read(&sbi->s_mb_preallocated),
