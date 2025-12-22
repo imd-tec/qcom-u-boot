@@ -58,14 +58,16 @@ struct timespec64 {
 };
 
 /*
- * ktime_t, atomic_t, atomic64_t, sector_t are now in linux/types.h
+ * ktime_t, sector_t are now in linux/types.h
+ * atomic_t, atomic64_t are now in asm-generic/atomic.h
  * MAX_JIFFY_OFFSET is now in linux/jiffies.h
  * BDEVNAME_SIZE is now in linux/blkdev.h
  */
+#include <asm-generic/atomic.h>
 #include <linux/jiffies.h>
 #include <linux/blkdev.h>
 
-/* Extra atomic operation not in linux/types.h */
+/* Extra atomic operation not in asm-generic/atomic.h */
 #define atomic_dec_if_positive(v)	(--(v)->counter)
 
 /* SMP stubs - U-Boot is single-threaded */
