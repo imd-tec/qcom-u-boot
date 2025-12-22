@@ -10,6 +10,7 @@
  */
 
 #include <blk.h>
+#include <membuf.h>
 #include <part.h>
 #include <malloc.h>
 #include <linux/errno.h>
@@ -18,6 +19,9 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
+
+/* Message buffer size */
+#define EXT4L_MSG_BUF_SIZE	4096
 
 /* Global state */
 static struct blk_desc *ext4l_dev_desc;
@@ -30,6 +34,10 @@ static int ext4l_mounted;
 
 /* Global super_block pointer for filesystem operations */
 static struct super_block *ext4l_sb;
+
+/* Message recording buffer */
+static struct membuf ext4l_msg_buf;
+static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /**
  * ext4l_get_blk_dev() - Get the current block device
@@ -91,6 +99,34 @@ void ext4l_clear_blk_dev(void)
 	ext4l_mounted = 0;
 }
 
+/**
+ * ext4l_msg_init() - Initialize the message buffer
+ */
+static void ext4l_msg_init(void)
+{
+	membuf_init(&ext4l_msg_buf, ext4l_msg_data, EXT4L_MSG_BUF_SIZE);
+}
+
+/**
+ * ext4l_record_msg() - Record a message in the buffer
+ * @msg: Message string to record
+ * @len: Length of message
+ */
+void ext4l_record_msg(const char *msg, int len)
+{
+	membuf_put(&ext4l_msg_buf, msg, len);
+}
+
+/**
+ * ext4l_get_msg_buf() - Get the message buffer
+ *
+ * Return: Pointer to the message buffer
+ */
+struct membuf *ext4l_get_msg_buf(void)
+{
+	return &ext4l_msg_buf;
+}
+
 int ext4l_probe(struct blk_desc *fs_dev_desc,
 		struct disk_partition *fs_partition)
 {
@@ -104,6 +140,9 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	if (!fs_dev_desc)
 		return -EINVAL;
+
+	/* Initialise message buffer for recording ext4 messages */
+	ext4l_msg_init();
 
 	/* Initialise CRC32C table for checksum verification */
 	ext4l_crc32c_init();

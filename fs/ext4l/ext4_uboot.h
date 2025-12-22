@@ -38,15 +38,14 @@
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
- * Enable ext4_msg() and other diagnostic macros to print full messages.
- * This is needed for CONFIG_EXT4L_DEBUG to show useful error messages.
+ * Enable ext4_msg() and other diagnostic macros to pass full messages.
+ * This is required for message recording to work. Without this, the
+ * ext4_msg macro passes empty strings to __ext4_msg().
  *
  * Use EXT4L_PRINTF instead of CONFIG_PRINTK since U-Boot requires CONFIG_
  * options to be defined in Kconfig.
  */
-#ifdef CONFIG_EXT4L_DEBUG
 #define EXT4L_PRINTF		1
-#endif
 
 /*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
@@ -2864,6 +2863,8 @@ int ext4l_read_block(sector_t block, size_t size, void *buffer);
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
+void ext4l_record_msg(const char *msg, int len);
+struct membuf *ext4l_get_msg_buf(void);
 
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 
