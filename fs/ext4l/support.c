@@ -40,6 +40,105 @@ u32 ext4l_crc32c(u32 crc, const void *address, unsigned int length)
 }
 
 /*
+ * iget_locked - allocate a new inode
+ * @sb: super block of filesystem
+ * @ino: inode number to allocate
+ *
+ * U-Boot implementation: allocates ext4_inode_info and returns the embedded
+ * vfs_inode. In Linux, this would look up the inode in a hash table first.
+ * Since U-Boot is single-threaded and doesn't cache inodes, we always allocate.
+ */
+struct inode *iget_locked(struct super_block *sb, unsigned long ino)
+{
+	struct ext4_inode_info *ei;
+	struct inode *inode;
+
+	ei = kzalloc(sizeof(struct ext4_inode_info), GFP_KERNEL);
+	if (!ei)
+		return NULL;
+
+	/* Get pointer to the embedded vfs_inode using offsetof */
+	inode = (struct inode *)((char *)ei +
+				 offsetof(struct ext4_inode_info, vfs_inode));
+	inode->i_sb = sb;
+	inode->i_blkbits = sb->s_blocksize_bits;
+	inode->i_ino = ino;
+	inode->i_state = I_NEW;
+	inode->i_count.counter = 1;
+	inode->i_mapping = &inode->i_data;
+	inode->i_data.host = inode;
+	INIT_LIST_HEAD(&ei->i_es_list);
+
+	return inode;
+}
+
+/*
+ * new_inode - allocate a new empty inode
+ * @sb: super block of filesystem
+ *
+ * U-Boot implementation: allocates ext4_inode_info for a new inode that
+ * will be initialised by the caller (e.g., for creating new files).
+ */
+struct inode *new_inode(struct super_block *sb)
+{
+	struct ext4_inode_info *ei;
+	struct inode *inode;
+
+	ei = kzalloc(sizeof(struct ext4_inode_info), GFP_KERNEL);
+	if (!ei)
+		return NULL;
+
+	inode = &ei->vfs_inode;
+	inode->i_sb = sb;
+	inode->i_blkbits = sb->s_blocksize_bits;
+	inode->i_nlink = 1;
+	inode->i_count.counter = 1;
+	inode->i_mapping = &inode->i_data;
+	inode->i_data.host = inode;
+	INIT_LIST_HEAD(&ei->i_es_list);
+
+	return inode;
+}
+
+/*
+ * ext4_uboot_bmap - map a logical block to a physical block
+ * @inode: inode to map
+ * @block: on entry, logical block number; on exit, physical block number
+ *
+ * U-Boot implementation of bmap for ext4. Maps a logical block number
+ * to the corresponding physical block on disk.
+ */
+int ext4_uboot_bmap(struct inode *inode, sector_t *block)
+{
+	struct ext4_map_blocks map;
+	int ret;
+
+	map.m_lblk = *block;
+	map.m_len = 1;
+	map.m_flags = 0;
+
+	ret = ext4_map_blocks(NULL, inode, &map, 0);
+	if (ret > 0) {
+		*block = map.m_pblk;
+		return 0;
+	}
+
+	return ret < 0 ? ret : -EINVAL;
+}
+
+/*
+ * bmap - map a logical block to a physical block (VFS interface)
+ * @inode: inode to map
+ * @blockp: pointer to logical block number; updated to physical block number
+ *
+ * This is the VFS bmap interface used by jbd2.
+ */
+int bmap(struct inode *inode, sector_t *blockp)
+{
+	return ext4_uboot_bmap(inode, blockp);
+}
+
+/*
  * Buffer cache implementation
  *
  * Linux's sb_getblk() returns the same buffer_head for the same block number,

@@ -377,8 +377,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define ktime_get_real_seconds()		(0)
 #define time_before32(a, b)			(0)
 
-/* Inode operations - stubs */
-#define new_inode(sb)				((struct inode *)NULL)
+/* Inode operations - iget_locked and new_inode are in interface.c */
+extern struct inode *new_inode(struct super_block *sb);
 #define i_uid_write(inode, uid)			do { } while (0)
 #define i_gid_write(inode, gid)			do { } while (0)
 #define inode_fsuid_set(inode, idmap)		do { } while (0)
@@ -820,6 +820,7 @@ struct inode {
 	const struct inode_operations *i_op;
 	const struct file_operations *i_fop;
 	atomic_t i_writecount;		/* Count of writers */
+	atomic_t i_count;		/* Reference count */
 	struct rw_semaphore i_rwsem;	/* inode lock */
 	const char *i_link;		/* Symlink target for fast symlinks */
 	unsigned short i_write_hint;	/* Write life time hint */
@@ -1615,7 +1616,7 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define fs_high2lowgid(gid)	((gid) & 0xFFFF)
 
 /* Inode allocation/state operations */
-#define iget_locked(sb, ino)		((struct inode *)NULL)
+extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
 #define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
 #define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
@@ -2855,7 +2856,7 @@ struct disk_partition *ext4l_get_partition(void);
 /* JBD2 journal.c stubs */
 struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
 #define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
-#define bmap(inode, block)		({ (void)(inode); (void)(block); 0; })
+int bmap(struct inode *inode, sector_t *block);
 #define trace_jbd2_update_log_tail(j, t, b, f) \
 	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
 
