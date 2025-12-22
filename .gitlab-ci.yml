@@ -301,6 +301,7 @@ Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig, patman and pickman suites:
       ./tools/patman/patman test;
       ./tools/pickman/pickman test;
       ./tools/pickman/pickman test -T;
+      ./tools/buildman/buildman --coverage;
       python3 ./test/scripts/test_hwids_to_dtsi.py;
       python3 -m pytest ./test/scripts/test_release_version.py;
       make testconfig
