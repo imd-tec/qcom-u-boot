@@ -79,3 +79,32 @@ static int fs_test_ext4l_msgs_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_msgs_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_ls_norun() - Test ext4l ls command
+ *
+ * This test verifies that the ext4l driver can list directory contents.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_ls_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	console_record_reset_enable();
+	ut_assertok(run_commandf("ls host 0"));
+	/*
+	 * The Python test adds testfile.txt (12 bytes) to the image.
+	 * Directory entries appear in hash order which varies between runs.
+	 * Verify the file entry appears with correct size (12 bytes).
+	 */
+	ut_assert_skip_to_line("       12   testfile.txt");
+	ut_assert_console_end();
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_ls_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

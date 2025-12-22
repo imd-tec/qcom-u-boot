@@ -302,6 +302,327 @@ err_exit_es:
 	return ret;
 }
 
+/**
+ * ext4l_read_symlink() - Read the target of a symlink inode
+ * @inode: Symlink inode
+ * @target: Buffer to store target
+ * @max_len: Maximum length of target buffer
+ * Return: Length of target on success, negative on error
+ */
+static int ext4l_read_symlink(struct inode *inode, char *target, size_t max_len)
+{
+	struct buffer_head *bh;
+	size_t len;
+
+	if (!S_ISLNK(inode->i_mode))
+		return -EINVAL;
+
+	if (ext4_inode_is_fast_symlink(inode)) {
+		/* Fast symlink: target stored in i_data */
+		len = inode->i_size;
+		if (len >= max_len)
+			len = max_len - 1;
+		memcpy(target, EXT4_I(inode)->i_data, len);
+		target[len] = '\0';
+		return len;
+	}
+
+	/* Slow symlink: target stored in data block */
+	bh = ext4_bread(NULL, inode, 0, 0);
+	if (IS_ERR(bh))
+		return PTR_ERR(bh);
+	if (!bh)
+		return -EIO;
+
+	len = inode->i_size;
+	if (len >= max_len)
+		len = max_len - 1;
+	memcpy(target, bh->b_data, len);
+	target[len] = '\0';
+	brelse(bh);
+
+	return len;
+}
+
+/* Forward declaration for recursive resolution */
+static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
+				       int depth);
+
+/**
+ * ext4l_resolve_path() - Resolve path to inode
+ * @path: Path to resolve
+ * @inodep: Output inode pointer
+ * Return: 0 on success, negative on error
+ */
+static int ext4l_resolve_path(const char *path, struct inode **inodep)
+{
+	return ext4l_resolve_path_internal(path, inodep, 0);
+}
+
+/**
+ * ext4l_resolve_path_internal() - Resolve path with symlink following
+ * @path: Path to resolve
+ * @inodep: Output inode pointer
+ * @depth: Current recursion depth (for symlink loop detection)
+ * Return: 0 on success, negative on error
+ */
+static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
+				       int depth)
+{
+	struct inode *dir;
+	struct dentry *dentry, *result;
+	char *path_copy, *component, *next_component;
+	int ret;
+
+	/* Prevent symlink loops */
+	if (depth > 8)
+		return -ELOOP;
+
+	if (!ext4l_mounted) {
+		ext4_debug("ext4l_resolve_path: filesystem not mounted\n");
+		return -ENODEV;
+	}
+
+	dir = ext4l_sb->s_root->d_inode;
+
+	if (!path || !*path || (strcmp(path, "/") == 0)) {
+		*inodep = dir;
+		return 0;
+	}
+
+	path_copy = strdup(path);
+	if (!path_copy)
+		return -ENOMEM;
+
+	component = path_copy;
+	/* Skip leading slash */
+	if (*component == '/')
+		component++;
+
+	while (component && *component) {
+		next_component = strchr(component, '/');
+		if (next_component) {
+			*next_component = '\0';
+			next_component++;
+		}
+
+		if (!*component) {
+			component = next_component;
+			continue;
+		}
+
+		/* Handle special directory entries */
+		if (strcmp(component, ".") == 0) {
+			component = next_component;
+			continue;
+		}
+		if (strcmp(component, "..") == 0) {
+			/* Parent directory - look up ".." entry */
+			dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+			if (!dentry) {
+				free(path_copy);
+				return -ENOMEM;
+			}
+			dentry->d_name.name = "..";
+			dentry->d_name.len = 2;
+			dentry->d_sb = ext4l_sb;
+			dentry->d_parent = NULL;
+
+			result = ext4_lookup(dir, dentry, 0);
+			if (IS_ERR(result)) {
+				kfree(dentry);
+				free(path_copy);
+				return PTR_ERR(result);
+			}
+			if (result && result->d_inode) {
+				dir = result->d_inode;
+				if (result != dentry)
+					kfree(dentry);
+				kfree(result);
+			} else if (dentry->d_inode) {
+				dir = dentry->d_inode;
+				kfree(dentry);
+			} else {
+				/* ".." not found - stay at root */
+				kfree(dentry);
+				if (result && result != dentry)
+					kfree(result);
+			}
+			component = next_component;
+			continue;
+		}
+
+		dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+		if (!dentry) {
+			free(path_copy);
+			return -ENOMEM;
+		}
+
+		dentry->d_name.name = component;
+		dentry->d_name.len = strlen(component);
+		dentry->d_sb = ext4l_sb;
+		dentry->d_parent = NULL;
+
+		result = ext4_lookup(dir, dentry, 0);
+
+		if (IS_ERR(result)) {
+			kfree(dentry);
+			free(path_copy);
+			return PTR_ERR(result);
+		}
+
+		if (result) {
+			if (!result->d_inode) {
+				if (result != dentry)
+					kfree(dentry);
+				kfree(result);
+				free(path_copy);
+				return -ENOENT;
+			}
+			dir = result->d_inode;
+			if (result != dentry)
+				kfree(dentry);
+			kfree(result);
+		} else {
+			if (!dentry->d_inode) {
+				kfree(dentry);
+				free(path_copy);
+				return -ENOENT;
+			}
+			dir = dentry->d_inode;
+			kfree(dentry);
+		}
+
+		if (!dir) {
+			free(path_copy);
+			return -ENOENT;
+		}
+
+		/* Check if this is a symlink and follow it */
+		if (S_ISLNK(dir->i_mode)) {
+			char link_target[256];
+			char *new_path;
+
+			ret = ext4l_read_symlink(dir, link_target,
+						 sizeof(link_target));
+			if (ret < 0) {
+				free(path_copy);
+				return ret;
+			}
+
+			/* Build new path: link_target + remaining path */
+			if (next_component && *next_component) {
+				size_t target_len = strlen(link_target);
+				size_t remaining_len = strlen(next_component);
+
+				new_path = malloc(target_len + 1 +
+						  remaining_len + 1);
+				if (!new_path) {
+					free(path_copy);
+					return -ENOMEM;
+				}
+				strcpy(new_path, link_target);
+				strcat(new_path, "/");
+				strcat(new_path, next_component);
+			} else {
+				new_path = strdup(link_target);
+				if (!new_path) {
+					free(path_copy);
+					return -ENOMEM;
+				}
+			}
+
+			free(path_copy);
+
+			/* Recursively resolve the new path */
+			ret = ext4l_resolve_path_internal(new_path, inodep,
+							  depth + 1);
+			free(new_path);
+			return ret;
+		}
+
+		component = next_component;
+	}
+
+	free(path_copy);
+	*inodep = dir;
+	return 0;
+}
+
+/**
+ * ext4l_dir_actor() - Directory entry callback for ext4_readdir
+ * @ctx: Directory context
+ * @name: Entry name
+ * @namelen: Length of name
+ * @offset: Directory offset
+ * @ino: Inode number
+ * @d_type: Entry type
+ * Return: 0 to continue iteration
+ */
+static int ext4l_dir_actor(struct dir_context *ctx, const char *name,
+			   int namelen, loff_t offset, u64 ino,
+			   unsigned int d_type)
+{
+	struct inode *inode;
+	char namebuf[256];
+
+	/* Copy the name to a null-terminated buffer */
+	if (namelen >= sizeof(namebuf))
+		namelen = sizeof(namebuf) - 1;
+	memcpy(namebuf, name, namelen);
+	namebuf[namelen] = '\0';
+
+	/* Look up the inode to get file size */
+	inode = ext4_iget(ext4l_sb, ino, 0);
+	if (IS_ERR(inode)) {
+		printf(" %8s   %s\n", "?", namebuf);
+		return 0;
+	}
+
+	if (d_type == DT_DIR || S_ISDIR(inode->i_mode))
+		printf("            %s/\n", namebuf);
+	else if (d_type == DT_LNK || S_ISLNK(inode->i_mode))
+		printf("    <SYM>   %s\n", namebuf);
+	else
+		printf(" %8lld   %s\n", (long long)inode->i_size, namebuf);
+
+	return 0;
+}
+
+int ext4l_ls(const char *dirname)
+{
+	struct inode *dir;
+	struct file file;
+	struct dir_context ctx;
+	int ret;
+
+	ret = ext4l_resolve_path(dirname, &dir);
+	if (ret)
+		return ret;
+
+	if (!S_ISDIR(dir->i_mode))
+		return -ENOTDIR;
+
+	memset(&file, 0, sizeof(file));
+	file.f_inode = dir;
+	file.f_mapping = dir->i_mapping;
+
+	/* Allocate private_data for readdir */
+	file.private_data = kzalloc(sizeof(struct dir_private_info), GFP_KERNEL);
+	if (!file.private_data)
+		return -ENOMEM;
+
+	memset(&ctx, 0, sizeof(ctx));
+	ctx.actor = ext4l_dir_actor;
+
+	ret = ext4_readdir(&file, &ctx);
+
+	if (file.private_data)
+		ext4_htree_free_dir_info(file.private_data);
+
+	return ret;
+}
+
 void ext4l_close(void)
 {
 	ext4l_dev_desc = NULL;

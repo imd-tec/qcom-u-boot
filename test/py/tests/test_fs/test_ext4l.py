@@ -10,6 +10,7 @@ Test ext4l filesystem probing via C unit test.
 
 import os
 from subprocess import CalledProcessError, check_call
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -35,6 +36,17 @@ class TestExt4l:
             check_call(f'dd if=/dev/zero of={image_path} bs=1M count=64 2>/dev/null',
                        shell=True)
             check_call(f'mkfs.ext4 -q {image_path}', shell=True)
+
+            # Add a test file using debugfs (no mount required)
+            with NamedTemporaryFile(mode='w', delete=False) as tmp:
+                tmp.write('hello world\n')
+                tmp_path = tmp.name
+            try:
+                check_call(f'debugfs -w {image_path} '
+                           f'-R "write {tmp_path} testfile.txt" 2>/dev/null',
+                           shell=True)
+            finally:
+                os.unlink(tmp_path)
         except CalledProcessError:
             pytest.skip('Failed to create ext4 image')
 
@@ -56,4 +68,11 @@ class TestExt4l:
         with ubman.log.section('Test ext4l msgs'):
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_msgs_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_ls(self, ubman, ext4_image):
+        """Test that ext4l can list directory contents."""
+        with ubman.log.section('Test ext4l ls'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_ls_norun fs_image={ext4_image}')
             assert 'failures: 0' in output
