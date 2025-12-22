@@ -35,6 +35,7 @@
 #include <linux/iomap.h>
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
+#include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
  * Override no_printk to avoid format warnings in disabled debug prints.
@@ -2818,6 +2819,7 @@ struct wait_bit_entry {
 void free_buffer_head(struct buffer_head *bh);
 
 /* ext4l support functions (support.c) */
+void ext4l_crc32c_init(void);
 void bh_cache_clear(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
 

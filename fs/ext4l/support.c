@@ -12,11 +12,32 @@
 #include <blk.h>
 #include <part.h>
 #include <malloc.h>
+#include <u-boot/crc.h>
 #include <linux/errno.h>
 #include <linux/types.h>
 
 #include "ext4_uboot.h"
 #include "ext4.h"
+
+/*
+ * CRC32C support - uses Castagnoli polynomial 0x82F63B78
+ * Table is initialised on first mount
+ */
+static u32 ext4l_crc32c_table[256];
+static bool ext4l_crc32c_inited;
+
+void ext4l_crc32c_init(void)
+{
+	if (!ext4l_crc32c_inited) {
+		crc32c_init(ext4l_crc32c_table, 0x82F63B78);
+		ext4l_crc32c_inited = true;
+	}
+}
+
+u32 ext4l_crc32c(u32 crc, const void *address, unsigned int length)
+{
+	return crc32c_cal(crc, address, length, ext4l_crc32c_table);
+}
 
 /*
  * Buffer cache implementation

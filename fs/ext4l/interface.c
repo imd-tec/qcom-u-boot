@@ -92,6 +92,8 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	/* Set up block device for buffer I/O */
 	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
 
+	ext4l_crc32c_init();
+
 	/* Initialise journal subsystem if enabled */
 	if (IS_ENABLED(CONFIG_EXT4_JOURNAL)) {
 		ret = jbd2_journal_init_global();
