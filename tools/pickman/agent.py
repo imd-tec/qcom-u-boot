@@ -16,6 +16,14 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 # pylint: disable=wrong-import-position,import-error
 from u_boot_pylib import tout
 
+# Signal file for agent to communicate status back to pickman
+SIGNAL_FILE = '.pickman-signal'
+
+# Signal status codes
+SIGNAL_SUCCESS = 'success'
+SIGNAL_ALREADY_APPLIED = 'already_applied'
+SIGNAL_CONFLICT = 'conflict'
+
 # Check if claude_agent_sdk is available
 try:
     from claude_agent_sdk import query, ClaudeAgentOptions
@@ -55,11 +63,19 @@ async def run(commits, source, branch_name, repo_path=None):
     if repo_path is None:
         repo_path = os.getcwd()
 
+    # Remove any stale signal file from previous runs
+    signal_path = os.path.join(repo_path, SIGNAL_FILE)
+    if os.path.exists(signal_path):
+        os.remove(signal_path)
+
     # Build commit list for the prompt
     commit_list = '\n'.join(
         f'  - {short_hash}: {subject}'
         for _, short_hash, subject in commits
     )
+
+    # Get full hash of last commit for signal file
+    last_commit_hash = commits[-1][0]
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
@@ -94,6 +110,20 @@ Important:
 - Do not force push or modify history
 - If cherry-pick fails, run 'git cherry-pick --abort'
 - NEVER skip merge commits - always use --allow-empty to preserve them
+
+CRITICAL - Detecting Already-Applied Commits:
+If the FIRST cherry-pick fails with conflicts, BEFORE aborting, check if the commits
+are already present in ci/master with different hashes. Do this by searching for
+commit subjects in ci/master:
+   git log --oneline ci/master --grep="<subject>" -1
+If ALL commits are already in ci/master (same subjects, different hashes), this means
+the series was already applied via a different path. In this case:
+1. Abort the cherry-pick: git cherry-pick --abort
+2. Delete the branch: git branch -D {branch_name}
+3. Write a signal file to indicate this status:
+   echo "already_applied" > {SIGNAL_FILE}
+   echo "{last_commit_hash}" >> {SIGNAL_FILE}
+4. Report that all {len(commits)} commits are already present in ci/master
 """
 
     options = ClaudeAgentOptions(
@@ -117,6 +147,39 @@ Important:
     except (RuntimeError, ValueError, OSError) as exc:
         tout.error(f'Agent failed: {exc}')
         return False, '\n\n'.join(conversation_log)
+
+
+def read_signal_file(repo_path=None):
+    """Read and remove the signal file if it exists
+
+    Args:
+        repo_path (str): path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (status, last_commit) where status is the signal status code
+            (e.g., 'already_applied') and last_commit is the commit hash,
+            or (None, None) if no signal file exists
+    """
+    if repo_path is None:
+        repo_path = os.getcwd()
+
+    signal_path = os.path.join(repo_path, SIGNAL_FILE)
+    if not os.path.exists(signal_path):
+        return None, None
+
+    try:
+        with open(signal_path, 'r', encoding='utf-8') as fhandle:
+            lines = fhandle.read().strip().split('\n')
+        status = lines[0] if lines else None
+        last_commit = lines[1] if len(lines) > 1 else None
+
+        # Remove the signal file after reading
+        os.remove(signal_path)
+
+        return status, last_commit
+    except (IOError, OSError) as exc:
+        tout.warning(f'Failed to read signal file: {exc}')
+        return None, None
 
 
 def cherry_pick_commits(commits, source, branch_name, repo_path=None):

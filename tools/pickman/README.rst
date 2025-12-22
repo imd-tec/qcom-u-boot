@@ -124,6 +124,44 @@ Pickman will add ``[skipped]`` to the MR title. Skipped MRs:
 - Don't block the ``step`` or ``poll`` commands from proceeding
 - Can be unskipped by commenting ``pickman unskip``
 
+Already-Applied Detection
+-------------------------
+
+Sometimes commits have already been applied to the target branch through a
+different path (e.g., directly merged or cherry-picked with different hashes).
+Pickman's Claude agent detects this situation automatically.
+
+**How it works**
+
+When the first cherry-pick fails with conflicts, the agent checks if the
+commits are already present in the target branch by searching for matching
+commit subjects::
+
+    git log --oneline ci/master --grep="<subject>" -1
+
+If all commits in the set are found (same subjects, different hashes), the
+agent:
+
+1. Aborts the cherry-pick
+2. Writes a signal file (``.pickman-signal``) with status ``already_applied``
+3. Reports the situation
+
+**What pickman does**
+
+When pickman detects the ``already_applied`` signal:
+
+1. Marks all commits as 'skipped' in the database
+2. Updates the source position to advance past these commits
+3. Creates an MR with ``[skipped]`` prefix to record the attempt
+4. The MR description explains that commits were already applied
+
+This ensures:
+
+- There's a record of what was attempted
+- The source position advances so the next ``poll`` iteration processes new
+  commits
+- No manual intervention is required to continue
+
 CI Pipelines
 ------------
 
