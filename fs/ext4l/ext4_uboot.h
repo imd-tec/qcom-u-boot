@@ -289,8 +289,8 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - stub */
-#define sb_rdonly(sb)	(0)
+/* sb_rdonly - for now U-Boot mounts filesystems read-only */
+#define sb_rdonly(sb)	1
 
 /* Trace stubs */
 #define trace_ext4_journal_start_inode(...)	do { } while (0)
