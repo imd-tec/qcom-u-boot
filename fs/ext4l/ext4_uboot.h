@@ -49,6 +49,22 @@
 #endif
 
 /*
+ * __CHAR_UNSIGNED__ - directory hash algorithm selection
+ *
+ * The ext4 filesystem uses different hash algorithms for directory indexing
+ * depending on whether the platform's 'char' type is signed or unsigned.
+ * GCC automatically defines __CHAR_UNSIGNED__ on platforms where char is
+ * unsigned (e.g., ARM), and leaves it undefined where char is signed
+ * (e.g., x86/sandbox).
+ *
+ * The filesystem stores EXT2_FLAGS_UNSIGNED_HASH or EXT2_FLAGS_SIGNED_HASH
+ * in the superblock to record which hash variant was used when the filesystem
+ * was created, ensuring correct behavior regardless of the mounting platform.
+ *
+ * See super.c:5123 and ioctl.c:1489 for the hash algorithm selection code.
+ */
+
+/*
  * Override no_printk to avoid format warnings in disabled debug prints.
  * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
  * This causes format mismatches with %llu that we want to ignore.
