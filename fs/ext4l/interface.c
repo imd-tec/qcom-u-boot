@@ -10,6 +10,7 @@
  */
 
 #include <blk.h>
+#include <env.h>
 #include <membuf.h>
 #include <part.h>
 #include <malloc.h>
@@ -125,6 +126,20 @@ void ext4l_record_msg(const char *msg, int len)
 struct membuf *ext4l_get_msg_buf(void)
 {
 	return &ext4l_msg_buf;
+}
+
+/**
+ * ext4l_print_msgs() - Print all recorded messages
+ *
+ * Prints the contents of the message buffer to the console.
+ */
+static void ext4l_print_msgs(void)
+{
+	char *data;
+	int len;
+
+	while ((len = membuf_getraw(&ext4l_msg_buf, 80, true, &data)) > 0)
+		printf("%.*s", len, data);
 }
 
 int ext4l_probe(struct blk_desc *fs_dev_desc,
@@ -263,6 +278,11 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Store super_block for later operations */
 	ext4l_sb = sb;
+
+	/* Print messages if ext4l_msgs environment variable is set */
+	if (env_get_yesno("ext4l_msgs") == 1)
+		ext4l_print_msgs();
+
 	return 0;
 
 err_free_buf:
