@@ -22,3 +22,12 @@ config EXT4_JOURNAL
 	  before committing them to the filesystem.
 
 	  If unsure, say Y.
+
+config EXT4L_DEBUG
+	bool "Enable ext4l debug messages"
+	depends on FS_EXT4L
+	help
+	  Enable debug and informational messages from the ext4l filesystem.
+	  This includes mount messages and other ext4_msg() output.
+
+	  If unsure, say N.

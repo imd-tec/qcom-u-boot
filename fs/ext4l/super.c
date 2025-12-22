@@ -946,6 +946,9 @@ void __ext4_msg(struct super_block *sb,
 	struct va_format vaf;
 	va_list args;
 
+	if (!IS_ENABLED(CONFIG_EXT4L_DEBUG))
+		return;
+
 	if (sb) {
 		atomic_inc(&EXT4_SB(sb)->s_msg_count);
 		if (!___ratelimit(&(EXT4_SB(sb)->s_msg_ratelimit_state),
