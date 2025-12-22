@@ -2324,8 +2324,15 @@ unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 /* Task I/O priority - declaration for stub.c */
 void set_task_ioprio(void *task, int ioprio);
 
-/* Superblock identity stubs */
-#define super_set_uuid(sb, uuid, len)		do { } while (0)
+/* Superblock identity functions */
+static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
+				  unsigned len)
+{
+	if (len > sizeof(sb->s_uuid.b))
+		len = sizeof(sb->s_uuid.b);
+	memcpy(sb->s_uuid.b, uuid, len);
+}
+
 #define super_set_sysfs_name_bdev(sb)		do { } while (0)
 
 /*

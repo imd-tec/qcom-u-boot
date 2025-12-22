@@ -28,4 +28,11 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
  */
 void ext4l_close(void);
 
+/**
+ * ext4l_get_uuid() - Get the filesystem UUID
+ * @uuid: Buffer to receive the 16-byte UUID
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_get_uuid(u8 *uuid);
+
 #endif /* __EXT4L_H__ */

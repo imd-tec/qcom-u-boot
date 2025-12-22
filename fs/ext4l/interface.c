@@ -52,6 +52,19 @@ struct disk_partition *ext4l_get_partition(void)
 }
 
 /**
+ * ext4l_get_uuid() - Get the filesystem UUID
+ * @uuid: Buffer to receive the 16-byte UUID
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_get_uuid(u8 *uuid)
+{
+	if (!ext4l_sb)
+		return -ENODEV;
+	memcpy(uuid, ext4l_sb->s_uuid.b, 16);
+	return 0;
+}
+
+/**
  * ext4l_set_blk_dev() - Set the block device for ext4l operations
  * @blk_dev: Block device descriptor
  * @partition: Partition info (can be NULL for whole disk)
