@@ -297,8 +297,8 @@ Steps to follow:
 4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
 5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
 6. Force push to the ORIGINAL remote branch to update the MR:
-   ./tools/pickman/pickman push-branch {branch_name} -r {remote} -f --run-ci
-   (--run-ci triggers a pipeline to verify the rebased changes)
+   ./tools/pickman/pickman push-branch {branch_name} -r {remote} -f
+   (GitLab automatically triggers an MR pipeline when the branch is updated)
 7. Report what was done and what reply should be posted to the MR
 
 Important:
@@ -306,7 +306,7 @@ Important:
 - If a comment is unclear or cannot be addressed, note this in your report
 - Local branch: {branch_name}-v2 (or -v3, -v4 etc.)
 - Remote push: always to '{branch_name}' to update the existing MR
-- Always use --run-ci when pushing rebases/updates to trigger verification
+- Do NOT update the MR title - it should remain as originally set
 """
 
 

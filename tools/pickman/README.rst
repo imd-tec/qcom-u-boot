@@ -165,31 +165,25 @@ This ensures:
 CI Pipelines
 ------------
 
-Pickman manages CI pipelines to avoid unnecessary runs while ensuring changes
-are properly verified.
+Pickman manages CI pipelines to avoid unnecessary duplicate runs. GitLab
+automatically triggers an MR pipeline whenever the source branch is updated,
+so pickman skips the push pipeline to avoid running two pipelines.
 
-**Initial MR creation**
+**How it works**
 
-When creating a new MR (via ``apply -p`` or ``step``), pickman pushes the
-branch with ``-o ci.skip``. This skips the push pipeline because GitLab
-automatically triggers an MR pipeline when the merge request is created.
-Without this, two pipelines would run: one for the push and one for the MR.
-
-**Review comment handling**
-
-When pushing changes after addressing review comments (via ``review``,
-``step``, or ``poll``), pickman does NOT skip the pipeline. A new pipeline
-is needed to verify that the changes made in response to review feedback
-are correct.
+When pushing a branch (for new MRs or updates), pickman uses ``-o ci.skip``
+to skip the push pipeline. GitLab then triggers an MR pipeline when it
+detects the branch update on the merge request. This ensures exactly one
+pipeline runs for each push.
 
 **Summary**
 
-===============================  ================  =========================
+===============================  ================  ==============================
 Action                           Pipeline Skipped  Reason
-===============================  ================  =========================
-Initial branch push for new MR   Yes               MR creation triggers one
-Push after review changes        No                Need to verify changes
-===============================  ================  =========================
+===============================  ================  ==============================
+Initial branch push for new MR   Yes               MR creation triggers pipeline
+Push after rebase/review         Yes               MR update triggers pipeline
+===============================  ================  ==============================
 
 Usage
 -----
