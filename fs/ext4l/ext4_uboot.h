@@ -2150,7 +2150,7 @@ struct blockgroup_lock {
 };
 
 /* Buffer submission stubs - declarations for stub.c implementations */
-void submit_bh(int op_flags, struct buffer_head *bh);
+int submit_bh(int op_flags, struct buffer_head *bh);
 struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
 				unsigned int size, gfp_t gfp);
 int trylock_buffer(struct buffer_head *bh);

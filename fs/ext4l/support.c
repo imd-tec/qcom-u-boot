@@ -353,6 +353,40 @@ int ext4l_read_block(sector_t block, size_t size, void *buffer)
 }
 
 /**
+ * ext4l_write_block() - Write a block to the block device
+ * @block: Block number (filesystem block, not sector)
+ * @size: Block size in bytes
+ * @buffer: Source buffer
+ * Return: 0 on success, negative on error
+ */
+int ext4l_write_block(sector_t block, size_t size, void *buffer)
+{
+	struct blk_desc *blk_dev;
+	struct disk_partition *part;
+	lbaint_t sector;
+	lbaint_t sector_count;
+	unsigned long n;
+
+	blk_dev = ext4l_get_blk_dev();
+	part = ext4l_get_partition();
+	if (!blk_dev)
+		return -EIO;
+
+	/* Convert block to sector */
+	sector = (block * size) / blk_dev->blksz + part->start;
+	sector_count = size / blk_dev->blksz;
+
+	if (sector_count == 0)
+		sector_count = 1;
+
+	n = blk_dwrite(blk_dev, sector, sector_count, buffer);
+	if (n != sector_count)
+		return -EIO;
+
+	return 0;
+}
+
+/**
  * sb_getblk() - Get a buffer, using cache if available
  * @sb: Super block
  * @block: Block number
@@ -378,6 +412,9 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block)
 	bh->b_blocknr = block;
 	bh->b_bdev = sb->s_bdev;
 	bh->b_size = sb->s_blocksize;
+
+	/* Mark buffer as having a valid disk mapping */
+	set_buffer_mapped(bh);
 
 	/* Don't read - just allocate with zeroed data */
 	memset(bh->b_data, '\0', bh->b_size);
@@ -474,6 +511,9 @@ struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
 	bh->b_bdev = bdev;
 	bh->b_size = size;
 
+	/* Mark buffer as having a valid disk mapping */
+	set_buffer_mapped(bh);
+
 	/* Don't read - just allocate with zeroed data */
 	memset(bh->b_data, 0, bh->b_size);
 
@@ -520,8 +560,9 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
  * submit_bh() - Submit a buffer_head for I/O
  * @op: Operation (REQ_OP_READ, REQ_OP_WRITE, etc.)
  * @bh: Buffer head to submit
+ * Return: 0 on success, negative on error
  */
-void submit_bh(int op, struct buffer_head *bh)
+int submit_bh(int op, struct buffer_head *bh)
 {
 	int ret;
 	int op_type = op & 0xff;  /* Mask out flags, keep operation type */
@@ -530,13 +571,19 @@ void submit_bh(int op, struct buffer_head *bh)
 		ret = ext4l_read_block(bh->b_blocknr, bh->b_size, bh->b_data);
 		if (ret) {
 			clear_buffer_uptodate(bh);
-			return;
+			return ret;
 		}
 		set_buffer_uptodate(bh);
 	} else if (op_type == REQ_OP_WRITE) {
-		/* Write support not implemented yet */
-		clear_buffer_uptodate(bh);
+		ret = ext4l_write_block(bh->b_blocknr, bh->b_size, bh->b_data);
+		if (ret) {
+			clear_buffer_uptodate(bh);
+			return ret;
+		}
+		/* Mark buffer as clean (not dirty) after write */
 	}
+
+	return 0;
 }
 
 /**
