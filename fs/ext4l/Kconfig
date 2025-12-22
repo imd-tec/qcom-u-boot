@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
+#
+# Copyright 2025 Canonical Ltd
+# Written by Simon Glass <simon.glass@canonical.com>
 
 config FS_EXT4L
 	bool "Enable ext4 filesystem support (Linux port)"
@@ -8,3 +11,23 @@ config FS_EXT4L
 	  FS_EXT4 (the existing U-Boot ext4 implementation).
 
 	  This requires 64-bit LBA support for proper block counting.
+
+config EXT4_JOURNAL
+	bool "Enable ext4 journal support"
+	depends on FS_EXT4L
+	default y
+	help
+	  This enables journal (jbd2) support for ext4 filesystems. The
+	  journal provides crash-consistency by logging metadata changes
+	  before committing them to the filesystem.
+
+	  If unsure, say Y.
+
+config EXT4L_DEBUG
+	bool "Enable ext4l debug messages"
+	depends on FS_EXT4L
+	help
+	  Enable debug and informational messages from the ext4l filesystem.
+	  This includes mount messages and other ext4_msg() output.
+
+	  If unsure, say N.

@@ -40,6 +40,8 @@ enum bh_state_bits {
 	BH_PrivateStart,/* not a state bit, but the first bit available
 			 * for private allocation by other entities
 			 */
+	/* U-Boot specific: marks buffer owns b_data and should free it */
+	BH_OwnsData = BH_PrivateStart,
 };
 
 #define MAX_BUF_PER_PAGE (PAGE_SIZE / 512)
@@ -176,8 +178,8 @@ static inline void put_bh(struct buffer_head *bh)
 	atomic_dec(&bh->b_count);
 }
 
-/* Stubs for U-Boot */
-#define brelse(bh)		do { if (bh) put_bh(bh); } while (0)
-#define __brelse(bh)		do { put_bh(bh); } while (0)
+/* Buffer release functions - implemented in ext4l/interface.c */
+void brelse(struct buffer_head *bh);
+void __brelse(struct buffer_head *bh);
 
 #endif /* _LINUX_BUFFER_HEAD_H */

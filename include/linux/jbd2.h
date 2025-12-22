@@ -20,14 +20,18 @@
 #else
 
 #include <linux/types.h>
+#include <linux/blk_types.h>
 #include <linux/buffer_head.h>
 #include <linux/journal-head.h>
 #include <linux/stddef.h>
 #include <linux/mutex.h>
 #include <linux/timer.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <linux/bit_spinlock.h>
 #include <linux/blkdev.h>
+#include <linux/jiffies.h>
+#include <linux/percpu_counter.h>
 #include <linux/crc32c.h>
 #include <linux/wait.h>
 #include <linux/init.h>
@@ -70,6 +74,7 @@ void __jbd2_debug(int level, const char *file, const char *func,
 
 extern void *jbd2_alloc(size_t size, gfp_t flags);
 extern void jbd2_free(void *ptr, size_t size);
+extern int jbd2_journal_init_global(void);
 
 #define JBD2_MIN_JOURNAL_BLOCKS 1024
 #define JBD2_DEFAULT_FAST_COMMIT_BLOCKS 256

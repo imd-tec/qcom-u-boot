@@ -2,6 +2,9 @@
 /*
  * Stub functions for ext4l filesystem
  *
+ * Copyright 2025 Canonical Ltd
+ * Written by Simon Glass <simon.glass@canonical.com>
+ *
  * These stubs allow the ext4l code to link during development while not all
  * source files are present. They will be removed once the full ext4l
  * implementation is complete.
@@ -306,20 +309,14 @@ void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 	return ERR_PTR(-ENODEV);
 }
 
-struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
-				unsigned int size, gfp_t gfp)
-{
-	return NULL;
-}
+/* bdev_getblk implemented in interface.c */
 
 int trylock_buffer(struct buffer_head *bh)
 {
 	return 1;
 }
 
-void submit_bh(int op, struct buffer_head *bh)
-{
-}
+/* submit_bh implemented in interface.c */
 
 /* NFS export stubs */
 struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
@@ -352,10 +349,7 @@ void inode_set_iversion(struct inode *inode, u64 version)
 {
 }
 
-/* rwlock stubs */
-void rwlock_init(rwlock_t *lock)
-{
-}
+/* rwlock_init is now a macro in linux/spinlock.h */
 
 /* trace_ext4_drop_inode is now a macro in ext4_uboot.h */
 
@@ -519,6 +513,14 @@ void fs_put_dax(void *dax, void *holder)
 /* Block size */
 int sb_set_blocksize(struct super_block *sb, int size)
 {
+	/* Validate block size */
+	if (size != 1024 && size != 2048 && size != 4096)
+		return 0;
+
+	/* Update superblock fields */
+	sb->s_blocksize = size;
+	sb->s_blocksize_bits = ffs(size) - 1;
+
 	return size;
 }
 
@@ -559,9 +561,30 @@ void generic_set_sb_d_ops(struct super_block *sb)
 {
 }
 
+/**
+ * d_make_root() - Create a root dentry for an inode
+ * @inode: Inode to create dentry for
+ * Return: Allocated dentry or NULL on failure
+ */
 struct dentry *d_make_root(struct inode *inode)
 {
-	return NULL;
+	struct dentry *de;
+
+	if (!inode)
+		return NULL;
+
+	de = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!de) {
+		iput(inode);
+		return NULL;
+	}
+
+	de->d_inode = inode;
+	de->d_sb = inode->i_sb;
+	de->d_name.name = "/";
+	de->d_name.len = 1;
+
+	return de;
 }
 
 /* percpu init rwsem */

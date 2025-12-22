@@ -2,6 +2,9 @@
 /*
  * U-Boot compatibility header for ext4l filesystem
  *
+ * Copyright 2025 Canonical Ltd
+ * Written by Simon Glass <simon.glass@canonical.com>
+ *
  * This provides minimal definitions to allow Linux ext4 code to compile
  * in U-Boot.
  */
@@ -31,6 +34,8 @@
 #include <linux/fs.h>
 #include <linux/iomap.h>
 #include <linux/seq_file.h>
+#include <linux/rbtree.h>	/* Real rbtree implementation */
+#include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
  * Override no_printk to avoid format warnings in disabled debug prints.
@@ -52,25 +57,15 @@ struct timespec64 {
 	long tv_nsec;
 };
 
-/* ktime_t - kernel time type */
-typedef s64 ktime_t;
+/*
+ * ktime_t, atomic_t, atomic64_t, sector_t are now in linux/types.h
+ * MAX_JIFFY_OFFSET is now in linux/jiffies.h
+ * BDEVNAME_SIZE is now in linux/blkdev.h
+ */
+#include <linux/jiffies.h>
+#include <linux/blkdev.h>
 
-/* Jiffy constants */
-#define MAX_JIFFY_OFFSET	((~0UL >> 1) - 1)
-
-/* Block device name size */
-#define BDEVNAME_SIZE		32
-
-/* Atomic types - stubs for single-threaded U-Boot */
-typedef struct { int counter; } atomic_t;
-typedef struct { long counter; } atomic64_t;
-
-#define atomic_read(v)		((v)->counter)
-#define atomic_set(v, i)	((v)->counter = (i))
-#define atomic_inc(v)		((v)->counter++)
-#define atomic_dec(v)		((v)->counter--)
-#define atomic64_read(v)	((v)->counter)
-#define atomic64_set(v, i)	((v)->counter = (i))
+/* Extra atomic operation not in linux/types.h */
 #define atomic_dec_if_positive(v)	(--(v)->counter)
 
 /* SMP stubs - U-Boot is single-threaded */
@@ -89,27 +84,10 @@ typedef struct { long counter; } atomic64_t;
 /* Reference count type */
 typedef struct { atomic_t refs; } refcount_t;
 
-/* Lock types - stubs for single-threaded U-Boot */
-typedef int rwlock_t;
-/* spinlock_t is defined in linux/compat.h */
+/* rwlock_t and read_lock/read_unlock are now in linux/spinlock.h */
+#include <linux/spinlock.h>
 
-#define read_lock(l)		do { } while (0)
-#define read_unlock(l)		do { } while (0)
-#define write_lock(l)		do { } while (0)
-#define write_unlock(l)		do { } while (0)
-
-/* RB tree types - stubs */
-struct rb_node {
-	unsigned long __rb_parent_color;
-	struct rb_node *rb_right;
-	struct rb_node *rb_left;
-};
-
-struct rb_root {
-	struct rb_node *rb_node;
-};
-
-#define RB_ROOT (struct rb_root) { NULL, }
+/* RB tree types - from <linux/rbtree.h> included above */
 
 /* percpu_counter - use Linux header */
 #include <linux/percpu_counter.h>
@@ -309,8 +287,8 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - stub */
-#define sb_rdonly(sb)	(0)
+/* sb_rdonly - for now U-Boot mounts filesystems read-only */
+#define sb_rdonly(sb)	1
 
 /* Trace stubs */
 #define trace_ext4_journal_start_inode(...)	do { } while (0)
@@ -324,9 +302,9 @@ extern struct user_namespace init_user_ns;
 #define __bforget(bh)			do { } while (0)
 #define mark_buffer_dirty_inode(bh, i)	do { } while (0)
 #define mark_buffer_dirty(bh)		do { } while (0)
-#define lock_buffer(bh)			do { } while (0)
-#define unlock_buffer(bh)		do { } while (0)
-#define sb_getblk(sb, block)		((struct buffer_head *)NULL)
+#define lock_buffer(bh)			set_buffer_locked(bh)
+#define unlock_buffer(bh)		clear_buffer_locked(bh)
+struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
 #define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
 
@@ -397,8 +375,8 @@ extern struct user_namespace init_user_ns;
 #define ktime_get_real_seconds()		(0)
 #define time_before32(a, b)			(0)
 
-/* Inode operations - stubs */
-#define new_inode(sb)				((struct inode *)NULL)
+/* Inode operations - iget_locked and new_inode are in interface.c */
+extern struct inode *new_inode(struct super_block *sb);
 #define i_uid_write(inode, uid)			do { } while (0)
 #define i_gid_write(inode, gid)			do { } while (0)
 #define inode_fsuid_set(inode, idmap)		do { } while (0)
@@ -468,21 +446,16 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Memory allocation - use linux/slab.h which is already available */
 #include <linux/slab.h>
 
-/* KMEM_CACHE macro - not in U-Boot's slab.h */
-#define KMEM_CACHE(s, flags)		((struct kmem_cache *)1)
+/* KMEM_CACHE macro - use kmem_cache_create */
+#define KMEM_CACHE(s, flags)		kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
 
-/* RB tree operations - stubs */
-#define rb_entry(ptr, type, member) \
-	container_of(ptr, type, member)
-#define rb_first(root)		((root)->rb_node)
-#define rb_next(node)		((node)->rb_right)
-#define rb_prev(node)		((node)->rb_left)
-#define rb_insert_color(node, root)	do { } while (0)
-#define rb_erase(node, root)		do { } while (0)
-#define rb_link_node(node, parent, rb_link)	do { *(rb_link) = (node); } while (0)
-#define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
-#define rbtree_postorder_for_each_entry_safe(pos, n, root, field) \
-	for (pos = NULL, (void)(n); pos != NULL; )
+/*
+ * RB tree operations - use real rbtree implementation from lib/rbtree.c
+ * and include/linux/rbtree.h. rb_entry, rb_first, rb_next, rb_prev,
+ * rb_insert_color, rb_erase, rb_link_node, RB_EMPTY_ROOT, and
+ * rbtree_postorder_for_each_entry_safe are all provided by the real
+ * implementation - do not stub them!
+ */
 
 /* RCU barrier - stub */
 #define rcu_barrier()		do { } while (0)
@@ -510,8 +483,7 @@ struct sb_writers {
 /* mapping_large_folio_support stub */
 #define mapping_large_folio_support(m)	(0)
 
-/* sector_t - needed before buffer_head.h */
-typedef unsigned long sector_t;
+/* sector_t is now in linux/types.h */
 
 /* Buffer head - from linux/buffer_head.h */
 #include <linux/buffer_head.h>
@@ -662,7 +634,7 @@ struct super_block {
 	struct rw_semaphore s_umount;
 	struct sb_writers s_writers;
 	struct block_device *s_bdev;
-	const char *s_id;
+	char s_id[32];
 	struct dentry *s_root;
 	uuid_t s_uuid;
 	struct file_system_type *s_type;
@@ -846,6 +818,7 @@ struct inode {
 	const struct inode_operations *i_op;
 	const struct file_operations *i_fop;
 	atomic_t i_writecount;		/* Count of writers */
+	atomic_t i_count;		/* Reference count */
 	struct rw_semaphore i_rwsem;	/* inode lock */
 	const char *i_link;		/* Symlink target for fast symlinks */
 	unsigned short i_write_hint;	/* Write life time hint */
@@ -1038,7 +1011,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define rwsem_is_locked(sem)		(1)
 
 /* Buffer operations */
-#define sb_getblk_gfp(sb, blk, gfp)	((struct buffer_head *)NULL)
+#define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
 #define bh_uptodate_or_lock(bh)		(1)
 /* ext4_read_bh is stubbed in interface.c */
 
@@ -1163,7 +1136,10 @@ struct shrinker {
 static inline struct shrinker *shrinker_alloc(unsigned int flags,
 					      const char *fmt, ...)
 {
-	return NULL;
+	/* Return static dummy - U-Boot doesn't need memory reclamation */
+	static struct shrinker dummy_shrinker;
+
+	return &dummy_shrinker;
 }
 
 static inline void shrinker_register(struct shrinker *s)
@@ -1531,7 +1507,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define filemap_splice_read(i, p, pi, l, f)	({ (void)(i); (void)(p); (void)(pi); (void)(l); (void)(f); 0L; })
 
 /* Buffer operations - additional */
-#define getblk_unmovable(bd, b, s)		((struct buffer_head *)NULL)
+#define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
 #define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
 #define bh_offset(bh)				(0UL)
 #define block_invalidate_folio(f, o, l)		do { } while (0)
@@ -1641,7 +1617,7 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define fs_high2lowgid(gid)	((gid) & 0xFFFF)
 
 /* Inode allocation/state operations */
-#define iget_locked(sb, ino)		((struct inode *)NULL)
+extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
 #define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
 #define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
@@ -1882,7 +1858,14 @@ struct file_system_type {
 #define FS_ALLOW_IDMAP		32
 
 /* Buffer read sync */
-#define end_buffer_read_sync	NULL
+static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
 #define REQ_OP_READ		0
 
 /* Superblock flags */
@@ -2037,6 +2020,9 @@ struct fs_context {
 	bool sloppy;
 	bool silent;
 };
+
+/* ext4 superblock initialisation */
+int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 
 /* fs_parameter stubs */
 struct fs_parameter {
@@ -2206,8 +2192,7 @@ void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 void inode_set_iversion(struct inode *inode, u64 version);
 int inode_generic_drop(struct inode *inode);
 
-/* Lock init - declaration for stub.c */
-void rwlock_init(rwlock_t *lock);
+/* rwlock_init is a macro in linux/spinlock.h */
 
 /* Trace stubs */
 #define trace_ext4_drop_inode(i, d)		do { } while (0)
@@ -2330,8 +2315,8 @@ struct mb_cache_entry {
 /* MB cache flags */
 #define MBE_REUSABLE_B	0
 
-#define mb_cache_create(bits)			((struct mb_cache *)NULL)
-#define mb_cache_destroy(cache)			do { (void)(cache); } while (0)
+#define mb_cache_create(bits)			kzalloc(sizeof(struct mb_cache), GFP_KERNEL)
+#define mb_cache_destroy(cache)			do { kfree(cache); } while (0)
 #define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
 #define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
 #define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)
@@ -2387,7 +2372,7 @@ void dquot_free_block(struct inode *inode, loff_t nr);
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
-#define __bread(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
 
 /* Trace stubs for super.c */
 #define trace_ext4_sync_fs(sb, wait)	do { (void)(sb); (void)(wait); } while (0)
@@ -2833,7 +2818,17 @@ struct wait_bit_entry {
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
 	({ (void)(m); (void)(s); (void)(e); 0; })
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
-#define free_buffer_head(bh)		kfree(bh)
+void free_buffer_head(struct buffer_head *bh);
+
+/* ext4l support functions (support.c) */
+void ext4l_crc32c_init(void);
+void bh_cache_clear(void);
+int ext4l_read_block(sector_t block, size_t size, void *buffer);
+
+/* ext4l interface functions (interface.c) */
+struct blk_desc *ext4l_get_blk_dev(void);
+struct disk_partition *ext4l_get_partition(void);
+
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 
 /* DEFINE_WAIT stub - creates a wait queue entry */
@@ -2860,9 +2855,9 @@ struct wait_bit_entry {
 #define trace_jbd2_lock_buffer_stall(...)	do { } while (0)
 
 /* JBD2 journal.c stubs */
-#define alloc_buffer_head(gfp)		((struct buffer_head *)kzalloc(sizeof(struct buffer_head), gfp))
+struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
 #define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
-#define bmap(inode, block)		({ (void)(inode); (void)(block); 0; })
+int bmap(struct inode *inode, sector_t *block);
 #define trace_jbd2_update_log_tail(j, t, b, f) \
 	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
 
@@ -2907,8 +2902,8 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 	do { (void)(j); (void)(f); } while (0)
 
 /* Block device operations for journal.c */
-#define bh_read(bh, flags)		({ (void)(bh); (void)(flags); 0; })
-#define bh_read_nowait(bh, flags)	do { (void)(bh); (void)(flags); } while (0)
+int bh_read(struct buffer_head *bh, int flags);
+#define bh_read_nowait(bh, flags)	bh_read(bh, flags)
 #define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
 #define truncate_inode_pages_range(m, s, e) \
 	do { (void)(m); (void)(s); (void)(e); } while (0)
