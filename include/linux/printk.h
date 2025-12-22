@@ -5,15 +5,15 @@
 #include <stdio.h>
 #include <linux/compiler.h>
 
-#define KERN_EMERG
-#define KERN_ALERT
-#define KERN_CRIT
-#define KERN_ERR
-#define KERN_WARNING
-#define KERN_NOTICE
-#define KERN_INFO
-#define KERN_DEBUG
-#define KERN_CONT
+#define KERN_EMERG	""
+#define KERN_ALERT	""
+#define KERN_CRIT	""
+#define KERN_ERR	""
+#define KERN_WARNING	""
+#define KERN_NOTICE	""
+#define KERN_INFO	""
+#define KERN_DEBUG	""
+#define KERN_CONT	""
 
 #define printk(fmt, ...) \
 	printf(fmt, ##__VA_ARGS__)
