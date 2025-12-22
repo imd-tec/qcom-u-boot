@@ -313,9 +313,9 @@ extern struct user_namespace init_user_ns;
 #define __bforget(bh)			do { } while (0)
 #define mark_buffer_dirty_inode(bh, i)	do { } while (0)
 #define mark_buffer_dirty(bh)		do { } while (0)
-#define lock_buffer(bh)			do { } while (0)
-#define unlock_buffer(bh)		do { } while (0)
-#define sb_getblk(sb, block)		((struct buffer_head *)NULL)
+#define lock_buffer(bh)			set_buffer_locked(bh)
+#define unlock_buffer(bh)		clear_buffer_locked(bh)
+struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
 #define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
 
@@ -1026,7 +1026,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define rwsem_is_locked(sem)		(1)
 
 /* Buffer operations */
-#define sb_getblk_gfp(sb, blk, gfp)	((struct buffer_head *)NULL)
+#define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
 #define bh_uptodate_or_lock(bh)		(1)
 /* ext4_read_bh is stubbed in interface.c */
 
@@ -1870,7 +1870,14 @@ struct file_system_type {
 #define FS_ALLOW_IDMAP		32
 
 /* Buffer read sync */
-#define end_buffer_read_sync	NULL
+static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
 #define REQ_OP_READ		0
 
 /* Superblock flags */
@@ -2377,7 +2384,7 @@ void dquot_free_block(struct inode *inode, loff_t nr);
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
-#define __bread(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
 
 /* Trace stubs for super.c */
 #define trace_ext4_sync_fs(sb, wait)	do { (void)(sb); (void)(wait); } while (0)
@@ -2823,7 +2830,16 @@ struct wait_bit_entry {
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
 	({ (void)(m); (void)(s); (void)(e); 0; })
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
-#define free_buffer_head(bh)		kfree(bh)
+void free_buffer_head(struct buffer_head *bh);
+
+/* ext4l support functions (support.c) */
+void bh_cache_clear(void);
+int ext4l_read_block(sector_t block, size_t size, void *buffer);
+
+/* ext4l interface functions (interface.c) */
+struct blk_desc *ext4l_get_blk_dev(void);
+struct disk_partition *ext4l_get_partition(void);
+
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 
 /* DEFINE_WAIT stub - creates a wait queue entry */
@@ -2850,7 +2866,7 @@ struct wait_bit_entry {
 #define trace_jbd2_lock_buffer_stall(...)	do { } while (0)
 
 /* JBD2 journal.c stubs */
-#define alloc_buffer_head(gfp)		((struct buffer_head *)kzalloc(sizeof(struct buffer_head), gfp))
+struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
 #define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
 #define bmap(inode, block)		({ (void)(inode); (void)(block); 0; })
 #define trace_jbd2_update_log_tail(j, t, b, f) \
@@ -2897,8 +2913,8 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 	do { (void)(j); (void)(f); } while (0)
 
 /* Block device operations for journal.c */
-#define bh_read(bh, flags)		({ (void)(bh); (void)(flags); 0; })
-#define bh_read_nowait(bh, flags)	do { (void)(bh); (void)(flags); } while (0)
+int bh_read(struct buffer_head *bh, int flags);
+#define bh_read_nowait(bh, flags)	bh_read(bh, flags)
 #define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
 #define truncate_inode_pages_range(m, s, e) \
 	do { (void)(m); (void)(s); (void)(e); } while (0)

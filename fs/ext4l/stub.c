@@ -309,20 +309,14 @@ void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 	return ERR_PTR(-ENODEV);
 }
 
-struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
-				unsigned int size, gfp_t gfp)
-{
-	return NULL;
-}
+/* bdev_getblk implemented in interface.c */
 
 int trylock_buffer(struct buffer_head *bh)
 {
 	return 1;
 }
 
-void submit_bh(int op, struct buffer_head *bh)
-{
-}
+/* submit_bh implemented in interface.c */
 
 /* NFS export stubs */
 struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
@@ -519,6 +513,14 @@ void fs_put_dax(void *dax, void *holder)
 /* Block size */
 int sb_set_blocksize(struct super_block *sb, int size)
 {
+	/* Validate block size */
+	if (size != 1024 && size != 2048 && size != 4096)
+		return 0;
+
+	/* Update superblock fields */
+	sb->s_blocksize = size;
+	sb->s_blocksize_bits = ffs(size) - 1;
+
 	return size;
 }
 

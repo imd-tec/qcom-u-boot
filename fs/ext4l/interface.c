@@ -5,13 +5,13 @@
  * Copyright 2025 Canonical Ltd
  * Written by Simon Glass <simon.glass@canonical.com>
  *
- * This provides the minimal interface between U-Boot and the ext4l driver.
+ * This provides the interface between U-Boot's filesystem layer and
+ * the ext4l driver.
  */
 
 #include <blk.h>
 #include <part.h>
 #include <malloc.h>
-#include <asm/byteorder.h>
 #include <linux/errno.h>
 #include <linux/jbd2.h>
 #include <linux/types.h>
@@ -22,6 +22,58 @@
 /* Global state */
 static struct blk_desc *ext4l_dev_desc;
 static struct disk_partition ext4l_part;
+
+/* Global block device tracking for buffer I/O */
+static struct blk_desc *ext4l_blk_dev;
+static struct disk_partition ext4l_partition;
+static int ext4l_mounted;
+
+/**
+ * ext4l_get_blk_dev() - Get the current block device
+ * Return: Block device descriptor or NULL if not mounted
+ */
+struct blk_desc *ext4l_get_blk_dev(void)
+{
+	if (!ext4l_mounted)
+		return NULL;
+	return ext4l_blk_dev;
+}
+
+/**
+ * ext4l_get_partition() - Get the current partition info
+ * Return: Partition info pointer
+ */
+struct disk_partition *ext4l_get_partition(void)
+{
+	return &ext4l_partition;
+}
+
+/**
+ * ext4l_set_blk_dev() - Set the block device for ext4l operations
+ * @blk_dev: Block device descriptor
+ * @partition: Partition info (can be NULL for whole disk)
+ */
+void ext4l_set_blk_dev(struct blk_desc *blk_dev, struct disk_partition *partition)
+{
+	ext4l_blk_dev = blk_dev;
+	if (partition)
+		memcpy(&ext4l_partition, partition, sizeof(struct disk_partition));
+	else
+		memset(&ext4l_partition, 0, sizeof(struct disk_partition));
+	ext4l_mounted = 1;
+}
+
+/**
+ * ext4l_clear_blk_dev() - Clear block device (unmount)
+ */
+void ext4l_clear_blk_dev(void)
+{
+	/* Clear buffer cache before unmounting */
+	bh_cache_clear();
+
+	ext4l_blk_dev = NULL;
+	ext4l_mounted = 0;
+}
 
 int ext4l_probe(struct blk_desc *fs_dev_desc,
 		struct disk_partition *fs_partition)
@@ -36,6 +88,9 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	if (!fs_dev_desc)
 		return -EINVAL;
+
+	/* Set up block device for buffer I/O */
+	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
 
 	/* Initialise journal subsystem if enabled */
 	if (IS_ENABLED(CONFIG_EXT4_JOURNAL)) {
@@ -162,5 +217,6 @@ err_exit_es:
 
 void ext4l_close(void)
 {
+	ext4l_clear_blk_dev();
 	ext4l_dev_desc = NULL;
 }
