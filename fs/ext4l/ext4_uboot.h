@@ -1703,8 +1703,12 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
 #define inode_query_iversion(i)			({ (void)(i); 0ULL; })
 
-/* Directory context operations */
-#define dir_emit(ctx, name, len, ino, type)	({ (void)(ctx); (void)(name); (void)(len); (void)(ino); (void)(type); 1; })
+/* Directory context operations - call the actor callback */
+static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
+			    u64 ino, unsigned int type)
+{
+	return ctx->actor(ctx, name, len, ctx->pos, ino, type) == 0;
+}
 #define dir_relax_shared(i)			({ (void)(i); 1; })
 
 /* File llseek */
