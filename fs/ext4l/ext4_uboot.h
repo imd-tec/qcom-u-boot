@@ -34,6 +34,7 @@
 #include <linux/fs.h>
 #include <linux/iomap.h>
 #include <linux/seq_file.h>
+#include <linux/rbtree.h>	/* Real rbtree implementation */
 
 /*
  * Override no_printk to avoid format warnings in disabled debug prints.
@@ -87,18 +88,7 @@ typedef struct { atomic_t refs; } refcount_t;
 /* rwlock_t and read_lock/read_unlock are now in linux/spinlock.h */
 #include <linux/spinlock.h>
 
-/* RB tree types - stubs */
-struct rb_node {
-	unsigned long __rb_parent_color;
-	struct rb_node *rb_right;
-	struct rb_node *rb_left;
-};
-
-struct rb_root {
-	struct rb_node *rb_node;
-};
-
-#define RB_ROOT (struct rb_root) { NULL, }
+/* RB tree types - from <linux/rbtree.h> included above */
 
 /* percpu_counter - use Linux header */
 #include <linux/percpu_counter.h>
@@ -460,18 +450,13 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* KMEM_CACHE macro - use kmem_cache_create */
 #define KMEM_CACHE(s, flags)		kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
 
-/* RB tree operations - stubs */
-#define rb_entry(ptr, type, member) \
-	container_of(ptr, type, member)
-#define rb_first(root)		((root)->rb_node)
-#define rb_next(node)		((node)->rb_right)
-#define rb_prev(node)		((node)->rb_left)
-#define rb_insert_color(node, root)	do { } while (0)
-#define rb_erase(node, root)		do { } while (0)
-#define rb_link_node(node, parent, rb_link)	do { *(rb_link) = (node); } while (0)
-#define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
-#define rbtree_postorder_for_each_entry_safe(pos, n, root, field) \
-	for (pos = NULL, (void)(n); pos != NULL; )
+/*
+ * RB tree operations - use real rbtree implementation from lib/rbtree.c
+ * and include/linux/rbtree.h. rb_entry, rb_first, rb_next, rb_prev,
+ * rb_insert_color, rb_erase, rb_link_node, RB_EMPTY_ROOT, and
+ * rbtree_postorder_for_each_entry_safe are all provided by the real
+ * implementation - do not stub them!
+ */
 
 /* RCU barrier - stub */
 #define rcu_barrier()		do { } while (0)
