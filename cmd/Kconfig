@@ -2835,6 +2835,7 @@ config CMD_FS_GENERIC
 
 config CMD_FS_UUID
 	bool "fsuuid command"
+	default y if SANDBOX
 	help
 	  Enables fsuuid command for filesystem UUID.
 
