@@ -636,6 +636,19 @@ int ext4l_ls(const char *dirname)
 	return ret;
 }
 
+int ext4l_exists(const char *filename)
+{
+	struct inode *inode;
+
+	if (!filename)
+		return 0;
+
+	if (ext4l_resolve_path(filename, &inode))
+		return 0;
+
+	return 1;
+}
+
 void ext4l_close(void)
 {
 	if (ext4l_open_dirs > 0)

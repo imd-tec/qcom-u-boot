@@ -39,6 +39,14 @@ void ext4l_close(void);
 int ext4l_ls(const char *dirname);
 
 /**
+ * ext4l_exists() - Check if a file or directory exists
+ *
+ * @filename: Path to check
+ * Return: 1 if exists, 0 if not
+ */
+int ext4l_exists(const char *filename);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID

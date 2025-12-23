@@ -196,3 +196,30 @@ static int fs_test_ext4l_opendir_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_opendir_norun, UTF_SCAN_FDT | UTF_CONSOLE |
 	     UTF_MANUAL, { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_exists_norun() - Test ext4l_exists function
+ *
+ * Verifies that ext4l_exists correctly reports file existence.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_exists_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Test existing directory */
+	ut_asserteq(1, ext4l_exists("/"));
+
+	/* Test non-existent paths */
+	ut_asserteq(0, ext4l_exists("/no/such/path"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_exists_norun, UTF_SCAN_FDT | UTF_CONSOLE |
+	     UTF_MANUAL, { "fs_image", UT_ARG_STR });

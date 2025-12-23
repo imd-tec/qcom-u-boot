@@ -96,3 +96,10 @@ class TestExt4l:
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_opendir_norun fs_image={ext4_image}')
             assert 'failures: 0' in output
+
+    def test_exists(self, ubman, ext4_image):
+        """Test that ext4l_exists reports file existence correctly."""
+        with ubman.log.section('Test ext4l exists'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_exists_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
