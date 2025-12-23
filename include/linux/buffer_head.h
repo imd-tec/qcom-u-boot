@@ -12,10 +12,7 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
-/*
- * Note: atomic_t and sector_t are expected to be defined by the including
- * file (ext4_uboot.h) before including this header.
- */
+#include <asm-generic/atomic.h>
 
 enum bh_state_bits {
 	BH_Uptodate,	/* Contains valid data */
