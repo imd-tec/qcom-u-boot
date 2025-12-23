@@ -3,6 +3,18 @@
 include:
   - local: '.gitlab-ci-release.yml'
 
+# Control when pipelines are created
+workflow:
+  rules:
+    # Allow manual merge request pipelines when MANUAL_TRIGGER is set
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $MANUAL_TRIGGER == "1"'
+      when: always
+    # Prevent automatic merge request pipelines
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    # Allow all other pipeline sources (push, manual, API)
+    - when: always
+
 variables:
   DEFAULT_TAG: ""
   MIRROR_DOCKER: docker.io
