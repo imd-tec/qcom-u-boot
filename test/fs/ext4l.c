@@ -295,3 +295,35 @@ static int fs_test_ext4l_read_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_read_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_uuid_norun() - Test ext4l_uuid function
+ *
+ * Verifies that ext4l can return the filesystem UUID.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_uuid_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	char uuid_str[UUID_STR_LEN + 1];
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Get the UUID string */
+	ut_assertok(ext4l_uuid(uuid_str));
+
+	/* Verify it's a valid UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) */
+	ut_asserteq(UUID_STR_LEN, strlen(uuid_str));
+	ut_asserteq('-', uuid_str[8]);
+	ut_asserteq('-', uuid_str[13]);
+	ut_asserteq('-', uuid_str[18]);
+	ut_asserteq('-', uuid_str[23]);
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_uuid_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

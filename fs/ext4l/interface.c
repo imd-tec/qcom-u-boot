@@ -15,6 +15,7 @@
 #include <membuf.h>
 #include <part.h>
 #include <malloc.h>
+#include <u-boot/uuid.h>
 #include <linux/errno.h>
 #include <linux/jbd2.h>
 #include <linux/types.h>
@@ -77,6 +78,25 @@ int ext4l_get_uuid(u8 *uuid)
 	if (!ext4l_sb)
 		return -ENODEV;
 	memcpy(uuid, ext4l_sb->s_uuid.b, 16);
+	return 0;
+}
+
+/**
+ * ext4l_uuid() - Get the filesystem UUID as a string
+ *
+ * @uuid_str: Buffer to receive the UUID string (must be at least 37 bytes)
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_uuid(char *uuid_str)
+{
+	u8 uuid[16];
+	int ret;
+
+	ret = ext4l_get_uuid(uuid);
+	if (ret)
+		return ret;
+	uuid_bin_to_str(uuid, uuid_str, UUID_STR_FORMAT_STD);
+
 	return 0;
 }
 

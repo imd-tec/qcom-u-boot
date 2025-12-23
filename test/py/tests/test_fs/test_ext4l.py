@@ -117,3 +117,10 @@ class TestExt4l:
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_read_norun fs_image={ext4_image}')
             assert 'failures: 0' in output
+
+    def test_uuid(self, ubman, ext4_image):
+        """Test that ext4l can return the filesystem UUID."""
+        with ubman.log.section('Test ext4l uuid'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_uuid_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output

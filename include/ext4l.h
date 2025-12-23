@@ -77,6 +77,14 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 int ext4l_get_uuid(u8 *uuid);
 
 /**
+ * ext4l_uuid() - Get the filesystem UUID as a string
+ *
+ * @uuid_str: Buffer to receive the UUID string (must be at least 37 bytes)
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_uuid(char *uuid_str);
+
+/**
  * ext4l_opendir() - Open a directory for iteration
  *
  * @filename: Directory path
