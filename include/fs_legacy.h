@@ -173,6 +173,27 @@ struct fs_dirent *fs_readdir(struct fs_dir_stream *dirs);
 void fs_closedir(struct fs_dir_stream *dirs);
 
 /**
+ * struct fs_statfs - filesystem statistics
+ *
+ * @bsize: block size
+ * @blocks: total blocks
+ * @bfree: free blocks
+ */
+struct fs_statfs {
+	ulong bsize;
+	u64 blocks;
+	u64 bfree;
+};
+
+/**
+ * fs_statfs - Get filesystem statistics
+ *
+ * @stats: pointer to struct fs_statfs to fill
+ * Return: 0 on success, -1 on error
+ */
+int fs_statfs(struct fs_statfs *stats);
+
+/**
  * fs_unlink - delete a file or directory
  *
  * If a given name is a directory, it will be deleted only if it's empty

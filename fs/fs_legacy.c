@@ -154,6 +154,11 @@ static inline int fs_rename_unsupported(const char *old_path,
 	return -1;
 }
 
+static inline int fs_statfs_unsupported(struct fs_statfs *stats)
+{
+	return -1;
+}
+
 struct fstype_info {
 	int fstype;
 	char *name;
@@ -195,6 +200,13 @@ struct fstype_info {
 	int (*mkdir)(const char *dirname);
 	int (*ln)(const char *filename, const char *target);
 	int (*rename)(const char *old_path, const char *new_path);
+
+	/*
+	 * Get filesystem statistics. On success return 0 and fill stats
+	 * with block size, total blocks, and free blocks. On error
+	 * return -errno. See fs_statfs().
+	 */
+	int (*statfs)(struct fs_statfs *stats);
 };
 
 static struct fstype_info fstypes[] = {
@@ -228,6 +240,7 @@ static struct fstype_info fstypes[] = {
 #else
 		.rename = fs_rename_unsupported,
 #endif
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 
@@ -256,6 +269,7 @@ static struct fstype_info fstypes[] = {
 		.unlink = fs_unlink_unsupported,
 		.mkdir = fs_mkdir_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if CONFIG_IS_ENABLED(FS_EXT4L)
@@ -278,6 +292,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if IS_ENABLED(CONFIG_SANDBOX) && !IS_ENABLED(CONFIG_XPL_BUILD)
@@ -298,6 +313,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if CONFIG_IS_ENABLED(SEMIHOSTING)
@@ -318,6 +334,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #ifndef CONFIG_XPL_BUILD
@@ -339,6 +356,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #endif
@@ -361,6 +379,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #endif
@@ -384,6 +403,7 @@ static struct fstype_info fstypes[] = {
 		.unlink = fs_unlink_unsupported,
 		.mkdir = fs_mkdir_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if IS_ENABLED(CONFIG_FS_EROFS)
@@ -406,6 +426,7 @@ static struct fstype_info fstypes[] = {
 		.unlink = fs_unlink_unsupported,
 		.mkdir = fs_mkdir_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if IS_ENABLED(CONFIG_FS_EXFAT)
@@ -428,6 +449,7 @@ static struct fstype_info fstypes[] = {
 		.unlink = exfat_fs_unlink,
 		.mkdir = exfat_fs_mkdir,
 		.rename = exfat_fs_rename,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 #if CONFIG_IS_ENABLED(VIRTIO_FS)
@@ -450,6 +472,7 @@ static struct fstype_info fstypes[] = {
 		.unlink = fs_unlink_unsupported,
 		.mkdir = fs_mkdir_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 #endif
 	{
@@ -469,6 +492,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
+		.statfs = fs_statfs_unsupported,
 	},
 };
 
@@ -618,6 +642,19 @@ int fs_size(const char *filename, loff_t *size)
 	struct fstype_info *info = fs_get_info(fs_type);
 
 	ret = info->size(filename, size);
+
+	fs_close();
+
+	return ret;
+}
+
+int fs_statfs(struct fs_statfs *stats)
+{
+	int ret;
+
+	struct fstype_info *info = fs_get_info(fs_type);
+
+	ret = info->statfs(stats);
 
 	fs_close();
 
