@@ -6,7 +6,7 @@ include:
 variables:
   DEFAULT_TAG: ""
   MIRROR_DOCKER: docker.io
-  TEST_SUITES: "1"
+  SUITES: "1"
   TEST_PY: "1"
   TEST_SPEC: ""
   WORLD: "1"
@@ -224,7 +224,7 @@ build all other platforms:
 .test_suites:
   stage: test_suites
   rules:
-    - if: $TEST_SUITES == "1"
+    - if: $SUITES == "1"
       when: always
     - when: never
 
