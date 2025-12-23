@@ -1426,10 +1426,10 @@ typedef unsigned int projid_t;
 #define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
 #define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
 #define dput(d)					do { (void)(d); } while (0)
-#define d_splice_alias(i, d)			({ (void)(i); (void)(d); (struct dentry *)NULL; })
+#define d_splice_alias(i, d)			({ (d)->d_inode = (i); (d); })
 #define d_obtain_alias(i)			({ (void)(i); (struct dentry *)NULL; })
-#define d_instantiate_new(d, i)			do { (void)(d); (void)(i); } while (0)
-#define d_instantiate(d, i)			do { (void)(d); (void)(i); } while (0)
+#define d_instantiate_new(d, i)			((void)((d)->d_inode = (i)))
+#define d_instantiate(d, i)			((void)((d)->d_inode = (i)))
 #define d_tmpfile(f, i)				do { (void)(f); (void)(i); } while (0)
 #define d_invalidate(d)				do { (void)(d); } while (0)
 #define finish_open_simple(f, e)		(e)
@@ -1555,7 +1555,6 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define fscrypt_limit_io_blocks(i, lb, l)	(l)
 #define fscrypt_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
 #define fscrypt_dio_supported(i)		(1)
-#define fscrypt_match_name(f, n, l)		({ (void)(f); (void)(n); (void)(l); 1; })
 #define fscrypt_has_permitted_context(p, c)	({ (void)(p); (void)(c); 1; })
 #define fscrypt_is_nokey_name(d)		({ (void)(d); 0; })
 #define fscrypt_prepare_symlink(d, s, l, m, dl)	({ (void)(d); (void)(s); (void)(l); (void)(m); (void)(dl); 0; })
@@ -1571,6 +1570,15 @@ struct fscrypt_name {
 	u32 minor_hash;
 	bool is_nokey_name;
 };
+
+static inline int fscrypt_match_name(const struct fscrypt_name *fname,
+				     const u8 *de_name, u32 de_name_len)
+{
+	if (fname->usr_fname->len != de_name_len)
+		return 0;
+
+	return !memcmp(fname->usr_fname->name, de_name, de_name_len);
+}
 
 /* fsverity stubs */
 #define fsverity_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
