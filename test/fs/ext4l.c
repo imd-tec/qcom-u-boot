@@ -327,3 +327,30 @@ static int fs_test_ext4l_uuid_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_uuid_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_fsinfo_norun() - Test fsinfo command
+ *
+ * This test verifies that the fsinfo command displays filesystem statistics.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_fsinfo_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	console_record_reset_enable();
+	ut_assertok(run_commandf("fsinfo host 0"));
+	ut_assert_nextlinen("Block size:");
+	ut_assert_nextlinen("Total blocks:");
+	ut_assert_nextlinen("Used blocks:");
+	ut_assert_nextlinen("Free blocks:");
+	ut_assert_console_end();
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_fsinfo_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

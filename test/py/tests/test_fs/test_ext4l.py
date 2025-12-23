@@ -124,3 +124,10 @@ class TestExt4l:
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_uuid_norun fs_image={ext4_image}')
             assert 'failures: 0' in output
+
+    def test_fsinfo(self, ubman, ext4_image):
+        """Test that fsinfo command displays filesystem statistics."""
+        with ubman.log.section('Test ext4l fsinfo'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_fsinfo_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output

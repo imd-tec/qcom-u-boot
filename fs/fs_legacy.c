@@ -1105,6 +1105,38 @@ int do_fs_type(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	return CMD_RET_SUCCESS;
 }
 
+int do_fs_statfs(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	struct fs_statfs st;
+	u64 used;
+	int ret;
+
+	if (argc != 3)
+		return CMD_RET_USAGE;
+
+	if (fs_set_blk_dev(argv[1], argv[2], FS_TYPE_ANY))
+		return 1;
+
+	ret = fs_statfs(&st);
+	if (ret) {
+		printf("** Filesystem info not supported **\n");
+		return CMD_RET_FAILURE;
+	}
+
+	used = st.blocks - st.bfree;
+	printf("Block size: %lu bytes\n", st.bsize);
+	printf("Total blocks: %llu (%llu bytes, ", st.blocks,
+	       st.blocks * st.bsize);
+	print_size(st.blocks * st.bsize, ")\n");
+	printf("Used blocks: %llu (%llu bytes, ", used, used * st.bsize);
+	print_size(used * st.bsize, ")\n");
+	printf("Free blocks: %llu (%llu bytes, ", st.bfree,
+	       st.bfree * st.bsize);
+	print_size(st.bfree * st.bsize, ")\n");
+
+	return 0;
+}
+
 int do_rm(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[],
 	  int fstype)
 {

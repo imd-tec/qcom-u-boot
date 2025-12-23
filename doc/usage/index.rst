@@ -81,6 +81,7 @@ Shell commands
    cmd/fdt
    cmd/font
    cmd/for
+   cmd/fsinfo
    cmd/fwu_mdata
    cmd/gpio
    cmd/gpt

@@ -152,3 +152,17 @@ U_BOOT_CMD(
 	"    - renames/moves a file/directory in 'dev' on 'interface' from\n"
 	"      'old_path' to 'new_path'"
 );
+
+#ifdef CONFIG_CMD_FSINFO
+static int do_fsinfo_wrapper(struct cmd_tbl *cmdtp, int flag, int argc,
+			     char *const argv[])
+{
+	return do_fs_statfs(cmdtp, flag, argc, argv);
+}
+
+U_BOOT_CMD(fsinfo, 3, 1, do_fsinfo_wrapper,
+	   "Print filesystem information",
+	   "<interface> <dev[:part]>\n"
+	   "    - Print filesystem statistics (block size, total/used/free blocks)"
+);
+#endif
