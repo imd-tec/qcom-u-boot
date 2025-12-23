@@ -42,6 +42,7 @@ static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /**
  * ext4l_get_blk_dev() - Get the current block device
+ *
  * Return: Block device descriptor or NULL if not mounted
  */
 struct blk_desc *ext4l_get_blk_dev(void)
@@ -53,6 +54,7 @@ struct blk_desc *ext4l_get_blk_dev(void)
 
 /**
  * ext4l_get_partition() - Get the current partition info
+ *
  * Return: Partition info pointer
  */
 struct disk_partition *ext4l_get_partition(void)
@@ -62,6 +64,7 @@ struct disk_partition *ext4l_get_partition(void)
 
 /**
  * ext4l_get_uuid() - Get the filesystem UUID
+ *
  * @uuid: Buffer to receive the 16-byte UUID
  * Return: 0 on success, -ENODEV if not mounted
  */
@@ -75,6 +78,7 @@ int ext4l_get_uuid(u8 *uuid)
 
 /**
  * ext4l_set_blk_dev() - Set the block device for ext4l operations
+ *
  * @blk_dev: Block device descriptor
  * @partition: Partition info (can be NULL for whole disk)
  */
@@ -110,6 +114,7 @@ static void ext4l_msg_init(void)
 
 /**
  * ext4l_record_msg() - Record a message in the buffer
+ *
  * @msg: Message string to record
  * @len: Length of message
  */
@@ -304,6 +309,7 @@ err_exit_es:
 
 /**
  * ext4l_read_symlink() - Read the target of a symlink inode
+ *
  * @inode: Symlink inode
  * @target: Buffer to store target
  * @max_len: Maximum length of target buffer
@@ -350,6 +356,7 @@ static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
 
 /**
  * ext4l_resolve_path() - Resolve path to inode
+ *
  * @path: Path to resolve
  * @inodep: Output inode pointer
  * Return: 0 on success, negative on error
@@ -361,6 +368,7 @@ static int ext4l_resolve_path(const char *path, struct inode **inodep)
 
 /**
  * ext4l_resolve_path_internal() - Resolve path with symlink following
+ *
  * @path: Path to resolve
  * @inodep: Output inode pointer
  * @depth: Current recursion depth (for symlink loop detection)
@@ -551,6 +559,7 @@ static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
 
 /**
  * ext4l_dir_actor() - Directory entry callback for ext4_readdir
+ *
  * @ctx: Directory context
  * @name: Entry name
  * @namelen: Length of name

@@ -30,6 +30,7 @@ void ext4l_close(void);
 
 /**
  * ext4l_ls() - List directory contents
+ *
  * @dirname: Directory path to list
  * Return: 0 on success, negative on error
  */
@@ -37,6 +38,7 @@ int ext4l_ls(const char *dirname);
 
 /**
  * ext4l_get_uuid() - Get the filesystem UUID
+ *
  * @uuid: Buffer to receive the 16-byte UUID
  * Return: 0 on success, -ENODEV if not mounted
  */
