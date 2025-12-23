@@ -7,7 +7,7 @@ variables:
   DEFAULT_TAG: ""
   MIRROR_DOCKER: docker.io
   SUITES: "1"
-  TEST_PY: "1"
+  PYTEST: "1"
   TEST_SPEC: ""
   WORLD: "1"
   SJG_LAB: ""
@@ -41,11 +41,11 @@ stages:
   #   - privileged = true in /etc/gitlab-runner/config.toml
   #   OR passwordless sudo for: modprobe, cryptsetup, dd
   rules:
-    - if: $TEST_PY == "1"
+    - if: $PYTEST == "1"
       when: always
-    - if: $TEST_PY == $CI_JOB_NAME
+    - if: $PYTEST == $CI_JOB_NAME
       when: always
-    - if: $TEST_PY == $TEST_PY_BD
+    - if: $PYTEST == $TEST_PY_BD
       when: always
     - when: never
   before_script:
@@ -369,11 +369,11 @@ Examples:
 .python_check_template:
   stage: test.py
   rules:
-    - if: $TEST_PY == "1"
+    - if: $PYTEST == "1"
       when: always
-    - if: $TEST_PY == $CI_JOB_NAME
+    - if: $PYTEST == $CI_JOB_NAME
       when: always
-    - if: $TEST_PY == $TEST_PY_BD
+    - if: $PYTEST == $TEST_PY_BD
       when: always
     - when: never
   before_script:
