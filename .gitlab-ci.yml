@@ -3,14 +3,25 @@
 include:
   - local: '.gitlab-ci-release.yml'
 
+# Control when pipelines are created
+workflow:
+  rules:
+    # Allow manual merge request pipelines when MANUAL_TRIGGER is set
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $MANUAL_TRIGGER == "1"'
+      when: always
+    # Prevent automatic merge request pipelines
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    # Allow all other pipeline sources (push, manual, API)
+    - when: always
+
 variables:
   DEFAULT_TAG: ""
   MIRROR_DOCKER: docker.io
-  TEST_SUITES: "1"
-  TEST_PY: "1"
+  SUITES: "1"
+  PYTEST: "1"
   TEST_SPEC: ""
-  WORLD_BUILD: "1"
-  LAB_ONLY: ""
+  WORLD: "1"
   SJG_LAB: ""
   PLATFORM: linux/amd64,linux/arm64
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_RUNNER_ID/$CI_CONCURRENT_ID/u-boot
@@ -42,13 +53,11 @@ stages:
   #   - privileged = true in /etc/gitlab-runner/config.toml
   #   OR passwordless sudo for: modprobe, cryptsetup, dd
   rules:
-    - if: $LAB_ONLY == "1"
-      when: never
-    - if: $TEST_PY == "1"
+    - if: $PYTEST == "1"
       when: always
-    - if: $TEST_PY == $CI_JOB_NAME
+    - if: $PYTEST == $CI_JOB_NAME
       when: always
-    - if: $TEST_PY == $TEST_PY_BD
+    - if: $PYTEST == $TEST_PY_BD
       when: always
     - when: never
   before_script:
@@ -145,9 +154,7 @@ stages:
 .world_build:
   stage: world_build
   rules:
-    - if: $LAB_ONLY == "1"
-      when: never
-    - if: $WORLD_BUILD == "1"
+    - if: $WORLD == "1"
       when: always
     - when: never
 
@@ -229,9 +236,7 @@ build all other platforms:
 .test_suites:
   stage: test_suites
   rules:
-    - if: $LAB_ONLY == "1"
-      when: never
-    - if: $TEST_SUITES == "1"
+    - if: $SUITES == "1"
       when: always
     - when: never
 
@@ -376,13 +381,11 @@ Examples:
 .python_check_template:
   stage: test.py
   rules:
-    - if: $LAB_ONLY == "1"
-      when: never
-    - if: $TEST_PY == "1"
+    - if: $PYTEST == "1"
       when: always
-    - if: $TEST_PY == $CI_JOB_NAME
+    - if: $PYTEST == $CI_JOB_NAME
       when: always
-    - if: $TEST_PY == $TEST_PY_BD
+    - if: $PYTEST == $TEST_PY_BD
       when: always
     - when: never
   before_script:
@@ -979,7 +982,5 @@ trigger_snap_builds:
       git config --global --add safe.directory $CI_PROJECT_DIR
       cd $CI_PROJECT_DIR
       git remote add github git@github.com:sjg20/u-boot-concept.git || true
-      git fetch github master --depth=1
-      git fetch origin "--shallow-since=$(git log -1 --format=%ci github/master)"
       git push github HEAD:master --force
       echo "GitHub push completed"
