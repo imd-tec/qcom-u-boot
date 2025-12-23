@@ -11,6 +11,8 @@
 
 struct blk_desc;
 struct disk_partition;
+struct fs_dir_stream;
+struct fs_dirent;
 
 /**
  * ext4l_probe() - Probe a block device for an ext4 filesystem
@@ -43,5 +45,31 @@ int ext4l_ls(const char *dirname);
  * Return: 0 on success, -ENODEV if not mounted
  */
 int ext4l_get_uuid(u8 *uuid);
+
+/**
+ * ext4l_opendir() - Open a directory for iteration
+ *
+ * @filename: Directory path
+ * @dirsp: Returns directory stream pointer
+ * Return: 0 on success, -ENODEV if not mounted, -ENOTDIR if not a directory,
+ *	   -ENOMEM on allocation failure
+ */
+int ext4l_opendir(const char *filename, struct fs_dir_stream **dirsp);
+
+/**
+ * ext4l_readdir() - Read the next directory entry
+ *
+ * @dirs: Directory stream from ext4l_opendir
+ * @dentp: Returns pointer to directory entry
+ * Return: 0 on success, -ENODEV if not mounted, -ENOENT at end of directory
+ */
+int ext4l_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp);
+
+/**
+ * ext4l_closedir() - Close a directory stream
+ *
+ * @dirs: Directory stream to close
+ */
+void ext4l_closedir(struct fs_dir_stream *dirs);
 
 #endif /* __EXT4L_H__ */

@@ -111,3 +111,88 @@ static int fs_test_ext4l_ls_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_ls_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_opendir_norun() - Test ext4l opendir/readdir/closedir
+ *
+ * Verifies that the ext4l driver can iterate through directory entries using
+ * the opendir/readdir/closedir interface. It checks:
+ * - Regular files (testfile.txt)
+ * - Subdirectories (subdir)
+ * - Symlinks (link.txt)
+ * - Files in subdirectories (subdir/nested.txt)
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_opendir_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	struct fs_dir_stream *dirs;
+	struct fs_dirent *dent;
+	bool found_testfile = false;
+	bool found_subdir = false;
+	bool found_symlink = false;
+	bool found_nested = false;
+	int count = 0;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Open root directory */
+	ut_assertok(ext4l_opendir("/", &dirs));
+	ut_assertnonnull(dirs);
+
+	/* Iterate through entries */
+	while (!ext4l_readdir(dirs, &dent)) {
+		ut_assertnonnull(dent);
+		count++;
+		if (!strcmp(dent->name, "testfile.txt")) {
+			found_testfile = true;
+			ut_asserteq(FS_DT_REG, dent->type);
+			ut_asserteq(12, dent->size);
+		} else if (!strcmp(dent->name, "subdir")) {
+			found_subdir = true;
+			ut_asserteq(FS_DT_DIR, dent->type);
+		} else if (!strcmp(dent->name, "link.txt")) {
+			found_symlink = true;
+			ut_asserteq(FS_DT_LNK, dent->type);
+		}
+	}
+
+	ext4l_closedir(dirs);
+
+	/* Verify we found expected entries */
+	ut_assert(found_testfile);
+	ut_assert(found_subdir);
+	ut_assert(found_symlink);
+	/* At least ., .., testfile.txt, subdir, link.txt */
+	ut_assert(count >= 5);
+
+	/* Now test reading the subdirectory */
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+	ut_assertok(ext4l_opendir("/subdir", &dirs));
+	ut_assertnonnull(dirs);
+
+	count = 0;
+	while (!ext4l_readdir(dirs, &dent)) {
+		ut_assertnonnull(dent);
+		count++;
+		if (!strcmp(dent->name, "nested.txt")) {
+			found_nested = true;
+			ut_asserteq(FS_DT_REG, dent->type);
+			ut_asserteq(12, dent->size);
+		}
+	}
+
+	ext4l_closedir(dirs);
+
+	ut_assert(found_nested);
+	/* At least ., .., nested.txt */
+	ut_assert(count >= 3);
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_opendir_norun, UTF_SCAN_FDT | UTF_CONSOLE |
+	     UTF_MANUAL, { "fs_image", UT_ARG_STR });

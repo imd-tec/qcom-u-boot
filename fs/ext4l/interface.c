@@ -11,6 +11,7 @@
 
 #include <blk.h>
 #include <env.h>
+#include <fs.h>
 #include <membuf.h>
 #include <part.h>
 #include <malloc.h>
@@ -32,6 +33,9 @@ static struct disk_partition ext4l_part;
 static struct blk_desc *ext4l_blk_dev;
 static struct disk_partition ext4l_partition;
 static int ext4l_mounted;
+
+/* Count of open directory streams (prevents unmount while iterating) */
+static int ext4l_open_dirs;
 
 /* Global super_block pointer for filesystem operations */
 static struct super_block *ext4l_sb;
@@ -634,7 +638,213 @@ int ext4l_ls(const char *dirname)
 
 void ext4l_close(void)
 {
+	if (ext4l_open_dirs > 0)
+		return;
+
 	ext4l_dev_desc = NULL;
 	ext4l_sb = NULL;
 	ext4l_clear_blk_dev();
+}
+
+/**
+ * struct ext4l_dir - ext4l directory stream state
+ * @parent: base fs_dir_stream structure
+ * @dirent: directory entry to return to caller
+ * @dir_inode: pointer to directory inode
+ * @file: file structure for ext4_readdir
+ * @entry_found: flag set by actor when entry is captured
+ * @last_ino: inode number of last returned entry (to skip on next call)
+ * @skip_last: true if we need to skip the last_ino entry
+ *
+ * The filesystem stays mounted while directory streams are open (ext4l_close
+ * checks ext4l_open_dirs), so we can keep direct pointers to inodes.
+ */
+struct ext4l_dir {
+	struct fs_dir_stream parent;
+	struct fs_dirent dirent;
+	struct inode *dir_inode;
+	struct file file;
+	bool entry_found;
+	u64 last_ino;
+	bool skip_last;
+};
+
+/**
+ * struct ext4l_readdir_ctx - Extended dir_context with back-pointer
+ * @ctx: base dir_context structure (must be first)
+ * @dir: pointer to ext4l_dir for state updates
+ */
+struct ext4l_readdir_ctx {
+	struct dir_context ctx;
+	struct ext4l_dir *dir;
+};
+
+/**
+ * ext4l_opendir_actor() - dir_context actor that captures single entry
+ *
+ * This actor is called by ext4_readdir for each directory entry. It captures
+ * the first entry found (skipping the previously returned entry if needed)
+ * and returns non-zero to stop iteration.
+ */
+static int ext4l_opendir_actor(struct dir_context *ctx, const char *name,
+			       int namelen, loff_t offset, u64 ino,
+			       unsigned int d_type)
+{
+	struct ext4l_readdir_ctx *rctx;
+	struct ext4l_dir *dir;
+	struct fs_dirent *dent;
+	struct inode *inode;
+
+	rctx = container_of(ctx, struct ext4l_readdir_ctx, ctx);
+	dir = rctx->dir;
+
+	/*
+	 * Skip the entry we returned last time. The htree code may call us
+	 * with the same entry again due to its extra_fname handling.
+	 */
+	if (dir->skip_last && ino == dir->last_ino) {
+		dir->skip_last = false;
+		return 0;  /* Continue to next entry */
+	}
+
+	dent = &dir->dirent;
+
+	/* Copy name */
+	if (namelen >= FS_DIRENT_NAME_LEN)
+		namelen = FS_DIRENT_NAME_LEN - 1;
+	memcpy(dent->name, name, namelen);
+	dent->name[namelen] = '\0';
+
+	/* Set type based on d_type hint */
+	switch (d_type) {
+	case DT_DIR:
+		dent->type = FS_DT_DIR;
+		break;
+	case DT_LNK:
+		dent->type = FS_DT_LNK;
+		break;
+	default:
+		dent->type = FS_DT_REG;
+		break;
+	}
+
+	/* Look up inode to get size and other attributes */
+	inode = ext4_iget(ext4l_sb, ino, 0);
+	if (!IS_ERR(inode)) {
+		dent->size = inode->i_size;
+		/* Refine type from inode mode if needed */
+		if (S_ISDIR(inode->i_mode))
+			dent->type = FS_DT_DIR;
+		else if (S_ISLNK(inode->i_mode))
+			dent->type = FS_DT_LNK;
+		else
+			dent->type = FS_DT_REG;
+	} else {
+		dent->size = 0;
+	}
+
+	dir->entry_found = true;
+	dir->last_ino = ino;
+
+	/*
+	 * Return non-zero to stop iteration after one entry.
+	 * dir_emit() returns (actor(...) == 0), so:
+	 *   actor returns 0 -> dir_emit returns 1 (continue)
+	 *   actor returns non-zero -> dir_emit returns 0 (stop)
+	 */
+	return 1;
+}
+
+int ext4l_opendir(const char *filename, struct fs_dir_stream **dirsp)
+{
+	struct ext4l_dir *dir;
+	struct inode *inode;
+	int ret;
+
+	if (!ext4l_mounted)
+		return -ENODEV;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret)
+		return ret;
+
+	if (!S_ISDIR(inode->i_mode))
+		return -ENOTDIR;
+
+	dir = calloc(1, sizeof(*dir));
+	if (!dir)
+		return -ENOMEM;
+
+	dir->dir_inode = inode;
+	dir->entry_found = false;
+
+	/* Set up file structure for ext4_readdir */
+	dir->file.f_inode = inode;
+	dir->file.f_mapping = inode->i_mapping;
+	dir->file.private_data = kzalloc(sizeof(struct dir_private_info),
+					 GFP_KERNEL);
+	if (!dir->file.private_data) {
+		free(dir);
+		return -ENOMEM;
+	}
+
+	/* Increment open dir count to prevent unmount */
+	ext4l_open_dirs++;
+
+	*dirsp = (struct fs_dir_stream *)dir;
+
+	return 0;
+}
+
+int ext4l_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
+{
+	struct ext4l_dir *dir = (struct ext4l_dir *)dirs;
+	struct ext4l_readdir_ctx ctx;
+	int ret;
+
+	if (!ext4l_mounted)
+		return -ENODEV;
+
+	memset(&dir->dirent, '\0', sizeof(dir->dirent));
+	dir->entry_found = false;
+
+	/* Skip the entry we returned last time (htree may re-emit it) */
+	if (dir->last_ino)
+		dir->skip_last = true;
+
+	/* Set up extended dir_context for this iteration */
+	memset(&ctx, '\0', sizeof(ctx));
+	ctx.ctx.actor = ext4l_opendir_actor;
+	ctx.ctx.pos = dir->file.f_pos;
+	ctx.dir = dir;
+
+	ret = ext4_readdir(&dir->file, &ctx.ctx);
+
+	/* Update file position for next call */
+	dir->file.f_pos = ctx.ctx.pos;
+
+	if (ret < 0)
+		return ret;
+
+	if (!dir->entry_found)
+		return -ENOENT;
+
+	*dentp = &dir->dirent;
+
+	return 0;
+}
+
+void ext4l_closedir(struct fs_dir_stream *dirs)
+{
+	struct ext4l_dir *dir = (struct ext4l_dir *)dirs;
+
+	if (dir) {
+		if (dir->file.private_data)
+			ext4_htree_free_dir_info(dir->file.private_data);
+		free(dir);
+	}
+
+	/* Decrement open dir count */
+	if (ext4l_open_dirs > 0)
+		ext4l_open_dirs--;
 }
