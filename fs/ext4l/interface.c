@@ -649,6 +649,20 @@ int ext4l_exists(const char *filename)
 	return 1;
 }
 
+int ext4l_size(const char *filename, loff_t *sizep)
+{
+	struct inode *inode;
+	int ret;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret)
+		return ret;
+
+	*sizep = inode->i_size;
+
+	return 0;
+}
+
 void ext4l_close(void)
 {
 	if (ext4l_open_dirs > 0)

@@ -11,6 +11,7 @@
 #include <ext4l.h>
 #include <fs.h>
 #include <fs_legacy.h>
+#include <linux/sizes.h>
 #include <u-boot/uuid.h>
 #include <test/test.h>
 #include <test/ut.h>
@@ -223,3 +224,36 @@ static int fs_test_ext4l_exists_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_exists_norun, UTF_SCAN_FDT | UTF_CONSOLE |
 	     UTF_MANUAL, { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_size_norun() - Test ext4l_size function
+ *
+ * Verifies that ext4l_size correctly reports file size.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_size_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	loff_t size;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Test root directory size - one block on a 4K block filesystem */
+	ut_assertok(ext4l_size("/", &size));
+	ut_asserteq(SZ_4K, size);
+
+	/* Test file size - testfile.txt contains "hello world\n" */
+	ut_assertok(ext4l_size("/testfile.txt", &size));
+	ut_asserteq(12, size);
+
+	/* Test non-existent path returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_size("/no/such/path", &size));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_size_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

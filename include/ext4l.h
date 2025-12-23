@@ -47,6 +47,15 @@ int ext4l_ls(const char *dirname);
 int ext4l_exists(const char *filename);
 
 /**
+ * ext4l_size() - Get the size of a file
+ *
+ * @filename: Path to file
+ * @sizep: Returns the file size
+ * Return: 0 on success, negative on error
+ */
+int ext4l_size(const char *filename, loff_t *sizep);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID
