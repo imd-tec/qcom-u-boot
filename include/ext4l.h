@@ -56,6 +56,19 @@ int ext4l_exists(const char *filename);
 int ext4l_size(const char *filename, loff_t *sizep);
 
 /**
+ * ext4l_read() - Read data from a file
+ *
+ * @filename: Path to file
+ * @buf: Buffer to read data into
+ * @offset: Byte offset to start reading from
+ * @len: Number of bytes to read (0 = read entire file from offset)
+ * @actread: Returns actual bytes read
+ * Return: 0 on success, negative on error
+ */
+int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
+	       loff_t *actread);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID

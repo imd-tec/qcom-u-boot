@@ -663,6 +663,70 @@ int ext4l_size(const char *filename, loff_t *sizep)
 	return 0;
 }
 
+int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
+	       loff_t *actread)
+{
+	uint copy_len, blk_off, blksize;
+	loff_t bytes_left, file_size;
+	struct buffer_head *bh;
+	struct inode *inode;
+	ext4_lblk_t block;
+	char *dst;
+	int ret;
+
+	*actread = 0;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret) {
+		printf("** File not found %s **\n", filename);
+		return ret;
+	}
+
+	file_size = inode->i_size;
+	if (offset >= file_size)
+		return 0;
+
+	/* If len is 0, read the whole file from offset */
+	if (!len)
+		len = file_size - offset;
+
+	/* Clamp to file size */
+	if (offset + len > file_size)
+		len = file_size - offset;
+
+	blksize = inode->i_sb->s_blocksize;
+	bytes_left = len;
+	dst = buf;
+
+	while (bytes_left > 0) {
+		/* Calculate logical block number and offset within block */
+		block = offset / blksize;
+		blk_off = offset % blksize;
+
+		/* Read the block */
+		bh = ext4_bread(NULL, inode, block, 0);
+		if (IS_ERR(bh))
+			return PTR_ERR(bh);
+		if (!bh)
+			return -EIO;
+
+		/* Calculate how much to copy from this block */
+		copy_len = blksize - blk_off;
+		if (copy_len > bytes_left)
+			copy_len = bytes_left;
+
+		memcpy(dst, bh->b_data + blk_off, copy_len);
+		brelse(bh);
+
+		dst += copy_len;
+		offset += copy_len;
+		bytes_left -= copy_len;
+		*actread += copy_len;
+	}
+
+	return 0;
+}
+
 void ext4l_close(void)
 {
 	if (ext4l_open_dirs > 0)

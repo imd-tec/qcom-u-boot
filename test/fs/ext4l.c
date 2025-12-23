@@ -257,3 +257,41 @@ static int fs_test_ext4l_size_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_size_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_read_norun() - Test ext4l_read function
+ *
+ * Verifies that ext4l can read file contents.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_read_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	loff_t actread;
+	char buf[32];
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Read the test file - contains "hello world\n" (12 bytes) */
+	memset(buf, '\0', sizeof(buf));
+	ut_assertok(ext4l_read("/testfile.txt", buf, 0, 0, &actread));
+	ut_asserteq(12, actread);
+	ut_asserteq_str("hello world\n", buf);
+
+	/* Test partial read with offset */
+	memset(buf, '\0', sizeof(buf));
+	ut_assertok(ext4l_read("/testfile.txt", buf, 6, 5, &actread));
+	ut_asserteq(5, actread);
+	ut_asserteq_str("world", buf);
+
+	/* Verify read returns error for non-existent path */
+	ut_asserteq(-ENOENT, ext4l_read("/no/such/file", buf, 0, 10, &actread));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_read_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

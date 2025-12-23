@@ -110,3 +110,10 @@ class TestExt4l:
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_size_norun fs_image={ext4_image}')
             assert 'failures: 0' in output
+
+    def test_read(self, ubman, ext4_image):
+        """Test that ext4l can read file contents."""
+        with ubman.log.section('Test ext4l read'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_read_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
