@@ -1746,7 +1746,7 @@ success:
 	return bh;
 }
 
-static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
+struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 {
 	struct inode *inode;
 	struct ext4_dir_entry_2 *de;

@@ -943,11 +943,9 @@ void __ext4_std_error(struct super_block *sb, const char *function,
 void __ext4_msg(struct super_block *sb,
 		const char *prefix, const char *fmt, ...)
 {
-	struct va_format vaf;
+	char buf[256];
 	va_list args;
-
-	if (!IS_ENABLED(CONFIG_EXT4L_DEBUG))
-		return;
+	int len;
 
 	if (sb) {
 		atomic_inc(&EXT4_SB(sb)->s_msg_count);
@@ -956,14 +954,28 @@ void __ext4_msg(struct super_block *sb,
 			return;
 	}
 
+	/* Format the message into a buffer */
 	va_start(args, fmt);
-	vaf.fmt = fmt;
-	vaf.va = &args;
 	if (sb)
-		printk("%sEXT4-fs (%s): %pV\n", prefix, sb->s_id, &vaf);
+		len = snprintf(buf, sizeof(buf), "%sEXT4-fs (%s): ",
+			       prefix, sb->s_id);
 	else
-		printk("%sEXT4-fs: %pV\n", prefix, &vaf);
+		len = snprintf(buf, sizeof(buf), "%sEXT4-fs: ", prefix);
+	len += vsnprintf(buf + len, sizeof(buf) - len, fmt, args);
 	va_end(args);
+
+	/* Add newline if there's space */
+	if (len < sizeof(buf) - 1) {
+		buf[len++] = '\n';
+		buf[len] = '\0';
+	}
+
+	/* Record in message buffer */
+	ext4l_record_msg(buf, len);
+
+	/* Also print if debug is enabled */
+	if (IS_ENABLED(CONFIG_EXT4L_DEBUG))
+		printf("%s", buf);
 }
 
 static int ext4_warning_ratelimit(struct super_block *sb)

@@ -38,6 +38,32 @@
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
+ * Enable ext4_msg() and other diagnostic macros to pass full messages.
+ * This is required for message recording to work. Without this, the
+ * ext4_msg macro passes empty strings to __ext4_msg().
+ *
+ * Use EXT4L_PRINTF instead of CONFIG_PRINTK since U-Boot requires CONFIG_
+ * options to be defined in Kconfig.
+ */
+#define EXT4L_PRINTF		1
+
+/*
+ * __CHAR_UNSIGNED__ - directory hash algorithm selection
+ *
+ * The ext4 filesystem uses different hash algorithms for directory indexing
+ * depending on whether the platform's 'char' type is signed or unsigned.
+ * GCC automatically defines __CHAR_UNSIGNED__ on platforms where char is
+ * unsigned (e.g., ARM), and leaves it undefined where char is signed
+ * (e.g., x86/sandbox).
+ *
+ * The filesystem stores EXT2_FLAGS_UNSIGNED_HASH or EXT2_FLAGS_SIGNED_HASH
+ * in the superblock to record which hash variant was used when the filesystem
+ * was created, ensuring correct behavior regardless of the mounting platform.
+ *
+ * See super.c:5123 and ioctl.c:1489 for the hash algorithm selection code.
+ */
+
+/*
  * Override no_printk to avoid format warnings in disabled debug prints.
  * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
  * This causes format mismatches with %llu that we want to ignore.
@@ -289,8 +315,8 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - for now U-Boot mounts filesystems read-only */
-#define sb_rdonly(sb)	1
+/* sb_rdonly - U-Boot mounts filesystems read-write */
+#define sb_rdonly(sb)	0
 
 /* Trace stubs */
 #define trace_ext4_journal_start_inode(...)	do { } while (0)
@@ -1677,8 +1703,12 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
 #define inode_query_iversion(i)			({ (void)(i); 0ULL; })
 
-/* Directory context operations */
-#define dir_emit(ctx, name, len, ino, type)	({ (void)(ctx); (void)(name); (void)(len); (void)(ino); (void)(type); 1; })
+/* Directory context operations - call the actor callback */
+static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
+			    u64 ino, unsigned int type)
+{
+	return ctx->actor(ctx, name, len, ctx->pos, ino, type) == 0;
+}
 #define dir_relax_shared(i)			({ (void)(i); 1; })
 
 /* File llseek */
@@ -2150,7 +2180,7 @@ struct blockgroup_lock {
 };
 
 /* Buffer submission stubs - declarations for stub.c implementations */
-void submit_bh(int op_flags, struct buffer_head *bh);
+int submit_bh(int op_flags, struct buffer_head *bh);
 struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
 				unsigned int size, gfp_t gfp);
 int trylock_buffer(struct buffer_head *bh);
@@ -2297,8 +2327,15 @@ unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 /* Task I/O priority - declaration for stub.c */
 void set_task_ioprio(void *task, int ioprio);
 
-/* Superblock identity stubs */
-#define super_set_uuid(sb, uuid, len)		do { } while (0)
+/* Superblock identity functions */
+static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
+				  unsigned len)
+{
+	if (len > sizeof(sb->s_uuid.b))
+		len = sizeof(sb->s_uuid.b);
+	memcpy(sb->s_uuid.b, uuid, len);
+}
+
 #define super_set_sysfs_name_bdev(sb)		do { } while (0)
 
 /*
@@ -2830,6 +2867,8 @@ int ext4l_read_block(sector_t block, size_t size, void *buffer);
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
+void ext4l_record_msg(const char *msg, int len);
+struct membuf *ext4l_get_msg_buf(void);
 
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 

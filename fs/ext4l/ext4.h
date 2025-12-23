@@ -2857,6 +2857,9 @@ extern int ext4_htree_store_dirent(struct file *dir_file, __u32 hash,
 				struct ext4_dir_entry_2 *dirent,
 				struct fscrypt_str *ent_name);
 extern void ext4_htree_free_dir_info(struct dir_private_info *p);
+extern int ext4_readdir(struct file *file, struct dir_context *ctx);
+extern struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry,
+				  unsigned int flags);
 extern int ext4_find_dest_de(struct inode *dir, struct buffer_head *bh,
 			     void *buf, int buf_size,
 			     struct ext4_filename *fname,
@@ -3237,7 +3240,7 @@ void __ext4_grp_locked_error(const char *, unsigned int,
 #define ext4_abort(sb, err, fmt, a...)					\
 	__ext4_error((sb), __func__, __LINE__, true, (err), 0, (fmt), ## a)
 
-#ifdef CONFIG_PRINTK
+#ifdef EXT4L_PRINTF
 
 #define ext4_error_inode(inode, func, line, block, fmt, ...)		\
 	__ext4_error_inode(inode, func, line, block, 0, fmt, ##__VA_ARGS__)
