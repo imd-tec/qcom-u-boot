@@ -9,7 +9,7 @@ variables:
   TEST_SUITES: "1"
   TEST_PY: "1"
   TEST_SPEC: ""
-  WORLD_BUILD: "1"
+  WORLD: "1"
   SJG_LAB: ""
   PLATFORM: linux/amd64,linux/arm64
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_RUNNER_ID/$CI_CONCURRENT_ID/u-boot
@@ -142,7 +142,7 @@ stages:
 .world_build:
   stage: world_build
   rules:
-    - if: $WORLD_BUILD == "1"
+    - if: $WORLD == "1"
       when: always
     - when: never
 
