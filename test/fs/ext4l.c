@@ -331,7 +331,7 @@ FS_TEST_ARGS(fs_test_ext4l_uuid_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 /**
  * fs_test_ext4l_fsinfo_norun() - Test fsinfo command
  *
- * This test verifies that the fsinfo command displays filesystem statistics.
+ * Verifies that the fsinfo command displays filesystem statistics.
  *
  * Arguments:
  *   fs_image: Path to the ext4 filesystem image
@@ -339,18 +339,60 @@ FS_TEST_ARGS(fs_test_ext4l_uuid_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 static int fs_test_ext4l_fsinfo_norun(struct unit_test_state *uts)
 {
 	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	struct fs_statfs stats;
+	u64 used;
 
 	ut_assertnonnull(fs_image);
 	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+	ut_assertok(ext4l_statfs(&stats));
+	used = stats.blocks - stats.bfree;
+
 	console_record_reset_enable();
 	ut_assertok(run_commandf("fsinfo host 0"));
-	ut_assert_nextlinen("Block size:");
-	ut_assert_nextlinen("Total blocks:");
-	ut_assert_nextlinen("Used blocks:");
-	ut_assert_nextlinen("Free blocks:");
+
+	/* Skip any EXT4-fs mount messages, check output format */
+	ut_assert_skip_to_line("Block size: %lu bytes", stats.bsize);
+	ut_assert_nextlinen("Total blocks: %llu (%llu bytes,",
+			    stats.blocks, stats.blocks * stats.bsize);
+	ut_assert_nextlinen("Used blocks: %llu (%llu bytes,",
+			    used, used * stats.bsize);
+	ut_assert_nextlinen("Free blocks: %llu (%llu bytes,",
+			    stats.bfree, stats.bfree * stats.bsize);
 	ut_assert_console_end();
 
 	return 0;
 }
 FS_TEST_ARGS(fs_test_ext4l_fsinfo_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_statfs_norun() - Test ext4l_statfs function
+ *
+ * Verifies that ext4l can return filesystem statistics.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_statfs_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	struct fs_statfs stats;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Get filesystem statistics */
+	ut_assertok(ext4l_statfs(&stats));
+
+	/* Verify reasonable values for a 64MB filesystem */
+	ut_asserteq(SZ_4K, stats.bsize);
+	ut_assert(stats.blocks > 0);
+	ut_assert(stats.bfree > 0);
+	ut_assert(stats.bfree <= stats.blocks);
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_statfs_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });

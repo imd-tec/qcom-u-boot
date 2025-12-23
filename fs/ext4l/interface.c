@@ -12,6 +12,7 @@
 #include <blk.h>
 #include <env.h>
 #include <fs.h>
+#include <fs_legacy.h>
 #include <membuf.h>
 #include <part.h>
 #include <malloc.h>
@@ -96,6 +97,27 @@ int ext4l_uuid(char *uuid_str)
 	if (ret)
 		return ret;
 	uuid_bin_to_str(uuid, uuid_str, UUID_STR_FORMAT_STD);
+
+	return 0;
+}
+
+/**
+ * ext4l_statfs() - Get filesystem statistics
+ *
+ * @stats: Pointer to fs_statfs structure to fill
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_statfs(struct fs_statfs *stats)
+{
+	struct ext4_super_block *es;
+
+	if (!ext4l_sb)
+		return -ENODEV;
+
+	es = EXT4_SB(ext4l_sb)->s_es;
+	stats->bsize = ext4l_sb->s_blocksize;
+	stats->blocks = ext4_blocks_count(es);
+	stats->bfree = ext4_free_blocks_count(es);
 
 	return 0;
 }

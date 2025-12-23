@@ -292,7 +292,7 @@ static struct fstype_info fstypes[] = {
 		.mkdir = fs_mkdir_unsupported,
 		.ln = fs_ln_unsupported,
 		.rename = fs_rename_unsupported,
-		.statfs = fs_statfs_unsupported,
+		.statfs = ext4l_statfs,
 	},
 #endif
 #if IS_ENABLED(CONFIG_SANDBOX) && !IS_ENABLED(CONFIG_XPL_BUILD)

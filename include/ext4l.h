@@ -13,6 +13,7 @@ struct blk_desc;
 struct disk_partition;
 struct fs_dir_stream;
 struct fs_dirent;
+struct fs_statfs;
 
 /**
  * ext4l_probe() - Probe a block device for an ext4 filesystem
@@ -83,6 +84,14 @@ int ext4l_get_uuid(u8 *uuid);
  * Return: 0 on success, -ENODEV if not mounted
  */
 int ext4l_uuid(char *uuid_str);
+
+/**
+ * ext4l_statfs() - Get filesystem statistics
+ *
+ * @stats: Pointer to fs_statfs structure to fill
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_statfs(struct fs_statfs *stats);
 
 /**
  * ext4l_opendir() - Open a directory for iteration
