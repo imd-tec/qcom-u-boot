@@ -129,18 +129,29 @@ Already-Applied Detection
 
 Sometimes commits have already been applied to the target branch through a
 different path (e.g., directly merged or cherry-picked with different hashes).
-Pickman's Claude agent detects this situation automatically.
+Pickman detects this situation automatically in two ways.
 
-**How it works**
+**Pre-Cherry-Pick Detection**
 
-When the first cherry-pick fails with conflicts, the agent checks if the
-commits are already present in the target branch by searching for matching
-commit subjects::
+Before starting cherry-picks, pickman checks for potentially already-applied
+commits by searching for matching commit subjects in the target branch::
 
     git log --oneline ci/master --grep="<subject>" -1
 
-If all commits in the set are found (same subjects, different hashes), the
-agent:
+Commits that match are marked as "maybe already applied" and passed to the
+Claude agent with the hash of the potentially matching commit. The agent then:
+
+1. Compares the actual patch content between the original and found commits
+2. Uses ``git show`` and ``diff`` to analyze the changes
+3. Skips commits that are similar with only minor differences (line numbers,
+   context, conflict resolutions)
+4. Proceeds with commits that differ significantly in actual changes
+
+**Fallback Detection**
+
+If pre-detection missed something and the first cherry-pick fails with
+conflicts, the agent performs the same subject search and patch comparison
+process. If all commits in the set are verified as already applied, the agent:
 
 1. Aborts the cherry-pick
 2. Writes a signal file (``.pickman-signal``) with status ``already_applied``
@@ -148,7 +159,8 @@ agent:
 
 **What pickman does**
 
-When pickman detects the ``already_applied`` signal:
+When pickman detects the ``already_applied`` signal or when the agent reports
+pre-detected applied commits:
 
 1. Marks all commits as 'skipped' in the database
 2. Updates the source position to advance past these commits
@@ -161,6 +173,7 @@ This ensures:
 - The source position advances so the next ``poll`` iteration processes new
   commits
 - No manual intervention is required to continue
+- False positives are minimized by comparing actual patch content
 
 CI Pipelines
 ------------
@@ -209,6 +222,38 @@ This shows:
 - The number of commits in the source branch (us/next) that are not in the
   master branch (ci/master)
 - The last common commit between the two branches
+
+To check current branch for problematic cherry-picks::
+
+    ./tools/pickman/pickman check
+
+This analyzes commits on the current branch and identifies cherry-picks with
+large deltas compared to their original commits. By default, it:
+
+- Shows only problematic commits (above 20% delta threshold)
+- Ignores small commits (less than 10 lines changed)
+- Skips merge commits (which have different delta characteristics)
+- Uses color coding: red for ≥80% delta, yellow for ≥50% delta
+
+Options:
+
+- ``-t, --threshold``: Delta threshold as fraction (default: 0.2 = 20%)
+- ``-m, --min-lines``: Minimum lines changed to check (default: 10)
+- ``-v, --verbose``: Show detailed analysis for all commits
+- ``--diff``: Show patch differences for problem commits
+- ``--no-colour``: Disable color output in patch differences
+
+Example output::
+
+    Cherry-pick Delta% Original   Subject
+    ----------- ------ ---------- -------
+    aaea489b2a    100 9bab7d2a7c net: wget: let wget_with_dns work with dns disabled
+    e557daec17     89 f0315babfb hash: Plumb crc8 into the hash functions
+    
+    2 problem commit(s) found
+
+This helps identify cherry-picks that may have been applied incorrectly or
+need manual review due to significant differences from the original commits.
 
 To check GitLab permissions for the configured token::
 

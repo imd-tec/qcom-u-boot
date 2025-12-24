@@ -21,7 +21,7 @@ SIGNAL_FILE = '.pickman-signal'
 
 # Signal status codes
 SIGNAL_SUCCESS = 'success'
-SIGNAL_ALREADY_APPLIED = 'already_applied'
+SIGNAL_APPLIED = 'already_applied'
 SIGNAL_CONFLICT = 'conflict'
 
 # Check if claude_agent_sdk is available
@@ -45,11 +45,12 @@ def check_available():
     return True
 
 
-async def run(commits, source, branch_name, repo_path=None):
+async def run(commits, source, branch_name, repo_path=None):  # pylint: disable=too-many-locals
     """Run the Claude agent to cherry-pick commits
 
     Args:
-        commits (list): list of (hash, short_hash, subject) tuples
+        commits (list): list of AgentCommit namedtuples with fields:
+                       hash, chash, subject, applied_as
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)
@@ -68,40 +69,83 @@ async def run(commits, source, branch_name, repo_path=None):
     if os.path.exists(signal_path):
         os.remove(signal_path)
 
-    # Build commit list for the prompt
-    commit_list = '\n'.join(
-        f'  - {short_hash}: {subject}'
-        for _, short_hash, subject in commits
-    )
+    # Build commit list for the prompt, marking potentially applied commits
+    commit_entries = []
+    has_applied = False
+    for commit in commits:
+        entry = f'  - {commit.chash}: {commit.subject}'
+        if commit.applied_as:
+            entry += f' (maybe already applied as {commit.applied_as})'
+            has_applied = True
+        commit_entries.append(entry)
+
+    commit_list = '\n'.join(commit_entries)
+
+    # Add note about checking for already applied commits
+    applied_note = ''
+    if has_applied:
+        applied_note = '''
+
+IMPORTANT: Some commits may already be applied. Before cherry-picking commits 
+marked as "maybe already applied as <hash>", verify they are truly the same commit:
+1. Compare the actual changes between the original and found commits:
+   - Use: git show --no-ext-diff <original-hash> > /tmp/orig.patch
+   - Use: git show --no-ext-diff <found-hash> > /tmp/found.patch
+   - Compare: diff /tmp/orig.patch /tmp/found.patch
+2. If the patches are similar with only minor differences (like line numbers,
+   context, or conflict resolutions), SKIP the cherry-pick and report that
+   it was already applied.
+3. If the patches differ significantly in the actual changes being made,
+   proceed with the cherry-pick as they are different commits.
+'''
 
     # Get full hash of last commit for signal file
-    last_commit_hash = commits[-1][0]
+    last_commit_hash = commits[-1].hash
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
-{commit_list}
+{commit_list}{applied_note}
 
 Steps to follow:
 1. First run 'git status' to check the repository state is clean
-2. Create and checkout a new branch based on ci/master: git checkout -b {branch_name} ci/master
+2. Create and checkout a new branch based on ci/master:
+   git checkout -b {branch_name} ci/master
 3. Cherry-pick each commit in order:
    - For regular commits: git cherry-pick -x <hash>
    - For merge commits (identified by "Merge" in subject): git cherry-pick -x -m 1 --allow-empty <hash>
    Cherry-pick one commit at a time to handle each appropriately.
    IMPORTANT: Always include merge commits even if they result in empty commits.
    The merge commit message is important for tracking history.
-4. If there are conflicts:
+4. AFTER EACH SUCCESSFUL CHERRY-PICK:
+   a) Check commit delta: 'git show --stat <cherry-picked-hash>' and 'git show --stat <original-hash>'
+      Compare the changed files and line counts. If they differ significantly (>20% lines changed
+      or different files modified), this indicates a problem with the cherry-pick.
+   b) Build test: Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build passes
+   c) If delta is too large:
+      - Reset the commit: 'git reset --hard HEAD~1'
+      - Try to manually apply just the changes from the original commit:
+        'git show <original-hash> | git apply --3way'
+      - If that succeeds, create a new commit with the original message
+      - If fails, try to apply the patch manually.
+      - If manual apply fails, create an empty commit to preserve the commit sequence:
+        'git commit --allow-empty -m "<original-subject> [FAILED]"'
+      - Continue to the next commit
+   d) If build fails and you cannot resolve it, report the issue and abort
+5. If there are conflicts:
    - Show the conflicting files
    - Try to resolve simple conflicts automatically
    - For complex conflicts, describe what needs manual resolution and abort
-   - When fix-ups are needed, amend the commit to add a one-line note at the end
-     of the commit message describing the changes made
-5. After ALL cherry-picks complete, verify with 'git log --oneline -n {len(commits) + 2}'
+   - When fix-ups are needed, amend the commit to add a one-line note at the
+     end of the commit message describing the changes made
+6. After ALL cherry-picks complete, verify with
+   'git log --oneline -n {len(commits) + 2}'
    Ensure all {len(commits)} commits are present.
-6. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
-7. Report the final status including:
+7. Run final build: 'buildman -L --board sandbox -w -o /tmp/pickman' to verify
+   everything still works together
+8. Report the final status including:
    - Build result (ok or list of warnings/errors)
    - Any fix-ups that were made
+   - Any commits with concerning deltas
 
 The cherry-pick branch will be left ready for pushing. Do NOT merge it back to any other branch.
 
@@ -113,11 +157,16 @@ Important:
 
 CRITICAL - Detecting Already-Applied Commits:
 If the FIRST cherry-pick fails with conflicts, BEFORE aborting, check if the commits
-are already present in ci/master with different hashes. Do this by searching for
-commit subjects in ci/master:
-   git log --oneline ci/master --grep="<subject>" -1
-If ALL commits are already in ci/master (same subjects, different hashes), this means
-the series was already applied via a different path. In this case:
+are already present in ci/master with different hashes. For each commit:
+1. Search for the commit subject: git log --oneline ci/master --grep="<subject>" -1
+2. If found, verify it's actually the same commit by comparing patches:
+   - git show --no-ext-diff <original-hash> > /tmp/orig.patch
+   - git show --no-ext-diff <found-hash> > /tmp/found.patch
+   - diff /tmp/orig.patch /tmp/found.patch
+3. Only consider it "already applied" if the patches are similar with minor
+   differences (like line numbers, context, or conflict resolutions)
+If ALL commits are verified as already applied (same content, different hashes),
+this means the series was already applied via a different path. In this case:
 1. Abort the cherry-pick: git cherry-pick --abort
 2. Delete the branch: git branch -D {branch_name}
 3. Write a signal file to indicate this status:
@@ -186,7 +235,8 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
     """Synchronous wrapper for running the cherry-pick agent
 
     Args:
-        commits (list): list of (hash, short_hash, subject) tuples
+        commits (list): list of AgentCommit namedtuples with fields:
+                       hash, chash, subject, applied_as
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)
@@ -241,6 +291,10 @@ Rebase instructions:
 - The MR is behind the target branch and needs rebasing
 - Use: git rebase --keep-empty {remote}/{target}
 - This preserves empty merge commits which are important for tracking
+- AFTER EACH REBASED COMMIT: Check delta and build
+  a) Compare commit delta before/after rebase using 'git show --stat'
+  b) Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify build passes
+  c) If delta is significantly different or build fails, report and abort
 - If there are conflicts, try to resolve them automatically
 - For complex conflicts that cannot be resolved, describe them and abort
 '''
@@ -287,14 +341,15 @@ def build_review_prompt(mr_iid, branch_name, task_desc, context_section,
         comment_steps = """   - Make the requested changes to the code
    - Amend the relevant commit or create a fixup commit"""
 
-    return f"""Task for merge request !{mr_iid} (branch: {branch_name}): {task_desc}
+    return f"""Task for merge request !{mr_iid} (branch: {branch_name}):
+{task_desc}
 {context_section}{comment_section}{rebase_section}
 Steps to follow:
 1. Checkout the branch: git checkout {branch_name}
 2. {step2}
 3. {step3}
 {comment_steps}
-4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
+4. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build passes
 5. Create a local branch with suffix '-v2' (or increment: -v3, -v4, etc.)
 6. Force push to the ORIGINAL remote branch to update the MR:
    ./tools/pickman/pickman push-branch {branch_name} -r {remote} -f

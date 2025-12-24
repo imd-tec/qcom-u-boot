@@ -132,7 +132,8 @@ def parse_url(url):
 
     Examples:
         - git@gitlab.com:group/project.git -> ('gitlab.com', 'group/project')
-        - https://gitlab.com/group/project.git -> ('gitlab.com', 'group/project')
+        - https://gitlab.com/group/project.git ->
+          ('gitlab.com', 'group/project')
     """
     # SSH format: git@gitlab.com:group/project.git
     ssh_match = re.match(r'git@([^:]+):(.+?)(?:\.git)?$', url)
@@ -211,7 +212,8 @@ def push_branch(remote, branch, force=False, skip_ci=True):
             args.extend(['-o', 'ci.skip'])
         if force:
             if have_remote_ref:
-                args.append(f'--force-with-lease=refs/remotes/{remote}/{branch}')
+                args.append(
+                    f'--force-with-lease=refs/remotes/{remote}/{branch}')
             else:
                 args.append('--force')
         args.extend([push_target, f'HEAD:{branch}'])
@@ -349,7 +351,8 @@ def get_open_pickman_mrs(remote):
         remote (str): Remote name
 
     Returns:
-        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch' keys,
+        list: List of dicts with 'iid', 'title', 'web_url', 'source_branch'
+            keys,
               or None on failure
     """
     return get_pickman_mrs(remote, state='opened')
@@ -452,7 +455,7 @@ def reply_to_mr(remote, mr_iid, message):
         return False
 
 
-def update_mr_description(remote, mr_iid, desc):
+def update_mr_desc(remote, mr_iid, desc):
     """Update a merge request's description
 
     Args:
@@ -594,7 +597,8 @@ def check_permissions(remote):  # pylint: disable=too-many-return-statements
     token = get_token()
     if not token:
         tout.error('No GitLab token configured')
-        tout.error('Set token in ~/.config/pickman.conf or GITLAB_TOKEN env var')
+        tout.error('Set token in ~/.config/pickman.conf or '
+                   'GITLAB_TOKEN env var')
         return None
 
     remote_url = get_remote_url(remote)
@@ -625,7 +629,8 @@ def check_permissions(remote):  # pylint: disable=too-many-return-statements
             except gitlab.exceptions.GitlabGetError:
                 pass
 
-        access_name = ACCESS_LEVELS.get(access_level, f'Unknown ({access_level})')
+        access_name = ACCESS_LEVELS.get(access_level,
+                                         f'Unknown ({access_level})')
 
         return PermissionInfo(
             user=user.username,

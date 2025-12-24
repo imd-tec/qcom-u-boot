@@ -292,8 +292,9 @@ class Database:  # pylint: disable=too-many-public-methods
                    cherry_hash) or None if not found
         """
         res = self.execute(
-            'SELECT id, chash, source_id, mergereq_id, subject, author, status, '
-            'cherry_hash FROM pcommit WHERE chash = ?', (chash,))
+            'SELECT id, chash, source_id, mergereq_id, subject, author, '
+            'status, cherry_hash FROM pcommit WHERE chash = ?', 
+            (chash,))
         return res.fetchone()
 
     def commit_get_by_source(self, source_id, status=None):
@@ -344,11 +345,13 @@ class Database:  # pylint: disable=too-many-public-methods
         """
         if cherry_hash:
             self.execute(
-                'UPDATE pcommit SET status = ?, cherry_hash = ? WHERE chash = ?',
+                'UPDATE pcommit SET status = ?, cherry_hash = ? '
+                'WHERE chash = ?',
                 (status, cherry_hash, chash))
         else:
             self.execute(
-                'UPDATE pcommit SET status = ? WHERE chash = ?', (status, chash))
+                'UPDATE pcommit SET status = ? WHERE chash = ?',
+                (status, chash))
 
     def commit_set_mergereq(self, chash, mergereq_id):
         """Set the merge request for a commit

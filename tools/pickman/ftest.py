@@ -28,7 +28,16 @@ from pickman import __main__ as pickman
 from pickman import agent
 from pickman import control
 from pickman import database
-from pickman import gitlab_api
+from pickman import gitlab_api as gitlab
+
+# Test URL constants
+TEST_OAUTH_URL = 'https://oauth2:test-token@gitlab.com/group/project.git'
+TEST_HTTPS_URL = 'https://gitlab.com/group/project.git'
+TEST_SSH_URL = 'git@gitlab.com:group/project.git'
+TEST_MR_URL = 'https://gitlab.com/group/project/-/merge_requests/42'
+TEST_MR_42_URL = 'https://gitlab.com/mr/42'
+TEST_MR_1_URL = 'https://gitlab.com/mr/1'
+TEST_SHORT_OAUTH_URL = 'https://oauth2:token@gitlab.com/g/p.git'
 
 
 class TestCommit(unittest.TestCase):
@@ -43,7 +52,7 @@ class TestCommit(unittest.TestCase):
             '2024-01-15 10:30:00 -0600'
         )
         self.assertEqual(commit.hash, 'abc123def456')
-        self.assertEqual(commit.short_hash, 'abc123d')
+        self.assertEqual(commit.chash, 'abc123d')
         self.assertEqual(commit.subject, 'Test commit subject')
         self.assertEqual(commit.date, '2024-01-15 10:30:00 -0600')
 
@@ -84,7 +93,7 @@ class TestCompareBranches(unittest.TestCase):
 
             self.assertEqual(count, 42)
             self.assertEqual(commit.hash, 'abc123def456789')
-            self.assertEqual(commit.short_hash, 'abc123d')
+            self.assertEqual(commit.chash, 'abc123d')
             self.assertEqual(commit.subject, 'Test subject')
             self.assertEqual(commit.date, '2024-01-15 10:30:00 -0600')
         finally:
@@ -107,7 +116,7 @@ class TestCompareBranches(unittest.TestCase):
                 count, commit = control.compare_branches('branch1', 'branch2')
 
             self.assertEqual(count, 0)
-            self.assertEqual(commit.short_hash, 'def456a')
+            self.assertEqual(commit.chash, 'def456a')
         finally:
             command.TEST_RESULT = None
 
@@ -230,7 +239,8 @@ class TestMain(unittest.TestCase):
             self.assertEqual(ret, 0)
             # Filter out database migration messages
             output_lines = [l for l in stdout.getvalue().splitlines()
-                            if not l.startswith(('Update database', 'Creating'))]
+                            if not l.startswith(('Update database',
+                                                'Creating'))]
             lines = iter(output_lines)
             self.assertEqual('Commits in us/next not in ci/master: 10',
                              next(lines))
@@ -562,7 +572,7 @@ class TestDatabaseMergereq(unittest.TestCase):
 
             # Add a merge request
             dbs.mergereq_add(source_id, 'cherry-abc123', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
 
             # Get the merge request
@@ -572,7 +582,7 @@ class TestDatabaseMergereq(unittest.TestCase):
             self.assertEqual(result[2], 'cherry-abc123')  # branch_name
             self.assertEqual(result[3], 42)  # mr_id
             self.assertEqual(result[4], 'open')  # status
-            self.assertEqual(result[5], 'https://gitlab.com/mr/42')  # url
+            self.assertEqual(result[5], TEST_MR_42_URL)  # url
             self.assertEqual(result[6], '2025-01-15')  # created_at
             dbs.close()
 
@@ -598,7 +608,7 @@ class TestDatabaseMergereq(unittest.TestCase):
 
             # Add merge requests
             dbs.mergereq_add(source_id, 'branch-1', 1, 'open',
-                             'https://gitlab.com/mr/1', '2025-01-01')
+                             TEST_MR_1_URL, '2025-01-01')
             dbs.mergereq_add(source_id, 'branch-2', 2, 'merged',
                              'https://gitlab.com/mr/2', '2025-01-02')
             dbs.mergereq_add(source_id, 'branch-3', 3, 'open',
@@ -630,7 +640,7 @@ class TestDatabaseMergereq(unittest.TestCase):
             source_id = dbs.source_get_id('us/next')
 
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
 
             # Update status
@@ -671,7 +681,7 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
 
             # Add merge request
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
             mr = dbs.mergereq_get(42)
             mr_id = mr[0]  # id field
@@ -701,7 +711,7 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
 
             # Add merge request
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
             mr = dbs.mergereq_get(42)
             mr_id = mr[0]
@@ -1238,8 +1248,8 @@ class TestGetNextCommits(unittest.TestCase):
             self.assertIsNone(error)
             self.assertTrue(merge_found)
             self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].short_hash, 'aaa111a')
-            self.assertEqual(commits[1].short_hash, 'bbb222b')
+            self.assertEqual(commits[0].chash, 'aaa111a')
+            self.assertEqual(commits[1].chash, 'bbb222b')
             dbs.close()
 
 
@@ -1360,55 +1370,55 @@ class TestParseUrl(unittest.TestCase):
 
     def test_parse_ssh_url(self):
         """Test parsing SSH URL."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'git@gitlab.com:group/project.git')
         self.assertEqual(host, 'gitlab.com')
         self.assertEqual(path, 'group/project')
 
     def test_parse_ssh_url_no_git_suffix(self):
         """Test parsing SSH URL without .git suffix."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'git@gitlab.com:group/project')
         self.assertEqual(host, 'gitlab.com')
         self.assertEqual(path, 'group/project')
 
     def test_parse_ssh_url_nested_group(self):
         """Test parsing SSH URL with nested group."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'git@gitlab.denx.de:u-boot/custodians/u-boot-dm.git')
         self.assertEqual(host, 'gitlab.denx.de')
         self.assertEqual(path, 'u-boot/custodians/u-boot-dm')
 
     def test_parse_https_url(self):
         """Test parsing HTTPS URL."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'https://gitlab.com/group/project.git')
         self.assertEqual(host, 'gitlab.com')
         self.assertEqual(path, 'group/project')
 
     def test_parse_https_url_no_git_suffix(self):
         """Test parsing HTTPS URL without .git suffix."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'https://gitlab.com/group/project')
         self.assertEqual(host, 'gitlab.com')
         self.assertEqual(path, 'group/project')
 
     def test_parse_http_url(self):
         """Test parsing HTTP URL."""
-        host, path = gitlab_api.parse_url(
+        host, path = gitlab.parse_url(
             'http://gitlab.example.com/group/project.git')
         self.assertEqual(host, 'gitlab.example.com')
         self.assertEqual(path, 'group/project')
 
     def test_parse_invalid_url(self):
         """Test parsing invalid URL."""
-        host, path = gitlab_api.parse_url('not-a-valid-url')
+        host, path = gitlab.parse_url('not-a-valid-url')
         self.assertIsNone(host)
         self.assertIsNone(path)
 
     def test_parse_empty_url(self):
         """Test parsing empty URL."""
-        host, path = gitlab_api.parse_url('')
+        host, path = gitlab.parse_url('')
         self.assertIsNone(host)
         self.assertIsNone(path)
 
@@ -1418,16 +1428,16 @@ class TestCheckAvailable(unittest.TestCase):
 
     def test_check_available_false(self):
         """Test check_available returns False when gitlab not installed."""
-        with mock.patch.object(gitlab_api, 'AVAILABLE', False):
+        with mock.patch.object(gitlab, 'AVAILABLE', False):
             with terminal.capture():
-                result = gitlab_api.check_available()
+                result = gitlab.check_available()
             self.assertFalse(result)
 
     def test_check_available_true(self):
         """Test check_available returns True when gitlab is installed."""
-        with mock.patch.object(gitlab_api, 'AVAILABLE', True):
+        with mock.patch.object(gitlab, 'AVAILABLE', True):
             with terminal.capture():
-                result = gitlab_api.check_available()
+                result = gitlab.check_available()
             self.assertTrue(result)
 
 
@@ -1436,36 +1446,37 @@ class TestGetPushUrl(unittest.TestCase):
 
     def test_get_push_url_success(self):
         """Test successful push URL generation."""
-        with mock.patch.object(gitlab_api, 'get_token',
+        with mock.patch.object(gitlab, 'get_token',
                                return_value='test-token'):
-            with mock.patch.object(gitlab_api, 'get_remote_url',
-                                   return_value='git@gitlab.com:group/project.git'):
-                url = gitlab_api.get_push_url('origin')
-        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+            with mock.patch.object(
+                    gitlab, 'get_remote_url',
+                    return_value=TEST_SSH_URL):
+                url = gitlab.get_push_url('origin')
+        self.assertEqual(url, TEST_OAUTH_URL)
 
     def test_get_push_url_no_token(self):
         """Test returns None when no token available."""
-        with mock.patch.object(gitlab_api, 'get_token', return_value=None):
-            url = gitlab_api.get_push_url('origin')
+        with mock.patch.object(gitlab, 'get_token', return_value=None):
+            url = gitlab.get_push_url('origin')
         self.assertIsNone(url)
 
     def test_get_push_url_invalid_remote(self):
         """Test returns None for invalid remote URL."""
-        with mock.patch.object(gitlab_api, 'get_token',
+        with mock.patch.object(gitlab, 'get_token',
                                return_value='test-token'):
-            with mock.patch.object(gitlab_api, 'get_remote_url',
+            with mock.patch.object(gitlab, 'get_remote_url',
                                    return_value='not-a-valid-url'):
-                url = gitlab_api.get_push_url('origin')
+                url = gitlab.get_push_url('origin')
         self.assertIsNone(url)
 
     def test_get_push_url_https_remote(self):
         """Test with HTTPS remote URL."""
-        with mock.patch.object(gitlab_api, 'get_token',
+        with mock.patch.object(gitlab, 'get_token',
                                return_value='test-token'):
-            with mock.patch.object(gitlab_api, 'get_remote_url',
-                                   return_value='https://gitlab.com/group/project.git'):
-                url = gitlab_api.get_push_url('origin')
-        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+            with mock.patch.object(gitlab, 'get_remote_url',
+                                   return_value=TEST_HTTPS_URL):
+                url = gitlab.get_push_url('origin')
+        self.assertEqual(url, TEST_OAUTH_URL)
 
 
 class TestPushBranch(unittest.TestCase):
@@ -1473,23 +1484,25 @@ class TestPushBranch(unittest.TestCase):
 
     def test_push_branch_force_with_remote_ref(self):
         """Test force push when remote branch exists uses --force-with-lease."""
-        with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+        with mock.patch.object(gitlab, 'get_push_url',
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
-                result = gitlab_api.push_branch('ci', 'test-branch', force=True)
+                result = gitlab.push_branch('ci', 'test-branch', force=True)
 
         self.assertTrue(result)
         # Should fetch first, then push with --force-with-lease
         calls = mock_output.call_args_list
         self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci', 'test-branch'))
+        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci',
+                                             'test-branch'))
         push_args = calls[1][0]
-        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch', push_args)
+        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch',
+                      push_args)
 
     def test_push_branch_force_no_remote_ref(self):
         """Test force push when remote branch doesn't exist uses --force."""
-        with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+        with mock.patch.object(gitlab, 'get_push_url',
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
                 # Fetch fails (branch doesn't exist on remote)
                 mock_output.side_effect = [
@@ -1497,10 +1510,11 @@ class TestPushBranch(unittest.TestCase):
                                        command.CommandResult()),  # fetch fails
                     None,  # push succeeds
                 ]
-                result = gitlab_api.push_branch('ci', 'new-branch', force=True)
+                result = gitlab.push_branch('ci', 'new-branch', force=True)
 
         self.assertTrue(result)
-        # Should try fetch, fail, then push with --force (not --force-with-lease)
+        # Should try fetch, fail, then push with --force
+        # (not --force-with-lease)
         calls = mock_output.call_args_list
         self.assertEqual(len(calls), 2)
         push_args = calls[1][0]
@@ -1509,10 +1523,10 @@ class TestPushBranch(unittest.TestCase):
 
     def test_push_branch_no_force(self):
         """Test regular push without force doesn't fetch or use force flags."""
-        with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+        with mock.patch.object(gitlab, 'get_push_url',
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
-                result = gitlab_api.push_branch('ci', 'test-branch', force=False)
+                result = gitlab.push_branch('ci', 'test-branch', force=False)
 
         self.assertTrue(result)
         # Should only push, no fetch, no force flags
@@ -1540,16 +1554,16 @@ class TestConfigFile(unittest.TestCase):
         with open(self.config_file, 'w', encoding='utf-8') as fhandle:
             fhandle.write('[gitlab]\ntoken = test-config-token\n')
 
-        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
-            token = gitlab_api.get_token()
+        with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
+            token = gitlab.get_token()
         self.assertEqual(token, 'test-config-token')
 
     def test_get_token_fallback_to_env(self):
         """Test falling back to environment variable."""
         # Config file doesn't exist
-        with mock.patch.object(gitlab_api, 'CONFIG_FILE', '/nonexistent/path'):
+        with mock.patch.object(gitlab, 'CONFIG_FILE', '/nonexistent/path'):
             with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
-                token = gitlab_api.get_token()
+                token = gitlab.get_token()
         self.assertEqual(token, 'env-token')
 
     def test_get_token_config_missing_section(self):
@@ -1557,9 +1571,9 @@ class TestConfigFile(unittest.TestCase):
         with open(self.config_file, 'w', encoding='utf-8') as fhandle:
             fhandle.write('[other]\nkey = value\n')
 
-        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
+        with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
-                token = gitlab_api.get_token()
+                token = gitlab.get_token()
         self.assertEqual(token, 'env-token')
 
     def test_get_config_value(self):
@@ -1567,17 +1581,17 @@ class TestConfigFile(unittest.TestCase):
         with open(self.config_file, 'w', encoding='utf-8') as fhandle:
             fhandle.write('[section1]\nkey1 = value1\n')
 
-        with mock.patch.object(gitlab_api, 'CONFIG_FILE', self.config_file):
-            value = gitlab_api.get_config_value('section1', 'key1')
+        with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
+            value = gitlab.get_config_value('section1', 'key1')
         self.assertEqual(value, 'value1')
 
 
 class TestCheckPermissions(unittest.TestCase):
     """Tests for check_permissions function."""
 
-    @mock.patch.object(gitlab_api, 'get_remote_url')
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    @mock.patch.object(gitlab, 'get_remote_url')
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
     def test_check_permissions_developer(self, mock_token, mock_url):
         """Test checking permissions for a developer."""
         mock_token.return_value = 'test-token'
@@ -1598,7 +1612,7 @@ class TestCheckPermissions(unittest.TestCase):
         mock_glab.projects.get.return_value = mock_project
 
         with mock.patch('gitlab.Gitlab', return_value=mock_glab):
-            perms = gitlab_api.check_permissions('origin')
+            perms = gitlab.check_permissions('origin')
 
         self.assertIsNotNone(perms)
         self.assertEqual(perms.user, 'testuser')
@@ -1608,30 +1622,30 @@ class TestCheckPermissions(unittest.TestCase):
         self.assertTrue(perms.can_create_mr)
         self.assertFalse(perms.can_merge)
 
-    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
+    @mock.patch.object(gitlab, 'AVAILABLE', False)
     def test_check_permissions_not_available(self):
         """Test check_permissions when gitlab not available."""
         with terminal.capture():
-            perms = gitlab_api.check_permissions('origin')
+            perms = gitlab.check_permissions('origin')
         self.assertIsNone(perms)
 
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
     def test_check_permissions_no_token(self, mock_token):
         """Test check_permissions when no token set."""
         mock_token.return_value = None
         with terminal.capture():
-            perms = gitlab_api.check_permissions('origin')
+            perms = gitlab.check_permissions('origin')
         self.assertIsNone(perms)
 
 
 class TestUpdateMrDescription(unittest.TestCase):
-    """Tests for update_mr_description function."""
+    """Tests for update_mr_desc function."""
 
-    @mock.patch.object(gitlab_api, 'get_remote_url')
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
-    def test_update_mr_description_success(self, mock_token, mock_url):
+    @mock.patch.object(gitlab, 'get_remote_url')
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_update_mr_desc_success(self, mock_token, mock_url):
         """Test successful MR description update."""
         mock_token.return_value = 'test-token'
         mock_url.return_value = 'git@gitlab.com:group/project.git'
@@ -1643,36 +1657,36 @@ class TestUpdateMrDescription(unittest.TestCase):
         with mock.patch('gitlab.Gitlab') as mock_gitlab:
             mock_gitlab.return_value.projects.get.return_value = mock_project
 
-            result = gitlab_api.update_mr_description('origin', 123,
+            result = gitlab.update_mr_desc('origin', 123,
                                                       'New description')
 
             self.assertTrue(result)
             self.assertEqual(mock_mr.description, 'New description')
             mock_mr.save.assert_called_once()
 
-    @mock.patch.object(gitlab_api, 'AVAILABLE', False)
-    def test_update_mr_description_not_available(self):
-        """Test update_mr_description when gitlab not available."""
+    @mock.patch.object(gitlab, 'AVAILABLE', False)
+    def test_update_mr_desc_not_available(self):
+        """Test update_mr_desc when gitlab not available."""
         with terminal.capture():
-            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+            result = gitlab.update_mr_desc('origin', 123, 'desc')
         self.assertFalse(result)
 
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
-    def test_update_mr_description_no_token(self, mock_token):
-        """Test update_mr_description when no token set."""
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_update_mr_desc_no_token(self, mock_token):
+        """Test update_mr_desc when no token set."""
         mock_token.return_value = None
         with terminal.capture():
-            result = gitlab_api.update_mr_description('origin', 123, 'desc')
+            result = gitlab.update_mr_desc('origin', 123, 'desc')
         self.assertFalse(result)
 
 
 class TestGetPickmanMrs(unittest.TestCase):
     """Tests for get_pickman_mrs function."""
 
-    @mock.patch.object(gitlab_api, 'get_remote_url')
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    @mock.patch.object(gitlab, 'get_remote_url')
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
     def test_get_pickman_mrs_sorted_oldest_first(self, mock_token, mock_url):
         """Test that MRs are requested sorted by created_at ascending."""
         mock_token.return_value = 'test-token'
@@ -1682,7 +1696,7 @@ class TestGetPickmanMrs(unittest.TestCase):
         mock_mr1 = mock.MagicMock()
         mock_mr1.iid = 1
         mock_mr1.title = '[pickman] Older MR'
-        mock_mr1.web_url = 'https://gitlab.com/mr/1'
+        mock_mr1.web_url = TEST_MR_1_URL
         mock_mr1.source_branch = 'cherry-1'
         mock_mr1.description = 'desc1'
         mock_mr1.has_conflicts = False
@@ -1707,7 +1721,7 @@ class TestGetPickmanMrs(unittest.TestCase):
         with mock.patch('gitlab.Gitlab') as mock_gitlab:
             mock_gitlab.return_value.projects.get.return_value = mock_project
 
-            result = gitlab_api.get_pickman_mrs('origin', state='opened')
+            result = gitlab.get_pickman_mrs('origin', state='opened')
 
         # Verify the list call includes sorting parameters
         mock_project.mergerequests.list.assert_called_once_with(
@@ -1722,8 +1736,8 @@ class TestGetPickmanMrs(unittest.TestCase):
 class TestCreateMr(unittest.TestCase):
     """Tests for create_mr function."""
 
-    @mock.patch.object(gitlab_api, 'get_token')
-    @mock.patch.object(gitlab_api, 'AVAILABLE', True)
+    @mock.patch.object(gitlab, 'get_token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
     def test_create_mr_409_returns_existing(self, mock_token):
         """Test that 409 error returns existing MR URL."""
         tout.init(tout.INFO)
@@ -1731,20 +1745,20 @@ class TestCreateMr(unittest.TestCase):
 
         # Create mock existing MR
         mock_existing_mr = mock.MagicMock()
-        mock_existing_mr.web_url = 'https://gitlab.com/group/project/-/merge_requests/42'
+        mock_existing_mr.web_url = TEST_MR_URL
 
         mock_project = mock.MagicMock()
         mock_project.mergerequests.list.return_value = [mock_existing_mr]
 
         # Simulate 409 Conflict error
         mock_project.mergerequests.create.side_effect = \
-            gitlab_api.MrCreateError(response_code=409)
+            gitlab.MrCreateError(response_code=409)
 
         with mock.patch('gitlab.Gitlab') as mock_gitlab:
             mock_gitlab.return_value.projects.get.return_value = mock_project
 
             with terminal.capture():
-                result = gitlab_api.create_mr(
+                result = gitlab.create_mr(
                     'gitlab.com', 'group/project',
                     'cherry-abc', 'master', 'Test MR')
 
@@ -1847,7 +1861,7 @@ Branch: cherry-abc"""
         self.assertIsNone(source)
         self.assertIsNone(last_hash)
 
-    def test_parse_mr_description_ignores_short_hashes(self):
+    def test_parse_mr_description_ignores_chashes(self):
         """Test that short numbers in conversation log are not matched."""
         description = """## 2025-01-15: us/next
 
@@ -1871,7 +1885,7 @@ class TestStep(unittest.TestCase):
 
     def test_step_with_pending_mr(self):
         """Test step does nothing when MR is pending."""
-        mock_mr = gitlab_api.PickmanMr(
+        mock_mr = gitlab.PickmanMr(
             iid=123,
             title='[pickman] Test MR',
             web_url='https://gitlab.com/mr/123',
@@ -1879,9 +1893,9 @@ class TestStep(unittest.TestCase):
             description='Test',
         )
         with mock.patch.object(control, 'run_git'):
-            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
-                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
                     args = argparse.Namespace(cmd='step', source='us/next',
                                               remote='ci', target='master',
@@ -1893,7 +1907,7 @@ class TestStep(unittest.TestCase):
 
     def test_step_gitlab_error(self):
         """Test step when GitLab API returns error."""
-        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+        with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='step', source='us/next',
                                       remote='ci', target='master',
@@ -1905,9 +1919,9 @@ class TestStep(unittest.TestCase):
 
     def test_step_open_mrs_error(self):
         """Test step when get_open_pickman_mrs returns error."""
-        with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+        with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                return_value=[]):
-            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                    return_value=None):
                 args = argparse.Namespace(cmd='step', source='us/next',
                                           remote='ci', target='master',
@@ -1919,7 +1933,7 @@ class TestStep(unittest.TestCase):
 
     def test_step_allows_below_max(self):
         """Test step allows new MR when count is below max_mrs."""
-        mock_mr = gitlab_api.PickmanMr(
+        mock_mr = gitlab.PickmanMr(
             iid=123,
             title='[pickman] Test MR',
             web_url='https://gitlab.com/mr/123',
@@ -1927,9 +1941,9 @@ class TestStep(unittest.TestCase):
             description='Test',
         )
         with mock.patch.object(control, 'run_git'):
-            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
-                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
                     with mock.patch.object(control, 'do_apply',
                                            return_value=0) as mock_apply:
@@ -1946,7 +1960,7 @@ class TestStep(unittest.TestCase):
     def test_step_blocks_at_max(self):
         """Test step blocks new MR when at max_mrs limit."""
         mock_mrs = [
-            gitlab_api.PickmanMr(
+            gitlab.PickmanMr(
                 iid=i,
                 title=f'[pickman] Test MR {i}',
                 web_url=f'https://gitlab.com/mr/{i}',
@@ -1956,9 +1970,9 @@ class TestStep(unittest.TestCase):
             for i in range(3)
         ]
         with mock.patch.object(control, 'run_git'):
-            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
-                with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+                with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=mock_mrs):
                     with mock.patch.object(control, 'do_apply') as mock_apply:
                         args = argparse.Namespace(cmd='step', source='us/next',
@@ -1993,7 +2007,7 @@ class TestReview(unittest.TestCase):
 
     def test_review_no_mrs(self):
         """Test review when no open MRs found."""
-        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                return_value=[]):
             args = argparse.Namespace(cmd='review', remote='ci')
             with terminal.capture():
@@ -2003,7 +2017,7 @@ class TestReview(unittest.TestCase):
 
     def test_review_gitlab_error(self):
         """Test review when GitLab API returns error."""
-        with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                return_value=None):
             args = argparse.Namespace(cmd='review', remote='ci')
             with terminal.capture():
@@ -2013,7 +2027,7 @@ class TestReview(unittest.TestCase):
 
 
 class TestUpdateHistoryWithReview(unittest.TestCase):
-    """Tests for update_history_with_review function."""
+    """Tests for update_history function."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -2033,20 +2047,20 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
         os.chdir(self.orig_dir)
         shutil.rmtree(self.test_dir)
 
-    def test_update_history_with_review(self):
+    def test_update_history(self):
         """Test that review handling is appended to history."""
         comments = [
-            gitlab_api.MrComment(id=1, author='reviewer1',
+            gitlab.MrComment(id=1, author='reviewer1',
                                  body='Please fix the indentation here',
                                  created_at='2025-01-01', resolvable=True,
                                  resolved=False),
-            gitlab_api.MrComment(id=2, author='reviewer2', body='Add a docstring',
+            gitlab.MrComment(id=2, author='reviewer2', body='Add a docstring',
                                  created_at='2025-01-01', resolvable=True,
                                  resolved=False),
         ]
         conversation_log = 'Fixed indentation and added docstring.'
 
-        control.update_history_with_review('cherry-abc123', comments,
+        control.update_history('cherry-abc123', comments,
                                            conversation_log)
 
         # Check history file was created
@@ -2071,10 +2085,10 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
         subprocess.run(['git', 'commit', '-m', 'Initial'],
                        check=True, capture_output=True)
 
-        comments = [gitlab_api.MrComment(id=1, author='reviewer', body='Fix this',
-                                         created_at='2025-01-01', resolvable=True,
-                                         resolved=False)]
-        control.update_history_with_review('cherry-xyz', comments, 'Fixed it')
+        comms = [gitlab.MrComment(id=1, author='reviewer', body='Fix this',
+                                      created_at='2025-01-01', resolvable=True,
+                                      resolved=False)]
+        control.update_history('cherry-xyz', comms, 'Fixed it')
 
         with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
             content = fhandle.read()
@@ -2120,7 +2134,7 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
             dbs.comment_mark_processed(100, 1)
             dbs.commit()
 
-            mrs = [gitlab_api.PickmanMr(
+            mrs = [gitlab.PickmanMr(
                 iid=100,
                 title='[pickman] Test MR',
                 source_branch='cherry-test',
@@ -2130,25 +2144,25 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
 
             # Comment 1 is processed, comment 2 is new
             comments = [
-                gitlab_api.MrComment(id=1, author='reviewer', body='Old comment',
+                gitlab.MrComment(id=1, author='reviewer', body='Old comment',
                                      created_at='2025-01-01', resolvable=True,
                                      resolved=False),
-                gitlab_api.MrComment(id=2, author='reviewer', body='New comment',
+                gitlab.MrComment(id=2, author='reviewer', body='New comment',
                                      created_at='2025-01-01', resolvable=True,
                                      resolved=False),
             ]
 
             with mock.patch.object(control, 'run_git'):
-                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                with mock.patch.object(gitlab, 'get_mr_comments',
                                        return_value=comments):
                     with mock.patch.object(agent, 'handle_mr_comments',
-                                           return_value=(True, 'Done')) as mock_agent:
-                        with mock.patch.object(gitlab_api, 'update_mr_description'):
-                            with mock.patch.object(control, 'update_history_with_review'):
+                                           return_value=(True, 'Done')) as moc:
+                        with mock.patch.object(gitlab, 'update_mr_desc'):
+                            with mock.patch.object(control, 'update_history'):
                                 control.process_mr_reviews('ci', mrs, dbs)
 
             # Agent should only receive the new comment
-            call_args = mock_agent.call_args
+            call_args = moc.call_args
             passed_comments = call_args[0][2]
             self.assertEqual(len(passed_comments), 1)
             self.assertEqual(passed_comments[0].id, 2)
@@ -2162,7 +2176,7 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
             dbs.start()
 
             # MR needs rebase but has no comments
-            mrs = [gitlab_api.PickmanMr(
+            mrs = [gitlab.PickmanMr(
                 iid=100,
                 title='[pickman] Test MR',
                 source_branch='cherry-test',
@@ -2173,17 +2187,17 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
             )]
 
             with mock.patch.object(control, 'run_git'):
-                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                with mock.patch.object(gitlab, 'get_mr_comments',
                                        return_value=[]):
                     with mock.patch.object(agent, 'handle_mr_comments',
-                                           return_value=(True, 'Rebased')) as mock_agent:
-                        with mock.patch.object(gitlab_api, 'update_mr_description'):
-                            with mock.patch.object(control, 'update_history_with_review'):
+                                           return_value=(True, 'Rebased')) as m:
+                        with mock.patch.object(gitlab, 'update_mr_desc'):
+                            with mock.patch.object(control, 'update_history'):
                                 control.process_mr_reviews('ci', mrs, dbs)
 
             # Agent should be called with needs_rebase=True
-            mock_agent.assert_called_once()
-            call_kwargs = mock_agent.call_args[1]
+            m.assert_called_once()
+            call_kwargs = m.call_args[1]
             self.assertTrue(call_kwargs.get('needs_rebase'))
             self.assertFalse(call_kwargs.get('has_conflicts'))
 
@@ -2196,7 +2210,7 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
             dbs.start()
 
             # MR has no comments and doesn't need rebase
-            mrs = [gitlab_api.PickmanMr(
+            mrs = [gitlab.PickmanMr(
                 iid=100,
                 title='[pickman] Test MR',
                 source_branch='cherry-test',
@@ -2207,14 +2221,14 @@ class TestProcessMrReviewsCommentTracking(unittest.TestCase):
             )]
 
             with mock.patch.object(control, 'run_git'):
-                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                with mock.patch.object(gitlab, 'get_mr_comments',
                                        return_value=[]):
                     with mock.patch.object(agent, 'handle_mr_comments',
-                                           return_value=(True, 'Done')) as mock_agent:
+                                           return_value=(True, 'Done')) as moc:
                         control.process_mr_reviews('ci', mrs, dbs)
 
             # Agent should NOT be called
-            mock_agent.assert_not_called()
+            moc.assert_not_called()
 
             dbs.close()
 
@@ -2348,20 +2362,20 @@ class TestParseInstruction(unittest.TestCase):
 
 
 class TestFormatHistorySummary(unittest.TestCase):
-    """Tests for format_history_summary function."""
+    """Tests for format_history function."""
 
-    def test_format_history_summary(self):
+    def test_format_history(self):
         """Test formatting history summary."""
         commits = [
             control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
-            control.CommitInfo('bbb222', 'bbb222b', 'Second commit', 'Author 2'),
+            control.CommitInfo('bbb222', 'bbb222b', 'Second one', 'Author 2'),
         ]
-        result = control.format_history_summary('us/next', commits, 'cherry-abc')
+        result = control.format_history('us/next', commits, 'cherry-abc')
 
         self.assertIn('us/next', result)
         self.assertIn('Branch: cherry-abc', result)
         self.assertIn('- aaa111a First commit', result)
-        self.assertIn('- bbb222b Second commit', result)
+        self.assertIn('- bbb222b Second one', result)
 
 
 class TestGetHistory(unittest.TestCase):
@@ -2460,7 +2474,7 @@ Other content
         """Test get_history with multiple commits."""
         commits = [
             control.CommitInfo('aaa111', 'aaa111a', 'First commit', 'Author 1'),
-            control.CommitInfo('bbb222', 'bbb222b', 'Second commit', 'Author 2'),
+            control.CommitInfo('bbb222', 'bbb222b', 'Second one', 'Author 2'),
             control.CommitInfo('ccc333', 'ccc333c', 'Third commit', 'Author 3'),
         ]
         content, commit_msg = control.get_history(
@@ -2468,13 +2482,13 @@ Other content
 
         # Verify all commits in content
         self.assertIn('- aaa111a First commit', content)
-        self.assertIn('- bbb222b Second commit', content)
+        self.assertIn('- bbb222b Second one', content)
         self.assertIn('- ccc333c Third commit', content)
 
         # Verify commit message
         self.assertIn('pickman: Record cherry-pick of 3 commits', commit_msg)
         self.assertIn('- aaa111a First commit', commit_msg)
-        self.assertIn('- bbb222b Second commit', commit_msg)
+        self.assertIn('- bbb222b Second one', commit_msg)
         self.assertIn('- ccc333c Third commit', commit_msg)
 
 
@@ -2672,7 +2686,7 @@ class TestExecuteApply(unittest.TestCase):
                                    return_value=(True, 'log')):
                 with mock.patch.object(control, 'run_git',
                                        return_value='abc123'):
-                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                    with mock.patch.object(gitlab, 'push_and_create_mr',
                                            return_value='https://mr/url'):
                         ret, success, _ = control.execute_apply(
                             dbs, 'us/next', commits, 'cherry-branch', args)
@@ -2698,7 +2712,7 @@ class TestExecuteApply(unittest.TestCase):
                                    return_value=(True, 'log')):
                 with mock.patch.object(control, 'run_git',
                                        return_value='abc123'):
-                    with mock.patch.object(gitlab_api, 'push_and_create_mr',
+                    with mock.patch.object(gitlab, 'push_and_create_mr',
                                            return_value=None):
                         ret, success, _ = control.execute_apply(
                             dbs, 'us/next', commits, 'cherry-branch', args)
@@ -2723,7 +2737,7 @@ class TestExecuteApply(unittest.TestCase):
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'aborted log')):
                 with mock.patch.object(control, 'run_git',
-                                       side_effect=Exception('branch not found')):
+                                       side_effect=Exception('not found')):
                     ret, success, _ = control.execute_apply(
                         dbs, 'us/next', commits, 'cherry-branch', args)
 
@@ -2754,7 +2768,7 @@ class TestExecuteApply(unittest.TestCase):
             with mock.patch.object(control.agent, 'cherry_pick_commits',
                                    return_value=(True, 'already applied log')):
                 with mock.patch.object(control.agent, 'read_signal_file',
-                                       return_value=(agent.SIGNAL_ALREADY_APPLIED,
+                                       return_value=(agent.SIGNAL_APPLIED,
                                                      'hhh888')):
                     ret, success, _ = control.execute_apply(
                         dbs, 'us/next', commits, 'cherry-branch', args)
@@ -2889,7 +2903,7 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertFalse(merge_found)
             # Only second commit should be returned (first is in DB)
             self.assertEqual(len(commits), 1)
-            self.assertEqual(commits[0].short_hash, 'bbb222b')
+            self.assertEqual(commits[0].chash, 'bbb222b')
             dbs.close()
 
     def test_get_next_commits_all_in_db(self):
@@ -2959,9 +2973,9 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
 
             call_count = [0]
 
+            # pylint: disable=unused-argument
             def mock_git(pipe_list):
                 call_count[0] += 1
-                _cmd = pipe_list[0] if pipe_list else []  # pylint: disable=unused-variable
                 # First call: get first-parent log
                 if call_count[0] == 1:
                     return command.CommandResult(stdout=fp_log)
@@ -2979,8 +2993,8 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertTrue(merge_found)
             # Should return commits from second merge (first was skipped)
             self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].short_hash, 'ccc333c')
-            self.assertEqual(commits[1].short_hash, 'merge2m')
+            self.assertEqual(commits[0].chash, 'ccc333c')
+            self.assertEqual(commits[1].chash, 'merge2m')
             dbs.close()
 
 
@@ -3035,7 +3049,7 @@ class TestDoPushBranch(unittest.TestCase):
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
                                   remote='ci', force=False, run_ci=False)
-        with mock.patch.object(gitlab_api, 'push_branch',
+        with mock.patch.object(gitlab, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
@@ -3048,7 +3062,7 @@ class TestDoPushBranch(unittest.TestCase):
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
                                   remote='origin', force=True, run_ci=False)
-        with mock.patch.object(gitlab_api, 'push_branch',
+        with mock.patch.object(gitlab, 'push_branch',
                                return_value=True) as mock_push:
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
@@ -3060,8 +3074,8 @@ class TestDoPushBranch(unittest.TestCase):
         """Test push failure."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='ci', force=False)
-        with mock.patch.object(gitlab_api, 'push_branch',
+                                  remote='ci', force=False, run_ci=False)
+        with mock.patch.object(gitlab, 'push_branch',
                                return_value=False):
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
@@ -3102,7 +3116,7 @@ class TestDoReviewWithMrs(unittest.TestCase):
         """Test review with open MRs but no comments."""
         tout.init(tout.INFO)
 
-        mock_mr = gitlab_api.PickmanMr(
+        mock_mr = gitlab.PickmanMr(
             iid=123,
             title='[pickman] Test MR',
             web_url='https://gitlab.com/mr/123',
@@ -3110,9 +3124,9 @@ class TestDoReviewWithMrs(unittest.TestCase):
             description='Test',
         )
         with mock.patch.object(control, 'run_git'):
-            with mock.patch.object(gitlab_api, 'get_open_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                    return_value=[mock_mr]):
-                with mock.patch.object(gitlab_api, 'get_mr_comments',
+                with mock.patch.object(gitlab, 'get_mr_comments',
                                        return_value=[]):
                     args = argparse.Namespace(cmd='review', remote='ci',
                                               target='master')
@@ -3145,10 +3159,10 @@ class TestProcessMergedMrs(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            dbs.source_set('us/next', 'aaa111aaa111aaa111aaa111aaa111aaa111aaa1')
+            dbs.source_set('us/next', 'aaa111aaa111aaa111aaa111aaa111aaa111aaa')
             dbs.commit()
 
-            merged_mrs = [gitlab_api.PickmanMr(
+            merged_mrs = [gitlab.PickmanMr(
                 iid=100,
                 title='[pickman] Test MR',
                 description='## 2025-01-01: us/next\n\n- bbb222b Subject',
@@ -3164,7 +3178,7 @@ class TestProcessMergedMrs(unittest.TestCase):
                     return ''
                 return ''
 
-            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=merged_mrs):
                 with mock.patch.object(control, 'run_git', mock_git):
                     processed = control.process_merged_mrs('ci', 'us/next', dbs)
@@ -3184,7 +3198,7 @@ class TestProcessMergedMrs(unittest.TestCase):
             dbs.source_set('us/next', 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
             dbs.commit()
 
-            merged_mrs = [gitlab_api.PickmanMr(
+            merged_mrs = [gitlab.PickmanMr(
                 iid=100,
                 title='[pickman] Test MR',
                 description='## 2025-01-01: us/next\n\n- aaa111a Subject',
@@ -3200,7 +3214,7 @@ class TestProcessMergedMrs(unittest.TestCase):
                     raise RuntimeError('Not an ancestor')
                 return ''
 
-            with mock.patch.object(gitlab_api, 'get_merged_pickman_mrs',
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=merged_mrs):
                 with mock.patch.object(control, 'run_git', mock_git):
                     processed = control.process_merged_mrs('ci', 'us/next', dbs)
@@ -3212,6 +3226,406 @@ class TestProcessMergedMrs(unittest.TestCase):
                              'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
 
             dbs.close()
+
+
+class TestCheck(unittest.TestCase):
+    """Tests for check command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.old_branch = 'old-branch'
+
+    def test_parse_git_stat_output(self):
+        """Test parsing git show --stat output."""
+        stat_output = """commit abc123def456
+Author: Test Author <test@example.com>
+Date:   Mon Jan 15 10:30:00 2024 -0600
+
+    Test commit message
+
+ file1.c | 15 +++++++++++++++
+ file2.h |  3 +--
+ 2 files changed, 16 insertions(+), 2 deletions(-)"""
+
+        result = control.parse_git_stat_output(stat_output)
+        files, insertions, deletions, file_set = result
+        self.assertEqual(files, 2)
+        self.assertEqual(insertions, 16)
+        self.assertEqual(deletions, 2)
+        self.assertEqual(file_set, {'file1.c', 'file2.h'})
+
+    def test_parse_git_stat_output_empty(self):
+        """Test parsing empty git show --stat output."""
+        stat_output = """commit abc123def456
+Author: Test Author <test@example.com>
+Date:   Mon Jan 15 10:30:00 2024 -0600
+
+    Empty commit message
+
+ 0 files changed"""
+
+        result = control.parse_git_stat_output(stat_output)
+        files, insertions, deletions, file_set = result
+        self.assertEqual(files, 0)
+        self.assertEqual(insertions, 0)
+        self.assertEqual(deletions, 0)
+        self.assertEqual(file_set, set())
+
+    def test_calc_ratio_identical(self):
+        """Test delta ratio calculation for identical commits."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertEqual(ratio, 0.0)
+
+    def test_calc_ratio_different_files(self):
+        """Test delta ratio calculation for different files."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertGreater(ratio, 0.0)
+        self.assertLessEqual(ratio, 1.0)
+
+    def test_calc_ratio_different_lines(self):
+        """Test delta ratio calculation for different line counts."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(2, 30, 6, {'file1.c', 'file2.h'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertGreater(ratio, 0.0)
+        self.assertLessEqual(ratio, 1.0)
+
+    def test_get_orig_commit(self):
+        """Test finding original commit from cherry-pick message."""
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            commit_msg = """Test commit subject
+
+This is the commit body.
+
+(cherry picked from commit abc123def456789)
+"""
+            mock_run_git.return_value = commit_msg
+
+            orig = control.get_orig_commit('def456abc123')
+            self.assertEqual(orig, 'abc123def456789')
+
+    def test_get_orig_commit_not_cherry_pick(self):
+        """Test finding original commit for non-cherry-pick."""
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            commit_msg = """Test commit subject
+
+This is a normal commit without cherry-pick info.
+"""
+            mock_run_git.return_value = commit_msg
+
+            orig = control.get_orig_commit('def456abc123')
+            self.assertIsNone(orig)
+
+    def test_check_commits_no_commits(self):
+        """Test check_commits with empty commit list."""
+        commits = []
+        results = list(control.check_commits(commits, 10))
+        self.assertEqual(len(results), 0)
+
+    def test_check_commits_large_delta(self):
+        """Test check_commits finding commits with large deltas."""
+        commits = [('abc123', 'abc123d', 'Test commit subject')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    with mock.patch('pickman.control.calc_ratio') as mock_calc:
+                        # Mock responses
+                        mock_run_git.side_effect = [
+                            ['def456'],  # parents (single parent)
+                            'orig_stat_output',  # original commit stats
+                            'cherry_stat_output'  # cherry-pick commit stats
+                        ]
+                        mock_find_orig.return_value = 'def456original'
+                        mock_parse.side_effect = [
+                            control.GitStat(2, 15, 3, {'file1.c', 'file2.h'}),
+                            control.GitStat(3, 30, 6,
+                                            {'file1.c', 'file2.h', 'file3.c'})
+                        ]
+                        mock_calc.return_value = 0.5  # 50% delta
+
+                        results = list(control.check_commits(commits, 10))
+                        self.assertEqual(len(results), 1)
+
+                        result = results[0]
+                        self.assertEqual(result.chash, 'abc123')
+                        self.assertEqual(result.orig_hash, 'def456original')
+                        self.assertEqual(result.delta_ratio, 0.5)
+                        self.assertIsNone(result.reason)
+
+    def test_check_commits_normal_commit(self):
+        """Test check_commits processing a normal commit."""
+        commits = [('abc123', 'abc123d', 'Test commit subject')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    with mock.patch('pickman.control.calc_ratio') as mock_calc:
+                        # Mock responses
+                        mock_run_git.side_effect = [
+                            ['def456'],  # parents (single parent)
+                            'orig_stat_output',  # original commit stats
+                            'cherry_stat_output'  # cherry-pick commit stats
+                        ]
+                        mock_find_orig.return_value = 'def456original'
+                        mock_parse.side_effect = [
+                            control.GitStat(2, 15, 3, {'file1.c', 'file2.h'}),
+                            control.GitStat(3, 30, 6,
+                                            {'file1.c', 'file2.h', 'file3.c'})
+                        ]
+                        mock_calc.return_value = 0.1  # 10% delta (low)
+
+                        results = list(control.check_commits(commits, 10))
+                        self.assertEqual(len(results), 1)
+
+                        result = results[0]
+                        self.assertEqual(result.chash, 'abc123')
+                        self.assertEqual(result.orig_hash, 'def456original')
+                        self.assertEqual(result.subject, 'Test commit subject')
+                        self.assertEqual(result.delta_ratio, 0.1)
+                        self.assertIsNone(result.reason)
+
+    def test_check_commits_merge_skip(self):
+        """Test check_commits skips merge commits."""
+        commits = [('abc123', 'abc123d', 'Merge branch feature')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            # Mock multiple parents (merge commit)
+            mock_run_git.return_value = ['parent1', 'parent2']
+
+            results = list(control.check_commits(commits, 10))
+            self.assertEqual(len(results), 1)
+
+            result = results[0]
+            self.assertEqual(result.reason, 'merge_commit')
+
+    def test_check_commits_small_commit_skip(self):
+        """Test check_commits skips small commits."""
+        commits = [('abc123', 'abc123d', 'Fix typo')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    # Mock responses for small commit
+                    mock_run_git.side_effect = [
+                        ['def456'],  # single parent
+                        'orig_stat_output',
+                        'cherry_stat_output'
+                    ]
+                    mock_find_orig.return_value = 'def456original'
+                    mock_parse.side_effect = [
+                        # 3 total lines (< 10)
+                        control.GitStat(1, 2, 1, {'file1.c'}),
+                        control.GitStat(1, 2, 1, {'file1.c'})
+                    ]
+
+                    results = list(control.check_commits(commits, 10))
+                    self.assertEqual(len(results), 1)
+
+                    result = results[0]
+                    self.assertEqual(result.reason, 'small_commit_3_lines')
+
+    @mock.patch('pickman.control.command')
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    @mock.patch('os.unlink')
+    def test_show_commit_diff_with_colour(self, unused_unlink, mock_temp,
+                                         mock_run_git, mock_command):
+        """Test show_commit_diff with colour enabled."""
+        # Mock temporary files
+        mock_temp.side_effect = [
+            mock.mock_open()(),  # orig file
+            mock.mock_open()()   # cherry file
+        ]
+        mock_temp.return_value.__enter__.return_value.name = '/tmp/test.patch'
+
+        # Mock git show outputs
+        mock_run_git.side_effect = [
+            'orig patch content',
+            'cherry patch content'
+        ]
+
+        # Mock diff command output
+        mock_command.output.return_value = 'diff output'
+
+        # Test data
+        res = control.CheckResult(
+            chash='abc123',
+            orig_hash='def456',
+            subject='Test',
+            delta_ratio=0.5,
+            orig_stats=None,
+            cherry_stats=None,
+            reason=None
+        )
+
+        with terminal.capture():
+            control.show_commit_diff(res, no_colour=False)
+
+        # Verify git show was called for both commits
+        expected_calls = [
+            mock.call(['show', '--no-ext-diff', 'def456']),
+            mock.call(['show', '--no-ext-diff', 'abc123'])
+        ]
+        mock_run_git.assert_has_calls(expected_calls)
+
+        # Verify diff was called with colour
+        mock_command.output.assert_called_once()
+        args, kwargs = mock_command.output.call_args
+        self.assertIn('--color=always', args)
+        self.assertEqual(kwargs.get('raise_on_error'), False)
+
+    @mock.patch('pickman.control.command')
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    @mock.patch('os.unlink')
+    def test_show_commit_diff_no_colour(self, unused_unlink, mock_temp,
+                                       mock_run_git, mock_command):
+        """Test show_commit_diff with colour disabled."""
+        # Mock temporary files
+        mock_temp.side_effect = [
+            mock.mock_open()(),  # orig file
+            mock.mock_open()()   # cherry file
+        ]
+        mock_temp.return_value.__enter__.return_value.name = '/tmp/test.patch'
+
+        # Mock git show outputs
+        mock_run_git.side_effect = [
+            'orig patch content',
+            'cherry patch content'
+        ]
+
+        # Mock diff command output
+        mock_command.output.return_value = 'diff output'
+
+        # Test data
+        res = control.CheckResult(
+            chash='abc123',
+            orig_hash='def456',
+            subject='Test',
+            delta_ratio=0.5,
+            orig_stats=None,
+            cherry_stats=None,
+            reason=None
+        )
+
+        with terminal.capture():
+            control.show_commit_diff(res, no_colour=True)
+
+        # Verify diff was called without colour
+        mock_command.output.assert_called_once()
+        args, kwargs = mock_command.output.call_args
+        self.assertNotIn('--color=always', args)
+        self.assertEqual(kwargs.get('raise_on_error'), False)
+
+
+class TestCheckAlreadyApplied(unittest.TestCase):
+    """Tests for the check_already_applied function."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.commits = [
+            control.CommitInfo('abc123def456', 'abc123d', 'Add new feature',
+                               'Author <email>'),
+            control.CommitInfo('def456abc123', 'def456a', 'Fix bug',
+                               'Author <email>')
+        ]
+        self.quoted_commit = [
+            control.CommitInfo('abc123def456', 'abc123d',
+                               'Add "quoted" feature', 'Author <email>')
+        ]
+        self.single_commit = [
+            control.CommitInfo('abc123def456', 'abc123d', 'Add new feature',
+                               'Author <email>')
+        ]
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_none_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when no commits are already applied."""
+        # Mock git log returning empty (no matches)
+        mock_run_git.return_value = ''
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 2)
+        self.assertEqual(len(applied), 0)
+        self.assertEqual(new_commits, self.commits)
+        mock_tout.info.assert_not_called()
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_some_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when some commits are already applied."""
+        # First commit returns a match, second doesn't
+        mock_run_git.side_effect = ['xyz789 Add new feature', '']
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(new_commits[0].hash, 'def456abc123')
+        self.assertEqual(applied[0].hash, 'abc123def456')
+        mock_tout.info.assert_called_once()
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_all_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when all commits are already applied."""
+        # Both commits return matches
+        mock_run_git.side_effect = ['xyz789 Add new feature', 'uvw123 Fix bug']
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 0)
+        self.assertEqual(len(applied), 2)
+        self.assertEqual(applied, self.commits)
+        self.assertEqual(mock_tout.info.call_count, 2)
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_with_quotes_in_subject(
+            self, unused_mock_tout, mock_run_git):
+        """Test check_already_applied handles quotes in commit subjects."""
+        mock_run_git.return_value = ''
+
+        new_commits, applied = control.check_already_applied(self.quoted_commit)
+
+        # Verify git was called with escaped quotes
+        mock_run_git.assert_called_once_with([
+            'log', '--oneline', 'ci/master',
+            '--grep=Add \\"quoted\\" feature', '-1'
+        ])
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 0)
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_git_error(self, unused_mock_tout,
+                                             mock_run_git):
+        """Test check_already_applied handles git errors gracefully."""
+        # Mock git command raising an exception
+        mock_run_git.side_effect = Exception('Git error')
+
+        new_commits, applied = control.check_already_applied(self.single_commit)
+
+        # Should treat as not applied when git fails
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 0)
+        self.assertEqual(new_commits, self.single_commit)
 
 
 if __name__ == '__main__':
