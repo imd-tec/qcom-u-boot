@@ -49,7 +49,8 @@ async def run(commits, source, branch_name, repo_path=None):
     """Run the Claude agent to cherry-pick commits
 
     Args:
-        commits (list): list of (hash, short_hash, subject) tuples
+        commits (list): list of AgentCommit namedtuples with fields:
+                       hash, chash, subject
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)
@@ -70,12 +71,12 @@ async def run(commits, source, branch_name, repo_path=None):
 
     # Build commit list for the prompt
     commit_list = '\n'.join(
-        f'  - {short_hash}: {subject}'
-        for _, short_hash, subject in commits
+        f'  - {commit.chash}: {commit.subject}'
+        for commit in commits
     )
 
     # Get full hash of last commit for signal file
-    last_commit_hash = commits[-1][0]
+    last_commit_hash = commits[-1].hash
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
@@ -204,7 +205,8 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
     """Synchronous wrapper for running the cherry-pick agent
 
     Args:
-        commits (list): list of (hash, short_hash, subject) tuples
+        commits (list): list of AgentCommit namedtuples with fields:
+                       hash, chash, subject
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)

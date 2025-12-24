@@ -72,8 +72,18 @@ CheckResult = namedtuple('CheckResult', [
 ])
 
 # Named tuple for commit with author
+# hash: Full SHA-1 commit hash (40 characters)
+# chash: Abbreviated commit hash (typically 7-8 characters) 
+# subject: First line of commit message (commit subject)
+# author: Commit author name and email in format "Name <email>"
 CommitInfo = namedtuple('CommitInfo',
                         ['hash', 'chash', 'subject', 'author'])
+
+# Named tuple for simplified commit data passed to agent
+# hash: Full SHA-1 commit hash (40 characters)
+# chash: Abbreviated commit hash (typically 7-8 characters)
+# subject: First line of commit message (commit subject)
+AgentCommit = namedtuple('AgentCommit', ['hash', 'chash', 'subject'])
 
 # Named tuple for prepare_apply result
 ApplyInfo = namedtuple('ApplyInfo',
@@ -1213,9 +1223,9 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
                        status='pending')
     dbs.commit()
 
-    # Convert CommitInfo to tuple format expected by agent
-    commit_tuples = [(c.hash, c.chash, c.subject) for c in commits]
-    success, conv_log = agent.cherry_pick_commits(commit_tuples, source,
+    # Convert CommitInfo to AgentCommit format expected by agent
+    agent_commits = [AgentCommit(c.hash, c.chash, c.subject) for c in commits]
+    success, conv_log = agent.cherry_pick_commits(agent_commits, source,
                                                           branch_name)
 
     # Check for signal file from agent
