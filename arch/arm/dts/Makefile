@@ -965,10 +965,6 @@ dtb-$(CONFIG_ARCH_IMXRT) += imxrt1050-evk.dtb \
 	imxrt1020-evk.dtb \
 	imxrt1170-evk.dtb \
 
-ifdef CONFIG_RCAR_64
-DTC_FLAGS += -R 4 -p 0x1000
-endif
-
 dtb-$(CONFIG_RZA1) += \
 	r7s72100-gr-peach.dtb
 
@@ -1146,14 +1142,11 @@ dtb-$(CONFIG_STM32MP25X) += \
 	stm32mp257f-ev1.dtb
 
 dtb-$(CONFIG_SOC_K3_AM654) += \
-	k3-am654-base-board.dtb \
-	k3-am654-r5-base-board.dtb \
-	k3-am654-icssg2.dtbo
+	k3-am654-r5-base-board.dtb
 
 dtb-$(CONFIG_SOC_K3_J721E) += k3-j721e-r5-common-proc-board.dtb \
 			      k3-j7200-r5-common-proc-board.dtb \
 			      k3-j721e-r5-sk.dtb \
-			      k3-j721e-beagleboneai64.dtb \
 			      k3-j721e-r5-beagleboneai64.dtb
 
 dtb-$(CONFIG_SOC_K3_J721S2) += k3-am68-sk-r5-base-board.dtb\
@@ -1173,7 +1166,9 @@ dtb-$(CONFIG_SOC_K3_AM625) += k3-am625-r5-sk.dtb \
 			      k3-am625-verdin-r5.dtb \
 			      k3-am625-r5-phycore-som-2gb.dtb
 
-dtb-$(CONFIG_SOC_K3_AM62A7) += k3-am62a7-r5-sk.dtb
+dtb-$(CONFIG_SOC_K3_AM62A7) += \
+	k3-am62a7-r5-sk.dtb \
+	k3-am62a7-r5-phycore-som-2gb.dtb
 
 dtb-$(CONFIG_SOC_K3_AM62P5) += k3-am62p5-r5-sk.dtb
 

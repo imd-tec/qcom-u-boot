@@ -106,6 +106,7 @@ Shell commands
    cmd/mtest
    cmd/mtrr
    cmd/mv
+   cmd/optee
    cmd/panic
    cmd/part
    cmd/part_find

@@ -425,7 +425,6 @@ int zboot_go(struct bootm_info *bmi)
 	image_64bit = false;
 	if (IS_ENABLED(CONFIG_X86_64) &&
 	    (hdr->xloadflags & XLF_KERNEL_64)) {
-		entry += 0x200;
 		image_64bit = true;
 	}
 

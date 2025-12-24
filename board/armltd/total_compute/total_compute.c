@@ -43,7 +43,6 @@ int board_fdt_blob_setup(void **fdtp)
 		return -ENXIO;
 
 	*fdtp = (void *)fw_dtb_pointer;
-
 	return 0;
 }
 

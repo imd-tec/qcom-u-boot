@@ -219,6 +219,8 @@ void board_init_f(ulong dummy)
 	}
 
 	spl_enable_cache();
+
+	setup_qos();
 	debug("am62px_init: %s done\n", __func__);
 
 	fixup_a53_cpu_freq_by_speed_grade();

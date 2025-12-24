@@ -48,6 +48,7 @@ stages:
   # The GitLab runner must be configured with:
   #   - privileged = true in /etc/gitlab-runner/config.toml
   #   OR passwordless sudo for: modprobe, cryptsetup, dd
+  needs: [ "Run binman, buildman, dtoc, hwids_to_dtsi, Kconfig, patman and pickman suites" ]
   rules:
     # Skip if MR description contains [skip-pytest]
     - if: $CI_MERGE_REQUEST_DESCRIPTION =~ /\[skip-pytest\]/
@@ -152,6 +153,7 @@ stages:
 
 .world_build:
   stage: world_build
+  dependencies: []
   rules:
     # Skip if MR description contains [skip-world]  
     - if: $CI_MERGE_REQUEST_DESCRIPTION =~ /\[skip-world\]/
@@ -162,6 +164,7 @@ stages:
 
 build all 32bit ARM platforms:
   extends: .world_build
+  dependencies: []
   tags:
     - single
   script:
@@ -180,6 +183,7 @@ build all 32bit ARM platforms:
 
 build all 64bit ARM platforms:
   extends: .world_build
+  dependencies: []
   tags:
     - single
   script:
@@ -199,6 +203,7 @@ build all 64bit ARM platforms:
 
 build all PowerPC platforms:
   extends: .world_build
+  dependencies: []
   tags:
     - single
   script:
@@ -219,6 +224,7 @@ build all PowerPC platforms:
 # hosts but covering all platforms in the pytest section.
 build all other platforms:
   extends: .world_build
+  dependencies: []
   tags:
     - single
   script:
