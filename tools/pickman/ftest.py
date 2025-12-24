@@ -30,6 +30,15 @@ from pickman import control
 from pickman import database
 from pickman import gitlab_api
 
+# Test URL constants
+TEST_OAUTH_URL = 'https://oauth2:test-token@gitlab.com/group/project.git'
+TEST_HTTPS_URL = 'https://gitlab.com/group/project.git'
+TEST_SSH_URL = 'git@gitlab.com:group/project.git'
+TEST_MR_URL = 'https://gitlab.com/group/project/-/merge_requests/42'
+TEST_MR_42_URL = 'https://gitlab.com/mr/42'
+TEST_MR_1_URL = 'https://gitlab.com/mr/1'
+TEST_SHORT_OAUTH_URL = 'https://oauth2:token@gitlab.com/g/p.git'
+
 
 class TestCommit(unittest.TestCase):
     """Tests for the Commit namedtuple."""
@@ -230,7 +239,8 @@ class TestMain(unittest.TestCase):
             self.assertEqual(ret, 0)
             # Filter out database migration messages
             output_lines = [l for l in stdout.getvalue().splitlines()
-                            if not l.startswith(('Update database', 'Creating'))]
+                            if not l.startswith(('Update database',
+                                                'Creating'))]
             lines = iter(output_lines)
             self.assertEqual('Commits in us/next not in ci/master: 10',
                              next(lines))
@@ -562,7 +572,7 @@ class TestDatabaseMergereq(unittest.TestCase):
 
             # Add a merge request
             dbs.mergereq_add(source_id, 'cherry-abc123', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
 
             # Get the merge request
@@ -572,7 +582,7 @@ class TestDatabaseMergereq(unittest.TestCase):
             self.assertEqual(result[2], 'cherry-abc123')  # branch_name
             self.assertEqual(result[3], 42)  # mr_id
             self.assertEqual(result[4], 'open')  # status
-            self.assertEqual(result[5], 'https://gitlab.com/mr/42')  # url
+            self.assertEqual(result[5], TEST_MR_42_URL)  # url
             self.assertEqual(result[6], '2025-01-15')  # created_at
             dbs.close()
 
@@ -598,7 +608,7 @@ class TestDatabaseMergereq(unittest.TestCase):
 
             # Add merge requests
             dbs.mergereq_add(source_id, 'branch-1', 1, 'open',
-                             'https://gitlab.com/mr/1', '2025-01-01')
+                             TEST_MR_1_URL, '2025-01-01')
             dbs.mergereq_add(source_id, 'branch-2', 2, 'merged',
                              'https://gitlab.com/mr/2', '2025-01-02')
             dbs.mergereq_add(source_id, 'branch-3', 3, 'open',
@@ -630,7 +640,7 @@ class TestDatabaseMergereq(unittest.TestCase):
             source_id = dbs.source_get_id('us/next')
 
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
 
             # Update status
@@ -671,7 +681,7 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
 
             # Add merge request
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
             mr = dbs.mergereq_get(42)
             mr_id = mr[0]  # id field
@@ -701,7 +711,7 @@ class TestDatabaseCommitMergereq(unittest.TestCase):
 
             # Add merge request
             dbs.mergereq_add(source_id, 'branch-1', 42, 'open',
-                             'https://gitlab.com/mr/42', '2025-01-15')
+                             TEST_MR_42_URL, '2025-01-15')
             dbs.commit()
             mr = dbs.mergereq_get(42)
             mr_id = mr[0]
@@ -1438,10 +1448,11 @@ class TestGetPushUrl(unittest.TestCase):
         """Test successful push URL generation."""
         with mock.patch.object(gitlab_api, 'get_token',
                                return_value='test-token'):
-            with mock.patch.object(gitlab_api, 'get_remote_url',
-                                   return_value='git@gitlab.com:group/project.git'):
+            with mock.patch.object(
+                    gitlab_api, 'get_remote_url',
+                    return_value=TEST_SSH_URL):
                 url = gitlab_api.get_push_url('origin')
-        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+        self.assertEqual(url, TEST_OAUTH_URL)
 
     def test_get_push_url_no_token(self):
         """Test returns None when no token available."""
@@ -1463,9 +1474,9 @@ class TestGetPushUrl(unittest.TestCase):
         with mock.patch.object(gitlab_api, 'get_token',
                                return_value='test-token'):
             with mock.patch.object(gitlab_api, 'get_remote_url',
-                                   return_value='https://gitlab.com/group/project.git'):
+                                   return_value=TEST_HTTPS_URL):
                 url = gitlab_api.get_push_url('origin')
-        self.assertEqual(url, 'https://oauth2:test-token@gitlab.com/group/project.git')
+        self.assertEqual(url, TEST_OAUTH_URL)
 
 
 class TestPushBranch(unittest.TestCase):
@@ -1474,7 +1485,7 @@ class TestPushBranch(unittest.TestCase):
     def test_push_branch_force_with_remote_ref(self):
         """Test force push when remote branch exists uses --force-with-lease."""
         with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
                 result = gitlab_api.push_branch('ci', 'test-branch', force=True)
 
@@ -1482,14 +1493,15 @@ class TestPushBranch(unittest.TestCase):
         # Should fetch first, then push with --force-with-lease
         calls = mock_output.call_args_list
         self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci', 'test-branch'))
+        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci',
+                                             'test-branch'))
         push_args = calls[1][0]
         self.assertIn('--force-with-lease=refs/remotes/ci/test-branch', push_args)
 
     def test_push_branch_force_no_remote_ref(self):
         """Test force push when remote branch doesn't exist uses --force."""
         with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
                 # Fetch fails (branch doesn't exist on remote)
                 mock_output.side_effect = [
@@ -1510,7 +1522,7 @@ class TestPushBranch(unittest.TestCase):
     def test_push_branch_no_force(self):
         """Test regular push without force doesn't fetch or use force flags."""
         with mock.patch.object(gitlab_api, 'get_push_url',
-                               return_value='https://oauth2:token@gitlab.com/g/p.git'):
+                               return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
                 result = gitlab_api.push_branch('ci', 'test-branch', force=False)
 
@@ -1682,7 +1694,7 @@ class TestGetPickmanMrs(unittest.TestCase):
         mock_mr1 = mock.MagicMock()
         mock_mr1.iid = 1
         mock_mr1.title = '[pickman] Older MR'
-        mock_mr1.web_url = 'https://gitlab.com/mr/1'
+        mock_mr1.web_url = TEST_MR_1_URL
         mock_mr1.source_branch = 'cherry-1'
         mock_mr1.description = 'desc1'
         mock_mr1.has_conflicts = False
@@ -1731,7 +1743,7 @@ class TestCreateMr(unittest.TestCase):
 
         # Create mock existing MR
         mock_existing_mr = mock.MagicMock()
-        mock_existing_mr.web_url = 'https://gitlab.com/group/project/-/merge_requests/42'
+        mock_existing_mr.web_url = TEST_MR_URL
 
         mock_project = mock.MagicMock()
         mock_project.mergerequests.list.return_value = [mock_existing_mr]
