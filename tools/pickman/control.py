@@ -11,6 +11,7 @@ from datetime import date
 import os
 import re
 import sys
+import tempfile
 import time
 import unittest
 
@@ -464,12 +465,87 @@ def get_branch_commits():
     return current_branch, commits
 
 
+def show_commit_diff(res, no_colour=False):
+    """Show the difference between original and cherry-picked commit patches
+
+    Args:
+        res (CheckResult): Check result with commit hashes
+        no_colour (bool): Disable colour output
+    """
+    tout.info(f'\n--- Patch diff between original {res.orig_hash[:8]} and '
+              f'cherry-picked {res.chash[:8]} ---')
+
+    # Get the patch content of each commit
+    orig_patch = run_git(['show', '--no-ext-diff', res.orig_hash])
+    cherry_patch = run_git(['show', '--no-ext-diff', res.chash])
+
+    # Create temporary files and diff them
+    with tempfile.NamedTemporaryFile(mode='w', suffix='_orig.patch',
+                                     delete=False) as orig_file:
+        orig_file.write(orig_patch)
+        orig_path = orig_file.name
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='_cherry.patch',
+                                     delete=False) as cherry_file:
+        cherry_file.write(cherry_patch)
+        cherry_path = cherry_file.name
+
+    try:
+        # Diff the two patch files using system diff
+        diff_args = ['diff', '-u']
+        if not no_colour:
+            diff_args.append('--color=always')
+        diff_args.extend([orig_path, cherry_path])
+
+        patch_diff = command.output(*diff_args, raise_on_error=False)
+        if patch_diff:
+            print(patch_diff)
+        else:
+            tout.info('(Patches are identical)')
+    finally:
+        # Clean up temporary files
+        os.unlink(orig_path)
+        os.unlink(cherry_path)
+
+    tout.info('--- End patch diff ---\n')
+
+
+def show_check_summary(bad, verbose, threshold, show_diff, no_colour):
+    """Show summary of check results
+    
+    Args:
+        bad (list): List of CheckResult objects with problems
+        verbose (bool): Whether to show verbose output
+        threshold (float): Delta threshold for problems
+        show_diff (bool): Whether to show diffs for problems
+        no_colour (bool): Whether to disable colour in diffs
+
+    Returns:
+        int: 0 if no problems, 1 if problems found
+    """
+    if bad:
+        if verbose:
+            tout.info(f'Found {len(bad)} commit(s) with large deltas:')
+            tout.info('')
+            print_check_header()
+            for res in bad:
+                tout.info(format_problem_commit(res, threshold))
+                if show_diff:
+                    show_commit_diff(res, no_colour)
+        else:
+            tout.info(f'{len(bad)} problem commit(s) found')
+        return 1
+    if verbose:
+        tout.info('All cherry-picks have acceptable deltas ✓')
+    return 0
+
+
 def do_check(args, dbs):  # pylint: disable=unused-argument
     """Check current branch for cherry-picks with large deltas
 
     Args:
         args (Namespace): Parsed arguments with 'threshold', 'min_lines',
-            and 'verbose' attributes
+            'verbose', and 'diff' attributes
         dbs (Database): Database instance
 
     Returns:
@@ -478,6 +554,7 @@ def do_check(args, dbs):  # pylint: disable=unused-argument
     threshold = args.threshold
     min_lines = args.min_lines
     verbose = args.verbose
+    show_diff = args.diff
 
     current_branch, commits = get_branch_commits()
 
@@ -493,33 +570,24 @@ def do_check(args, dbs):  # pylint: disable=unused-argument
 
     # Process commits using the generator
     for res in check_commits(commits, min_lines):
+        is_problem = not res.reason and res.delta_ratio > threshold
+
         if verbose:
             check_verbose(res, threshold)
-            if not res.reason and res.delta_ratio > threshold:
-                bad.append(res)
-        else:
+        elif is_problem:
             # Non-verbose: only show problems on one line
-            if not res.reason and res.delta_ratio > threshold:
-                if not header_printed:
-                    print_check_header()
-                    header_printed = True
-                tout.info(format_problem_commit(res, threshold))
-                bad.append(res)
+            if not header_printed:
+                print_check_header()
+                header_printed = True
+            tout.info(format_problem_commit(res, threshold))
 
-    # Summary
-    if bad:
-        if verbose:
-            tout.info(f'Found {len(bad)} commit(s) with large deltas:')
-            tout.info('')
-            print_check_header()
-            for res in bad:
-                tout.info(format_problem_commit(res, threshold))
-        else:
-            tout.info(f'{len(bad)} problem commit(s) found')
-        return 1
-    if verbose:
-        tout.info('All cherry-picks have acceptable deltas ✓')
-    return 0
+        if is_problem:
+            bad.append(res)
+            if show_diff:
+                show_commit_diff(res, args.no_colour)
+
+    return show_check_summary(bad, verbose, threshold, show_diff,
+                              args.no_colour)
 
 
 def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument

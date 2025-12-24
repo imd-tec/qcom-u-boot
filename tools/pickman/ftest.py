@@ -3438,6 +3438,99 @@ This is a normal commit without cherry-pick info.
                     result = results[0]
                     self.assertEqual(result.reason, 'small_commit_3_lines')
 
+    @mock.patch('pickman.control.command')
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    @mock.patch('os.unlink')
+    def test_show_commit_diff_with_colour(self, unused_unlink, mock_temp,
+                                         mock_run_git, mock_command):
+        """Test show_commit_diff with colour enabled."""
+        # Mock temporary files
+        mock_temp.side_effect = [
+            mock.mock_open()(),  # orig file
+            mock.mock_open()()   # cherry file
+        ]
+        mock_temp.return_value.__enter__.return_value.name = '/tmp/test.patch'
+
+        # Mock git show outputs
+        mock_run_git.side_effect = [
+            'orig patch content',
+            'cherry patch content'
+        ]
+
+        # Mock diff command output
+        mock_command.output.return_value = 'diff output'
+
+        # Test data
+        res = control.CheckResult(
+            chash='abc123',
+            orig_hash='def456',
+            subject='Test',
+            delta_ratio=0.5,
+            orig_stats=None,
+            cherry_stats=None,
+            reason=None
+        )
+
+        with terminal.capture():
+            control.show_commit_diff(res, no_colour=False)
+
+        # Verify git show was called for both commits
+        expected_calls = [
+            mock.call(['show', '--no-ext-diff', 'def456']),
+            mock.call(['show', '--no-ext-diff', 'abc123'])
+        ]
+        mock_run_git.assert_has_calls(expected_calls)
+
+        # Verify diff was called with colour
+        mock_command.output.assert_called_once()
+        args, kwargs = mock_command.output.call_args
+        self.assertIn('--color=always', args)
+        self.assertEqual(kwargs.get('raise_on_error'), False)
+
+    @mock.patch('pickman.control.command')
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    @mock.patch('os.unlink')
+    def test_show_commit_diff_no_colour(self, unused_unlink, mock_temp,
+                                       mock_run_git, mock_command):
+        """Test show_commit_diff with colour disabled."""
+        # Mock temporary files
+        mock_temp.side_effect = [
+            mock.mock_open()(),  # orig file
+            mock.mock_open()()   # cherry file
+        ]
+        mock_temp.return_value.__enter__.return_value.name = '/tmp/test.patch'
+
+        # Mock git show outputs
+        mock_run_git.side_effect = [
+            'orig patch content',
+            'cherry patch content'
+        ]
+
+        # Mock diff command output
+        mock_command.output.return_value = 'diff output'
+
+        # Test data
+        res = control.CheckResult(
+            chash='abc123',
+            orig_hash='def456',
+            subject='Test',
+            delta_ratio=0.5,
+            orig_stats=None,
+            cherry_stats=None,
+            reason=None
+        )
+
+        with terminal.capture():
+            control.show_commit_diff(res, no_colour=True)
+
+        # Verify diff was called without colour
+        mock_command.output.assert_called_once()
+        args, kwargs = mock_command.output.call_args
+        self.assertNotIn('--color=always', args)
+        self.assertEqual(kwargs.get('raise_on_error'), False)
+
 
 if __name__ == '__main__':
     unittest.main()

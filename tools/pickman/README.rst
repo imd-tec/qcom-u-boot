@@ -227,6 +227,8 @@ Options:
 - ``-t, --threshold``: Delta threshold as fraction (default: 0.2 = 20%)
 - ``-m, --min-lines``: Minimum lines changed to check (default: 10)
 - ``-v, --verbose``: Show detailed analysis for all commits
+- ``--diff``: Show patch differences for problem commits
+- ``--no-colour``: Disable color output in patch differences
 
 Example output::
 

@@ -53,6 +53,8 @@ def add_main_commands(subparsers):
                                 '(default: 10)')
     check_cmd.add_argument('-v', '--verbose', action='store_true',
                            help='Show detailed stats for all commits')
+    check_cmd.add_argument('-d', '--diff', action='store_true',
+                           help='Show source code diff for problem commits')
 
     check_gl = subparsers.add_parser('check-gitlab',
                                       help='Check GitLab permissions')
@@ -148,6 +150,8 @@ def parse_args(argv):
         Namespace: Parsed arguments
     """
     parser = argparse.ArgumentParser(description='Check commit differences')
+    parser.add_argument('--no-colour', action='store_true',
+                        help='Disable colour output')
     subparsers = parser.add_subparsers(dest='cmd', required=True)
 
     add_main_commands(subparsers)
