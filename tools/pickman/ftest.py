@@ -3532,5 +3532,101 @@ This is a normal commit without cherry-pick info.
         self.assertEqual(kwargs.get('raise_on_error'), False)
 
 
+class TestCheckAlreadyApplied(unittest.TestCase):
+    """Tests for the check_already_applied function."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.commits = [
+            control.CommitInfo('abc123def456', 'abc123d', 'Add new feature',
+                               'Author <email>'),
+            control.CommitInfo('def456abc123', 'def456a', 'Fix bug',
+                               'Author <email>')
+        ]
+        self.quoted_commit = [
+            control.CommitInfo('abc123def456', 'abc123d',
+                               'Add "quoted" feature', 'Author <email>')
+        ]
+        self.single_commit = [
+            control.CommitInfo('abc123def456', 'abc123d', 'Add new feature',
+                               'Author <email>')
+        ]
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_none_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when no commits are already applied."""
+        # Mock git log returning empty (no matches)
+        mock_run_git.return_value = ''
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 2)
+        self.assertEqual(len(applied), 0)
+        self.assertEqual(new_commits, self.commits)
+        mock_tout.info.assert_not_called()
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_some_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when some commits are already applied."""
+        # First commit returns a match, second doesn't
+        mock_run_git.side_effect = ['xyz789 Add new feature', '']
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(new_commits[0].hash, 'def456abc123')
+        self.assertEqual(applied[0].hash, 'abc123def456')
+        mock_tout.info.assert_called_once()
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_all_applied(self, mock_tout, mock_run_git):
+        """Test check_already_applied when all commits are already applied."""
+        # Both commits return matches
+        mock_run_git.side_effect = ['xyz789 Add new feature', 'uvw123 Fix bug']
+
+        new_commits, applied = control.check_already_applied(self.commits)
+
+        self.assertEqual(len(new_commits), 0)
+        self.assertEqual(len(applied), 2)
+        self.assertEqual(applied, self.commits)
+        self.assertEqual(mock_tout.info.call_count, 2)
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_with_quotes_in_subject(
+            self, unused_mock_tout, mock_run_git):
+        """Test check_already_applied handles quotes in commit subjects."""
+        mock_run_git.return_value = ''
+
+        new_commits, applied = control.check_already_applied(self.quoted_commit)
+
+        # Verify git was called with escaped quotes
+        mock_run_git.assert_called_once_with([
+            'log', '--oneline', 'ci/master',
+            '--grep=Add \\"quoted\\" feature', '-1'
+        ])
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 0)
+
+    @mock.patch('pickman.control.run_git')
+    @mock.patch('pickman.control.tout')
+    def test_check_already_applied_git_error(self, unused_mock_tout,
+                                             mock_run_git):
+        """Test check_already_applied handles git errors gracefully."""
+        # Mock git command raising an exception
+        mock_run_git.side_effect = Exception('Git error')
+
+        new_commits, applied = control.check_already_applied(self.single_commit)
+
+        # Should treat as not applied when git fails
+        self.assertEqual(len(new_commits), 1)
+        self.assertEqual(len(applied), 0)
+        self.assertEqual(new_commits, self.single_commit)
+
+
 if __name__ == '__main__':
     unittest.main()

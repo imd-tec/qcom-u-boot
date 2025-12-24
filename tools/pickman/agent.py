@@ -45,12 +45,12 @@ def check_available():
     return True
 
 
-async def run(commits, source, branch_name, repo_path=None):
+async def run(commits, source, branch_name, repo_path=None):  # pylint: disable=too-many-locals
     """Run the Claude agent to cherry-pick commits
 
     Args:
         commits (list): list of AgentCommit namedtuples with fields:
-                       hash, chash, subject
+                       hash, chash, subject, applied_as
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)
@@ -69,18 +69,42 @@ async def run(commits, source, branch_name, repo_path=None):
     if os.path.exists(signal_path):
         os.remove(signal_path)
 
-    # Build commit list for the prompt
-    commit_list = '\n'.join(
-        f'  - {commit.chash}: {commit.subject}'
-        for commit in commits
-    )
+    # Build commit list for the prompt, marking potentially applied commits
+    commit_entries = []
+    has_applied = False
+    for commit in commits:
+        entry = f'  - {commit.chash}: {commit.subject}'
+        if commit.applied_as:
+            entry += f' (maybe already applied as {commit.applied_as})'
+            has_applied = True
+        commit_entries.append(entry)
+
+    commit_list = '\n'.join(commit_entries)
+
+    # Add note about checking for already applied commits
+    applied_note = ''
+    if has_applied:
+        applied_note = '''
+
+IMPORTANT: Some commits may already be applied. Before cherry-picking commits 
+marked as "maybe already applied as <hash>", verify they are truly the same commit:
+1. Compare the actual changes between the original and found commits:
+   - Use: git show --no-ext-diff <original-hash> > /tmp/orig.patch
+   - Use: git show --no-ext-diff <found-hash> > /tmp/found.patch
+   - Compare: diff /tmp/orig.patch /tmp/found.patch
+2. If the patches are similar with only minor differences (like line numbers,
+   context, or conflict resolutions), SKIP the cherry-pick and report that
+   it was already applied.
+3. If the patches differ significantly in the actual changes being made,
+   proceed with the cherry-pick as they are different commits.
+'''
 
     # Get full hash of last commit for signal file
     last_commit_hash = commits[-1].hash
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
-{commit_list}
+{commit_list}{applied_note}
 
 Steps to follow:
 1. First run 'git status' to check the repository state is clean
@@ -113,10 +137,11 @@ Steps to follow:
    - For complex conflicts, describe what needs manual resolution and abort
    - When fix-ups are needed, amend the commit to add a one-line note at the
      end of the commit message describing the changes made
-6. After ALL cherry-picks complete, verify with 
+6. After ALL cherry-picks complete, verify with
    'git log --oneline -n {len(commits) + 2}'
    Ensure all {len(commits)} commits are present.
-7. Run final build: 'buildman -L --board sandbox -w -o /tmp/pickman' to verify everything still works together
+7. Run final build: 'buildman -L --board sandbox -w -o /tmp/pickman' to verify
+   everything still works together
 8. Report the final status including:
    - Build result (ok or list of warnings/errors)
    - Any fix-ups that were made
@@ -132,11 +157,16 @@ Important:
 
 CRITICAL - Detecting Already-Applied Commits:
 If the FIRST cherry-pick fails with conflicts, BEFORE aborting, check if the commits
-are already present in ci/master with different hashes. Do this by searching for
-commit subjects in ci/master:
-   git log --oneline ci/master --grep="<subject>" -1
-If ALL commits are already in ci/master (same subjects, different hashes), this means
-the series was already applied via a different path. In this case:
+are already present in ci/master with different hashes. For each commit:
+1. Search for the commit subject: git log --oneline ci/master --grep="<subject>" -1
+2. If found, verify it's actually the same commit by comparing patches:
+   - git show --no-ext-diff <original-hash> > /tmp/orig.patch
+   - git show --no-ext-diff <found-hash> > /tmp/found.patch
+   - diff /tmp/orig.patch /tmp/found.patch
+3. Only consider it "already applied" if the patches are similar with minor
+   differences (like line numbers, context, or conflict resolutions)
+If ALL commits are verified as already applied (same content, different hashes),
+this means the series was already applied via a different path. In this case:
 1. Abort the cherry-pick: git cherry-pick --abort
 2. Delete the branch: git branch -D {branch_name}
 3. Write a signal file to indicate this status:
@@ -206,7 +236,7 @@ def cherry_pick_commits(commits, source, branch_name, repo_path=None):
 
     Args:
         commits (list): list of AgentCommit namedtuples with fields:
-                       hash, chash, subject
+                       hash, chash, subject, applied_as
         source (str): source branch name
         branch_name (str): name for the new branch to create
         repo_path (str): path to repository (defaults to current directory)

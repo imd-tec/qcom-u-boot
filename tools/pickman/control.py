@@ -73,7 +73,7 @@ CheckResult = namedtuple('CheckResult', [
 
 # Named tuple for commit with author
 # hash: Full SHA-1 commit hash (40 characters)
-# chash: Abbreviated commit hash (typically 7-8 characters) 
+# chash: Abbreviated commit hash (typically 7-8 characters)
 # subject: First line of commit message (commit subject)
 # author: Commit author name and email in format "Name <email>"
 CommitInfo = namedtuple('CommitInfo',
@@ -83,7 +83,9 @@ CommitInfo = namedtuple('CommitInfo',
 # hash: Full SHA-1 commit hash (40 characters)
 # chash: Abbreviated commit hash (typically 7-8 characters)
 # subject: First line of commit message (commit subject)
-AgentCommit = namedtuple('AgentCommit', ['hash', 'chash', 'subject'])
+# applied_as: Short hash if potentially already applied, None otherwise
+AgentCommit = namedtuple('AgentCommit',
+                         ['hash', 'chash', 'subject', 'applied_as'])
 
 # Named tuple for prepare_apply result
 ApplyInfo = namedtuple('ApplyInfo',
@@ -475,6 +477,43 @@ def get_branch_commits():
     return current_branch, commits
 
 
+def check_already_applied(commits, target_branch='ci/master'):
+    """Check which commits are already applied to the target branch
+
+    Args:
+        commits (list): List of CommitInfo tuples to check
+        target_branch (str): Branch to check against (default: ci/master)
+
+    Returns:
+        tuple: (new_commits, applied) where:
+            new_commits: list of CommitInfo for commits not yet applied
+            applied: list of CommitInfo for commits already applied
+    """
+    new_commits = []
+    applied = []
+
+    for commit in commits:
+        # Check if a commit with the same subject exists in target branch
+        try:
+            # Use git log with --grep to search for the subject
+            # Escape any special characters in the subject for grep
+            escaped_subject = commit.subject.replace('"', '\\"')
+            result = run_git(['log', '--oneline', target_branch,
+                             f'--grep={escaped_subject}', '-1'])
+            if result.strip():
+                # Found a commit with the same subject
+                applied.append(commit)
+                tout.info(f'Skipping {commit.chash} (already applied): '
+                         f'{commit.subject}')
+            else:
+                new_commits.append(commit)
+        except Exception:  # pylint: disable=broad-except
+            # If grep fails, assume the commit is not applied
+            new_commits.append(commit)
+
+    return new_commits, applied
+
+
 def show_commit_diff(res, no_colour=False):
     """Show the difference between original and cherry-picked commit patches
 
@@ -522,7 +561,7 @@ def show_commit_diff(res, no_colour=False):
 
 def show_check_summary(bad, verbose, threshold, show_diff, no_colour):
     """Show summary of check results
-    
+
     Args:
         bad (list): List of CheckResult objects with problems
         verbose (bool): Whether to show verbose output
@@ -1216,7 +1255,23 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
         tuple: (ret, success, conv_log) where ret is 0 on success,
             1 on failure
     """
-    # Add commits to database with 'pending' status
+    # Check for already applied commits before proceeding
+    _, applied = check_already_applied(commits)
+
+    # Build mapping of applied commits by hash
+    applied_map = {}
+    if applied:
+        for c in applied:
+            # Get the hash of the applied commit in target branch
+            escaped_subject = c.subject.replace('"', '\\"')
+            result = run_git(['log', '--oneline', 'ci/master',
+                             f'--grep={escaped_subject}', '-1'])
+            if result.strip():
+                applied_hash = result.split()[0]
+                applied_map[c.hash] = applied_hash
+        tout.info(f'Found {len(applied)} potentially already applied commit(s)')
+
+    # Add all commits to database with 'pending' status (agent updates later)
     source_id = dbs.source_get_id(source)
     for commit in commits:
         dbs.commit_add(commit.hash, source_id, commit.subject, commit.author,
@@ -1224,9 +1279,10 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     dbs.commit()
 
     # Convert CommitInfo to AgentCommit format expected by agent
-    agent_commits = [AgentCommit(c.hash, c.chash, c.subject) for c in commits]
+    agent_commits = [AgentCommit(c.hash, c.chash, c.subject,
+                                 applied_map.get(c.hash)) for c in commits]
     success, conv_log = agent.cherry_pick_commits(agent_commits, source,
-                                                          branch_name)
+                                                  branch_name)
 
     # Check for signal file from agent
     signal_status, signal_commit = agent.read_signal_file()
@@ -1272,6 +1328,11 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
         else:
             tout.info(f"Use 'pickman commit-source {source} "
                       f"{commits[-1].chash}' to update the database")
+
+    # Update database with the last processed commit if successful
+    if success:
+        dbs.source_set(source, commits[-1].hash)
+        dbs.commit()
 
     return ret, success, conv_log
 
