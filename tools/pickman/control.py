@@ -601,7 +601,8 @@ def get_history(fname, source, commits, branch_name, conv_log):
         fhandle.write(content)
 
     # Generate commit message
-    commit_msg = f'pickman: Record cherry-pick of {len(commits)} commits from {source}\n\n'
+    commit_msg = (f'pickman: Record cherry-pick of {len(commits)} commits '
+                  f'from {source}\n\n')
     commit_msg += '\n'.join(f'- {c.short_hash} {c.subject}' for c in commits)
 
     return content, commit_msg
@@ -806,7 +807,8 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
             target = args.target
             # Use merge commit subject as title (last commit is the merge)
             title = f'[pickman] {commits[-1].subject}'
-            # Description matches .pickman-history entry (summary + conversation)
+            # Description matches .pickman-history entry
+            # (summary + conversation)
             summary = format_history_summary(source, commits, branch_name)
             description = f'{summary}\n\n### Conversation log\n{conv_log}'
 
@@ -1083,7 +1085,8 @@ Comments addressed:
 
     # Commit the history file
     run_git(['add', '-f', HISTORY_FILE])
-    run_git(['commit', '-m', f'pickman: Record review handling for {branch_name}'])
+    run_git(['commit', '-m',
+             f'pickman: Record review handling for {branch_name}'])
 
 
 def do_review(args, dbs):
@@ -1126,7 +1129,8 @@ def parse_mr_description(desc):
         desc (str): MR description text
 
     Returns:
-        tuple: (source_branch, last_commit_hash) or (None, None) if not parseable
+        tuple: (source_branch, last_commit_hash) or (None, None)
+            if not parseable
     """
     # Extract source branch from "## date: source_branch" line
     source_match = re.search(r'^## [^:]+: (.+)$', desc, re.MULTILINE)

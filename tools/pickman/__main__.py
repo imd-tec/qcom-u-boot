@@ -60,24 +60,24 @@ def parse_args(argv):
 
     subparsers.add_parser('compare', help='Compare branches')
 
-    count_merges = subparsers.add_parser('count-merges',
-                                         help='Count remaining merges to process')
+    count_merges = subparsers.add_parser(
+        'count-merges', help='Count remaining merges to process')
     count_merges.add_argument('source', help='Source branch name')
 
     subparsers.add_parser('list-sources', help='List tracked source branches')
 
-    next_merges = subparsers.add_parser('next-merges',
-                                         help='Show next N merges to be applied')
+    next_merges = subparsers.add_parser(
+        'next-merges', help='Show next N merges to be applied')
     next_merges.add_argument('source', help='Source branch name')
     next_merges.add_argument('-c', '--count', type=int, default=10,
                              help='Number of merges to show (default: 10)')
 
-    next_set = subparsers.add_parser('next-set',
-                                     help='Show next set of commits to cherry-pick')
+    next_set = subparsers.add_parser(
+        'next-set', help='Show next set of commits to cherry-pick')
     next_set.add_argument('source', help='Source branch name')
 
-    review_cmd = subparsers.add_parser('review',
-                                       help='Check open MRs and handle comments')
+    review_cmd = subparsers.add_parser(
+        'review', help='Check open MRs and handle comments')
     review_cmd.add_argument('-r', '--remote', default='ci',
                             help='Git remote (default: ci)')
 
@@ -95,7 +95,8 @@ def parse_args(argv):
                                      help='Run step repeatedly until stopped')
     poll_cmd.add_argument('source', help='Source branch name')
     poll_cmd.add_argument('-i', '--interval', type=int, default=300,
-                          help='Interval between steps in seconds (default: 300)')
+                          help='Interval between steps in seconds '
+                               '(default: 300)')
     poll_cmd.add_argument('-m', '--max-mrs', type=int, default=5,
                           help='Max open MRs allowed (default: 5)')
     poll_cmd.add_argument('-r', '--remote', default='ci',
@@ -115,7 +116,8 @@ def parse_args(argv):
 
     test_cmd = subparsers.add_parser('test', help='Run tests')
     test_cmd.add_argument('-P', '--processes', type=int,
-                          help='Number of processes to run tests (default: all)')
+                          help='Number of processes to run tests '
+                               '(default: all)')
     test_cmd.add_argument('-T', '--test-coverage', action='store_true',
                           help='Run tests and check for 100%% coverage')
     test_cmd.add_argument('-v', '--verbosity', type=int, default=1,

@@ -83,7 +83,8 @@ async def run(commits, source, branch_name, repo_path=None):
 
 Steps to follow:
 1. First run 'git status' to check the repository state is clean
-2. Create and checkout a new branch based on ci/master: git checkout -b {branch_name} ci/master
+2. Create and checkout a new branch based on ci/master:
+   git checkout -b {branch_name} ci/master
 3. Cherry-pick each commit in order:
    - For regular commits: git cherry-pick -x <hash>
    - For merge commits (identified by "Merge" in subject): git cherry-pick -x -m 1 --allow-empty <hash>
@@ -94,9 +95,10 @@ Steps to follow:
    - Show the conflicting files
    - Try to resolve simple conflicts automatically
    - For complex conflicts, describe what needs manual resolution and abort
-   - When fix-ups are needed, amend the commit to add a one-line note at the end
-     of the commit message describing the changes made
-5. After ALL cherry-picks complete, verify with 'git log --oneline -n {len(commits) + 2}'
+   - When fix-ups are needed, amend the commit to add a one-line note at the
+     end of the commit message describing the changes made
+5. After ALL cherry-picks complete, verify with
+   'git log --oneline -n {len(commits) + 2}'
    Ensure all {len(commits)} commits are present.
 6. Run 'buildman -L --board sandbox -w -o /tmp/pickman' to verify the build
 7. Report the final status including:
@@ -287,7 +289,8 @@ def build_review_prompt(mr_iid, branch_name, task_desc, context_section,
         comment_steps = """   - Make the requested changes to the code
    - Amend the relevant commit or create a fixup commit"""
 
-    return f"""Task for merge request !{mr_iid} (branch: {branch_name}): {task_desc}
+    return f"""Task for merge request !{mr_iid} (branch: {branch_name}):
+{task_desc}
 {context_section}{comment_section}{rebase_section}
 Steps to follow:
 1. Checkout the branch: git checkout {branch_name}
