@@ -210,6 +210,36 @@ This shows:
   master branch (ci/master)
 - The last common commit between the two branches
 
+To check current branch for problematic cherry-picks::
+
+    ./tools/pickman/pickman check
+
+This analyzes commits on the current branch and identifies cherry-picks with
+large deltas compared to their original commits. By default, it:
+
+- Shows only problematic commits (above 20% delta threshold)
+- Ignores small commits (less than 10 lines changed)
+- Skips merge commits (which have different delta characteristics)
+- Uses color coding: red for ≥80% delta, yellow for ≥50% delta
+
+Options:
+
+- ``-t, --threshold``: Delta threshold as fraction (default: 0.2 = 20%)
+- ``-m, --min-lines``: Minimum lines changed to check (default: 10)
+- ``-v, --verbose``: Show detailed analysis for all commits
+
+Example output::
+
+    Cherry-pick Delta% Original   Subject
+    ----------- ------ ---------- -------
+    aaea489b2a    100 9bab7d2a7c net: wget: let wget_with_dns work with dns disabled
+    e557daec17     89 f0315babfb hash: Plumb crc8 into the hash functions
+    
+    2 problem commit(s) found
+
+This helps identify cherry-picks that may have been applied incorrectly or
+need manual review due to significant differences from the original commits.
+
 To check GitLab permissions for the configured token::
 
     ./tools/pickman/pickman check-gitlab

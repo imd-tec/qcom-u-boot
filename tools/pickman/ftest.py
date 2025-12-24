@@ -52,7 +52,7 @@ class TestCommit(unittest.TestCase):
             '2024-01-15 10:30:00 -0600'
         )
         self.assertEqual(commit.hash, 'abc123def456')
-        self.assertEqual(commit.short_hash, 'abc123d')
+        self.assertEqual(commit.chash, 'abc123d')
         self.assertEqual(commit.subject, 'Test commit subject')
         self.assertEqual(commit.date, '2024-01-15 10:30:00 -0600')
 
@@ -93,7 +93,7 @@ class TestCompareBranches(unittest.TestCase):
 
             self.assertEqual(count, 42)
             self.assertEqual(commit.hash, 'abc123def456789')
-            self.assertEqual(commit.short_hash, 'abc123d')
+            self.assertEqual(commit.chash, 'abc123d')
             self.assertEqual(commit.subject, 'Test subject')
             self.assertEqual(commit.date, '2024-01-15 10:30:00 -0600')
         finally:
@@ -116,7 +116,7 @@ class TestCompareBranches(unittest.TestCase):
                 count, commit = control.compare_branches('branch1', 'branch2')
 
             self.assertEqual(count, 0)
-            self.assertEqual(commit.short_hash, 'def456a')
+            self.assertEqual(commit.chash, 'def456a')
         finally:
             command.TEST_RESULT = None
 
@@ -1248,8 +1248,8 @@ class TestGetNextCommits(unittest.TestCase):
             self.assertIsNone(error)
             self.assertTrue(merge_found)
             self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].short_hash, 'aaa111a')
-            self.assertEqual(commits[1].short_hash, 'bbb222b')
+            self.assertEqual(commits[0].chash, 'aaa111a')
+            self.assertEqual(commits[1].chash, 'bbb222b')
             dbs.close()
 
 
@@ -1861,7 +1861,7 @@ Branch: cherry-abc"""
         self.assertIsNone(source)
         self.assertIsNone(last_hash)
 
-    def test_parse_mr_description_ignores_short_hashes(self):
+    def test_parse_mr_description_ignores_chashes(self):
         """Test that short numbers in conversation log are not matched."""
         description = """## 2025-01-15: us/next
 
@@ -2903,7 +2903,7 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertFalse(merge_found)
             # Only second commit should be returned (first is in DB)
             self.assertEqual(len(commits), 1)
-            self.assertEqual(commits[0].short_hash, 'bbb222b')
+            self.assertEqual(commits[0].chash, 'bbb222b')
             dbs.close()
 
     def test_get_next_commits_all_in_db(self):
@@ -2993,8 +2993,8 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             self.assertTrue(merge_found)
             # Should return commits from second merge (first was skipped)
             self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].short_hash, 'ccc333c')
-            self.assertEqual(commits[1].short_hash, 'merge2m')
+            self.assertEqual(commits[0].chash, 'ccc333c')
+            self.assertEqual(commits[1].chash, 'merge2m')
             dbs.close()
 
 
@@ -3074,7 +3074,7 @@ class TestDoPushBranch(unittest.TestCase):
         """Test push failure."""
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
-                                  remote='ci', force=False)
+                                  remote='ci', force=False, run_ci=False)
         with mock.patch.object(gitlab, 'push_branch',
                                return_value=False):
             with terminal.capture():
@@ -3226,6 +3226,217 @@ class TestProcessMergedMrs(unittest.TestCase):
                              'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
 
             dbs.close()
+
+
+class TestCheck(unittest.TestCase):
+    """Tests for check command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.old_branch = 'old-branch'
+
+    def test_parse_git_stat_output(self):
+        """Test parsing git show --stat output."""
+        stat_output = """commit abc123def456
+Author: Test Author <test@example.com>
+Date:   Mon Jan 15 10:30:00 2024 -0600
+
+    Test commit message
+
+ file1.c | 15 +++++++++++++++
+ file2.h |  3 +--
+ 2 files changed, 16 insertions(+), 2 deletions(-)"""
+
+        result = control.parse_git_stat_output(stat_output)
+        files, insertions, deletions, file_set = result
+        self.assertEqual(files, 2)
+        self.assertEqual(insertions, 16)
+        self.assertEqual(deletions, 2)
+        self.assertEqual(file_set, {'file1.c', 'file2.h'})
+
+    def test_parse_git_stat_output_empty(self):
+        """Test parsing empty git show --stat output."""
+        stat_output = """commit abc123def456
+Author: Test Author <test@example.com>
+Date:   Mon Jan 15 10:30:00 2024 -0600
+
+    Empty commit message
+
+ 0 files changed"""
+
+        result = control.parse_git_stat_output(stat_output)
+        files, insertions, deletions, file_set = result
+        self.assertEqual(files, 0)
+        self.assertEqual(insertions, 0)
+        self.assertEqual(deletions, 0)
+        self.assertEqual(file_set, set())
+
+    def test_calc_ratio_identical(self):
+        """Test delta ratio calculation for identical commits."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertEqual(ratio, 0.0)
+
+    def test_calc_ratio_different_files(self):
+        """Test delta ratio calculation for different files."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertGreater(ratio, 0.0)
+        self.assertLessEqual(ratio, 1.0)
+
+    def test_calc_ratio_different_lines(self):
+        """Test delta ratio calculation for different line counts."""
+        orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
+        cherry_stats = control.GitStat(2, 30, 6, {'file1.c', 'file2.h'})
+
+        ratio = control.calc_ratio(orig_stats, cherry_stats)
+        self.assertGreater(ratio, 0.0)
+        self.assertLessEqual(ratio, 1.0)
+
+    def test_get_orig_commit(self):
+        """Test finding original commit from cherry-pick message."""
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            commit_msg = """Test commit subject
+
+This is the commit body.
+
+(cherry picked from commit abc123def456789)
+"""
+            mock_run_git.return_value = commit_msg
+
+            orig = control.get_orig_commit('def456abc123')
+            self.assertEqual(orig, 'abc123def456789')
+
+    def test_get_orig_commit_not_cherry_pick(self):
+        """Test finding original commit for non-cherry-pick."""
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            commit_msg = """Test commit subject
+
+This is a normal commit without cherry-pick info.
+"""
+            mock_run_git.return_value = commit_msg
+
+            orig = control.get_orig_commit('def456abc123')
+            self.assertIsNone(orig)
+
+    def test_check_commits_no_commits(self):
+        """Test check_commits with empty commit list."""
+        commits = []
+        results = list(control.check_commits(commits, 10))
+        self.assertEqual(len(results), 0)
+
+    def test_check_commits_large_delta(self):
+        """Test check_commits finding commits with large deltas."""
+        commits = [('abc123', 'abc123d', 'Test commit subject')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    with mock.patch('pickman.control.calc_ratio') as mock_calc:
+                        # Mock responses
+                        mock_run_git.side_effect = [
+                            ['def456'],  # parents (single parent)
+                            'orig_stat_output',  # original commit stats
+                            'cherry_stat_output'  # cherry-pick commit stats
+                        ]
+                        mock_find_orig.return_value = 'def456original'
+                        mock_parse.side_effect = [
+                            control.GitStat(2, 15, 3, {'file1.c', 'file2.h'}),
+                            control.GitStat(3, 30, 6,
+                                            {'file1.c', 'file2.h', 'file3.c'})
+                        ]
+                        mock_calc.return_value = 0.5  # 50% delta
+
+                        results = list(control.check_commits(commits, 10))
+                        self.assertEqual(len(results), 1)
+
+                        result = results[0]
+                        self.assertEqual(result.chash, 'abc123')
+                        self.assertEqual(result.orig_hash, 'def456original')
+                        self.assertEqual(result.delta_ratio, 0.5)
+                        self.assertIsNone(result.reason)
+
+    def test_check_commits_normal_commit(self):
+        """Test check_commits processing a normal commit."""
+        commits = [('abc123', 'abc123d', 'Test commit subject')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    with mock.patch('pickman.control.calc_ratio') as mock_calc:
+                        # Mock responses
+                        mock_run_git.side_effect = [
+                            ['def456'],  # parents (single parent)
+                            'orig_stat_output',  # original commit stats
+                            'cherry_stat_output'  # cherry-pick commit stats
+                        ]
+                        mock_find_orig.return_value = 'def456original'
+                        mock_parse.side_effect = [
+                            control.GitStat(2, 15, 3, {'file1.c', 'file2.h'}),
+                            control.GitStat(3, 30, 6,
+                                            {'file1.c', 'file2.h', 'file3.c'})
+                        ]
+                        mock_calc.return_value = 0.1  # 10% delta (low)
+
+                        results = list(control.check_commits(commits, 10))
+                        self.assertEqual(len(results), 1)
+
+                        result = results[0]
+                        self.assertEqual(result.chash, 'abc123')
+                        self.assertEqual(result.orig_hash, 'def456original')
+                        self.assertEqual(result.subject, 'Test commit subject')
+                        self.assertEqual(result.delta_ratio, 0.1)
+                        self.assertIsNone(result.reason)
+
+    def test_check_commits_merge_skip(self):
+        """Test check_commits skips merge commits."""
+        commits = [('abc123', 'abc123d', 'Merge branch feature')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            # Mock multiple parents (merge commit)
+            mock_run_git.return_value = ['parent1', 'parent2']
+
+            results = list(control.check_commits(commits, 10))
+            self.assertEqual(len(results), 1)
+
+            result = results[0]
+            self.assertEqual(result.reason, 'merge_commit')
+
+    def test_check_commits_small_commit_skip(self):
+        """Test check_commits skips small commits."""
+        commits = [('abc123', 'abc123d', 'Fix typo')]
+
+        with mock.patch('pickman.control.run_git') as mock_run_git:
+            with mock.patch('pickman.control.get_orig_commit') as \
+                    mock_find_orig:
+                with mock.patch('pickman.control.parse_git_stat_output') as \
+                        mock_parse:
+                    # Mock responses for small commit
+                    mock_run_git.side_effect = [
+                        ['def456'],  # single parent
+                        'orig_stat_output',
+                        'cherry_stat_output'
+                    ]
+                    mock_find_orig.return_value = 'def456original'
+                    mock_parse.side_effect = [
+                        # 3 total lines (< 10)
+                        control.GitStat(1, 2, 1, {'file1.c'}),
+                        control.GitStat(1, 2, 1, {'file1.c'})
+                    ]
+
+                    results = list(control.check_commits(commits, 10))
+                    self.assertEqual(len(results), 1)
+
+                    result = results[0]
+                    self.assertEqual(result.reason, 'small_commit_3_lines')
 
 
 if __name__ == '__main__':

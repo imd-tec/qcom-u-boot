@@ -21,18 +21,12 @@ from pickman import ftest
 from u_boot_pylib import test_util
 
 
-def parse_args(argv):
-    """Parse command line arguments.
+def add_main_commands(subparsers):
+    """Add main pickman commands to the argument parser
 
     Args:
-        argv (list): Command line arguments
-
-    Returns:
-        Namespace: Parsed arguments
+        subparsers (ArgumentParser): ArgumentParser subparsers object
     """
-    parser = argparse.ArgumentParser(description='Check commit differences')
-    subparsers = parser.add_subparsers(dest='cmd', required=True)
-
     add_source = subparsers.add_parser('add-source',
                                         help='Add a source branch to track')
     add_source.add_argument('source', help='Source branch name')
@@ -47,6 +41,18 @@ def parse_args(argv):
                            help='Git remote for push (default: ci)')
     apply_cmd.add_argument('-t', '--target', default='master',
                            help='Target branch for MR (default: master)')
+
+    check_cmd = subparsers.add_parser(
+        'check',
+        help='Check current branch for cherry-picks with large deltas')
+    check_cmd.add_argument('-t', '--threshold', type=float, default=0.2,
+                           help='Delta threshold as fraction (default: 0.2 = '
+                                '20%%)')
+    check_cmd.add_argument('-m', '--min-lines', type=int, default=10,
+                           help='Minimum lines changed to check delta '
+                                '(default: 10)')
+    check_cmd.add_argument('-v', '--verbose', action='store_true',
+                           help='Show detailed stats for all commits')
 
     check_gl = subparsers.add_parser('check-gitlab',
                                       help='Check GitLab permissions')
@@ -114,6 +120,13 @@ def parse_args(argv):
     push_cmd.add_argument('--run-ci', action='store_true',
                           help='Run CI pipeline (default: skip for new MRs)')
 
+
+def add_test_commands(subparsers):
+    """Add test-related commands to the argument parser
+
+    Args:
+        subparsers (ArgumentParser): ArgumentParser subparsers object
+    """
     test_cmd = subparsers.add_parser('test', help='Run tests')
     test_cmd.add_argument('-P', '--processes', type=int,
                           help='Number of processes to run tests '
@@ -123,6 +136,22 @@ def parse_args(argv):
     test_cmd.add_argument('-v', '--verbosity', type=int, default=1,
                           help='Verbosity level (0-4, default: 1)')
     test_cmd.add_argument('tests', nargs='*', help='Specific tests to run')
+
+
+def parse_args(argv):
+    """Parse command line arguments.
+
+    Args:
+        argv (list): Command line arguments
+
+    Returns:
+        Namespace: Parsed arguments
+    """
+    parser = argparse.ArgumentParser(description='Check commit differences')
+    subparsers = parser.add_subparsers(dest='cmd', required=True)
+
+    add_main_commands(subparsers)
+    add_test_commands(subparsers)
 
     return parser.parse_args(argv)
 

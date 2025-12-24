@@ -24,6 +24,7 @@ from pickman import database
 from pickman import ftest
 from pickman import gitlab_api
 from u_boot_pylib import command
+from u_boot_pylib import terminal
 from u_boot_pylib import tout
 
 # Default database filename
@@ -33,12 +34,45 @@ DB_FNAME = '.pickman.db'
 BRANCH_MASTER = 'ci/master'
 BRANCH_SOURCE = 'us/next'
 
+# Git stat output parsing patterns
+RE_GIT_STAT_SUMMARY = re.compile(
+    r'(\d+)\s+files?\s+changed'
+    r'(?:,\s*(\d+)\s+insertions?\([+]\))?'
+    r'(?:,\s*(\d+)\s+deletions?\([-]\))?'
+)
+RE_GIT_STAT_FILE = re.compile(r'^([^|]+)\s*\|')
+
+# Extract hash from line like "(cherry picked from commit abc123def)"
+RE_CHERRY_PICK = re.compile(r'cherry picked from commit ([a-f0-9]+)')
+
 # Named tuple for commit info
-Commit = namedtuple('Commit', ['hash', 'short_hash', 'subject', 'date'])
+Commit = namedtuple('Commit', ['hash', 'chash', 'subject', 'date'])
+
+# Named tuple for git stat output
+# files: Number of files changed
+# inserted: Number of lines inserted
+# deleted: Number of lines deleted
+# file_set: Set of modified file paths
+GitStat = namedtuple('GitStat', ['files', 'inserted', 'deleted', 'file_set'])
+
+# Named tuple for check results
+# chash: Cherry-pick commit hash (full)
+# orig_hash: Original commit hash that was cherry-picked
+# subject: Commit subject line
+# delta_ratio: Ratio of differences between original and cherry-pick
+#   (0.0=identical, 1.0=completely different)
+# orig_stats: Stats from original commit (files, insertions, deletions,
+#   file_set)
+# cherry_stats: Stats from cherry-pick commit
+# reason: Reason for skipping analysis (None if analyzed)
+CheckResult = namedtuple('CheckResult', [
+    'chash', 'orig_hash', 'subject', 'delta_ratio',
+    'orig_stats', 'cherry_stats', 'reason'
+])
 
 # Named tuple for commit with author
 CommitInfo = namedtuple('CommitInfo',
-                        ['hash', 'short_hash', 'subject', 'author'])
+                        ['hash', 'chash', 'subject', 'author'])
 
 # Named tuple for prepare_apply result
 ApplyInfo = namedtuple('ApplyInfo',
@@ -70,9 +104,9 @@ def compare_branches(master, source):
 
     # Get details about the merge-base commit
     info = run_git(['log', '-1', '--format=%H%n%h%n%s%n%ci', base])
-    full_hash, short_hash, subject, commit_date = info.split('\n')
+    full_hash, chash, subject, commit_date = info.split('\n')
 
-    return count, Commit(full_hash, short_hash, subject, commit_date)
+    return count, Commit(full_hash, chash, subject, commit_date)
 
 
 def do_add_source(args, dbs):
@@ -94,14 +128,14 @@ def do_add_source(args, dbs):
 
     # Get commit details for display
     info = run_git(['log', '-1', '--format=%h%n%s', base_hash])
-    short_hash, subject = info.split('\n')
+    chash, subject = info.split('\n')
 
     # Store in database
     dbs.source_set(source, base_hash)
     dbs.commit()
 
     tout.info(f"Added source '{source}' with base commit:")
-    tout.info(f'  Hash:    {short_hash}')
+    tout.info(f'  Hash:    {chash}')
     tout.info(f'  Subject: {subject}')
 
     return 0
@@ -141,10 +175,350 @@ def do_compare(args, dbs):  # pylint: disable=unused-argument
     tout.info(f'Commits in {BRANCH_SOURCE} not in {BRANCH_MASTER}: {count}')
     tout.info('')
     tout.info('Last common commit:')
-    tout.info(f'  Hash:    {base.short_hash}')
+    tout.info(f'  Hash:    {base.chash}')
     tout.info(f'  Subject: {base.subject}')
     tout.info(f'  Date:    {base.date}')
 
+    return 0
+
+
+def parse_git_stat_output(stat_output):
+    """Parse git show --stat output to extract file change statistics
+
+    Args:
+        stat_output (str): Output from 'git show --stat <hash>'
+
+    Returns:
+        GitStat: Named tuple with files, insertions, deletions, file_set
+    """
+    lines = stat_output.strip().split('\n')
+    files_changed = 0
+    insertions = 0
+    deletions = 0
+    changed_files = set()
+
+    # Parse summary line: "5 files changed, 42 insertions(+), 13 deletions(-)"
+    for line in lines:
+        match = RE_GIT_STAT_SUMMARY.search(line)
+        if match:
+            files_changed = int(match.group(1))
+            insertions = int(match.group(2)) if match.group(2) else 0
+            deletions = int(match.group(3)) if match.group(3) else 0
+            break
+
+    # Parse individual file lines: "path/to/file.ext | 42 ++++----"
+    for line in lines:
+        match = RE_GIT_STAT_FILE.match(line)
+        if match:
+            filename = match.group(1).strip()
+            if filename:
+                changed_files.add(filename)
+
+    return GitStat(files_changed, insertions, deletions, changed_files)
+
+
+def calc_ratio(orig, cherry):
+    """Get the ratio of differences between original and cherry-picked commits
+
+    Args:
+        orig (GitStat): Stats for original commit
+        cherry (GitStat): Stats for cherry-pick commit
+
+    Returns:
+        float: Delta ratio (0.0 = identical, 1.0 = completely
+            different)
+    """
+    # If both commits have no changes, they're identical
+    if not (orig.inserted + orig.deleted) and not (cherry.inserted +
+                                                    cherry.deleted):
+        return 0.0
+
+    # Calculate file set difference
+    if orig.file_set or cherry.file_set:
+        union = orig.file_set | cherry.file_set
+        intersection = orig.file_set & cherry.file_set
+        similarity = (len(intersection) / len(union) if union else 1.0)
+    else:
+        similarity = 1.0
+
+    # Calculate line change difference
+    orig_lines = orig.inserted + orig.deleted
+    cherry_lines = cherry.inserted + cherry.deleted
+
+    if not orig_lines and not cherry_lines:
+        line_similarity = 1.0
+    elif not orig_lines or not cherry_lines:
+        line_similarity = 0.0
+    else:
+        line_ratio = (min(orig_lines, cherry_lines) /
+                      max(orig_lines, cherry_lines))
+        line_similarity = line_ratio
+
+    # Overall similarity is the minimum of file and line similarity
+    overall_similarity = min(similarity, line_similarity)
+
+    # Delta ratio is 1 - similarity
+    return 1.0 - overall_similarity
+
+
+def get_orig_commit(cherry_commit_hash):
+    """Find the original commit hash from a cherry-pick commit
+
+    Args:
+        cherry_commit_hash (str): Hash of the cherry-picked commit
+
+    Returns:
+        str: Original commit hash, or None if not found
+    """
+    try:
+        # Get the commit message
+        commit_msg = run_git(['log', '-1', '--format=%B', cherry_commit_hash])
+
+        # Look for "(cherry picked from commit <hash>)" line
+        for line in commit_msg.split('\n'):
+            if 'cherry picked from commit' in line:
+                match = RE_CHERRY_PICK.search(line)
+                if match:
+                    return match.group(1)
+
+        return None
+    except Exception:  # pylint: disable=broad-except
+        return None
+
+
+def check_commits(commits, min_lines):
+    """Yield CheckResult entries for commits with delta analysis
+
+    Args:
+        commits (list): List of (commit_hash, chash, subject) tuples
+        min_lines (int): Minimum lines changed to analyze
+
+    Yields:
+        CheckResult: Analysis result for each commit
+    """
+    for chash, _, subject in commits:
+        # Skip merge commits
+        is_merge = False
+        try:
+            parents = run_git(['log', '-1', '--format=%P', chash]).split()
+            if len(parents) > 1:
+                is_merge = True
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+        # Also check subject for merge indicators
+        if not is_merge and (subject.startswith('Merge ') or
+                             'Merge branch' in subject or
+                             'Merge tag' in subject):
+            is_merge = True
+
+        if is_merge:
+            yield CheckResult(
+                chash, None, subject, 0.0,
+                None, None, 'merge_commit'
+            )
+            continue
+
+        # Find original commit
+        orig_hash = get_orig_commit(chash)
+        if not orig_hash:
+            yield CheckResult(
+                chash, None, subject, 0.0,
+                None, None, 'not_cherry_pick'
+            )
+            continue
+
+        # Get stats for both commits
+        orig_stat = run_git(['show', '--stat', orig_hash])
+        cherry_stat = run_git(['show', '--stat', chash])
+
+        # Parse statistics
+        orig_stats = parse_git_stat_output(orig_stat)
+        cherry_stats = parse_git_stat_output(cherry_stat)
+
+        # Skip small commits
+        orig_total_lines = orig_stats.inserted + orig_stats.deleted
+        cherry_total_lines = cherry_stats.inserted + cherry_stats.deleted
+        max_lines = max(orig_total_lines, cherry_total_lines)
+
+        if max_lines < min_lines:
+            yield CheckResult(
+                chash, orig_hash, subject, 0.0,
+                orig_stats, cherry_stats, f'small_commit_{max_lines}_lines'
+            )
+            continue
+
+        # Calculate delta ratio
+        delta_ratio = calc_ratio(orig_stats, cherry_stats)
+
+        yield CheckResult(
+            chash, orig_hash, subject, delta_ratio,
+            orig_stats, cherry_stats, None
+        )
+
+
+def check_verbose(result, threshold):
+    """Print verbose output for a single check result
+
+    Args:
+        result (CheckResult): The check result to print
+        threshold (float): Delta threshold for highlighting problems
+    """
+    chash_short = result.chash[:10]
+
+    if result.reason:
+        if result.reason == 'merge_commit':
+            tout.info(f'{chash_short}: {result.subject}')
+            tout.info('  → Skipped (merge commit)')
+            tout.info('')
+        elif result.reason == 'not_cherry_pick':
+            tout.info(f'{chash_short}: {result.subject}')
+            tout.info('  → Not a cherry-pick (no original commit found)')
+            tout.info('')
+        elif result.reason.startswith('small_commit'):
+            lines = result.reason.split('_')[2]
+            tout.info(f'{chash_short}: {result.subject}')
+            tout.info(f'  → Skipped (only {lines} lines changed)')
+            tout.info('')
+        elif result.reason.startswith('error'):
+            error = result.reason[6:]  # Remove 'error_' prefix
+            tout.info(f'{chash_short}: {result.subject}')
+            tout.info(f'  → Error checking delta: {error}')
+            tout.info('')
+    else:
+        # Valid result with analysis
+        tout.info(f'{chash_short}: {result.subject}')
+        tout.info(f'  → Original: {result.orig_hash[:12]} '
+                  f'({result.orig_stats.files} files, '
+                  f'{result.orig_stats.inserted}+/'
+                  f'{result.orig_stats.deleted}- lines)')
+        tout.info(f'  → Cherry-pick: {result.cherry_stats.files} files, '
+                  f'{result.cherry_stats.inserted}+/'
+                  f'{result.cherry_stats.deleted}- lines')
+        if result.delta_ratio > threshold:
+            tout.info(f'  → Delta ratio: {result.delta_ratio:.1%} '
+                      f'⚠️  LARGE DELTA!')
+        else:
+            tout.info(f'  → Delta ratio: {result.delta_ratio:.1%} ✓')
+        tout.info('')
+
+
+def print_check_header():
+    """Print the standard header for check output table"""
+    header = (f'{"Cherry-pick":<11} {"Delta%":>6} '
+              f'{"Original":<10} Subject')
+    dashes = f'{"-" * 11} {"-" * 6} {"-" * 10} -------'
+    tout.info(header)
+    tout.info(dashes)
+
+
+def format_problem_commit(result, threshold):
+    """Format a problematic commit in the standard table format
+
+    Args:
+        result (CheckResult): The check result to format
+        threshold (float): Delta threshold for coloring
+
+    Returns:
+        str: Formatted commit line
+    """
+    delta_pct_val = result.delta_ratio * 100
+    delta_pct = f'{delta_pct_val:.0f}'
+    pct_field = f'{delta_pct:>6}'
+
+    # Apply color
+    col = terminal.Color()
+    threshold_pct = threshold * 100
+    if delta_pct_val >= 50:
+        pct_field = col.build(terminal.Color.RED, pct_field)
+    elif delta_pct_val >= threshold_pct:
+        pct_field = col.build(terminal.Color.YELLOW, pct_field)
+
+    return (f'{result.chash[:10]}  {pct_field} '
+            f'{result.orig_hash[:10]} {result.subject}')
+
+
+def get_branch_commits():
+    """Get commits on current branch that differ from ci/master
+
+    Returns:
+        tuple: (current_branch, commits) where commits is a list of
+            (full_hash, short_hash, subject) tuples
+    """
+    current_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+    # Get all commits on current branch that aren't in ci/master
+    commit_list = run_git(['log', '--reverse', '--format=%H|%h|%s',
+                          f'{BRANCH_MASTER}..HEAD'])
+
+    if not commit_list:
+        return current_branch, []
+
+    # Parse commit_list format: "full_hash|short_hash|subject" per line
+    commits = []
+    for line in commit_list.split('\n'):
+        if line:
+            parts = line.split('|', 2)
+            commits.append((parts[0], parts[1], parts[2]))
+
+    return current_branch, commits
+
+
+def do_check(args, dbs):  # pylint: disable=unused-argument
+    """Check current branch for cherry-picks with large deltas
+
+    Args:
+        args (Namespace): Parsed arguments with 'threshold', 'min_lines',
+            and 'verbose' attributes
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    threshold = args.threshold
+    min_lines = args.min_lines
+    verbose = args.verbose
+
+    current_branch, commits = get_branch_commits()
+
+    if verbose:
+        tout.info(f'Checking branch: {current_branch}')
+        tout.info(f'Delta threshold: {threshold:.1%}')
+        tout.info(f'Minimum lines to check: {min_lines}')
+        tout.info(f'Found {len(commits)} commits to check')
+        tout.info('')
+
+    bad = []
+    header_printed = False
+
+    # Process commits using the generator
+    for res in check_commits(commits, min_lines):
+        if verbose:
+            check_verbose(res, threshold)
+            if not res.reason and res.delta_ratio > threshold:
+                bad.append(res)
+        else:
+            # Non-verbose: only show problems on one line
+            if not res.reason and res.delta_ratio > threshold:
+                if not header_printed:
+                    print_check_header()
+                    header_printed = True
+                tout.info(format_problem_commit(res, threshold))
+                bad.append(res)
+
+    # Summary
+    if bad:
+        if verbose:
+            tout.info(f'Found {len(bad)} commit(s) with large deltas:')
+            tout.info('')
+            print_check_header()
+            for res in bad:
+                tout.info(format_problem_commit(res, threshold))
+        else:
+            tout.info(f'{len(bad)} problem commit(s) found')
+        return 1
+    if verbose:
+        tout.info('All cherry-picks have acceptable deltas ✓')
     return 0
 
 
@@ -250,7 +624,7 @@ def get_next_commits(dbs, source):
                 continue
             parts = line.split('|')
             commit_hash = parts[0]
-            short_hash = parts[1]
+            chash = parts[1]
             author = parts[2]
             subject = '|'.join(parts[3:-1])  # Subject may contain separator
 
@@ -258,7 +632,7 @@ def get_next_commits(dbs, source):
             if dbs.commit_get(commit_hash):
                 continue
 
-            commits.append(CommitInfo(commit_hash, short_hash, subject, author))
+            commits.append(CommitInfo(commit_hash, chash, subject, author))
 
         if commits:
             return commits, True, None
@@ -281,14 +655,14 @@ def get_next_commits(dbs, source):
             continue
         parts = line.split('|')
         commit_hash = parts[0]
-        short_hash = parts[1]
+        chash = parts[1]
         author = parts[2]
         subject = '|'.join(parts[3:-1])
 
         if dbs.commit_get(commit_hash):
             continue
 
-        commits.append(CommitInfo(commit_hash, short_hash, subject, author))
+        commits.append(CommitInfo(commit_hash, chash, subject, author))
 
     return commits, False, None
 
@@ -321,7 +695,7 @@ def do_next_set(args, dbs):
                   'no merge found):')
 
     for commit in commits:
-        tout.info(f'  {commit.short_hash} {commit.subject}')
+        tout.info(f'  {commit.chash} {commit.subject}')
 
     return 0
 
@@ -363,15 +737,15 @@ def do_next_merges(args, dbs):
             continue
         parts = line.split('|', 2)
         commit_hash = parts[0]
-        short_hash = parts[1]
+        chash = parts[1]
         subject = parts[2] if len(parts) > 2 else ''
-        merges.append((commit_hash, short_hash, subject))
+        merges.append((commit_hash, chash, subject))
         if len(merges) >= count:
             break
 
     tout.info(f'Next {len(merges)} merges from {source}:')
-    for i, (_, short_hash, subject) in enumerate(merges, 1):
-        tout.info(f'  {i}. {short_hash} {subject}')
+    for i, (_, chash, subject) in enumerate(merges, 1):
+        tout.info(f'  {i}. {chash} {subject}')
 
     return 0
 
@@ -549,7 +923,7 @@ def format_history(source, commits, branch_name):
         str: Formatted summary text
     """
     commit_list = '\n'.join(
-        f'- {c.short_hash} {c.subject}'
+        f'- {c.chash} {c.subject}'
         for c in commits
     )
 
@@ -603,7 +977,7 @@ def get_history(fname, source, commits, branch_name, conv_log):
     # Generate commit message
     commit_msg = (f'pickman: Record cherry-pick of {len(commits)} commits '
                   f'from {source}\n\n')
-    commit_msg += '\n'.join(f'- {c.short_hash} {c.subject}' for c in commits)
+    commit_msg += '\n'.join(f'- {c.chash} {c.subject}' for c in commits)
 
     return content, commit_msg
 
@@ -660,7 +1034,7 @@ def prepare_apply(dbs, source, branch):
     branch_name = branch
     if not branch_name:
         # Use first commit's short hash as part of branch name
-        branch_name = f'cherry-{commits[0].short_hash}'
+        branch_name = f'cherry-{commits[0].chash}'
 
     # Delete branch if it already exists
     try:
@@ -678,7 +1052,7 @@ def prepare_apply(dbs, source, branch):
 
     tout.info(f'  Branch: {branch_name}')
     for commit in commits:
-        tout.info(f'  {commit.short_hash} {commit.subject}')
+        tout.info(f'  {commit.chash} {commit.subject}')
     tout.info('')
 
     return ApplyInfo(commits, branch_name, original_branch, merge_found), 0
@@ -772,7 +1146,7 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     dbs.commit()
 
     # Convert CommitInfo to tuple format expected by agent
-    commit_tuples = [(c.hash, c.short_hash, c.subject) for c in commits]
+    commit_tuples = [(c.hash, c.chash, c.subject) for c in commits]
     success, conv_log = agent.cherry_pick_commits(commit_tuples, source,
                                                           branch_name)
 
@@ -819,7 +1193,7 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
                 ret = 1
         else:
             tout.info(f"Use 'pickman commit-source {source} "
-                      f"{commits[-1].short_hash}' to update the database")
+                      f"{commits[-1].chash}' to update the database")
 
     return ret, success, conv_log
 
@@ -874,7 +1248,7 @@ def do_push_branch(args, dbs):  # pylint: disable=unused-argument
     Returns:
         int: 0 on success, 1 on failure
     """
-    skip_ci = not getattr(args, 'run_ci', False)
+    skip_ci = not args.run_ci
     success = gitlab_api.push_branch(args.remote, args.branch, args.force,
                                      skip_ci=skip_ci)
     return 0 if success else 1
@@ -1327,6 +1701,7 @@ def do_test(args, dbs):  # pylint: disable=unused-argument
 COMMANDS = {
     'add-source': do_add_source,
     'apply': do_apply,
+    'check': do_check,
     'check-gitlab': do_check_gitlab,
     'commit-source': do_commit_source,
     'compare': do_compare,
