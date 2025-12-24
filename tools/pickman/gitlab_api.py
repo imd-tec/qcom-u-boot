@@ -455,7 +455,7 @@ def reply_to_mr(remote, mr_iid, message):
         return False
 
 
-def update_mr_description(remote, mr_iid, desc):
+def update_mr_desc(remote, mr_iid, desc):
     """Update a merge request's description
 
     Args:

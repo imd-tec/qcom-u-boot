@@ -21,7 +21,7 @@ SIGNAL_FILE = '.pickman-signal'
 
 # Signal status codes
 SIGNAL_SUCCESS = 'success'
-SIGNAL_ALREADY_APPLIED = 'already_applied'
+SIGNAL_APPLIED = 'already_applied'
 SIGNAL_CONFLICT = 'conflict'
 
 # Check if claude_agent_sdk is available

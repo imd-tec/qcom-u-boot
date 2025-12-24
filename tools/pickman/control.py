@@ -537,7 +537,7 @@ def handle_skip_comments(remote, mr_iid, title, unresolved, dbs):
     return True
 
 
-def format_history_summary(source, commits, branch_name):
+def format_history(source, commits, branch_name):
     """Format a summary of the cherry-pick operation
 
     Args:
@@ -575,7 +575,7 @@ def get_history(fname, source, commits, branch_name, conv_log):
         tuple: (content, commit_msg) where content is the updated history
             and commit_msg is the git commit message
     """
-    summary = format_history_summary(source, commits, branch_name)
+    summary = format_history(source, commits, branch_name)
     entry = f"""{summary}
 
 ### Conversation log
@@ -735,7 +735,7 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
 
         # Use merge commit subject as title with [skip] prefix
         title = f'{SKIPPED_TAG} [pickman] {commits[-1].subject}'
-        summary = format_history_summary(source, commits, branch_name)
+        summary = format_history(source, commits, branch_name)
         description = (f'{summary}\n\n'
                        f'**Status:** Commits already applied to {target} '
                        f'with different hashes.\n\n'
@@ -778,7 +778,7 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
 
     # Check for signal file from agent
     signal_status, signal_commit = agent.read_signal_file()
-    if signal_status == agent.SIGNAL_ALREADY_APPLIED:
+    if signal_status == agent.SIGNAL_APPLIED:
         ret = handle_already_applied(dbs, source, commits, branch_name,
                                      conv_log, args, signal_commit)
         return ret, False, conv_log
@@ -809,7 +809,7 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
             title = f'[pickman] {commits[-1].subject}'
             # Description matches .pickman-history entry
             # (summary + conversation)
-            summary = format_history_summary(source, commits, branch_name)
+            summary = format_history(source, commits, branch_name)
             description = f'{summary}\n\n### Conversation log\n{conv_log}'
 
             mr_url = gitlab_api.push_and_create_mr(
@@ -1000,10 +1000,10 @@ def process_single_mr(remote, merge_req, dbs, target):
         new_desc = (f"{old_desc}\n\n### Review response\n\n"
                     f"**Comments addressed:**\n{comment_summary}\n\n"
                     f"**Response:**\n{conversation_log}")
-        gitlab_api.update_mr_description(remote, mr_iid, new_desc)
+        gitlab_api.update_mr_desc(remote, mr_iid, new_desc)
 
         # Update .pickman-history
-        update_history_with_review(merge_req.source_branch,
+        update_history(merge_req.source_branch,
                                    unresolved, conversation_log)
 
         tout.info(f'Updated MR !{mr_iid} description and history')
@@ -1047,7 +1047,7 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
     return processed
 
 
-def update_history_with_review(branch_name, comments, conversation_log):
+def update_history(branch_name, comments, conversation_log):
     """Append review handling to .pickman-history
 
     Args:
