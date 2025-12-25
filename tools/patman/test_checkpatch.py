@@ -532,5 +532,37 @@ index 0000000..2234c87
         pm.add_line('arch/sandbox/dts/sandbox.dtsi', '\tu-boot,dm-pre-proper;')
         self.check_single_message(pm, 'PRE_SCHEMA', 'error')
 
+    def test_parse_consecutive_messages(self):
+        """Test parsing of consecutive checkpatch messages without blank lines
+
+        Checkpatch.pl doesn't always output blank lines between messages.
+        Verify that the parser correctly separates consecutive messages.
+        """
+        # Simulated checkpatch output with two warnings not separated by blank
+        # line - this is how checkpatch actually outputs consecutive messages
+        output = '''WARNING: please write a help paragraph
+#10: FILE: scripts/Makefile:1:
++config FOO
+WARNING: please define a type for config
+#15: FILE: scripts/Makefile:5:
++config BAR
+
+total: 0 errors, 2 warnings, 0 checks, 20 lines checked
+
+test.patch has style problems, please review.'''
+
+        result = checkpatch.check_patch_parse(output)
+        self.assertEqual(result.ok, False)
+        self.assertEqual(result.errors, 0)
+        self.assertEqual(result.warnings, 2)
+        self.assertEqual(result.checks, 0)
+        # Both warnings should be parsed as separate problems
+        # pylint: disable=E1136
+        self.assertEqual(len(result.problems), 2)
+        self.assertEqual(result.problems[0]['msg'],
+                         'please write a help paragraph')
+        self.assertEqual(result.problems[1]['msg'],
+                         'please define a type for config')
+
 if __name__ == "__main__":
     unittest.main()
