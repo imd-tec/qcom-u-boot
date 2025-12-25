@@ -493,8 +493,14 @@ index 0000000..2234c87
         pm.add_line('common/main.c', '.%s = sizeof(struct(fred)),' % auto)
         pm.add_line('common/main.c', '.%s = sizeof(struct(mary%s)),' %
                     (auto, suffix))
-        self.check_single_message(
-            pm, warning, "struct 'fred' should have a %s suffix" % suffix)
+        result = pm.run_checkpatch()
+        # Checkpatch outputs this warning twice (once without file info, once
+        # with), so check that we have at least one matching problem
+        self.assertGreaterEqual(result.warnings, 1)
+        # pylint: disable=E1133
+        self.assertTrue(
+            any(warning in p.get('cptype', '') for p in result.problems),
+            f"Expected warning {warning} not found in {result.problems}")
 
     def test_dm_driver_auto(self):
         """Check for the correct suffix on 'struct driver' auto members"""

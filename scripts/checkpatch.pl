@@ -4201,11 +4201,22 @@ sub process {
 		      $line =~ /^\+\s*(?:static\s+)?[A-Z_]*ATTR/ ||
 		      $line =~ /^\+\s*DECLARE/ ||
 		      $line =~ /^\+\s*builtin_[\w_]*driver/ ||
-		      $line =~ /^\+\s*__setup/)) {
+		      $line =~ /^\+\s*__setup/ ||
+		      $line =~ /^\+\s*[A-Z_]*TEST/)) {
 			if (CHK("LINE_SPACING",
 				"Please use a blank line after function/struct/union/enum declarations\n" . $hereprev) &&
 			    $fix) {
 				fix_insert_line($fixlinenr, "\+");
+			}
+		}
+
+# check for blank line before test declaration macro
+		if ($prevline =~ /^[\+ ]\s*$/ &&
+		    $line =~ /^\+[A-Z_]*TEST/) {
+			if (CHK("LINE_SPACING",
+				"Please don't use a blank line before test declaration\n" . $hereprev) &&
+			    $fix) {
+				fix_delete_line($fixlinenr - 1, $prevrawline);
 			}
 		}
 
