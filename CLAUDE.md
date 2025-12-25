@@ -72,3 +72,5 @@ pyt <test_name>
 - Keep commit messages concise - focus on the key change and essential details only
 - Code should be formatted to 80 columns and not have trailing spaces
 - Remember to use Co-developed-by instead of Co-Authored-By in commits
+- Test declarations (e.g., UNIT_TEST macro) should immediately follow the
+  closing } of the function they declare, with no blank line in between
