@@ -3311,7 +3311,8 @@ sub process {
 				} elsif ($rawlines[$linenr] !~ /^signed-off-by:\s*(.*)/i) {
 					WARN("BAD_SIGN_OFF",
 					     "Co-developed-by: must be immediately followed by Signed-off-by:\n" . $herecurr . $rawlines[$linenr] . "\n");
-				} elsif ($1 ne $email) {
+				} elsif ($1 ne $email &&
+				 $email !~ /noreply\@/) {
 					WARN("BAD_SIGN_OFF",
 					     "Co-developed-by and Signed-off-by: name/email do not match\n" . $herecurr . $rawlines[$linenr] . "\n");
 				}

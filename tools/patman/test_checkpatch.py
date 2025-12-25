@@ -43,8 +43,11 @@ class PatchMaker:
             lines (list of Line): List of lines to add to the patch. Note that
                 each line has both a file and some text associated with it,
                 since for simplicity we just add a single line for each file
+            commit_tags (str): Optional commit tags (Signed-off-by, etc.) to
+                use instead of the default
         """
         self.lines = []
+        self.commit_tags = None
 
     def add_line(self, fname, text):
         """Add to the list of filename/line pairs"""
@@ -59,17 +62,18 @@ class PatchMaker:
         Returns:
             str: Patch text ready for submission to checkpatch
         """
+        tags = self.commit_tags if self.commit_tags else '''
+Signed-off-by: Simon Glass <sjg@chromium.org>'''
         base = '''From 125b77450f4c66b8fd9654319520bbe795c9ef31 Mon Sep 17 00:00:00 2001
 From: Simon Glass <sjg@chromium.org>
 Date: Sun, 14 Jun 2020 09:45:14 -0600
 Subject: [PATCH] Test commit
 
 This is a test commit.
-
-Signed-off-by: Simon Glass <sjg@chromium.org>
+%s
 ---
 
-'''
+''' % tags
         lines = base.splitlines()
 
         # Create the diffstat
@@ -537,6 +541,23 @@ index 0000000..2234c87
         pm = PatchMaker()
         pm.add_line('arch/sandbox/dts/sandbox.dtsi', '\tu-boot,dm-pre-proper;')
         self.check_single_message(pm, 'PRE_SCHEMA', 'error')
+
+    def test_ai_co_developed_by(self):
+        """Check that AI Co-developed-by doesn't require matching Signed-off-by"""
+        pm = PatchMaker()
+        pm.add_line('common/main.c', 'int x;')
+        # Override commit tags to include AI co-developer
+        pm.commit_tags = '''
+Co-developed-by: Claude <noreply@anthropic.com>
+Signed-off-by: A Human <human@example.com>
+'''
+        result = pm.run_checkpatch()
+        # Should not warn about mismatched Co-developed-by/Signed-off-by
+        # pylint: disable=E1133
+        self.assertFalse(
+            any('Co-developed-by and Signed-off-by' in p.get('msg', '')
+                for p in result.problems),
+            f"Unexpected Co-developed-by warning in {result.problems}")
 
     def test_parse_consecutive_messages(self):
         """Test parsing of consecutive checkpatch messages without blank lines
