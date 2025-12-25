@@ -513,9 +513,13 @@ index 0000000..2234c87
         """Check one of the checks for strn(cpy|cat)"""
         pm = PatchMaker()
         pm.add_line('common/main.c', "strn%s(foo, bar, sizeof(foo));" % func)
-        self.check_single_message(pm, "STRL",
-            "strl%s is preferred over strn%s because it always produces a nul-terminated string\n"
-            % (func, func))
+        result = pm.run_checkpatch()
+        # Linux checkpatch may add additional warnings (e.g., STRNCPY for cpy)
+        self.assertGreaterEqual(result.warnings, 1)
+        # pylint: disable=E1133
+        self.assertTrue(
+            any('STRL' in p.get('cptype', '') for p in result.problems),
+            f"Expected STRL warning not found in {result.problems}")
 
     def test_strl(self):
         """Check for uses of strn(cat|cpy)"""
