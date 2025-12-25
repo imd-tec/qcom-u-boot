@@ -157,9 +157,24 @@ def check_patch_parse(checkpatch_output, verbose=False):
                                r' checks, (\d+)')
     re_ok = re.compile(r'.*has no obvious style problems')
     re_bad = re.compile(r'.*has style problems, please review')
+    # Patterns that start a new message block
+    re_message_start = re.compile(
+        r'^(ERROR|WARNING|CHECK):|^total:|^NOTE:|.* has (no obvious )?style')
 
-    # A blank line indicates the end of a message
-    for message in result.stdout.split('\n\n'):
+    # Split output into individual messages by looking for message-starting
+    # patterns at the start of lines, since messages may not be separated by
+    # blank lines
+    messages = []
+    current = []
+    for line in result.stdout.splitlines():
+        if re_message_start.match(line) and current:
+            messages.append('\n'.join(current))
+            current = []
+        current.append(line)
+    if current:
+        messages.append('\n'.join(current))
+
+    for message in messages:
         if verbose:
             print(message)
 

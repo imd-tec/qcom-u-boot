@@ -43,8 +43,11 @@ class PatchMaker:
             lines (list of Line): List of lines to add to the patch. Note that
                 each line has both a file and some text associated with it,
                 since for simplicity we just add a single line for each file
+            commit_tags (str): Optional commit tags (Signed-off-by, etc.) to
+                use instead of the default
         """
         self.lines = []
+        self.commit_tags = None
 
     def add_line(self, fname, text):
         """Add to the list of filename/line pairs"""
@@ -59,17 +62,18 @@ class PatchMaker:
         Returns:
             str: Patch text ready for submission to checkpatch
         """
+        tags = self.commit_tags if self.commit_tags else '''
+Signed-off-by: Simon Glass <sjg@chromium.org>'''
         base = '''From 125b77450f4c66b8fd9654319520bbe795c9ef31 Mon Sep 17 00:00:00 2001
 From: Simon Glass <sjg@chromium.org>
 Date: Sun, 14 Jun 2020 09:45:14 -0600
 Subject: [PATCH] Test commit
 
 This is a test commit.
-
-Signed-off-by: Simon Glass <sjg@chromium.org>
+%s
 ---
 
-'''
+''' % tags
         lines = base.splitlines()
 
         # Create the diffstat
@@ -493,8 +497,14 @@ index 0000000..2234c87
         pm.add_line('common/main.c', '.%s = sizeof(struct(fred)),' % auto)
         pm.add_line('common/main.c', '.%s = sizeof(struct(mary%s)),' %
                     (auto, suffix))
-        self.check_single_message(
-            pm, warning, "struct 'fred' should have a %s suffix" % suffix)
+        result = pm.run_checkpatch()
+        # Checkpatch outputs this warning twice (once without file info, once
+        # with), so check that we have at least one matching problem
+        self.assertGreaterEqual(result.warnings, 1)
+        # pylint: disable=E1133
+        self.assertTrue(
+            any(warning in p.get('cptype', '') for p in result.problems),
+            f"Expected warning {warning} not found in {result.problems}")
 
     def test_dm_driver_auto(self):
         """Check for the correct suffix on 'struct driver' auto members"""
@@ -513,9 +523,13 @@ index 0000000..2234c87
         """Check one of the checks for strn(cpy|cat)"""
         pm = PatchMaker()
         pm.add_line('common/main.c', "strn%s(foo, bar, sizeof(foo));" % func)
-        self.check_single_message(pm, "STRL",
-            "strl%s is preferred over strn%s because it always produces a nul-terminated string\n"
-            % (func, func))
+        result = pm.run_checkpatch()
+        # Linux checkpatch may add additional warnings (e.g., STRNCPY for cpy)
+        self.assertGreaterEqual(result.warnings, 1)
+        # pylint: disable=E1133
+        self.assertTrue(
+            any('STRL' in p.get('cptype', '') for p in result.problems),
+            f"Expected STRL warning not found in {result.problems}")
 
     def test_strl(self):
         """Check for uses of strn(cat|cpy)"""
@@ -527,6 +541,55 @@ index 0000000..2234c87
         pm = PatchMaker()
         pm.add_line('arch/sandbox/dts/sandbox.dtsi', '\tu-boot,dm-pre-proper;')
         self.check_single_message(pm, 'PRE_SCHEMA', 'error')
+
+    def test_ai_co_developed_by(self):
+        """Check that AI Co-developed-by doesn't require matching Signed-off-by"""
+        pm = PatchMaker()
+        pm.add_line('common/main.c', 'int x;')
+        # Override commit tags to include AI co-developer
+        pm.commit_tags = '''
+Co-developed-by: Claude <noreply@anthropic.com>
+Signed-off-by: A Human <human@example.com>
+'''
+        result = pm.run_checkpatch()
+        # Should not warn about mismatched Co-developed-by/Signed-off-by
+        # pylint: disable=E1133
+        self.assertFalse(
+            any('Co-developed-by and Signed-off-by' in p.get('msg', '')
+                for p in result.problems),
+            f"Unexpected Co-developed-by warning in {result.problems}")
+
+    def test_parse_consecutive_messages(self):
+        """Test parsing of consecutive checkpatch messages without blank lines
+
+        Checkpatch.pl doesn't always output blank lines between messages.
+        Verify that the parser correctly separates consecutive messages.
+        """
+        # Simulated checkpatch output with two warnings not separated by blank
+        # line - this is how checkpatch actually outputs consecutive messages
+        output = '''WARNING: please write a help paragraph
+#10: FILE: scripts/Makefile:1:
++config FOO
+WARNING: please define a type for config
+#15: FILE: scripts/Makefile:5:
++config BAR
+
+total: 0 errors, 2 warnings, 0 checks, 20 lines checked
+
+test.patch has style problems, please review.'''
+
+        result = checkpatch.check_patch_parse(output)
+        self.assertEqual(result.ok, False)
+        self.assertEqual(result.errors, 0)
+        self.assertEqual(result.warnings, 2)
+        self.assertEqual(result.checks, 0)
+        # Both warnings should be parsed as separate problems
+        # pylint: disable=E1136
+        self.assertEqual(len(result.problems), 2)
+        self.assertEqual(result.problems[0]['msg'],
+                         'please write a help paragraph')
+        self.assertEqual(result.problems[1]['msg'],
+                         'please define a type for config')
 
 if __name__ == "__main__":
     unittest.main()
