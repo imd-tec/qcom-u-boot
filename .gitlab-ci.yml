@@ -968,6 +968,8 @@ efi-aarch64:
 
 trigger_snap_builds:
   stage: release
+  variables:
+    GIT_DEPTH: 0  # Need full history for GitHub push
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
   before_script:
