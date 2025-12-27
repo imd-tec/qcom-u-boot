@@ -88,7 +88,7 @@ class RunAndLog(object):
     a multiplexed log file. Objects of this type should be created by factory
     functions in the Logfile class rather than directly."""
 
-    def __init__(self, logfile, name, chained_file):
+    def __init__(self, logfile, name, chained_file, quiet=False):
         """Initialize a new object.
 
         Args:
@@ -96,6 +96,7 @@ class RunAndLog(object):
             name: The name of this log stream or sub-process.
             chained_file: The file-like object to which all stream data should
                 be logged to in addition to logfile. Can be None.
+            quiet: Suppress display of hook commands to chained_file.
 
         Returns:
             Nothing.
@@ -104,6 +105,7 @@ class RunAndLog(object):
         self.logfile = logfile
         self.name = name
         self.chained_file = chained_file
+        self.quiet = quiet
         self.output = None
         self.exit_status = None
 
@@ -133,7 +135,7 @@ class RunAndLog(object):
         """
 
         msg = '+' + ' '.join(cmd) + '\n'
-        if self.chained_file:
+        if self.chained_file and not self.quiet:
             self.chained_file.write(msg)
         self.logfile.write(self, msg)
 
@@ -215,11 +217,12 @@ class Logfile:
     """Generates an HTML-formatted log file containing multiple streams of
     data, each represented in a well-delineated/-structured fashion."""
 
-    def __init__(self, fn):
+    def __init__(self, fn, quiet_hooks=False):
         """Initialize a new object.
 
         Args:
             fn: The filename to write to.
+            quiet_hooks: Suppress display of hook commands to stdout.
 
         Returns:
             Nothing.
@@ -234,6 +237,7 @@ class Logfile:
         self.timestamp_prev = self.timestamp_start
         self.timestamp_blocks = []
         self.seen_warning = False
+        self.quiet_hooks = quiet_hooks
 
         shutil.copy(mod_dir + '/multiplexed_log.css', os.path.dirname(fn))
         self.f.write('''\
@@ -666,7 +670,7 @@ $(document).ready(function () {
             A RunAndLog object.
         """
 
-        return RunAndLog(self, name, chained_file)
+        return RunAndLog(self, name, chained_file, self.quiet_hooks)
 
     def write(self, stream, data, implicit=False):
         """Write stream data into the log file.
