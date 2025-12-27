@@ -98,6 +98,7 @@ struct file {
 	void *private_data;
 	struct file_ra_state f_ra;
 	struct path f_path;
+	loff_t f_pos;
 };
 
 /* Get inode from file */

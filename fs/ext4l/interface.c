@@ -11,9 +11,12 @@
 
 #include <blk.h>
 #include <env.h>
+#include <fs.h>
+#include <fs_legacy.h>
 #include <membuf.h>
 #include <part.h>
 #include <malloc.h>
+#include <u-boot/uuid.h>
 #include <linux/errno.h>
 #include <linux/jbd2.h>
 #include <linux/types.h>
@@ -33,6 +36,9 @@ static struct blk_desc *ext4l_blk_dev;
 static struct disk_partition ext4l_partition;
 static int ext4l_mounted;
 
+/* Count of open directory streams (prevents unmount while iterating) */
+static int ext4l_open_dirs;
+
 /* Global super_block pointer for filesystem operations */
 static struct super_block *ext4l_sb;
 
@@ -42,6 +48,7 @@ static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /**
  * ext4l_get_blk_dev() - Get the current block device
+ *
  * Return: Block device descriptor or NULL if not mounted
  */
 struct blk_desc *ext4l_get_blk_dev(void)
@@ -53,6 +60,7 @@ struct blk_desc *ext4l_get_blk_dev(void)
 
 /**
  * ext4l_get_partition() - Get the current partition info
+ *
  * Return: Partition info pointer
  */
 struct disk_partition *ext4l_get_partition(void)
@@ -62,6 +70,7 @@ struct disk_partition *ext4l_get_partition(void)
 
 /**
  * ext4l_get_uuid() - Get the filesystem UUID
+ *
  * @uuid: Buffer to receive the 16-byte UUID
  * Return: 0 on success, -ENODEV if not mounted
  */
@@ -74,7 +83,48 @@ int ext4l_get_uuid(u8 *uuid)
 }
 
 /**
+ * ext4l_uuid() - Get the filesystem UUID as a string
+ *
+ * @uuid_str: Buffer to receive the UUID string (must be at least 37 bytes)
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_uuid(char *uuid_str)
+{
+	u8 uuid[16];
+	int ret;
+
+	ret = ext4l_get_uuid(uuid);
+	if (ret)
+		return ret;
+	uuid_bin_to_str(uuid, uuid_str, UUID_STR_FORMAT_STD);
+
+	return 0;
+}
+
+/**
+ * ext4l_statfs() - Get filesystem statistics
+ *
+ * @stats: Pointer to fs_statfs structure to fill
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_statfs(struct fs_statfs *stats)
+{
+	struct ext4_super_block *es;
+
+	if (!ext4l_sb)
+		return -ENODEV;
+
+	es = EXT4_SB(ext4l_sb)->s_es;
+	stats->bsize = ext4l_sb->s_blocksize;
+	stats->blocks = ext4_blocks_count(es);
+	stats->bfree = ext4_free_blocks_count(es);
+
+	return 0;
+}
+
+/**
  * ext4l_set_blk_dev() - Set the block device for ext4l operations
+ *
  * @blk_dev: Block device descriptor
  * @partition: Partition info (can be NULL for whole disk)
  */
@@ -110,6 +160,7 @@ static void ext4l_msg_init(void)
 
 /**
  * ext4l_record_msg() - Record a message in the buffer
+ *
  * @msg: Message string to record
  * @len: Length of message
  */
@@ -304,6 +355,7 @@ err_exit_es:
 
 /**
  * ext4l_read_symlink() - Read the target of a symlink inode
+ *
  * @inode: Symlink inode
  * @target: Buffer to store target
  * @max_len: Maximum length of target buffer
@@ -350,6 +402,7 @@ static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
 
 /**
  * ext4l_resolve_path() - Resolve path to inode
+ *
  * @path: Path to resolve
  * @inodep: Output inode pointer
  * Return: 0 on success, negative on error
@@ -361,6 +414,7 @@ static int ext4l_resolve_path(const char *path, struct inode **inodep)
 
 /**
  * ext4l_resolve_path_internal() - Resolve path with symlink following
+ *
  * @path: Path to resolve
  * @inodep: Output inode pointer
  * @depth: Current recursion depth (for symlink loop detection)
@@ -551,6 +605,7 @@ static int ext4l_resolve_path_internal(const char *path, struct inode **inodep,
 
 /**
  * ext4l_dir_actor() - Directory entry callback for ext4_readdir
+ *
  * @ctx: Directory context
  * @name: Entry name
  * @namelen: Length of name
@@ -623,9 +678,306 @@ int ext4l_ls(const char *dirname)
 	return ret;
 }
 
+int ext4l_exists(const char *filename)
+{
+	struct inode *inode;
+
+	if (!filename)
+		return 0;
+
+	if (ext4l_resolve_path(filename, &inode))
+		return 0;
+
+	return 1;
+}
+
+int ext4l_size(const char *filename, loff_t *sizep)
+{
+	struct inode *inode;
+	int ret;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret)
+		return ret;
+
+	*sizep = inode->i_size;
+
+	return 0;
+}
+
+int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
+	       loff_t *actread)
+{
+	uint copy_len, blk_off, blksize;
+	loff_t bytes_left, file_size;
+	struct buffer_head *bh;
+	struct inode *inode;
+	ext4_lblk_t block;
+	char *dst;
+	int ret;
+
+	*actread = 0;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret) {
+		printf("** File not found %s **\n", filename);
+		return ret;
+	}
+
+	file_size = inode->i_size;
+	if (offset >= file_size)
+		return 0;
+
+	/* If len is 0, read the whole file from offset */
+	if (!len)
+		len = file_size - offset;
+
+	/* Clamp to file size */
+	if (offset + len > file_size)
+		len = file_size - offset;
+
+	blksize = inode->i_sb->s_blocksize;
+	bytes_left = len;
+	dst = buf;
+
+	while (bytes_left > 0) {
+		/* Calculate logical block number and offset within block */
+		block = offset / blksize;
+		blk_off = offset % blksize;
+
+		/* Read the block */
+		bh = ext4_bread(NULL, inode, block, 0);
+		if (IS_ERR(bh))
+			return PTR_ERR(bh);
+		if (!bh)
+			return -EIO;
+
+		/* Calculate how much to copy from this block */
+		copy_len = blksize - blk_off;
+		if (copy_len > bytes_left)
+			copy_len = bytes_left;
+
+		memcpy(dst, bh->b_data + blk_off, copy_len);
+		brelse(bh);
+
+		dst += copy_len;
+		offset += copy_len;
+		bytes_left -= copy_len;
+		*actread += copy_len;
+	}
+
+	return 0;
+}
+
 void ext4l_close(void)
 {
+	if (ext4l_open_dirs > 0)
+		return;
+
 	ext4l_dev_desc = NULL;
 	ext4l_sb = NULL;
 	ext4l_clear_blk_dev();
+}
+
+/**
+ * struct ext4l_dir - ext4l directory stream state
+ * @parent: base fs_dir_stream structure
+ * @dirent: directory entry to return to caller
+ * @dir_inode: pointer to directory inode
+ * @file: file structure for ext4_readdir
+ * @entry_found: flag set by actor when entry is captured
+ * @last_ino: inode number of last returned entry (to skip on next call)
+ * @skip_last: true if we need to skip the last_ino entry
+ *
+ * The filesystem stays mounted while directory streams are open (ext4l_close
+ * checks ext4l_open_dirs), so we can keep direct pointers to inodes.
+ */
+struct ext4l_dir {
+	struct fs_dir_stream parent;
+	struct fs_dirent dirent;
+	struct inode *dir_inode;
+	struct file file;
+	bool entry_found;
+	u64 last_ino;
+	bool skip_last;
+};
+
+/**
+ * struct ext4l_readdir_ctx - Extended dir_context with back-pointer
+ * @ctx: base dir_context structure (must be first)
+ * @dir: pointer to ext4l_dir for state updates
+ */
+struct ext4l_readdir_ctx {
+	struct dir_context ctx;
+	struct ext4l_dir *dir;
+};
+
+/**
+ * ext4l_opendir_actor() - dir_context actor that captures single entry
+ *
+ * This actor is called by ext4_readdir for each directory entry. It captures
+ * the first entry found (skipping the previously returned entry if needed)
+ * and returns non-zero to stop iteration.
+ */
+static int ext4l_opendir_actor(struct dir_context *ctx, const char *name,
+			       int namelen, loff_t offset, u64 ino,
+			       unsigned int d_type)
+{
+	struct ext4l_readdir_ctx *rctx;
+	struct ext4l_dir *dir;
+	struct fs_dirent *dent;
+	struct inode *inode;
+
+	rctx = container_of(ctx, struct ext4l_readdir_ctx, ctx);
+	dir = rctx->dir;
+
+	/*
+	 * Skip the entry we returned last time. The htree code may call us
+	 * with the same entry again due to its extra_fname handling.
+	 */
+	if (dir->skip_last && ino == dir->last_ino) {
+		dir->skip_last = false;
+		return 0;  /* Continue to next entry */
+	}
+
+	dent = &dir->dirent;
+
+	/* Copy name */
+	if (namelen >= FS_DIRENT_NAME_LEN)
+		namelen = FS_DIRENT_NAME_LEN - 1;
+	memcpy(dent->name, name, namelen);
+	dent->name[namelen] = '\0';
+
+	/* Set type based on d_type hint */
+	switch (d_type) {
+	case DT_DIR:
+		dent->type = FS_DT_DIR;
+		break;
+	case DT_LNK:
+		dent->type = FS_DT_LNK;
+		break;
+	default:
+		dent->type = FS_DT_REG;
+		break;
+	}
+
+	/* Look up inode to get size and other attributes */
+	inode = ext4_iget(ext4l_sb, ino, 0);
+	if (!IS_ERR(inode)) {
+		dent->size = inode->i_size;
+		/* Refine type from inode mode if needed */
+		if (S_ISDIR(inode->i_mode))
+			dent->type = FS_DT_DIR;
+		else if (S_ISLNK(inode->i_mode))
+			dent->type = FS_DT_LNK;
+		else
+			dent->type = FS_DT_REG;
+	} else {
+		dent->size = 0;
+	}
+
+	dir->entry_found = true;
+	dir->last_ino = ino;
+
+	/*
+	 * Return non-zero to stop iteration after one entry.
+	 * dir_emit() returns (actor(...) == 0), so:
+	 *   actor returns 0 -> dir_emit returns 1 (continue)
+	 *   actor returns non-zero -> dir_emit returns 0 (stop)
+	 */
+	return 1;
+}
+
+int ext4l_opendir(const char *filename, struct fs_dir_stream **dirsp)
+{
+	struct ext4l_dir *dir;
+	struct inode *inode;
+	int ret;
+
+	if (!ext4l_mounted)
+		return -ENODEV;
+
+	ret = ext4l_resolve_path(filename, &inode);
+	if (ret)
+		return ret;
+
+	if (!S_ISDIR(inode->i_mode))
+		return -ENOTDIR;
+
+	dir = calloc(1, sizeof(*dir));
+	if (!dir)
+		return -ENOMEM;
+
+	dir->dir_inode = inode;
+	dir->entry_found = false;
+
+	/* Set up file structure for ext4_readdir */
+	dir->file.f_inode = inode;
+	dir->file.f_mapping = inode->i_mapping;
+	dir->file.private_data = kzalloc(sizeof(struct dir_private_info),
+					 GFP_KERNEL);
+	if (!dir->file.private_data) {
+		free(dir);
+		return -ENOMEM;
+	}
+
+	/* Increment open dir count to prevent unmount */
+	ext4l_open_dirs++;
+
+	*dirsp = (struct fs_dir_stream *)dir;
+
+	return 0;
+}
+
+int ext4l_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
+{
+	struct ext4l_dir *dir = (struct ext4l_dir *)dirs;
+	struct ext4l_readdir_ctx ctx;
+	int ret;
+
+	if (!ext4l_mounted)
+		return -ENODEV;
+
+	memset(&dir->dirent, '\0', sizeof(dir->dirent));
+	dir->entry_found = false;
+
+	/* Skip the entry we returned last time (htree may re-emit it) */
+	if (dir->last_ino)
+		dir->skip_last = true;
+
+	/* Set up extended dir_context for this iteration */
+	memset(&ctx, '\0', sizeof(ctx));
+	ctx.ctx.actor = ext4l_opendir_actor;
+	ctx.ctx.pos = dir->file.f_pos;
+	ctx.dir = dir;
+
+	ret = ext4_readdir(&dir->file, &ctx.ctx);
+
+	/* Update file position for next call */
+	dir->file.f_pos = ctx.ctx.pos;
+
+	if (ret < 0)
+		return ret;
+
+	if (!dir->entry_found)
+		return -ENOENT;
+
+	*dentp = &dir->dirent;
+
+	return 0;
+}
+
+void ext4l_closedir(struct fs_dir_stream *dirs)
+{
+	struct ext4l_dir *dir = (struct ext4l_dir *)dirs;
+
+	if (dir) {
+		if (dir->file.private_data)
+			ext4_htree_free_dir_info(dir->file.private_data);
+		free(dir);
+	}
+
+	/* Decrement open dir count */
+	if (ext4l_open_dirs > 0)
+		ext4l_open_dirs--;
 }

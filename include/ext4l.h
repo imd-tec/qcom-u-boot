@@ -11,6 +11,9 @@
 
 struct blk_desc;
 struct disk_partition;
+struct fs_dir_stream;
+struct fs_dirent;
+struct fs_statfs;
 
 /**
  * ext4l_probe() - Probe a block device for an ext4 filesystem
@@ -30,16 +33,90 @@ void ext4l_close(void);
 
 /**
  * ext4l_ls() - List directory contents
+ *
  * @dirname: Directory path to list
  * Return: 0 on success, negative on error
  */
 int ext4l_ls(const char *dirname);
 
 /**
+ * ext4l_exists() - Check if a file or directory exists
+ *
+ * @filename: Path to check
+ * Return: 1 if exists, 0 if not
+ */
+int ext4l_exists(const char *filename);
+
+/**
+ * ext4l_size() - Get the size of a file
+ *
+ * @filename: Path to file
+ * @sizep: Returns the file size
+ * Return: 0 on success, negative on error
+ */
+int ext4l_size(const char *filename, loff_t *sizep);
+
+/**
+ * ext4l_read() - Read data from a file
+ *
+ * @filename: Path to file
+ * @buf: Buffer to read data into
+ * @offset: Byte offset to start reading from
+ * @len: Number of bytes to read (0 = read entire file from offset)
+ * @actread: Returns actual bytes read
+ * Return: 0 on success, negative on error
+ */
+int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
+	       loff_t *actread);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
+ *
  * @uuid: Buffer to receive the 16-byte UUID
  * Return: 0 on success, -ENODEV if not mounted
  */
 int ext4l_get_uuid(u8 *uuid);
+
+/**
+ * ext4l_uuid() - Get the filesystem UUID as a string
+ *
+ * @uuid_str: Buffer to receive the UUID string (must be at least 37 bytes)
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_uuid(char *uuid_str);
+
+/**
+ * ext4l_statfs() - Get filesystem statistics
+ *
+ * @stats: Pointer to fs_statfs structure to fill
+ * Return: 0 on success, -ENODEV if not mounted
+ */
+int ext4l_statfs(struct fs_statfs *stats);
+
+/**
+ * ext4l_opendir() - Open a directory for iteration
+ *
+ * @filename: Directory path
+ * @dirsp: Returns directory stream pointer
+ * Return: 0 on success, -ENODEV if not mounted, -ENOTDIR if not a directory,
+ *	   -ENOMEM on allocation failure
+ */
+int ext4l_opendir(const char *filename, struct fs_dir_stream **dirsp);
+
+/**
+ * ext4l_readdir() - Read the next directory entry
+ *
+ * @dirs: Directory stream from ext4l_opendir
+ * @dentp: Returns pointer to directory entry
+ * Return: 0 on success, -ENODEV if not mounted, -ENOENT at end of directory
+ */
+int ext4l_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp);
+
+/**
+ * ext4l_closedir() - Close a directory stream
+ *
+ * @dirs: Directory stream to close
+ */
+void ext4l_closedir(struct fs_dir_stream *dirs);
 
 #endif /* __EXT4L_H__ */

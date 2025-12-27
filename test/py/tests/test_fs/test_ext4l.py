@@ -37,13 +37,26 @@ class TestExt4l:
                        shell=True)
             check_call(f'mkfs.ext4 -q {image_path}', shell=True)
 
-            # Add a test file using debugfs (no mount required)
+            # Add test files using debugfs (no mount required)
             with NamedTemporaryFile(mode='w', delete=False) as tmp:
                 tmp.write('hello world\n')
                 tmp_path = tmp.name
             try:
+                # Add a regular file
                 check_call(f'debugfs -w {image_path} '
                            f'-R "write {tmp_path} testfile.txt" 2>/dev/null',
+                           shell=True)
+                # Add a subdirectory
+                check_call(f'debugfs -w {image_path} '
+                           f'-R "mkdir subdir" 2>/dev/null',
+                           shell=True)
+                # Add a file in the subdirectory
+                check_call(f'debugfs -w {image_path} '
+                           f'-R "write {tmp_path} subdir/nested.txt" 2>/dev/null',
+                           shell=True)
+                # Add a symlink
+                check_call(f'debugfs -w {image_path} '
+                           f'-R "symlink link.txt testfile.txt" 2>/dev/null',
                            shell=True)
             finally:
                 os.unlink(tmp_path)
@@ -75,4 +88,53 @@ class TestExt4l:
         with ubman.log.section('Test ext4l ls'):
             output = ubman.run_command(
                 f'ut -f fs fs_test_ext4l_ls_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_opendir(self, ubman, ext4_image):
+        """Test that ext4l can iterate directory entries."""
+        with ubman.log.section('Test ext4l opendir'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_opendir_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_exists(self, ubman, ext4_image):
+        """Test that ext4l_exists reports file existence correctly."""
+        with ubman.log.section('Test ext4l exists'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_exists_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_size(self, ubman, ext4_image):
+        """Test that ext4l_size reports file size correctly."""
+        with ubman.log.section('Test ext4l size'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_size_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_read(self, ubman, ext4_image):
+        """Test that ext4l can read file contents."""
+        with ubman.log.section('Test ext4l read'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_read_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_uuid(self, ubman, ext4_image):
+        """Test that ext4l can return the filesystem UUID."""
+        with ubman.log.section('Test ext4l uuid'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_uuid_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_statfs(self, ubman, ext4_image):
+        """Test that ext4l can return filesystem statistics."""
+        with ubman.log.section('Test ext4l statfs'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_statfs_norun fs_image={ext4_image}')
+            assert 'failures: 0' in output
+
+    def test_fsinfo(self, ubman, ext4_image):
+        """Test that fsinfo command displays filesystem statistics."""
+        with ubman.log.section('Test ext4l fsinfo'):
+            output = ubman.run_command(
+                f'ut -f fs fs_test_ext4l_fsinfo_norun fs_image={ext4_image}')
             assert 'failures: 0' in output

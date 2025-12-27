@@ -2835,8 +2835,19 @@ config CMD_FS_GENERIC
 
 config CMD_FS_UUID
 	bool "fsuuid command"
+	default y if SANDBOX
 	help
 	  Enables fsuuid command for filesystem UUID.
+
+config CMD_FSINFO
+	bool "fsinfo command"
+	depends on !CMD_JFFS2
+	default y if SANDBOX
+	help
+	  Enables the fsinfo command which prints filesystem statistics
+	  such as block size, total blocks, used blocks and free blocks.
+	  This command conflicts with the JFFS2 fsinfo command, so it
+	  cannot be enabled when JFFS2 support is enabled.
 
 config CMD_LUKS
 	bool "luks command"
