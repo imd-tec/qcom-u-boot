@@ -17,6 +17,7 @@ class Commit:
     Variables:
         hash: Commit hash
         subject: Subject line
+        msg: Commit message body (everything after the subject line)
         tags: List of maintainer tag strings
         changes: Dict containing a list of changes (single line strings).
             The dict is indexed by change version (an integer)
@@ -35,6 +36,7 @@ class Commit:
     def __init__(self, hash):
         self.hash = hash
         self.subject = ''
+        self.msg = ''
         self.tags = []
         self.changes = {}
         self.cc_list = []
