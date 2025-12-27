@@ -87,6 +87,8 @@ def pytest_addoption(parser):
         help='Compile U-Boot before running tests')
     parser.addoption('--buildman', default=False, action='store_true',
         help='Use buildman to build U-Boot (assuming --build is given)')
+    parser.addoption('--quiet-hooks', default=False, action='store_true',
+        help='Suppress display of hook commands (still logged to file)')
     parser.addoption(
         '-E', '--allow-exceptions', '-E', default=False, action='store_true',
         help='Avoid catching exceptions with test failures')
@@ -113,6 +115,8 @@ def run_build(config, source_dir, build_dir, board_type, log):
     if config.getoption('buildman'):
         if build_dir != source_dir:
             dest_args = ['-o', build_dir, '-w']
+            if config.getoption('quiet_hooks'):
+                dest_args.append('-I')
         else:
             dest_args = ['-i']
         cmds = (['buildman', '--board', board_type] + dest_args,)
@@ -276,7 +280,9 @@ def pytest_configure(config):
         raise Exception('--gdbserver only supported with sandbox targets')
 
     import multiplexed_log
-    log = multiplexed_log.Logfile(result_dir + '/test-log.html')
+    quiet_hooks = config.getoption('quiet_hooks')
+    log = multiplexed_log.Logfile(result_dir + '/test-log.html',
+                                   quiet_hooks=quiet_hooks)
 
     if config.getoption('build'):
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
@@ -626,7 +632,7 @@ def show_timings():
         if too_long:
             show_bar(f'>{get_time_delta(max_dur)}', too_long_msecs, too_long)
         log.info(buf.getvalue())
-    if ubconfig and hasattr(ubconfig, 'timing'):
+    if ubconfig and ubconfig.timing:
         print(buf.getvalue(), end='')
 
 
