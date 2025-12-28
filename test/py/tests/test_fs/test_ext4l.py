@@ -118,3 +118,8 @@ class TestExt4l:
         """Test that fsinfo command displays filesystem statistics."""
         with ubman.log.section('Test ext4l fsinfo'):
             ubman.run_ut('fs', 'fs_test_ext4l_fsinfo', fs_image=ext4_image)
+
+    def test_write(self, ubman, ext4_image):
+        """Test that ext4l can write file contents."""
+        with ubman.log.section('Test ext4l write'):
+            ubman.run_ut('fs', 'fs_test_ext4l_write', fs_image=ext4_image)

@@ -396,3 +396,45 @@ static int fs_test_ext4l_statfs_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_statfs_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_write_norun() - Test ext4l_write function
+ *
+ * Verifies that ext4l can write file contents to the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_write_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "test write data\n";
+	size_t test_len = strlen(test_data);
+	loff_t actwrite, actread;
+	char read_buf[32];
+	loff_t size;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Write a new file */
+	ut_assertok(ext4l_write("/newfile.txt", (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify the file exists and has correct size */
+	ut_asserteq(1, ext4l_exists("/newfile.txt"));
+	ut_assertok(ext4l_size("/newfile.txt", &size));
+	ut_asserteq(test_len, size);
+
+	/* Read back and verify contents */
+	memset(read_buf, '\0', sizeof(read_buf));
+	ut_assertok(ext4l_read("/newfile.txt", read_buf, 0, 0, &actread));
+	ut_asserteq(test_len, actread);
+	ut_asserteq_str(test_data, read_buf);
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_write_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

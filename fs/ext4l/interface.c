@@ -874,6 +874,277 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 	return 0;
 }
 
+static int ext4l_write_file(struct inode *dir, const char *filename, void *buf,
+			    loff_t offset, loff_t len, loff_t *actwrite)
+{
+	struct dentry *dir_dentry, *dentry, *result;
+	handle_t *handle = NULL;
+	struct buffer_head *bh;
+	struct inode *inode;
+	loff_t pos, end;
+	umode_t mode;
+	int ret;
+
+	/* Create dentry for the parent directory */
+	dir_dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dir_dentry)
+		return -ENOMEM;
+	dir_dentry->d_inode = dir;
+	dir_dentry->d_sb = dir->i_sb;
+
+	/* Create dentry for the filename */
+	dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dentry) {
+		kfree(dir_dentry);
+		return -ENOMEM;
+	}
+
+	/* Initialize dentry (kzalloc already zeros memory) */
+	dentry->d_name.name = filename;
+	dentry->d_name.len = strlen(filename);
+	dentry->d_sb = dir->i_sb;
+	dentry->d_parent = dir_dentry;
+
+	/* Lookup file */
+	result = ext4_lookup(dir, dentry, 0);
+
+	if (IS_ERR(result)) {
+		ret = PTR_ERR(result);
+		goto out_dentry;
+	}
+
+	if (result && result->d_inode) {
+		/* File exists - use the existing inode for overwrite */
+		inode = result->d_inode;
+		if (result != dentry) {
+			/* Use the result dentry instead */
+			kfree(dentry);
+			dentry = result;
+		}
+	} else {
+		/* ext4_lookup returned NULL or a dentry with NULL inode */
+		if (result && result != dentry) {
+			/* Free the result dentry since it doesn't have an inode */
+			kfree(result);
+		}
+		/* Keep using our original dentry */
+		dentry->d_inode = NULL;
+
+		/* File does not exist, create it */
+		/* Mode: 0644 (rw-r--r--) | S_IFREG */
+		mode = S_IFREG | 0644;
+		ret = ext4_create(&nop_mnt_idmap, dir, dentry, mode, true);
+		if (ret)
+			goto out_dentry;
+
+		inode = dentry->d_inode;
+	}
+	if (!inode) {
+		ret = -EIO;
+		goto out_dentry;
+	}
+
+	/*
+	 * Attach jinode for journaling if needed (like ext4_file_open does).
+	 * This is required for ordered data mode.
+	 */
+	ret = ext4_inode_attach_jinode(inode);
+	if (ret < 0)
+		goto out_dentry;
+
+	/*
+	 * Start a journal handle for the write operation.
+	 * U-Boot uses a synchronous single-transaction model where
+	 * ext4_journal_stop() commits immediately for crash safety.
+	 */
+	handle = ext4_journal_start(inode, EXT4_HT_WRITE_PAGE,
+				    EXT4_DATA_TRANS_BLOCKS(inode->i_sb));
+	if (IS_ERR(handle)) {
+		ret = PTR_ERR(handle);
+		handle = NULL;
+		goto out_dentry;
+	}
+
+	/* Write data to file */
+	pos = offset;
+	end = offset + len;
+	while (pos < end) {
+		ext4_lblk_t block = pos >> inode->i_blkbits;
+		uint block_offset = pos & (inode->i_sb->s_blocksize - 1);
+		uint bytes_to_write = inode->i_sb->s_blocksize - block_offset;
+		int needed_credits = EXT4_DATA_TRANS_BLOCKS(inode->i_sb);
+
+		if (pos + bytes_to_write > end)
+			bytes_to_write = end - pos;
+
+		/*
+		 * Ensure we have enough journal credits for this block.
+		 * Each block allocation can use up to EXT4_DATA_TRANS_BLOCKS
+		 * credits. Try to extend, or restart the transaction if needed.
+		 */
+		ret = ext4_journal_ensure_credits(handle, needed_credits, 0);
+		if (ret < 0)
+			goto out_handle;
+
+		bh = ext4_getblk(handle, inode, block, 0);
+
+		if (IS_ERR(bh)) {
+			ret = PTR_ERR(bh);
+			goto out_handle;
+		}
+		if (!bh) {
+			/* Block doesn't exist, allocate it */
+			bh = ext4_getblk(handle, inode, block,
+					 EXT4_GET_BLOCKS_CREATE);
+			if (IS_ERR(bh)) {
+				ret = PTR_ERR(bh);
+				goto out_handle;
+			}
+			if (!bh) {
+				ret = -EIO;
+				goto out_handle;
+			}
+		}
+
+		/* Get write access for journaling */
+		ret = ext4_journal_get_write_access(handle, inode->i_sb, bh,
+						    EXT4_JTR_NONE);
+		if (ret) {
+			brelse(bh);
+			goto out_handle;
+		}
+
+		/* Copy data to buffer */
+		memcpy(bh->b_data + block_offset, buf + (pos - offset),
+		       bytes_to_write);
+
+		/*
+		 * In data=journal mode, file data goes through the journal.
+		 * In data=ordered mode, write directly to disk.
+		 */
+		if (ext4_should_journal_data(inode)) {
+			/* data=journal: write through journal */
+			ret = ext4_handle_dirty_metadata(handle, inode, bh);
+			if (ret) {
+				brelse(bh);
+				goto out_handle;
+			}
+		} else {
+			/* data=ordered: write directly to disk */
+			mark_buffer_dirty(bh);
+			ret = sync_dirty_buffer(bh);
+			if (ret) {
+				brelse(bh);
+				goto out_handle;
+			}
+		}
+
+		brelse(bh);
+		pos += bytes_to_write;
+	}
+
+	/* Update inode size */
+	if (end > inode->i_size) {
+		i_size_write(inode, end);
+		/*
+		 * Also update i_disksize in ext4_inode_info - this is what gets
+		 * written to disk via ext4_fill_raw_inode -> ext4_isize_set
+		 */
+		EXT4_I(inode)->i_disksize = end;
+		/* Mark inode dirty to update on disk */
+		ext4_mark_inode_dirty(handle, inode);
+	}
+
+	*actwrite = len;
+	ret = 0;
+
+out_handle:
+	/* Stop handle - this commits the transaction synchronously in U-Boot */
+	if (handle) {
+		int stop_ret = ext4_journal_stop(handle);
+
+		if (stop_ret) {
+			if (!ret)
+				ret = stop_ret;
+		}
+	}
+
+out_dentry:
+	/*
+	 * Free our manually allocated dentries. In U-Boot's minimal dcache,
+	 * these won't be cached elsewhere.
+	 */
+	kfree(dir_dentry);
+	kfree(dentry);
+	return ret;
+}
+
+int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
+		loff_t *actwrite)
+{
+	struct inode *parent_inode = NULL;
+	char *parent_path = NULL;
+	const char *basename;
+	char *path_copy;
+	char *last_slash;
+	int ret;
+
+	if (!ext4l_sb)
+		return -ENODEV;
+
+	if (!filename || !buf || !actwrite)
+		return -EINVAL;
+
+	/* Check if filesystem is mounted read-write */
+	if (ext4l_sb->s_flags & SB_RDONLY)
+		return -EROFS;
+
+	/* Parse filename to get parent directory and basename */
+	path_copy = strdup(filename);
+	if (!path_copy)
+		return -ENOMEM;
+
+	last_slash = strrchr(path_copy, '/');
+
+	if (last_slash) {
+		*last_slash = '\0';
+		parent_path = path_copy;
+		basename = last_slash + 1;
+		if (*parent_path == '\0') /* Root directory */
+			parent_path = "/";
+	} else {
+		parent_path = "/";
+		basename = filename;
+	}
+
+	/* Resolve parent directory inode */
+	ret = ext4l_resolve_path(parent_path, &parent_inode);
+	if (ret) {
+		free(path_copy);
+		return ret;
+	}
+
+	if (!S_ISDIR(parent_inode->i_mode)) {
+		free(path_copy);
+		return -ENOTDIR;
+	}
+
+	/* Call write implementation */
+	ret = ext4l_write_file(parent_inode, basename, buf, offset, len,
+			       actwrite);
+
+	/* Sync all dirty buffers - U-Boot has no journal thread */
+	if (!ret) {
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+	}
+
+	free(path_copy);
+	return ret;
+}
+
 void ext4l_close(void)
 {
 	ext4l_close_internal(false);
