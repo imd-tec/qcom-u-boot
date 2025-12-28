@@ -328,8 +328,8 @@ extern struct user_namespace init_user_ns;
 /* Buffer operations - stubs */
 #define wait_on_buffer(bh)		do { } while (0)
 #define __bforget(bh)			do { } while (0)
-#define mark_buffer_dirty_inode(bh, i)	do { } while (0)
-#define mark_buffer_dirty(bh)		do { } while (0)
+#define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
+#define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
 #define lock_buffer(bh)			set_buffer_locked(bh)
 #define unlock_buffer(bh)		clear_buffer_locked(bh)
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
@@ -399,7 +399,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 
 /* Buffer cache operations */
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
-#define sync_dirty_buffer(bh)			({ (void)(bh); 0; })
+#define sync_dirty_buffer(bh)			submit_bh(REQ_OP_WRITE, bh)
 
 /* Time functions */
 #define ktime_get_real_seconds()		(0)
@@ -2181,8 +2181,8 @@ struct blk_holder_ops {
 };
 static const struct blk_holder_ops fs_holder_ops;
 
-/* end_buffer_write_sync */
-#define end_buffer_write_sync		NULL
+/* end_buffer_write_sync - implemented in support.c */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
 /* File system management time flag */
 #define FS_MGTIME			0
@@ -2886,7 +2886,9 @@ void free_buffer_head(struct buffer_head *bh);
 /* ext4l support functions (support.c) */
 void ext4l_crc32c_init(void);
 void bh_cache_clear(void);
+int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
+int ext4l_write_block(sector_t block, size_t size, void *buffer);
 
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
@@ -2921,7 +2923,8 @@ struct membuf *ext4l_get_msg_buf(void);
 
 /* JBD2 journal.c stubs */
 struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
-#define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size);
 int bmap(struct inode *inode, sector_t *block);
 #define trace_jbd2_update_log_tail(j, t, b, f) \
 	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)

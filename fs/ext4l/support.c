@@ -268,6 +268,34 @@ void bh_cache_clear(void)
 }
 
 /**
+ * bh_cache_sync() - Sync all dirty buffers to disk
+ *
+ * U-Boot doesn't have a journal thread, so we need to manually sync
+ * all dirty buffers after write operations.
+ *
+ * Return: 0 on success, negative on first error
+ */
+int bh_cache_sync(void)
+{
+	int i, ret = 0;
+	struct bh_cache_entry *entry;
+
+	for (i = 0; i < BH_CACHE_SIZE; i++) {
+		for (entry = bh_cache[i]; entry; entry = entry->next) {
+			if (entry->bh && buffer_dirty(entry->bh)) {
+				int err = ext4l_write_block(entry->bh->b_blocknr,
+							    entry->bh->b_size,
+							    entry->bh->b_data);
+				if (err && !ret)
+					ret = err;
+				clear_buffer_dirty(entry->bh);
+			}
+		}
+	}
+	return ret;
+}
+
+/**
  * alloc_buffer_head() - Allocate a buffer_head structure
  * @gfp_mask: Allocation flags (ignored in U-Boot)
  * Return: Pointer to buffer_head or NULL on error
@@ -328,19 +356,25 @@ static struct buffer_head *alloc_buffer_head_with_data(size_t size)
  * @bh: Buffer head to free
  *
  * Only free b_data if BH_OwnsData is set. Shadow buffers created by
- * jbd2_journal_write_metadata_buffer() share b_data with the original
- * buffer and should not free it.
+ * jbd2_journal_write_metadata_buffer() share b_data/b_folio with the original
+ * buffer and should not free them. Shadow buffers are identified by having
+ * b_private set to point to the original buffer.
  */
 void free_buffer_head(struct buffer_head *bh)
 {
 	if (!bh)
 		return;
 
+	/*
+	 * Shadow buffers (b_private != NULL) share their folio with the
+	 * original buffer. Don't free the shared folio.
+	 */
+	if (!bh->b_private && bh->b_folio)
+		free(bh->b_folio);
+
 	/* Only free b_data if this buffer owns it */
 	if (bh->b_data && test_bit(BH_OwnsData, &bh->b_state))
 		free(bh->b_data);
-	if (bh->b_folio)
-		free(bh->b_folio);
 	free(bh);
 }
 
@@ -452,6 +486,50 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block)
 }
 
 /**
+ * __getblk() - Get a buffer for a given block device
+ * @bdev: Block device
+ * @block: Block number
+ * @size: Block size
+ * Return: Buffer head or NULL on error
+ *
+ * Similar to sb_getblk but takes a block device instead of superblock.
+ * Used by the journal to allocate descriptor buffers.
+ */
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size)
+{
+	struct buffer_head *bh;
+
+	if (!bdev || !size)
+		return NULL;
+
+	/* Check cache first - must match block number AND size */
+	bh = bh_cache_lookup(block, size);
+	if (bh)
+		return bh;
+
+	/* Allocate new buffer */
+	bh = alloc_buffer_head_with_data(size);
+	if (!bh)
+		return NULL;
+
+	bh->b_blocknr = block;
+	bh->b_bdev = bdev;
+	bh->b_size = size;
+
+	/* Mark buffer as having a valid disk mapping */
+	set_buffer_mapped(bh);
+
+	/* Don't read - just allocate with zeroed data */
+	memset(bh->b_data, '\0', bh->b_size);
+
+	/* Add to cache */
+	bh_cache_insert(bh);
+
+	return bh;
+}
+
+/**
  * sb_bread() - Read a block via super_block
  * @sb: Super block
  * @block: Block number to read
@@ -503,12 +581,17 @@ void brelse(struct buffer_head *bh)
 }
 
 /**
- * __brelse() - Release a buffer_head (alternate API)
+ * __brelse() - Release a buffer_head reference without freeing
  * @bh: Buffer head to release
+ *
+ * Unlike brelse(), this only decrements the reference count without
+ * freeing the buffer when count reaches zero. Used when caller will
+ * explicitly free with free_buffer_head() afterward.
  */
 void __brelse(struct buffer_head *bh)
 {
-	brelse(bh);
+	if (bh)
+		atomic_dec(&bh->b_count);
 }
 
 /**
@@ -583,6 +666,23 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
 }
 
 /**
+ * end_buffer_write_sync() - Completion handler for synchronous buffer writes
+ * @bh: Buffer head that completed I/O
+ * @uptodate: 1 if I/O succeeded, 0 if failed
+ *
+ * This callback is invoked after a buffer write completes. It sets the
+ * buffer's uptodate state based on the result and unlocks the buffer.
+ */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
+
+/**
  * submit_bh() - Submit a buffer_head for I/O
  * @op: Operation (REQ_OP_READ, REQ_OP_WRITE, etc.)
  * @bh: Buffer head to submit
@@ -590,26 +690,38 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
  */
 int submit_bh(int op, struct buffer_head *bh)
 {
-	int ret;
+	int ret = 0;
 	int op_type = op & REQ_OP_MASK;  /* Mask out flags, keep operation type */
+	int uptodate;
 
 	if (op_type == REQ_OP_READ) {
 		ret = ext4l_read_block(bh->b_blocknr, bh->b_size, bh->b_data);
 		if (ret) {
 			clear_buffer_uptodate(bh);
-			return ret;
+			uptodate = 0;
+		} else {
+			set_buffer_uptodate(bh);
+			uptodate = 1;
 		}
-		set_buffer_uptodate(bh);
 	} else if (op_type == REQ_OP_WRITE) {
 		ret = ext4l_write_block(bh->b_blocknr, bh->b_size, bh->b_data);
 		if (ret) {
 			clear_buffer_uptodate(bh);
-			return ret;
+			set_buffer_write_io_error(bh);
+			uptodate = 0;
+		} else {
+			clear_buffer_write_io_error(bh);
+			uptodate = 1;
 		}
-		/* Mark buffer as clean (not dirty) after write */
+	} else {
+		uptodate = 0;
 	}
 
-	return 0;
+	/* Call b_end_io callback if set - U-Boot does sync I/O */
+	if (bh->b_end_io)
+		bh->b_end_io(bh, uptodate);
+
+	return ret;
 }
 
 /**
