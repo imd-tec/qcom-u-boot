@@ -515,8 +515,14 @@ struct sb_writers {
 
 /* Buffer head - from linux/buffer_head.h */
 #include <linux/buffer_head.h>
+#include <linux/jbd2.h>
 
-/* BH_JBDPrivateStart is defined in jbd2.h as an enum value */
+/*
+ * U-Boot: marks buffer owns b_data and should free it.
+ * Use BH_JBDPrivateStart to avoid conflicts with JBD2 state bits.
+ */
+#define BH_OwnsData		BH_JBDPrivateStart
+BUFFER_FNS(OwnsData, ownsdata)
 
 /* Forward declare for get_block_t */
 struct inode;
@@ -2153,10 +2159,13 @@ struct fs_parse_result {
 #define BLK_OPEN_WRITE			(1 << 1)
 #define BLK_OPEN_RESTRICT_WRITES	(1 << 2)
 
-/* Request flags */
+/* Request operation (bits 0-7) and flags (bits 8+) */
 #define REQ_OP_WRITE			1
-#define REQ_SYNC			(1 << 0)
-#define REQ_FUA				(1 << 1)
+#define REQ_OP_MASK			0xff
+
+/* ensure these values are outside the operations mask */
+#define REQ_SYNC			(1 << 8)
+#define REQ_FUA				(1 << 9)
 
 /* blk_holder_ops for block device */
 struct blk_holder_ops {

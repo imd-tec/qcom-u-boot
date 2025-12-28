@@ -37,8 +37,6 @@ enum bh_state_bits {
 	BH_PrivateStart,/* not a state bit, but the first bit available
 			 * for private allocation by other entities
 			 */
-	/* U-Boot specific: marks buffer owns b_data and should free it */
-	BH_OwnsData = BH_PrivateStart,
 };
 
 #define MAX_BUF_PER_PAGE (PAGE_SIZE / 512)
