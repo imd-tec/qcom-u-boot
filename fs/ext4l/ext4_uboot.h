@@ -349,13 +349,15 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
  * We implement them in interface.c for sandbox.
  */
 
-/* Little-endian bit operations */
-#define __set_bit_le(nr, addr)		((void)(nr), (void)(addr))
-#define test_bit_le(nr, addr)		({ (void)(nr); (void)(addr); 0; })
+/* Little-endian bit operations - use arch-provided find_next_zero_bit */
 #define find_next_zero_bit_le(addr, size, offset) \
-	({ (void)(addr); (void)(size); (offset); })
-#define __test_and_clear_bit_le(nr, addr) ({ (void)(nr); (void)(addr); 0; })
-#define __test_and_set_bit_le(nr, addr)	({ (void)(nr); (void)(addr); 0; })
+	find_next_zero_bit((void *)addr, size, offset)
+#define __set_bit_le(nr, addr)		set_bit(nr, addr)
+#define test_bit_le(nr, addr)		test_bit(nr, addr)
+#define __test_and_clear_bit_le(nr, addr) \
+	({ int __old = test_bit(nr, addr); clear_bit(nr, addr); __old; })
+#define __test_and_set_bit_le(nr, addr) \
+	({ int __old = test_bit(nr, addr); set_bit(nr, addr); __old; })
 
 /* KUNIT stub */
 #define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
