@@ -23,6 +23,12 @@ static struct kmem_cache *ext4_system_zone_cachep;
 
 int __init ext4_init_system_zone(void)
 {
+#ifdef __UBOOT__
+	/* Already initialized - skip in multiple mount scenarios */
+	if (ext4_system_zone_cachep)
+		return 0;
+#endif
+
 	ext4_system_zone_cachep = KMEM_CACHE(ext4_system_zone, 0);
 	if (ext4_system_zone_cachep == NULL)
 		return -ENOMEM;
@@ -33,6 +39,10 @@ void ext4_exit_system_zone(void)
 {
 	rcu_barrier();
 	kmem_cache_destroy(ext4_system_zone_cachep);
+#ifdef __UBOOT__
+	/* Reset pointer for clean reinitialization */
+	ext4_system_zone_cachep = NULL;
+#endif
 }
 
 static inline int can_merge(struct ext4_system_zone *entry1,

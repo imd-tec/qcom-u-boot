@@ -189,6 +189,12 @@ static int __revise_pending(struct inode *inode, ext4_lblk_t lblk,
 
 int __init ext4_init_es(void)
 {
+#ifdef __UBOOT__
+	/* Already initialized - skip in multiple mount scenarios */
+	if (ext4_es_cachep)
+		return 0;
+#endif
+
 	ext4_es_cachep = KMEM_CACHE(extent_status, SLAB_RECLAIM_ACCOUNT);
 	if (ext4_es_cachep == NULL)
 		return -ENOMEM;
