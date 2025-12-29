@@ -72,69 +72,49 @@ class TestExt4l:
     def test_probe(self, ubman, ext4_image):
         """Test that ext4l can probe an ext4 filesystem."""
         with ubman.log.section('Test ext4l probe'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_probe_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_probe', fs_image=ext4_image)
 
     def test_msgs(self, ubman, ext4_image):
         """Test that ext4l_msgs env var produces mount messages."""
         with ubman.log.section('Test ext4l msgs'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_msgs_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_msgs', fs_image=ext4_image)
 
     def test_ls(self, ubman, ext4_image):
         """Test that ext4l can list directory contents."""
         with ubman.log.section('Test ext4l ls'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_ls_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_ls', fs_image=ext4_image)
 
     def test_opendir(self, ubman, ext4_image):
         """Test that ext4l can iterate directory entries."""
         with ubman.log.section('Test ext4l opendir'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_opendir_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_opendir', fs_image=ext4_image)
 
     def test_exists(self, ubman, ext4_image):
         """Test that ext4l_exists reports file existence correctly."""
         with ubman.log.section('Test ext4l exists'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_exists_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_exists', fs_image=ext4_image)
 
     def test_size(self, ubman, ext4_image):
         """Test that ext4l_size reports file size correctly."""
         with ubman.log.section('Test ext4l size'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_size_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_size', fs_image=ext4_image)
 
     def test_read(self, ubman, ext4_image):
         """Test that ext4l can read file contents."""
         with ubman.log.section('Test ext4l read'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_read_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_read', fs_image=ext4_image)
 
     def test_uuid(self, ubman, ext4_image):
         """Test that ext4l can return the filesystem UUID."""
         with ubman.log.section('Test ext4l uuid'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_uuid_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_uuid', fs_image=ext4_image)
 
     def test_statfs(self, ubman, ext4_image):
         """Test that ext4l can return filesystem statistics."""
         with ubman.log.section('Test ext4l statfs'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_statfs_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_statfs', fs_image=ext4_image)
 
     def test_fsinfo(self, ubman, ext4_image):
         """Test that fsinfo command displays filesystem statistics."""
         with ubman.log.section('Test ext4l fsinfo'):
-            output = ubman.run_command(
-                f'ut -f fs fs_test_ext4l_fsinfo_norun fs_image={ext4_image}')
-            assert 'failures: 0' in output
+            ubman.run_ut('fs', 'fs_test_ext4l_fsinfo', fs_image=ext4_image)
