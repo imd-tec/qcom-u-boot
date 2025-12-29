@@ -367,6 +367,14 @@ int __ext4_handle_dirty_metadata(const char *where, unsigned int line,
 	set_buffer_uptodate(bh);
 	if (ext4_handle_valid(handle)) {
 		err = jbd2_journal_dirty_metadata(handle, bh);
+#ifdef __UBOOT__
+		/*
+		 * Also mark buffer dirty for bh_cache_sync().
+		 * The journal may not write buffers to final locations,
+		 * so we need bh_cache_sync() to write them.
+		 */
+		mark_buffer_dirty(bh);
+#endif
 		/* Errors can only happen due to aborted journal or a nasty bug */
 		if (!is_handle_aborted(handle) && WARN_ON_ONCE(err)) {
 			ext4_journal_abort_handle(where, line, __func__, bh,
