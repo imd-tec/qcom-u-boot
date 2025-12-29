@@ -27,10 +27,12 @@ static int dm_test_spi_flash(struct unit_test_state *uts)
 	uint map_size;
 	ulong map_base;
 	uint offset;
+	char pathname[256];
 	int i;
 
 	src = map_sysmem(0x20000, full_size);
-	ut_assertok(os_write_file("spi.bin", src, full_size));
+	ut_assertok(os_persistent_file(pathname, sizeof(pathname), "spi.bin"));
+	ut_assertok(os_write_file(pathname, src, full_size));
 	ut_assertok(uclass_first_device_err(UCLASS_SPI_FLASH, &dev));
 
 	dst = map_sysmem(0x20000 + full_size, full_size);

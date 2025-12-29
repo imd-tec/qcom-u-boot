@@ -126,7 +126,9 @@ static int sandbox_sf_probe(struct udevice *dev)
 	struct dm_spi_slave_plat *slave_plat;
 	struct udevice *bus = dev->parent;
 	const char *spec = NULL;
+	const char *filename;
 	struct udevice *emul;
+	char buf[256];
 	int ret = 0;
 	int cs = -1;
 
@@ -170,10 +172,16 @@ static int sandbox_sf_probe(struct udevice *dev)
 	if (sandbox_sf_0xff[0] == 0x00)
 		memset(sandbox_sf_0xff, 0xff, sizeof(sandbox_sf_0xff));
 
-	sbsf->fd = os_open(pdata->filename, 02);
+	/*
+	 * Try persistent data directory first, then fall back to the
+	 * filename as given (for absolute paths or current directory)
+	 */
+	filename = pdata->filename;
+	if (!os_persistent_file(buf, sizeof(buf), pdata->filename))
+		filename = buf;
+	sbsf->fd = os_open(filename, 02);
 	if (sbsf->fd < 0) {
-		printf("%s: unable to open file '%s'\n", __func__,
-		       pdata->filename);
+		log_err("Unable to open file '%s'\n", filename);
 		ret = -EIO;
 		goto error;
 	}

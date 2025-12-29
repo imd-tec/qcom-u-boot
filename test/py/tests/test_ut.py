@@ -42,7 +42,7 @@ def test_ut_dm_init(ubman):
         with open(fn, 'wb') as fh:
             fh.write(data)
 
-    fn = ubman.config.source_dir + '/spi.bin'
+    fn = ubman.config.persistent_data_dir + '/spi.bin'
     if not os.path.exists(fn):
         data = b'\x00' * (2 * 1024 * 1024)
         with open(fn, 'wb') as fh:
