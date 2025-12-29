@@ -305,8 +305,30 @@ int jbd2_journal_write_metadata_buffer(transaction_t *transaction,
 	struct buffer_head *new_bh;
 	struct folio *new_folio;
 	unsigned int new_offset;
-	struct buffer_head *bh_in = jh2bh(jh_in);
+	struct buffer_head *bh_in;
 	journal_t *journal = transaction->t_journal;
+
+#ifdef __UBOOT__
+	/* Validate jh_in before dereferencing */
+	if (!jh_in || !jh_in->b_bh) {
+		printf("jbd2: ERROR: invalid jh_in=%p b_bh=%p\n",
+		       jh_in, jh_in ? jh_in->b_bh : NULL);
+		return -EIO;
+	}
+#endif
+	bh_in = jh2bh(jh_in);
+#ifdef __UBOOT__
+	/* Additional validation for buffer head */
+	if (!bh_in->b_folio || !bh_in->b_blocknr) {
+		printf("jbd2: ERROR: bh=%p folio=%p blocknr=%llu b_data=%p b_count=%d\n",
+		       bh_in, bh_in->b_folio, (unsigned long long)bh_in->b_blocknr,
+		       bh_in->b_data, atomic_read(&bh_in->b_count));
+		printf("jbd2: ERROR: jh=%p b_jlist=%d b_jcount=%d b_next=%p\n",
+		       jh_in, jh_in->b_jlist, jh_in->b_jcount,
+		       jh_in->b_tnext);
+		return -EIO;
+	}
+#endif
 
 	/*
 	 * The buffer really shouldn't be locked: only the current committing
