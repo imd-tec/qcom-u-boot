@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    ut [-r<runs>] [-f] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
+    ut [-fmr<runs>] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
     ut [-s] info
 
 Description
@@ -26,11 +26,13 @@ suite
 test
     Speciifes a particular test to run, within a suite, or all suites
 
--f
-    Forces running of a manual test.
+-f, -m
+    Force running of manual tests. Manual tests have the `_norun` suffix and
+    are normally skipped because they require external setup (e.g., creating
+    disk images from Python/pytest).
 
 -r <n>
-    Specifies the number of types to run each test
+    Specifies the number of times to run each test
 
 -I <n>:<one_test>
     Test to run after <n> other tests have run.  This is used to find which test

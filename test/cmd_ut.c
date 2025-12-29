@@ -272,6 +272,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			runs_per_text = dectoul(str + 2, NULL);
 			break;
 		case 'f':
+		case 'm':
 			force_run = true;
 			break;
 		case 'I':
@@ -340,9 +341,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-rs] [-f] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"[-fmrs] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
 	"   -r<runs>   Number of times to run each test\n"
-	"   -f         Force 'manual' tests to run as well\n"
+	"   -f/-m      Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"
 	"   -R         Preserve console recording on test failure\n"
 	"   -s         Show all suites with ut info\n"
