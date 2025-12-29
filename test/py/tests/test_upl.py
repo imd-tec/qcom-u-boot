@@ -33,5 +33,4 @@ def test_upl_handoff(ubman):
     assert 'UPL state: active' == output
 
     # Check the FIT offsets look correct
-    output = ubman.run_command('ut upl -f upl_test_info_norun')
-    assert 'failures: 0' in output
+    ubman.run_ut('upl', 'upl_test_info')

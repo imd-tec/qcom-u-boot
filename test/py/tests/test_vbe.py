@@ -127,9 +127,7 @@ def test_vbe_extlinux_fit_no_oem(ubman):
     fname = os.path.join(ubman.config.persistent_data_dir, 'vbe0.img')
     ubman.run_command(f'host bind 0 {fname}')
 
-    ubman.run_command('ut -f bootstd vbe_test_abrec_no_oem_norun')
-    result = ubman.run_command('echo $?')
-    assert '0' == result
+    ubman.run_ut('bootstd', 'vbe_test_abrec_no_oem')
 
 @pytest.mark.boardspec('sandbox')
 def test_vbe_extlinux_fit_oem(ubman):
@@ -137,6 +135,4 @@ def test_vbe_extlinux_fit_oem(ubman):
     fname = os.path.join(ubman.config.persistent_data_dir, 'vbe1.img')
     ubman.run_command(f'host bind 0 {fname}')
 
-    ubman.run_command('ut -f bootstd vbe_test_abrec_oem_norun')
-    result = ubman.run_command('echo $?')
-    assert '0' == result
+    ubman.run_ut('bootstd', 'vbe_test_abrec_oem')
