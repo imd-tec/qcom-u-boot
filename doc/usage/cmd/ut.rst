@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    ut [-Efmr<runs>] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
+    ut [-Efmr<runs>] [-R] [-I<n>:<one_test>] [-P<n>:<w>] [<suite> | all [<test>]] [<args>...]
     ut [-s] info
 
 Description
@@ -43,6 +43,12 @@ test
     Test to run after <n> other tests have run.  This is used to find which test
     causes another test to fail. If the one test fails, testing stops
     immediately.
+
+-P <n>:<w>
+    Run as worker `<w>` of `<n>` parallel workers. Tests are distributed by
+    index modulo number of workers, so each worker runs a disjoint subset of
+    tests. This allows running tests in parallel across multiple sandbox
+    instances.
 
 -R
     Preserve console recording on test failure. Normally when a test fails,

@@ -790,6 +790,10 @@ static int ut_run_tests(struct unit_test_state *uts, const char *prefix,
 		    !test_matches(prefix, test_name, select_name))
 			continue;
 
+		/* Skip tests not assigned to this worker */
+		if (uts->workers && upto % uts->workers != uts->worker_id)
+			continue;
+
 		if (test->flags & UTF_MANUAL) {
 			int len;
 

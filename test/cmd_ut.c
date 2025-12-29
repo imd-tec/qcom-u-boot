@@ -257,6 +257,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	bool keep_record = false;
 	bool emit_result = false;
 	int runs_per_text = 1;
+	int workers = 0, worker_id = 0;
 	struct suite *ste;
 	char *name;
 	int ret;
@@ -285,6 +286,15 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 				if (!strchr(test_insert, ':'))
 					return CMD_RET_USAGE;
 				goto next_arg;
+			case 'P': {
+				const char *colon = strchr(str + 1, ':');
+
+				if (!colon)
+					return CMD_RET_USAGE;
+				workers = dectoul(str + 1, NULL);
+				worker_id = dectoul(colon + 1, NULL);
+				goto next_arg;
+			}
 			case 'R':
 				keep_record = true;
 				break;
@@ -304,6 +314,8 @@ next_arg:
 	ut_init_state(&uts);
 	uts.keep_record = keep_record;
 	uts.emit_result = emit_result;
+	uts.workers = workers;
+	uts.worker_id = worker_id;
 	name = argv[0];
 	select_name = cmd_arg1(argc, argv);
 
@@ -349,11 +361,13 @@ next_arg:
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-Efmrs] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"[-Efmrs] [-R] [-I<n>:<one_test>] [-P<n>:<w>] <suite> [<test> [<args>...]]\n"
+	"                                                    - run unit tests\n"
 	"   -E         Emit result line after each test\n"
 	"   -r<runs>   Number of times to run each test\n"
 	"   -f/-m      Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"
+	"   -P<n>:<w>  Run as worker <w> of <n> parallel workers\n"
 	"   -R         Preserve console recording on test failure\n"
 	"   -s         Show all suites with ut info\n"
 	"   <suite>    Test suite to run (or comma-separated list)\n"
