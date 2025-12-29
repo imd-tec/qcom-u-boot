@@ -87,7 +87,6 @@ bootm loados
 bootm prep
 fdt addr
 fdt print
-ut -f bootstd vbe_test_fixup_norun
 '''
 
 @pytest.mark.boardspec('sandbox')
@@ -117,9 +116,9 @@ def test_vbe_os_request(ubman):
     cmd = base_script % params
 
     with ubman.log.section('Kernel load'):
-        output = ubman.run_command_list(cmd.splitlines())
+        ubman.run_command_list(cmd.splitlines())
 
-    assert 'failures: 0' in output[-1]
+    ubman.run_ut('bootstd', 'vbe_test_fixup')
 
 @pytest.mark.boardspec('sandbox')
 def test_vbe_extlinux_fit_no_oem(ubman):
