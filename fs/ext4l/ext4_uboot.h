@@ -375,7 +375,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 
 /* Quota operations - stubs (only define if quotaops.h not included) */
 #ifndef _LINUX_QUOTAOPS_H
-#define dquot_alloc_block_nofail(inode, nr)	({ (void)(inode); (void)(nr); 0; })
+#define dquot_alloc_block_nofail(inode, nr)	\
+	({ (inode)->i_blocks += (nr) << ((inode)->i_blkbits - 9); 0; })
 #define dquot_initialize(inode)			({ (void)(inode); 0; })
 #define dquot_free_inode(inode)			do { (void)(inode); } while (0)
 #define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
