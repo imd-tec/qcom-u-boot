@@ -170,11 +170,20 @@ static int sandbox_mmc_probe(struct udevice *dev)
 	int ret;
 
 	if (plat->fname) {
-		ret = os_map_file(plat->fname, OS_O_RDWR | OS_O_CREAT,
+		const char *fname = plat->fname;
+		char buf[256];
+
+		/*
+		 * Try persistent data directory first, then fall back to the
+		 * filename as given (for absolute paths or current directory)
+		 */
+		if (!os_persistent_file(buf, sizeof(buf), plat->fname))
+			fname = buf;
+		ret = os_map_file(fname, OS_O_RDWR | OS_O_CREAT,
 				  (void **)&priv->buf, &priv->size);
 		if (ret) {
 			log_err("%s: Unable to map file '%s'\n", dev->name,
-				plat->fname);
+				fname);
 			return ret;
 		}
 		priv->csize = priv->size / SIZE_MULTIPLE - 1;

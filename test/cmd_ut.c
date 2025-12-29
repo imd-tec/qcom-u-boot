@@ -255,7 +255,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	bool show_suites = false;
 	bool force_run = false;
 	bool keep_record = false;
+	bool emit_result = false;
 	int runs_per_text = 1;
+	int workers = 0, worker_id = 0;
 	struct suite *ste;
 	char *name;
 	int ret;
@@ -267,25 +269,41 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	while (argc > 0 && *argv[0] == '-') {
 		const char *str = argv[0];
 
-		switch (str[1]) {
-		case 'r':
-			runs_per_text = dectoul(str + 2, NULL);
-			break;
-		case 'f':
-			force_run = true;
-			break;
-		case 'I':
-			test_insert = str + 2;
-			if (!strchr(test_insert, ':'))
-				return CMD_RET_USAGE;
-			break;
-		case 'R':
-			keep_record = true;
-			break;
-		case 's':
-			show_suites = true;
-			break;
+		for (str++; *str; str++) {
+			switch (*str) {
+			case 'E':
+				emit_result = true;
+				break;
+			case 'r':
+				runs_per_text = dectoul(str + 1, NULL);
+				goto next_arg;
+			case 'f':
+			case 'm':
+				force_run = true;
+				break;
+			case 'I':
+				test_insert = str + 1;
+				if (!strchr(test_insert, ':'))
+					return CMD_RET_USAGE;
+				goto next_arg;
+			case 'P': {
+				const char *colon = strchr(str + 1, ':');
+
+				if (!colon)
+					return CMD_RET_USAGE;
+				workers = dectoul(str + 1, NULL);
+				worker_id = dectoul(colon + 1, NULL);
+				goto next_arg;
+			}
+			case 'R':
+				keep_record = true;
+				break;
+			case 's':
+				show_suites = true;
+				break;
+			}
 		}
+next_arg:
 		argv++;
 		argc--;
 	}
@@ -295,6 +313,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 
 	ut_init_state(&uts);
 	uts.keep_record = keep_record;
+	uts.emit_result = emit_result;
+	uts.workers = workers;
+	uts.worker_id = worker_id;
 	name = argv[0];
 	select_name = cmd_arg1(argc, argv);
 
@@ -340,10 +361,13 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-rs] [-f] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"[-Efmrs] [-R] [-I<n>:<one_test>] [-P<n>:<w>] <suite> [<test> [<args>...]]\n"
+	"                                                    - run unit tests\n"
+	"   -E         Emit result line after each test\n"
 	"   -r<runs>   Number of times to run each test\n"
-	"   -f         Force 'manual' tests to run as well\n"
+	"   -f/-m      Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"
+	"   -P<n>:<w>  Run as worker <w> of <n> parallel workers\n"
 	"   -R         Preserve console recording on test failure\n"
 	"   -s         Show all suites with ut info\n"
 	"   <suite>    Test suite to run (or comma-separated list)\n"

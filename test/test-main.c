@@ -624,6 +624,7 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 {
 	const char *fname = strrchr(test->file, '/') + 1;
 	const char *note = "";
+	int old_fail_count;
 	int ret;
 
 	if ((test->flags & UTF_DM) && !uts->of_live)
@@ -639,6 +640,7 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 	if (ret)
 		return ret;
 
+	old_fail_count = uts->cur.fail_count;
 	uts->arg_error = false;
 	ret = test->func(uts);
 	if (ret == -EAGAIN)
@@ -649,6 +651,13 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 		return ret;
 
 	ut_set_state(NULL);
+
+	if (uts->emit_result) {
+		bool passed = uts->cur.fail_count == old_fail_count;
+
+		printf("Result: %s: %s: %s%s\n", passed ? "PASS" : "FAIL",
+		       test_name, fname, note);
+	}
 
 	return 0;
 }
@@ -779,6 +788,10 @@ static int ut_run_tests(struct unit_test_state *uts, const char *prefix,
 
 		if (!(test->flags & (UTF_INIT | UTF_UNINIT)) &&
 		    !test_matches(prefix, test_name, select_name))
+			continue;
+
+		/* Skip tests not assigned to this worker */
+		if (uts->workers && upto % uts->workers != uts->worker_id)
 			continue;
 
 		if (test->flags & UTF_MANUAL) {

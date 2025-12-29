@@ -261,9 +261,7 @@ def test_fit_print(ubman):
     build_test_fit(ubman, fit)
 
     # Run the C test which will load and verify this FIT
-    ubman.run_command('ut -f bootstd test_fit_print_norun')
-    result = ubman.run_command('echo $?')
-    assert '0' == result
+    ubman.run_ut('bootstd', 'test_fit_print')
 
 
 @pytest.mark.boardspec('sandbox')
@@ -279,9 +277,7 @@ def test_fit_print_no_desc(ubman):
     utils.run_and_log(ubman, ['fdtput', '-d', fit, '/', 'description'])
 
     # Run the C test to check the missing description
-    ubman.run_command('ut -f bootstd test_fit_print_no_desc_norun')
-    result = ubman.run_command('echo $?')
-    assert '0' == result
+    ubman.run_ut('bootstd', 'test_fit_print_no_desc')
 
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('fit_print')

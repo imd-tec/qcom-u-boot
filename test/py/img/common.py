@@ -84,7 +84,7 @@ def setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
 
     fsh.mk_fs()
 
-    img = DiskHelper(config, devnum, basename, True)
+    img = DiskHelper(config, devnum, basename)
     img.add_fs(fsh, DiskHelper.VFAT, bootable=True)
 
     ext4 = FsHelper(config, 'ext4', max(1, part2_size - 30), prefix=basename,

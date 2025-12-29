@@ -104,9 +104,18 @@ static int sandbox_scsi_probe(struct udevice *dev)
 	info->block_size = SANDBOX_SCSI_BLOCK_LEN;
 
 	if (priv->pathname) {
-		priv->fd = os_open(priv->pathname, OS_O_RDONLY);
+		const char *pathname = priv->pathname;
+		char buf[256];
+
+		/*
+		 * Try persistent data directory first, then fall back to the
+		 * pathname as given (for absolute paths or current directory)
+		 */
+		if (!os_persistent_file(buf, sizeof(buf), priv->pathname))
+			pathname = buf;
+		priv->fd = os_open(pathname, OS_O_RDONLY);
 		if (priv->fd >= 0) {
-			ret = os_get_filesize(priv->pathname, &info->file_size);
+			ret = os_get_filesize(pathname, &info->file_size);
 			if (ret)
 				return log_msg_ret("sz", ret);
 		}

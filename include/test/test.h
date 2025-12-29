@@ -89,6 +89,8 @@ struct ut_arg {
  * @of_other: Live tree for the other FDT
  * @runs_per_test: Number of times to run each test (typically 1)
  * @force_run: true to run tests marked with the UTF_MANUAL flag
+ * @workers: Number of parallel workers, 0 if not sharding tests
+ * @worker_id: ID of this worker (0 to workers-1)
  * @old_bloblist: stores the old gd->bloblist pointer
  * @soft_fail: continue execution of the test even after it fails
  * @expect_str: Temporary string used to hold expected string value
@@ -97,6 +99,7 @@ struct ut_arg {
  * @arg_count: Number of parsed arguments
  * @arg_error: Set if ut_str/int/bool() detects a type mismatch
  * @keep_record: Preserve console recording when ut_fail() is called
+ * @emit_result: Emit result line after each test completes
  * @priv: Private data for tests to use as needed
  */
 struct unit_test_state {
@@ -120,6 +123,8 @@ struct unit_test_state {
 	struct device_node *of_other;
 	int runs_per_test;
 	bool force_run;
+	int workers;
+	int worker_id;
 	void *old_bloblist;
 	bool soft_fail;
 	char expect_str[1024];
@@ -128,6 +133,7 @@ struct unit_test_state {
 	int arg_count;
 	bool arg_error;
 	bool keep_record;
+	bool emit_result;
 	char priv[UT_PRIV_SIZE];
 };
 

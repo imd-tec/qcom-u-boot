@@ -485,6 +485,33 @@ class ConsoleBase():
             output.append(self.run_command(cmd))
         return output
 
+    def run_ut(self, suite, test, **kwargs):
+        """Run a manual unit test
+
+        Run a unit test that has the _norun suffix, meaning it requires
+        external setup (like creating a disk image) before it can run.
+
+        Args:
+            suite (str): Test suite name (e.g., 'fs')
+            test (str): Test name without _norun suffix
+                (e.g., 'fs_test_ext4l_probe')
+            **kwargs: Test arguments passed as key=value
+                (e.g., fs_image='/path/to/img')
+
+        Returns:
+            str: Command output
+
+        Raises:
+            AssertionError: If test reports failures
+        """
+        args = ' '.join(f'{k}={v}' for k, v in kwargs.items())
+        cmd = f'ut -f {suite} {test}_norun'
+        if args:
+            cmd += f' {args}'
+        output = self.run_command(cmd)
+        assert 'failures: 0' in output, f'Test {test} failed'
+        return output
+
     def send(self, msg):
         """Send characters without waiting for echo, etc."""
         self.run_command(msg, wait_for_prompt=False, wait_for_echo=False,

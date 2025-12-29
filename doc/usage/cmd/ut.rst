@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    ut [-r<runs>] [-f] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
+    ut [-Efmr<runs>] [-R] [-I<n>:<one_test>] [-P<n>:<w>] [<suite> | all [<test>]] [<args>...]
     ut [-s] info
 
 Description
@@ -26,16 +26,29 @@ suite
 test
     Speciifes a particular test to run, within a suite, or all suites
 
--f
-    Forces running of a manual test.
+-E
+    Emit a result line after each test, in the format
+    `Result: PASS|FAIL|SKIP: <test_name>: <file>`. This is useful for
+    automated parsing of test results.
+
+-f, -m
+    Force running of manual tests. Manual tests have the `_norun` suffix and
+    are normally skipped because they require external setup (e.g., creating
+    disk images from Python/pytest).
 
 -r <n>
-    Specifies the number of types to run each test
+    Specifies the number of times to run each test
 
 -I <n>:<one_test>
     Test to run after <n> other tests have run.  This is used to find which test
     causes another test to fail. If the one test fails, testing stops
     immediately.
+
+-P <n>:<w>
+    Run as worker `<w>` of `<n>` parallel workers. Tests are distributed by
+    index modulo number of workers, so each worker runs a disjoint subset of
+    tests. This allows running tests in parallel across multiple sandbox
+    instances.
 
 -R
     Preserve console recording on test failure. Normally when a test fails,
@@ -76,6 +89,23 @@ To specify a list of suites to run, <suites> can also be a comma-separated list.
 
 See :ref:`develop/tests_writing:writing c tests` for more information on how to
 write unit tests.
+
+Return Value
+------------
+
+The `ut` command returns 0 (success) if all tests pass, or 1 (failure) if any
+test fails.
+
+Skipped tests do not cause a failure return. Tests may be skipped for several
+reasons:
+
+- Manual tests (with `_norun` suffix) are skipped unless `-f` or `-m` is used
+- Tests requiring features not available on the current platform (e.g.,
+  `UTF_OTHER_FDT` on non-sandbox, console recording disabled)
+- Tests that explicitly request to be skipped by returning `-EAGAIN`
+
+To detect skipped tests programmatically, use the `-E` flag and check for
+`Result: SKIP:` lines in the output.
 
 ut all
 ~~~~~~

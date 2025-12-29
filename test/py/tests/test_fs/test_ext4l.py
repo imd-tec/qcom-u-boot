@@ -65,8 +65,8 @@ class TestExt4l:
 
         yield image_path
 
-        # Cleanup
-        if os.path.exists(image_path):
+        # Cleanup (skip if --persist flag is set)
+        if not u_boot_config.persist and os.path.exists(image_path):
             os.remove(image_path)
 
     def test_probe(self, ubman, ext4_image):

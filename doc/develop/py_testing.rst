@@ -171,6 +171,34 @@ require a large amount of refactoring, e.g. with more use of pytest fixtures.
 The code-coverage tests are omitted since they cannot run in parallel due to a
 Python limitation.
 
+Parallel C unit tests
+~~~~~~~~~~~~~~~~~~~~~
+
+The ``ut`` command supports distributing tests across multiple sandbox
+instances using the ``-P`` flag. This is useful when running tests directly
+from the command line without pytest.
+
+To run tests in parallel across 4 workers::
+
+    # Terminal 1
+    /tmp/b/sandbox/u-boot -T -c "ut -P4:0 dm"
+
+    # Terminal 2
+    /tmp/b/sandbox/u-boot -T -c "ut -P4:1 dm"
+
+    # Terminal 3
+    /tmp/b/sandbox/u-boot -T -c "ut -P4:2 dm"
+
+    # Terminal 4
+    /tmp/b/sandbox/u-boot -T -c "ut -P4:3 dm"
+
+The format is ``-P<n>:<w>`` where ``n`` is the total number of workers and
+``w`` is this worker's ID (0 to n-1). Tests are distributed by index modulo
+the number of workers, so each worker runs a disjoint subset.
+
+This can be combined with other flags, e.g. ``-EP4:0`` to emit result lines
+while running as worker 0 of 4.
+
 
 Testing under a debugger
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -245,6 +273,13 @@ Command-line options
 --persistent-data-dir
   sets the directory used to store persistent test data. This is test data that
   may be re-used across test runs, such as file-system images.
+
+-P, --persist
+  prevents cleanup of test-generated files like disk images after the test run
+  completes. This is useful when iterating on C test code, allowing you to
+  re-run the C tests without re-running the Python fixture that creates the
+  test images. Note that this must be individually supported by each test, e.g.
+  with a check against u_boot_config.persist before removing images.
 
 --timing
   shows a histogram of test duration, at the end of the run. The columns are:

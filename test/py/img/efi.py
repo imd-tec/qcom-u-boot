@@ -31,7 +31,7 @@ def setup_efi_image(config):
 
     fsh.mk_fs()
 
-    img = DiskHelper(config, devnum, 'flash', True)
+    img = DiskHelper(config, devnum, 'flash')
     img.add_fs(fsh, DiskHelper.VFAT)
     img.create()
     fsh.cleanup()
