@@ -222,6 +222,29 @@ static void bh_cache_insert(struct buffer_head *bh)
  *
  * Called on unmount to free all cached buffers.
  */
+/**
+ * bh_clear_stale_jbd() - Clear stale journal_head from buffer_head
+ * @bh: buffer_head to check
+ *
+ * Check if the buffer still has journal_head attached. This should not happen
+ * if the journal was properly destroyed, but warn if it does to help debugging.
+ * Clear the JBD flag and b_private to prevent issues with subsequent mounts.
+ */
+static void bh_clear_stale_jbd(struct buffer_head *bh)
+{
+	if (buffer_jbd(bh)) {
+		log_err("bh %p block %llu still has JBD (b_private %p)\n",
+			bh, (unsigned long long)bh->b_blocknr, bh->b_private);
+		/*
+		 * Clear the JBD flag and b_private to prevent issues.
+		 * The journal_head itself will be freed when the
+		 * journal_head cache is destroyed.
+		 */
+		clear_buffer_jbd(bh);
+		bh->b_private = NULL;
+	}
+}
+
 void bh_cache_clear(void)
 {
 	int i;
@@ -231,9 +254,12 @@ void bh_cache_clear(void)
 		for (entry = bh_cache[i]; entry; entry = next) {
 			next = entry->next;
 			if (entry->bh) {
+				struct buffer_head *bh = entry->bh;
+
+				bh_clear_stale_jbd(bh);
 				/* Release the cache's reference */
-				if (atomic_dec_and_test(&entry->bh->b_count))
-					free_buffer_head(entry->bh);
+				if (atomic_dec_and_test(&bh->b_count))
+					free_buffer_head(bh);
 			}
 			free(entry);
 		}
