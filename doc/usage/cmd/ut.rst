@@ -84,6 +84,23 @@ To specify a list of suites to run, <suites> can also be a comma-separated list.
 See :ref:`develop/tests_writing:writing c tests` for more information on how to
 write unit tests.
 
+Return Value
+------------
+
+The `ut` command returns 0 (success) if all tests pass, or 1 (failure) if any
+test fails.
+
+Skipped tests do not cause a failure return. Tests may be skipped for several
+reasons:
+
+- Manual tests (with `_norun` suffix) are skipped unless `-f` or `-m` is used
+- Tests requiring features not available on the current platform (e.g.,
+  `UTF_OTHER_FDT` on non-sandbox, console recording disabled)
+- Tests that explicitly request to be skipped by returning `-EAGAIN`
+
+To detect skipped tests programmatically, use the `-E` flag and check for
+`Result: SKIP:` lines in the output.
+
 ut all
 ~~~~~~
 
