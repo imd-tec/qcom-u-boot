@@ -77,26 +77,27 @@ typedef struct journal_s journal_t;
 
 /*
  * Bit operations - sandbox declares these extern but doesn't implement them.
+ * These work on bitmaps where nr is the absolute bit number.
  */
 void set_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p |= (1UL << nr);
+	*p |= (1UL << (nr % BITS_PER_LONG));
 }
 
 void clear_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p &= ~(1UL << nr);
+	*p &= ~(1UL << (nr % BITS_PER_LONG));
 }
 
 void change_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p ^= (1UL << nr);
+	*p ^= (1UL << (nr % BITS_PER_LONG));
 }
 
 /*
