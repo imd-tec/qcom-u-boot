@@ -267,26 +267,29 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	while (argc > 0 && *argv[0] == '-') {
 		const char *str = argv[0];
 
-		switch (str[1]) {
-		case 'r':
-			runs_per_text = dectoul(str + 2, NULL);
-			break;
-		case 'f':
-		case 'm':
-			force_run = true;
-			break;
-		case 'I':
-			test_insert = str + 2;
-			if (!strchr(test_insert, ':'))
-				return CMD_RET_USAGE;
-			break;
-		case 'R':
-			keep_record = true;
-			break;
-		case 's':
-			show_suites = true;
-			break;
+		for (str++; *str; str++) {
+			switch (*str) {
+			case 'r':
+				runs_per_text = dectoul(str + 1, NULL);
+				goto next_arg;
+			case 'f':
+			case 'm':
+				force_run = true;
+				break;
+			case 'I':
+				test_insert = str + 1;
+				if (!strchr(test_insert, ':'))
+					return CMD_RET_USAGE;
+				goto next_arg;
+			case 'R':
+				keep_record = true;
+				break;
+			case 's':
+				show_suites = true;
+				break;
+			}
 		}
+next_arg:
 		argv++;
 		argc--;
 	}
