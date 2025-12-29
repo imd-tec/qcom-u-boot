@@ -174,10 +174,15 @@ class FsHelper:
                 stdout=DEVNULL if self.quiet else None)
 
         if self.fs_type.startswith('ext'):
-            sb_content = check_output(f'tune2fs -l {fs_img}',
-                                    shell=True).decode()
-            if 'metadata_csum' in sb_content:
-                check_call(f'tune2fs -O ^metadata_csum {fs_img}', shell=True)
+            # ext4l supports metadata_csum; the old ext4 driver does not.
+            # Only disable metadata_csum when using the old driver.
+            if self.config and self.config.buildconfig.get(
+                    'config_fs_ext4l', 'n') != 'y':
+                sb_content = check_output(f'tune2fs -l {fs_img}',
+                                        shell=True).decode()
+                if 'metadata_csum' in sb_content:
+                    check_call(f'tune2fs -O ^metadata_csum {fs_img}',
+                               shell=True)
         elif fs_lnxtype == 'exfat':
             check_call(f'fattools cp {self.srcdir}/* {fs_img}', shell=True)
         elif self.srcdir and os.listdir(self.srcdir):
