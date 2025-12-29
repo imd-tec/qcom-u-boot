@@ -114,9 +114,12 @@ int ext4l_mkdir(const char *dirname);
 /**
  * ext4l_ln() - Create a symbolic link
  *
+ * Creates the symlink, replacing any existing file (like ln -sf).
+ * Refuses to replace a directory.
+ *
  * @filename: Path of symlink to create
  * @target: Target path the symlink points to
- * Return: 0 on success, -EEXIST if file already exists,
+ * Return: 0 on success, -EISDIR if target is a directory,
  *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
  *	   negative on other errors
  */

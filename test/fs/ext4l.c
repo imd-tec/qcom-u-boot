@@ -576,8 +576,8 @@ static int fs_test_ext4l_ln_norun(struct unit_test_state *uts)
 	ut_asserteq(12, actread);
 	ut_asserteq_str("hello world\n", buf);
 
-	/* Verify creating duplicate returns -EEXIST */
-	ut_asserteq(-EEXIST, ext4l_ln(target, link_name));
+	/* Verify creating duplicate succeeds (like ln -sf) */
+	ut_assertok(ext4l_ln(target, link_name));
 
 	/* Verify creating symlink in non-existent parent returns -ENOENT */
 	ut_asserteq(-ENOENT, ext4l_ln(target, "/nonexistent/link"));

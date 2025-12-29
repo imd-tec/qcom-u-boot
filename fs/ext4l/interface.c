@@ -1268,9 +1268,21 @@ int ext4l_ln(const char *filename, const char *linkname)
 		return ret;
 
 	if (dentry->d_inode) {
-		/* File already exists */
-		ret = -EEXIST;
-		goto out;
+		/* File already exists - delete it first (like ln -sf) */
+		if (S_ISDIR(dentry->d_inode->i_mode)) {
+			/* Cannot replace a directory with a symlink */
+			ret = -EISDIR;
+			goto out;
+		}
+
+		ret = __ext4_unlink(dir_dentry->d_inode, &dentry->d_name,
+				    dentry->d_inode, dentry);
+		if (ret)
+			goto out;
+
+		/* Release inode to free data blocks */
+		iput(dentry->d_inode);
+		dentry->d_inode = NULL;
 	}
 
 	/* Create the symlink - filename is what the link points to */
