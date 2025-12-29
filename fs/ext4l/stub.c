@@ -587,6 +587,29 @@ struct dentry *d_make_root(struct inode *inode)
 	return de;
 }
 
+/**
+ * iput() - Release a reference to an inode
+ * @inode: Inode to release
+ *
+ * Decrements the inode reference count. When the reference count reaches
+ * zero and the inode has no links, the inode is evicted (freed).
+ */
+void iput(struct inode *inode)
+{
+	if (!inode)
+		return;
+
+	if (atomic_dec_and_test(&inode->i_count)) {
+		/* Last reference - check if inode should be evicted */
+		if (inode->i_nlink == 0 && inode->i_sb &&
+		    inode->i_sb->s_op && inode->i_sb->s_op->evict_inode) {
+			inode->i_sb->s_op->evict_inode(inode);
+			/* Sync dirty buffers after eviction */
+			bh_cache_sync();
+		}
+	}
+}
+
 /* percpu init rwsem */
 int percpu_init_rwsem(struct percpu_rw_semaphore *sem)
 {

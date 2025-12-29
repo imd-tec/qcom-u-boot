@@ -491,8 +491,8 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* RCU barrier - stub */
 #define rcu_barrier()		do { } while (0)
 
-/* inode/dentry operations - stubs */
-#define iput(inode)		do { } while (0)
+/* inode/dentry operations */
+void iput(struct inode *inode);
 
 /* current task - from linux/sched.h */
 #include <linux/sched.h>
