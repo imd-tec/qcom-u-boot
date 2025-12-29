@@ -246,6 +246,13 @@ Command-line options
   sets the directory used to store persistent test data. This is test data that
   may be re-used across test runs, such as file-system images.
 
+-P, --persist
+  prevents cleanup of test-generated files like disk images after the test run
+  completes. This is useful when iterating on C test code, allowing you to
+  re-run the C tests without re-running the Python fixture that creates the
+  test images. Note that this must be individually supported by each test, e.g.
+  with a check against u_boot_config.persist before removing images.
+
 --timing
   shows a histogram of test duration, at the end of the run. The columns are:
 

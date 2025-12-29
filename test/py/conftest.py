@@ -100,6 +100,8 @@ def pytest_addoption(parser):
         help="Assume that U-Boot is ready and don't wait for a prompt")
     parser.addoption('--timing', default=False, action='store_true',
                      help='Show info on test timing')
+    parser.addoption('-P', '--persist', default=False, action='store_true',
+                     help='Persist test artifacts (do not clean up after tests)')
 
 
 def run_build(config, source_dir, build_dir, board_type, log):
@@ -346,6 +348,7 @@ def pytest_configure(config):
     ubconfig.dtb = build_dir + '/arch/sandbox/dts/test.dtb'
     ubconfig.connection_ok = True
     ubconfig.timing = config.getoption('timing')
+    ubconfig.persist = config.getoption('persist')
     ubconfig.role = config.getoption('role')
     ubconfig.allow_exceptions = config.getoption('allow_exceptions')
 
