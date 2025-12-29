@@ -6,7 +6,7 @@ subdir-y :=
 
 # You can set these variables from the command line.
 SPHINXBUILD   = sphinx-build
-SPHINXOPTS    = -W
+SPHINXOPTS    = -q -W
 SPHINXDIRS    = .
 _SPHINXDIRS   = $(patsubst $(srctree)/doc/%/conf.py,%,$(wildcard $(srctree)/doc/*/conf.py))
 SPHINX_CONF   = conf.py
@@ -51,8 +51,8 @@ loop_cmd = $(echo-cmd) $(cmd_$(1)) || exit;
 # $5 reST source folder relative to $(srctree)/$(src),
 #    e.g. "media" for the linux-tv book-set at ./doc/media
 
-quiet_cmd_sphinx = SPHINX  $@ --> file://$(abspath $(BUILDDIR)/$3/$4)
-      cmd_sphinx = $(MAKE) BUILDDIR=$(abspath $(BUILDDIR)) $(build)=doc/media $2 && \
+quiet_cmd_sphinx =
+      cmd_sphinx = $(MAKE) -s BUILDDIR=$(abspath $(BUILDDIR)) $(build)=doc/media $2 && \
 	PYTHONDONTWRITEBYTECODE=1 \
 	BUILDDIR=$(abspath $(BUILDDIR)) SPHINX_CONF=$(abspath $(srctree)/$(src)/$5/$(SPHINX_CONF)) \
 	$(SPHINXBUILD) \

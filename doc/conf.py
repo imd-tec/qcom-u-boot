@@ -377,7 +377,6 @@ latex_elements = {
 
 cjk_cmd = check_output(['fc-list', '--format="%{family[0]}\n"']).decode('utf-8', 'ignore')
 if cjk_cmd.find("Noto Sans CJK SC") >= 0:
-    print ("enabling CJK for LaTeX builder")
     latex_elements['preamble']  += '''
 	% This is needed for translations
         \\usepackage{xeCJK}
