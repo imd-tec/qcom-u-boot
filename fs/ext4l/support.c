@@ -470,6 +470,15 @@ void free_buffer_head(struct buffer_head *bh)
 		return;
 
 	/*
+	 * Never free a buffer_head that has a journal_head attached.
+	 * This would cause use-after-free when the journal tries to access it.
+	 * The journal owns a reference and the buffer will be cleaned up when
+	 * the journal_head is properly released.
+	 */
+	if (buffer_jbd(bh))
+		return;
+
+	/*
 	 * Shadow buffers (b_private != NULL) share their folio with the
 	 * original buffer. Don't free the shared folio.
 	 */
