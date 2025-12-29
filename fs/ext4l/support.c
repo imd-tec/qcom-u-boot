@@ -336,6 +336,42 @@ void bh_cache_clear(void)
 }
 
 /**
+ * bh_cache_release_jbd() - Release all JBD references from buffer cache
+ *
+ * This must be called after journal destroy but before bh_cache_clear().
+ * It ensures all journal_heads are properly released from buffer_heads
+ * even if the journal destroy didn't fully clean up (e.g., on abort).
+ */
+void bh_cache_release_jbd(void)
+{
+	int i;
+	struct bh_cache_entry *entry;
+
+	for (i = 0; i < BH_CACHE_SIZE; i++) {
+		for (entry = bh_cache[i]; entry; entry = entry->next) {
+			if (entry->bh && buffer_jbd(entry->bh)) {
+				struct buffer_head *bh = entry->bh;
+				struct journal_head *jh = bh2jh(bh);
+
+				/*
+				 * Forcibly release the journal_head.
+				 * Clear b_bh to prevent use-after-free when
+				 * the buffer_head is later freed.
+				 */
+				if (jh) {
+					jh->b_bh = NULL;
+					jh->b_transaction = NULL;
+					jh->b_next_transaction = NULL;
+					jh->b_cp_transaction = NULL;
+				}
+				clear_buffer_jbd(bh);
+				bh->b_private = NULL;
+			}
+		}
+	}
+}
+
+/**
  * bh_cache_sync() - Sync all dirty buffers to disk
  *
  * U-Boot doesn't have a journal thread, so we need to manually sync

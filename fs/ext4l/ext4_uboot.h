@@ -2901,6 +2901,7 @@ void free_buffer_head(struct buffer_head *bh);
 
 /* ext4l support functions (support.c) */
 void ext4l_crc32c_init(void);
+void bh_cache_release_jbd(void);
 void bh_cache_clear(void);
 int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
