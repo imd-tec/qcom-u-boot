@@ -11,7 +11,7 @@ Synopsis
 
 ::
 
-    ut [-fmr<runs>] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
+    ut [-Efmr<runs>] [-R] [-I<n>:<one_test>] [<suite> | all [<test>]] [<args>...]
     ut [-s] info
 
 Description
@@ -25,6 +25,11 @@ suite
 
 test
     Speciifes a particular test to run, within a suite, or all suites
+
+-E
+    Emit a result line after each test, in the format
+    `Result: PASS|FAIL|SKIP: <test_name>: <file>`. This is useful for
+    automated parsing of test results.
 
 -f, -m
     Force running of manual tests. Manual tests have the `_norun` suffix and

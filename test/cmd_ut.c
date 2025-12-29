@@ -255,6 +255,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	bool show_suites = false;
 	bool force_run = false;
 	bool keep_record = false;
+	bool emit_result = false;
 	int runs_per_text = 1;
 	struct suite *ste;
 	char *name;
@@ -269,6 +270,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 
 		for (str++; *str; str++) {
 			switch (*str) {
+			case 'E':
+				emit_result = true;
+				break;
 			case 'r':
 				runs_per_text = dectoul(str + 1, NULL);
 				goto next_arg;
@@ -299,6 +303,7 @@ next_arg:
 
 	ut_init_state(&uts);
 	uts.keep_record = keep_record;
+	uts.emit_result = emit_result;
 	name = argv[0];
 	select_name = cmd_arg1(argc, argv);
 
@@ -344,7 +349,8 @@ next_arg:
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-fmrs] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"[-Efmrs] [-R] [-I<n>:<one_test>] <suite> [<test> [<args>...]] - run unit tests\n"
+	"   -E         Emit result line after each test\n"
 	"   -r<runs>   Number of times to run each test\n"
 	"   -f/-m      Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"

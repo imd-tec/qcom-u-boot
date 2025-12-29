@@ -97,6 +97,7 @@ struct ut_arg {
  * @arg_count: Number of parsed arguments
  * @arg_error: Set if ut_str/int/bool() detects a type mismatch
  * @keep_record: Preserve console recording when ut_fail() is called
+ * @emit_result: Emit result line after each test completes
  * @priv: Private data for tests to use as needed
  */
 struct unit_test_state {
@@ -128,6 +129,7 @@ struct unit_test_state {
 	int arg_count;
 	bool arg_error;
 	bool keep_record;
+	bool emit_result;
 	char priv[UT_PRIV_SIZE];
 };
 
