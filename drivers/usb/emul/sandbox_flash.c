@@ -339,11 +339,19 @@ static int sandbox_flash_probe(struct udevice *dev)
 	struct sandbox_flash_plat *plat = dev_get_plat(dev);
 	struct sandbox_flash_priv *priv = dev_get_priv(dev);
 	struct scsi_emul_info *info = &priv->eminfo;
+	const char *pathname = plat->pathname;
+	char buf[256];
 	int ret;
 
-	priv->fd = os_open(plat->pathname, OS_O_RDWR);
+	/*
+	 * Try persistent data directory first, then fall back to the
+	 * pathname as given (for absolute paths or current directory)
+	 */
+	if (!os_persistent_file(buf, sizeof(buf), plat->pathname))
+		pathname = buf;
+	priv->fd = os_open(pathname, OS_O_RDWR);
 	if (priv->fd >= 0) {
-		ret = os_get_filesize(plat->pathname, &info->file_size);
+		ret = os_get_filesize(pathname, &info->file_size);
 		if (ret)
 			return log_msg_ret("sz", ret);
 	}

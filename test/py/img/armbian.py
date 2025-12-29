@@ -126,7 +126,7 @@ booti ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
     utils.run_and_log_no_ubman(log, f'echo here {kernel} {symlink}')
     os.symlink(kernel, symlink)
     fsh.mk_fs()
-    img = DiskHelper(config, mmc_dev, 'mmc', True)
+    img = DiskHelper(config, mmc_dev, 'mmc')
     img.add_fs(fsh, DiskHelper.EXT4)
     img.create()
     fsh.cleanup()

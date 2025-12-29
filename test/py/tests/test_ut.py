@@ -34,7 +34,8 @@ from img.localboot import setup_localboot_image
 def test_ut_dm_init(ubman):
     """Initialize data for ut dm tests."""
 
-    fn = ubman.config.source_dir + '/testflash.bin'
+    # This is used by flash-stick@0 in test.py
+    fn = ubman.config.persistent_data_dir + '/testflash.bin'
     if not os.path.exists(fn):
         data = b'this is a test'
         data += b'\x00' * ((4 * 1024 * 1024) - len(data))
@@ -47,8 +48,8 @@ def test_ut_dm_init(ubman):
         with open(fn, 'wb') as fh:
             fh.write(data)
 
-    # Create a file with a single partition
-    fn = ubman.config.source_dir + '/scsi.img'
+    # Create a file with a single partition (used by /scsi in test.dts) */
+    fn = ubman.config.persistent_data_dir + '/scsi.img'
     if not os.path.exists(fn):
         data = b'\x00' * (2 * 1024 * 1024)
         with open(fn, 'wb') as fh:
@@ -56,11 +57,13 @@ def test_ut_dm_init(ubman):
         utils.run_and_log(
             ubman, f'sfdisk {fn}', stdin=b'type=83')
 
+    # These two are used by test/dm/host.c
     FsHelper(ubman.config, 'ext2', 2, '2MB').mk_fs()
     FsHelper(ubman.config, 'fat32', 1, '1MB').mk_fs()
 
+    # This is used by test/cmd/mbr.c
     mmc_dev = 6
-    fn = os.path.join(ubman.config.source_dir, f'mmc{mmc_dev}.img')
+    fn = os.path.join(ubman.config.persistent_data_dir, f'mmc{mmc_dev}.img')
     data = b'\x00' * (12 * 1024 * 1024)
     with open(fn, 'wb') as fh:
         fh.write(data)
