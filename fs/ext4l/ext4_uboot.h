@@ -402,8 +402,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
 #define sync_dirty_buffer(bh)			submit_bh(REQ_OP_WRITE, bh)
 
-/* Time functions */
-#define ktime_get_real_seconds()		(0)
+/* Time functions - use boot-relative time for timestamps */
+#define ktime_get_real_seconds()		(get_timer(0) / 1000)
 #define time_before32(a, b)			(0)
 
 /* Inode operations - iget_locked and new_inode are in interface.c */
