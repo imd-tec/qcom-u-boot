@@ -410,7 +410,7 @@ extern struct inode *new_inode(struct super_block *sb);
 #define i_uid_write(inode, uid)			do { } while (0)
 #define i_gid_write(inode, gid)			do { } while (0)
 #define inode_fsuid_set(inode, idmap)		do { } while (0)
-#define inode_init_owner(idmap, i, dir, mode)	do { } while (0)
+#define inode_init_owner(idmap, i, dir, mode)	do { (i)->i_mode = (mode); } while (0)
 #define insert_inode_locked(inode)		(0)
 #define unlock_new_inode(inode)			do { } while (0)
 #define clear_nlink(inode)			do { } while (0)
