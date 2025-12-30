@@ -2075,8 +2075,9 @@ struct fs_context {
 	bool silent;
 };
 
-/* ext4 superblock initialisation */
+/* ext4 superblock initialisation and commit */
 int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
+int ext4_commit_super(struct super_block *sb);
 
 /* fs_parameter stubs */
 struct fs_parameter {
