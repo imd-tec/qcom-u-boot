@@ -103,6 +103,15 @@ int ext4_orphan_add(handle_t *handle, struct inode *inode)
 	int err = 0, rc;
 	bool dirty = false;
 
+#ifdef __UBOOT__
+	/*
+	 * Skip orphan handling in U-Boot. We do synchronous journal commits
+	 * after each operation, so orphan recovery is not needed. Adding to
+	 * the orphan list without proper locking can corrupt the list.
+	 */
+	return 0;
+#endif
+
 	if (!sbi->s_journal || is_bad_inode(inode))
 		return 0;
 
