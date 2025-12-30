@@ -565,7 +565,7 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
 int submit_bh(int op, struct buffer_head *bh)
 {
 	int ret;
-	int op_type = op & 0xff;  /* Mask out flags, keep operation type */
+	int op_type = op & REQ_OP_MASK;  /* Mask out flags, keep operation type */
 
 	if (op_type == REQ_OP_READ) {
 		ret = ext4l_read_block(bh->b_blocknr, bh->b_size, bh->b_data);

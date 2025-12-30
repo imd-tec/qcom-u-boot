@@ -50,6 +50,11 @@ struct path {
 
 /* Buffer operations are in buffer_head.h */
 
+#ifdef __UBOOT__
+/* Maximum number of cached folios per address_space */
+#define FOLIO_CACHE_MAX 64
+#endif
+
 /* address_space - extended for inode.c */
 struct address_space {
 	struct inode *host;
@@ -58,6 +63,11 @@ struct address_space {
 	unsigned long writeback_index;
 	struct list_head i_private_list;
 	const struct address_space_operations *a_ops;
+#ifdef __UBOOT__
+	/* Simple folio cache for U-Boot (no XA/radix tree) */
+	struct folio *folio_cache[FOLIO_CACHE_MAX];
+	int folio_cache_count;
+#endif
 };
 
 /* block_device - minimal stub */

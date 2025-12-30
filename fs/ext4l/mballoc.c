@@ -409,7 +409,7 @@ static struct kmem_cache *ext4_free_data_cachep;
 #define NR_GRPINFO_CACHES 8
 static struct kmem_cache *ext4_groupinfo_caches[NR_GRPINFO_CACHES];
 
-static const char * const ext4_groupinfo_slab_names[NR_GRPINFO_CACHES] = {
+static const char * const ext4_groupinfo_slab_names[NR_GRPINFO_CACHES] __maybe_unused = {
 	"ext4_groupinfo_1k", "ext4_groupinfo_2k", "ext4_groupinfo_4k",
 	"ext4_groupinfo_8k", "ext4_groupinfo_16k", "ext4_groupinfo_32k",
 	"ext4_groupinfo_64k", "ext4_groupinfo_128k"
@@ -4008,6 +4008,12 @@ void ext4_process_freed_data(struct super_block *sb, tid_t commit_tid)
 
 int __init ext4_init_mballoc(void)
 {
+#ifdef __UBOOT__
+	/* Already initialized - skip in multiple mount scenarios */
+	if (ext4_pspace_cachep)
+		return 0;
+#endif
+
 	ext4_pspace_cachep = KMEM_CACHE(ext4_prealloc_space,
 					SLAB_RECLAIM_ACCOUNT);
 	if (ext4_pspace_cachep == NULL)
@@ -4044,6 +4050,13 @@ void ext4_exit_mballoc(void)
 	kmem_cache_destroy(ext4_ac_cachep);
 	kmem_cache_destroy(ext4_free_data_cachep);
 	ext4_groupinfo_destroy_slabs();
+
+#ifdef __UBOOT__
+	/* Reset pointers for clean reinitialization */
+	ext4_pspace_cachep = NULL;
+	ext4_ac_cachep = NULL;
+	ext4_free_data_cachep = NULL;
+#endif
 }
 
 #define EXT4_MB_BITMAP_MARKED_CHECK 0x0001

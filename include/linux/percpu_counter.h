@@ -15,6 +15,7 @@
 struct percpu_counter {
 	s64 count;
 	s64 counter;	/* Alias for count - some code uses this name */
+	bool initialized;  /* Track if counter has been initialized */
 };
 
 static inline int percpu_counter_init(struct percpu_counter *fbc, s64 amount,
@@ -22,6 +23,7 @@ static inline int percpu_counter_init(struct percpu_counter *fbc, s64 amount,
 {
 	fbc->count = amount;
 	fbc->counter = amount;
+	fbc->initialized = true;
 	return 0;
 }
 
@@ -76,7 +78,7 @@ static inline s64 percpu_counter_sum_positive(struct percpu_counter *fbc)
 
 static inline bool percpu_counter_initialized(struct percpu_counter *fbc)
 {
-	return true;
+	return fbc->initialized;
 }
 
 #endif /* _LINUX_PERCPU_COUNTER_H */

@@ -305,8 +305,30 @@ int jbd2_journal_write_metadata_buffer(transaction_t *transaction,
 	struct buffer_head *new_bh;
 	struct folio *new_folio;
 	unsigned int new_offset;
-	struct buffer_head *bh_in = jh2bh(jh_in);
+	struct buffer_head *bh_in;
 	journal_t *journal = transaction->t_journal;
+
+#ifdef __UBOOT__
+	/* Validate jh_in before dereferencing */
+	if (!jh_in || !jh_in->b_bh) {
+		printf("jbd2: ERROR: invalid jh_in=%p b_bh=%p\n",
+		       jh_in, jh_in ? jh_in->b_bh : NULL);
+		return -EIO;
+	}
+#endif
+	bh_in = jh2bh(jh_in);
+#ifdef __UBOOT__
+	/* Additional validation for buffer head */
+	if (!bh_in->b_folio || !bh_in->b_blocknr) {
+		printf("jbd2: ERROR: bh=%p folio=%p blocknr=%llu b_data=%p b_count=%d\n",
+		       bh_in, bh_in->b_folio, (unsigned long long)bh_in->b_blocknr,
+		       bh_in->b_data, atomic_read(&bh_in->b_count));
+		printf("jbd2: ERROR: jh=%p b_jlist=%d b_jcount=%d b_next=%p\n",
+		       jh_in, jh_in->b_jlist, jh_in->b_jcount,
+		       jh_in->b_tnext);
+		return -EIO;
+	}
+#endif
 
 	/*
 	 * The buffer really shouldn't be locked: only the current committing
@@ -3118,6 +3140,10 @@ static int __init journal_init(void)
 	return ret;
 }
 
+#ifdef __UBOOT__
+static bool jbd2_initialized;
+#endif
+
 /**
  * jbd2_journal_init_global() - Initialize JBD2 global state
  *
@@ -3128,17 +3154,46 @@ static int __init journal_init(void)
  */
 int jbd2_journal_init_global(void)
 {
+#ifdef __UBOOT__
+	if (jbd2_initialized)
+		return 0;
+#else
 	static bool initialized;
 
 	if (initialized)
 		return 0;
+#endif
 
 	if (journal_init())
 		return -ENOMEM;
 
+#ifdef __UBOOT__
+	jbd2_initialized = true;
+#else
 	initialized = true;
+#endif
 	return 0;
 }
+
+#ifdef __UBOOT__
+/**
+ * jbd2_journal_exit_global() - Clean up JBD2 global state
+ *
+ * This should be called when unmounting the last ext4 filesystem to
+ * properly clean up all JBD2 caches and reset global state. This is
+ * important in U-Boot where we may mount/unmount filesystems multiple
+ * times in a single session.
+ */
+void jbd2_journal_exit_global(void)
+{
+	if (!jbd2_initialized)
+		return;
+
+	jbd2_remove_jbd_stats_proc_entry();
+	jbd2_journal_destroy_caches();
+	jbd2_initialized = false;
+}
+#endif
 
 static void __exit journal_exit(void)
 {

@@ -38,7 +38,6 @@ static int ext4_load_journal(struct super_block *, struct ext4_super_block *,
 			     unsigned long journal_devnum);
 static int ext4_show_options(struct seq_file *seq, struct dentry *root);
 static void ext4_update_super(struct super_block *sb);
-static int ext4_commit_super(struct super_block *sb);
 static int ext4_mark_recovery_complete(struct super_block *sb,
 					struct ext4_super_block *es);
 static int ext4_clear_journal_err(struct super_block *sb,
@@ -6153,7 +6152,7 @@ static void ext4_update_super(struct super_block *sb)
 	unlock_buffer(sbh);
 }
 
-static int ext4_commit_super(struct super_block *sb)
+int ext4_commit_super(struct super_block *sb)
 {
 	struct buffer_head *sbh = EXT4_SB(sb)->s_sbh;
 
