@@ -2792,8 +2792,8 @@ static int ext4_add_nondir(handle_t *handle,
  * If the create succeeds, we fill in the inode information
  * with d_instantiate().
  */
-static int ext4_create(struct mnt_idmap *idmap, struct inode *dir,
-		       struct dentry *dentry, umode_t mode, bool excl)
+int ext4_create(struct mnt_idmap *idmap, struct inode *dir,
+		struct dentry *dentry, umode_t mode, bool excl)
 {
 	handle_t *handle;
 	struct inode *inode;
@@ -2974,8 +2974,8 @@ out:
 	return err;
 }
 
-static struct dentry *ext4_mkdir(struct mnt_idmap *idmap, struct inode *dir,
-				 struct dentry *dentry, umode_t mode)
+struct dentry *ext4_mkdir(struct mnt_idmap *idmap, struct inode *dir,
+			  struct dentry *dentry, umode_t mode)
 {
 	handle_t *handle;
 	struct inode *inode;
@@ -3340,8 +3340,8 @@ out:
 	return err;
 }
 
-static int ext4_symlink(struct mnt_idmap *idmap, struct inode *dir,
-			struct dentry *dentry, const char *symname)
+int ext4_symlink(struct mnt_idmap *idmap, struct inode *dir,
+		 struct dentry *dentry, const char *symname)
 {
 	handle_t *handle;
 	struct inode *inode;
@@ -3773,9 +3773,9 @@ retry:
  * while new_{dentry,inode) refers to the destination dentry/inode
  * This comes from rename(const char *oldpath, const char *newpath)
  */
-static int ext4_rename(struct mnt_idmap *idmap, struct inode *old_dir,
-		       struct dentry *old_dentry, struct inode *new_dir,
-		       struct dentry *new_dentry, unsigned int flags)
+int ext4_rename(struct mnt_idmap *idmap, struct inode *old_dir,
+		struct dentry *old_dentry, struct inode *new_dir,
+		struct dentry *new_dentry, unsigned int flags)
 {
 	handle_t *handle = NULL;
 	struct ext4_renament old = {
