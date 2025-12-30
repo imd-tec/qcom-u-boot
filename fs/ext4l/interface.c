@@ -286,6 +286,17 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	if (!fs_dev_desc)
 		return -EINVAL;
 
+	/*
+	 * Ensure any previous mount is properly closed before mounting again.
+	 * This prevents resource leaks if probe is called without close.
+	 *
+	 * Since we're being called while a previous mount exists, we can't
+	 * trust the old device state (it may have been rebound to a different
+	 * file). Use skip_io=true to skip all I/O during close.
+	 */
+	if (ext4l_sb)
+		ext4l_close_internal(true);
+
 	/* Initialise message buffer for recording ext4 messages */
 	ext4l_msg_init();
 
@@ -855,12 +866,7 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 
 void ext4l_close(void)
 {
-	if (ext4l_open_dirs > 0)
-		return;
-
-	ext4l_dev_desc = NULL;
-	ext4l_sb = NULL;
-	ext4l_clear_blk_dev();
+	ext4l_close_internal(false);
 }
 
 /**
