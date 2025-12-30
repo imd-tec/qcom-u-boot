@@ -1309,6 +1309,60 @@ out:
 	return ret;
 }
 
+int ext4l_rename(const char *old_path, const char *new_path)
+{
+	struct dentry *old_dentry, *new_dentry;
+	struct dentry *old_dir_dentry, *new_dir_dentry;
+	char *old_path_copy, *new_path_copy;
+	int ret;
+
+	/* Check new_path before ext4l_resolve_file checks old_path */
+	if (!new_path)
+		return -EINVAL;
+
+	ret = ext4l_resolve_file(old_path, &old_dir_dentry, &old_dentry,
+				 &old_path_copy);
+	if (ret)
+		return ret;
+
+	if (!old_dentry->d_inode) {
+		/* Source file doesn't exist */
+		ret = -ENOENT;
+		goto out_old;
+	}
+
+	ret = ext4l_resolve_file(new_path, &new_dir_dentry, &new_dentry,
+				 &new_path_copy);
+	if (ret)
+		goto out_old;
+
+	/* Perform the rename */
+	ret = ext4_rename(&nop_mnt_idmap, old_dir_dentry->d_inode, old_dentry,
+			  new_dir_dentry->d_inode, new_dentry, 0);
+	if (ret)
+		goto out_new;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out_new:
+	kfree(new_dentry);
+	kfree(new_dir_dentry);
+	free(new_path_copy);
+out_old:
+	kfree(old_dentry);
+	kfree(old_dir_dentry);
+	free(old_path_copy);
+	return ret;
+}
+
 void ext4l_close(void)
 {
 	ext4l_close_internal(false);

@@ -586,3 +586,64 @@ static int fs_test_ext4l_ln_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_ln_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_rename_norun() - Test ext4l_rename function
+ *
+ * Verifies that ext4l can rename files and directories on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_rename_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "rename test\n";
+	size_t test_len = strlen(test_data);
+	static int test_counter;
+	char old_name[32], new_name[32], subdir_name[32], moved_name[64];
+	loff_t actwrite, size;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique names to avoid issues with test re-runs */
+	snprintf(old_name, sizeof(old_name), "/renameme%d.txt", test_counter);
+	snprintf(new_name, sizeof(new_name), "/renamed%d.txt", test_counter);
+	snprintf(subdir_name, sizeof(subdir_name), "/renamedir%d", test_counter);
+	snprintf(moved_name, sizeof(moved_name), "%s/moved.txt", subdir_name);
+	test_counter++;
+
+	/* Create a file to rename */
+	ut_assertok(ext4l_write(old_name, (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify file exists */
+	ut_asserteq(1, ext4l_exists(old_name));
+
+	/* Rename the file */
+	ut_assertok(ext4l_rename(old_name, new_name));
+
+	/* Verify old name no longer exists, new name does */
+	ut_asserteq(0, ext4l_exists(old_name));
+	ut_asserteq(1, ext4l_exists(new_name));
+
+	/* Verify file size is preserved */
+	ut_assertok(ext4l_size(new_name, &size));
+	ut_asserteq(test_len, size);
+
+	/* Verify renaming non-existent file returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_rename("/nonexistent", "/newname"));
+
+	/* Test cross-directory rename */
+	ut_assertok(ext4l_mkdir(subdir_name));
+	ut_assertok(ext4l_rename(new_name, moved_name));
+	ut_asserteq(0, ext4l_exists(new_name));
+	ut_asserteq(1, ext4l_exists(moved_name));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_rename_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

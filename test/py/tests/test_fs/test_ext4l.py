@@ -128,3 +128,18 @@ class TestExt4l:
         """Test that ext4l can delete files."""
         with ubman.log.section('Test ext4l unlink'):
             ubman.run_ut('fs', 'fs_test_ext4l_unlink', fs_image=ext4_image)
+
+    def test_mkdir(self, ubman, ext4_image):
+        """Test that ext4l can create directories."""
+        with ubman.log.section('Test ext4l mkdir'):
+            ubman.run_ut('fs', 'fs_test_ext4l_mkdir', fs_image=ext4_image)
+
+    def test_ln(self, ubman, ext4_image):
+        """Test that ext4l can create symbolic links."""
+        with ubman.log.section('Test ext4l ln'):
+            ubman.run_ut('fs', 'fs_test_ext4l_ln', fs_image=ext4_image)
+
+    def test_rename(self, ubman, ext4_image):
+        """Test that ext4l can rename files and directories."""
+        with ubman.log.section('Test ext4l rename'):
+            ubman.run_ut('fs', 'fs_test_ext4l_rename', fs_image=ext4_image)

@@ -126,6 +126,17 @@ int ext4l_mkdir(const char *dirname);
 int ext4l_ln(const char *filename, const char *target);
 
 /**
+ * ext4l_rename() - Rename a file or directory
+ *
+ * @old_path: Current path of file or directory
+ * @new_path: New path for file or directory
+ * Return: 0 on success, -ENOENT if source not found,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_rename(const char *old_path, const char *new_path);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID
