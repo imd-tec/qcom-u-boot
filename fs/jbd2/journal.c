@@ -3140,6 +3140,10 @@ static int __init journal_init(void)
 	return ret;
 }
 
+#ifdef __UBOOT__
+static bool jbd2_initialized;
+#endif
+
 /**
  * jbd2_journal_init_global() - Initialize JBD2 global state
  *
@@ -3150,17 +3154,46 @@ static int __init journal_init(void)
  */
 int jbd2_journal_init_global(void)
 {
+#ifdef __UBOOT__
+	if (jbd2_initialized)
+		return 0;
+#else
 	static bool initialized;
 
 	if (initialized)
 		return 0;
+#endif
 
 	if (journal_init())
 		return -ENOMEM;
 
+#ifdef __UBOOT__
+	jbd2_initialized = true;
+#else
 	initialized = true;
+#endif
 	return 0;
 }
+
+#ifdef __UBOOT__
+/**
+ * jbd2_journal_exit_global() - Clean up JBD2 global state
+ *
+ * This should be called when unmounting the last ext4 filesystem to
+ * properly clean up all JBD2 caches and reset global state. This is
+ * important in U-Boot where we may mount/unmount filesystems multiple
+ * times in a single session.
+ */
+void jbd2_journal_exit_global(void)
+{
+	if (!jbd2_initialized)
+		return;
+
+	jbd2_remove_jbd_stats_proc_entry();
+	jbd2_journal_destroy_caches();
+	jbd2_initialized = false;
+}
+#endif
 
 static void __exit journal_exit(void)
 {
