@@ -396,6 +396,14 @@ config TPL_TINY_MEMSET
 config RBTREE
 	bool
 
+config LIB_KMEM_CACHE
+	bool "Enable full kmem_cache implementation"
+	help
+	  Provide a proper kmem_cache implementation in lib/linux_compat.c
+	  that tracks allocated objects. This is needed by subsystems like
+	  ext4 that require cache management. When disabled, simple inline
+	  stubs are used instead.
+
 config BITREVERSE
 	bool "Bit reverse library from Linux"
 
