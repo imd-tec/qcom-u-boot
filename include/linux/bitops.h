@@ -195,6 +195,19 @@ static inline unsigned long __ffs64(u64 word)
 }
 
 /**
+ * fns - find N'th set bit in a word
+ * @word: The word to search
+ * @n: Bit to find
+ */
+static inline unsigned int fns(unsigned long word, unsigned int n)
+{
+	while (word && n--)
+		word &= word - 1;
+
+	return word ? __ffs(word) : BITS_PER_LONG;
+}
+
+/**
  * __set_bit - Set a bit in memory
  * @nr: the bit to set
  * @addr: the address to start counting from
