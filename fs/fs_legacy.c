@@ -290,7 +290,7 @@ static struct fstype_info fstypes[] = {
 		.closedir = ext4l_closedir,
 		.unlink = ext4l_op_ptr(ext4l_unlink, fs_unlink_unsupported),
 		.mkdir = ext4l_op_ptr(ext4l_mkdir, fs_mkdir_unsupported),
-		.ln = fs_ln_unsupported,
+		.ln = ext4l_op_ptr(ext4l_ln, fs_ln_unsupported),
 		.rename = fs_rename_unsupported,
 		.statfs = ext4l_statfs,
 	},

@@ -526,3 +526,63 @@ static int fs_test_ext4l_mkdir_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_mkdir_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_ln_norun() - Test ext4l_ln function
+ *
+ * Verifies that ext4l can create symbolic links on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_ln_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	static int test_counter;
+	char link_name[32];
+	const char *target = "/testfile.txt";
+	loff_t size;
+	loff_t actread;
+	char buf[32];
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique symlink names to avoid issues with test re-runs */
+	snprintf(link_name, sizeof(link_name), "/testlink%d", test_counter);
+	test_counter++;
+
+	/*
+	 * Create a symbolic link. ext4l_ln follows U-Boot's ln command
+	 * convention: ext4l_ln(target, linkname) creates linkname pointing
+	 * to target.
+	 */
+	ut_assertok(ext4l_ln(target, link_name));
+
+	/* Verify symlink exists */
+	ut_asserteq(1, ext4l_exists(link_name));
+
+	/*
+	 * Size through symlink should be target file's size (12 bytes),
+	 * since ext4l_resolve_path follows symlinks (like stat, not lstat)
+	 */
+	ut_assertok(ext4l_size(link_name, &size));
+	ut_asserteq(12, size);
+
+	/* Verify we can read through the symlink */
+	memset(buf, '\0', sizeof(buf));
+	ut_assertok(ext4l_read(link_name, buf, 0, 0, &actread));
+	ut_asserteq(12, actread);
+	ut_asserteq_str("hello world\n", buf);
+
+	/* Verify creating duplicate returns -EEXIST */
+	ut_asserteq(-EEXIST, ext4l_ln(target, link_name));
+
+	/* Verify creating symlink in non-existent parent returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_ln(target, "/nonexistent/link"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_ln_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

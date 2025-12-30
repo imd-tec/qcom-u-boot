@@ -1249,6 +1249,54 @@ out:
 	return ret;
 }
 
+int ext4l_ln(const char *filename, const char *linkname)
+{
+	struct dentry *dentry, *dir_dentry;
+	char *path_copy;
+	int ret;
+
+	/*
+	 * Note: The parameter naming follows U-Boot's convention:
+	 * - filename: the target file the link should point to
+	 * - linkname: the path of the symlink to create
+	 */
+	if (!filename)
+		return -EINVAL;
+
+	ret = ext4l_resolve_file(linkname, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	if (dentry->d_inode) {
+		/* File already exists */
+		ret = -EEXIST;
+		goto out;
+	}
+
+	/* Create the symlink - filename is what the link points to */
+	ret = ext4_symlink(&nop_mnt_idmap, dir_dentry->d_inode, dentry,
+			   filename);
+	if (ret)
+		goto out;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+
+	return ret;
+}
+
 void ext4l_close(void)
 {
 	ext4l_close_internal(false);

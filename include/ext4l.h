@@ -112,6 +112,17 @@ int ext4l_unlink(const char *filename);
 int ext4l_mkdir(const char *dirname);
 
 /**
+ * ext4l_ln() - Create a symbolic link
+ *
+ * @filename: Path of symlink to create
+ * @target: Target path the symlink points to
+ * Return: 0 on success, -EEXIST if file already exists,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_ln(const char *filename, const char *target);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID
