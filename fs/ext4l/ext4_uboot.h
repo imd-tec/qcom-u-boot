@@ -368,7 +368,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define percpu_counter_add(fbc, amount)		((fbc)->count += (amount))
 #define percpu_counter_inc(fbc)			((fbc)->count++)
 #define percpu_counter_dec(fbc)			((fbc)->count--)
-#define percpu_counter_initialized(fbc)		(1)
+#define percpu_counter_initialized(fbc)		((fbc)->initialized)
 
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
@@ -1216,7 +1216,8 @@ static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
 #define write_trylock(lock)		({ (void)(lock); 1; })
 
 /* percpu counter init/destroy */
-#define percpu_counter_init(fbc, val, gfp)	({ (fbc)->count = (val); 0; })
+#define percpu_counter_init(fbc, val, gfp)	\
+	({ (fbc)->count = (val); (fbc)->initialized = true; 0; })
 #define percpu_counter_destroy(fbc)		do { } while (0)
 
 /* ratelimit macros */
