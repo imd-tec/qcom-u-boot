@@ -626,3 +626,83 @@ int bh_read(struct buffer_head *bh, int flags)
 	submit_bh(REQ_OP_READ | flags, bh);
 	return buffer_uptodate(bh) ? 0 : -EIO;
 }
+
+/**
+ * __filemap_get_folio() - Get or create a folio for a mapping
+ * @mapping: The address_space to search
+ * @index: The page index
+ * @fgp_flags: Flags (FGP_CREAT to create if not found)
+ * @gfp: Memory allocation flags
+ * Return: Folio pointer or ERR_PTR on error
+ */
+struct folio *__filemap_get_folio(struct address_space *mapping,
+				  pgoff_t index, unsigned int fgp_flags,
+				  gfp_t gfp)
+{
+	struct folio *folio;
+	int i;
+
+	/* Search for existing folio in cache */
+	if (mapping) {
+		for (i = 0; i < mapping->folio_cache_count; i++) {
+			folio = mapping->folio_cache[i];
+			if (folio && folio->index == index) {
+				/* Found existing folio, bump refcount */
+				folio->_refcount++;
+				return folio;
+			}
+		}
+	}
+
+	/* If not creating, return error */
+	if (!(fgp_flags & FGP_CREAT))
+		return ERR_PTR(-ENOENT);
+
+	/* Create new folio */
+	folio = kzalloc(sizeof(struct folio), gfp);
+	if (!folio)
+		return ERR_PTR(-ENOMEM);
+
+	folio->data = kzalloc(PAGE_SIZE, gfp);
+	if (!folio->data) {
+		kfree(folio);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	folio->index = index;
+	folio->mapping = mapping;
+	folio->_refcount = 1;
+
+	/* Add to cache if there's room */
+	if (mapping && mapping->folio_cache_count < FOLIO_CACHE_MAX) {
+		mapping->folio_cache[mapping->folio_cache_count++] = folio;
+		/* Extra ref for cache */
+		folio->_refcount++;
+	}
+
+	return folio;
+}
+
+/**
+ * folio_put() - Release a reference to a folio
+ * @folio: The folio to release
+ */
+void folio_put(struct folio *folio)
+{
+	if (!folio)
+		return;
+	if (--folio->_refcount > 0)
+		return;
+	kfree(folio->data);
+	kfree(folio);
+}
+
+/**
+ * folio_get() - Acquire a reference to a folio
+ * @folio: The folio to reference
+ */
+void folio_get(struct folio *folio)
+{
+	if (folio)
+		folio->_refcount++;
+}

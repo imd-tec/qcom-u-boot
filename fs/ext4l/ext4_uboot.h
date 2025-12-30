@@ -1247,16 +1247,21 @@ struct folio_batch {
 
 /* folio operations - stubs */
 #define folio_mark_dirty(f)			do { (void)(f); } while (0)
-#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((unsigned long)(p) & (PAGE_SIZE - 1)); })
+/*
+ * offset_in_folio - calculate offset of pointer within folio's data
+ * In Linux this uses page alignment, but in U-Boot we use the folio's
+ * actual data pointer since our buffers are malloc'd.
+ */
+#define offset_in_folio(f, p)			((f) ? (unsigned int)((uintptr_t)(p) - (uintptr_t)(f)->data) : 0U)
 #define folio_buffers(f)			({ (void)(f); (struct buffer_head *)NULL; })
 #define virt_to_folio(p)			({ (void)(p); (struct folio *)NULL; })
-#define folio_set_bh(bh, f, off)		do { (void)(bh); (void)(f); (void)(off); } while (0)
+#define folio_set_bh(bh, f, off)		do { if ((bh) && (f)) { (bh)->b_folio = (f); (bh)->b_data = (char *)(f)->data + (off); } } while (0)
 #define memcpy_from_folio(dst, f, off, len)	do { (void)(dst); (void)(f); (void)(off); (void)(len); } while (0)
 #define folio_test_uptodate(f)			({ (void)(f); 1; })
 #define folio_pos(f)				({ (void)(f); 0LL; })
 #define folio_size(f)				({ (void)(f); PAGE_SIZE; })
 #define folio_unlock(f)				do { (void)(f); } while (0)
-#define folio_put(f)				do { (void)(f); } while (0)
+/* folio_put and folio_get are implemented in support.c */
 #define folio_lock(f)				do { (void)(f); } while (0)
 #define folio_batch_init(fb)			do { (fb)->nr = 0; } while (0)
 #define filemap_get_folios(m, i, e, fb)		({ (void)(m); (void)(i); (void)(e); (void)(fb); 0U; })
@@ -1357,7 +1362,7 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 #define FGP_WRITEBEGIN	(FGP_LOCK | FGP_WRITE | FGP_CREAT | FGP_STABLE)
 
 /* kmap/kunmap stubs for inline.c */
-#define kmap_local_folio(folio, off)	({ (void)(folio); (void)(off); (void *)NULL; })
+#define kmap_local_folio(folio, off)	((folio) ? (char *)(folio)->data + (off) : NULL)
 #define kunmap_local(addr)		do { (void)(addr); } while (0)
 
 /* Folio zeroing stubs for inline.c */
@@ -1367,13 +1372,12 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 /* mapping_gfp_mask stub */
 #define mapping_gfp_mask(m)		({ (void)(m); GFP_KERNEL; })
 
-/* __filemap_get_folio stub */
-static inline struct folio *__filemap_get_folio(struct address_space *mapping,
-						pgoff_t index, unsigned int fgp_flags,
-						gfp_t gfp)
-{
-	return NULL;
-}
+/* Folio operations - implemented in support.c */
+struct folio *__filemap_get_folio(struct address_space *mapping,
+				  pgoff_t index, unsigned int fgp_flags,
+				  gfp_t gfp);
+void folio_put(struct folio *folio);
+void folio_get(struct folio *folio);
 
 /* projid_t - project ID type */
 typedef unsigned int projid_t;
@@ -1545,7 +1549,9 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 /* Buffer operations - additional */
 #define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
 #define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
-#define bh_offset(bh)				(0UL)
+/* bh_offset returns offset of b_data within the folio */
+#define bh_offset(bh)				((bh)->b_folio ? \
+	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
 #define block_invalidate_folio(f, o, l)		do { } while (0)
 #define block_write_end(pos, len, copied, folio) ({ (void)(pos); (void)(len); (void)(folio); (copied); })
 #define block_dirty_folio(m, f)			({ (void)(m); (void)(f); false; })
@@ -2542,8 +2548,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
 #define WARN_RATELIMIT(condition, ...) (condition)
 
-/* folio_get - increment folio refcount (no-op in U-Boot) */
-#define folio_get(f)			do { (void)(f); } while (0)
+/* folio_get - now implemented in support.c */
 
 /* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
 #define array_index_nospec(index, size) (index)
