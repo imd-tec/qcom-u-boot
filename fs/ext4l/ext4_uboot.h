@@ -2320,10 +2320,6 @@ void *kvzalloc(size_t size, gfp_t flags);
 #define kvmalloc(size, flags)	kvzalloc(size, flags)
 unsigned long roundup_pow_of_two(unsigned long n);
 
-/* Atomic operations - declarations for stub.c */
-void atomic_add(int val, atomic_t *v);
-void atomic64_add(s64 val, atomic64_t *v);
-
 /* Power of 2 check - declaration for stub.c */
 int is_power_of_2(unsigned long n);
 

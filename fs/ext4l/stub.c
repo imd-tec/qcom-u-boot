@@ -617,13 +617,7 @@ int percpu_init_rwsem(struct percpu_rw_semaphore *sem)
 	return 0;
 }
 
-/* Atomic operations */
-void atomic_add(int val, atomic_t *v)
-{
-	v->counter += val;
-}
-
-/* atomic64_add is now a macro in ext4_uboot.h */
+/* atomic_add and atomic64_add are now in asm-generic/atomic.h */
 
 /* Discard */
 unsigned int bdev_max_discard_sectors(struct block_device *bdev)
