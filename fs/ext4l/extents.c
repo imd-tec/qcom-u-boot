@@ -2252,7 +2252,7 @@ static ext4_lblk_t ext4_ext_find_hole(struct inode *inode,
 {
 	int depth = ext_depth(inode);
 	struct ext4_extent *ex;
-	ext4_lblk_t len;
+	ext4_lblk_t len = 0;
 
 	ex = path[depth].p_ext;
 	if (ex == NULL) {
