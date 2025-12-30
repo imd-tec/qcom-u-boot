@@ -77,26 +77,27 @@ typedef struct journal_s journal_t;
 
 /*
  * Bit operations - sandbox declares these extern but doesn't implement them.
+ * These work on bitmaps where nr is the absolute bit number.
  */
 void set_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p |= (1UL << nr);
+	*p |= (1UL << (nr % BITS_PER_LONG));
 }
 
 void clear_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p &= ~(1UL << nr);
+	*p &= ~(1UL << (nr % BITS_PER_LONG));
 }
 
 void change_bit(int nr, void *addr)
 {
-	unsigned long *p = (unsigned long *)addr;
+	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
-	*p ^= (1UL << nr);
+	*p ^= (1UL << (nr % BITS_PER_LONG));
 }
 
 /*
@@ -587,6 +588,29 @@ struct dentry *d_make_root(struct inode *inode)
 	return de;
 }
 
+/**
+ * iput() - Release a reference to an inode
+ * @inode: Inode to release
+ *
+ * Decrements the inode reference count. When the reference count reaches
+ * zero and the inode has no links, the inode is evicted (freed).
+ */
+void iput(struct inode *inode)
+{
+	if (!inode)
+		return;
+
+	if (atomic_dec_and_test(&inode->i_count)) {
+		/* Last reference - check if inode should be evicted */
+		if (inode->i_nlink == 0 && inode->i_sb &&
+		    inode->i_sb->s_op && inode->i_sb->s_op->evict_inode) {
+			inode->i_sb->s_op->evict_inode(inode);
+			/* Sync dirty buffers after eviction */
+			bh_cache_sync();
+		}
+	}
+}
+
 /* percpu init rwsem */
 int percpu_init_rwsem(struct percpu_rw_semaphore *sem)
 {
@@ -669,11 +693,22 @@ void dquot_free_space_nodirty(struct inode *inode, loff_t size)
 
 int dquot_alloc_block(struct inode *inode, loff_t nr)
 {
+	/*
+	 * Update i_blocks to reflect the allocated blocks.
+	 * i_blocks is in 512-byte units, so convert from fs blocks.
+	 */
+	inode->i_blocks += nr << (inode->i_blkbits - 9);
+
 	return 0;
 }
 
 void dquot_free_block(struct inode *inode, loff_t nr)
 {
+	/*
+	 * Update i_blocks to reflect the freed blocks.
+	 * i_blocks is in 512-byte units, so convert from fs blocks.
+	 */
+	inode->i_blocks -= nr << (inode->i_blkbits - 9);
 }
 
 /*

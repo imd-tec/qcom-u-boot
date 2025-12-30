@@ -222,6 +222,29 @@ static void bh_cache_insert(struct buffer_head *bh)
  *
  * Called on unmount to free all cached buffers.
  */
+/**
+ * bh_clear_stale_jbd() - Clear stale journal_head from buffer_head
+ * @bh: buffer_head to check
+ *
+ * Check if the buffer still has journal_head attached. This should not happen
+ * if the journal was properly destroyed, but warn if it does to help debugging.
+ * Clear the JBD flag and b_private to prevent issues with subsequent mounts.
+ */
+static void bh_clear_stale_jbd(struct buffer_head *bh)
+{
+	if (buffer_jbd(bh)) {
+		log_err("bh %p block %llu still has JBD (b_private %p)\n",
+			bh, (unsigned long long)bh->b_blocknr, bh->b_private);
+		/*
+		 * Clear the JBD flag and b_private to prevent issues.
+		 * The journal_head itself will be freed when the
+		 * journal_head cache is destroyed.
+		 */
+		clear_buffer_jbd(bh);
+		bh->b_private = NULL;
+	}
+}
+
 void bh_cache_clear(void)
 {
 	int i;
@@ -231,14 +254,45 @@ void bh_cache_clear(void)
 		for (entry = bh_cache[i]; entry; entry = next) {
 			next = entry->next;
 			if (entry->bh) {
+				struct buffer_head *bh = entry->bh;
+
+				bh_clear_stale_jbd(bh);
 				/* Release the cache's reference */
-				if (atomic_dec_and_test(&entry->bh->b_count))
-					free_buffer_head(entry->bh);
+				if (atomic_dec_and_test(&bh->b_count))
+					free_buffer_head(bh);
 			}
 			free(entry);
 		}
 		bh_cache[i] = NULL;
 	}
+}
+
+/**
+ * bh_cache_sync() - Sync all dirty buffers to disk
+ *
+ * U-Boot doesn't have a journal thread, so we need to manually sync
+ * all dirty buffers after write operations.
+ *
+ * Return: 0 on success, negative on first error
+ */
+int bh_cache_sync(void)
+{
+	int i, ret = 0;
+	struct bh_cache_entry *entry;
+
+	for (i = 0; i < BH_CACHE_SIZE; i++) {
+		for (entry = bh_cache[i]; entry; entry = entry->next) {
+			if (entry->bh && buffer_dirty(entry->bh)) {
+				int err = ext4l_write_block(entry->bh->b_blocknr,
+							    entry->bh->b_size,
+							    entry->bh->b_data);
+				if (err && !ret)
+					ret = err;
+				clear_buffer_dirty(entry->bh);
+			}
+		}
+	}
+	return ret;
 }
 
 /**
@@ -302,19 +356,25 @@ static struct buffer_head *alloc_buffer_head_with_data(size_t size)
  * @bh: Buffer head to free
  *
  * Only free b_data if BH_OwnsData is set. Shadow buffers created by
- * jbd2_journal_write_metadata_buffer() share b_data with the original
- * buffer and should not free it.
+ * jbd2_journal_write_metadata_buffer() share b_data/b_folio with the original
+ * buffer and should not free them. Shadow buffers are identified by having
+ * b_private set to point to the original buffer.
  */
 void free_buffer_head(struct buffer_head *bh)
 {
 	if (!bh)
 		return;
 
+	/*
+	 * Shadow buffers (b_private != NULL) share their folio with the
+	 * original buffer. Don't free the shared folio.
+	 */
+	if (!bh->b_private && bh->b_folio)
+		free(bh->b_folio);
+
 	/* Only free b_data if this buffer owns it */
 	if (bh->b_data && test_bit(BH_OwnsData, &bh->b_state))
 		free(bh->b_data);
-	if (bh->b_folio)
-		free(bh->b_folio);
 	free(bh);
 }
 
@@ -426,6 +486,50 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block)
 }
 
 /**
+ * __getblk() - Get a buffer for a given block device
+ * @bdev: Block device
+ * @block: Block number
+ * @size: Block size
+ * Return: Buffer head or NULL on error
+ *
+ * Similar to sb_getblk but takes a block device instead of superblock.
+ * Used by the journal to allocate descriptor buffers.
+ */
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size)
+{
+	struct buffer_head *bh;
+
+	if (!bdev || !size)
+		return NULL;
+
+	/* Check cache first - must match block number AND size */
+	bh = bh_cache_lookup(block, size);
+	if (bh)
+		return bh;
+
+	/* Allocate new buffer */
+	bh = alloc_buffer_head_with_data(size);
+	if (!bh)
+		return NULL;
+
+	bh->b_blocknr = block;
+	bh->b_bdev = bdev;
+	bh->b_size = size;
+
+	/* Mark buffer as having a valid disk mapping */
+	set_buffer_mapped(bh);
+
+	/* Don't read - just allocate with zeroed data */
+	memset(bh->b_data, '\0', bh->b_size);
+
+	/* Add to cache */
+	bh_cache_insert(bh);
+
+	return bh;
+}
+
+/**
  * sb_bread() - Read a block via super_block
  * @sb: Super block
  * @block: Block number to read
@@ -477,12 +581,17 @@ void brelse(struct buffer_head *bh)
 }
 
 /**
- * __brelse() - Release a buffer_head (alternate API)
+ * __brelse() - Release a buffer_head reference without freeing
  * @bh: Buffer head to release
+ *
+ * Unlike brelse(), this only decrements the reference count without
+ * freeing the buffer when count reaches zero. Used when caller will
+ * explicitly free with free_buffer_head() afterward.
  */
 void __brelse(struct buffer_head *bh)
 {
-	brelse(bh);
+	if (bh)
+		atomic_dec(&bh->b_count);
 }
 
 /**
@@ -557,6 +666,23 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
 }
 
 /**
+ * end_buffer_write_sync() - Completion handler for synchronous buffer writes
+ * @bh: Buffer head that completed I/O
+ * @uptodate: 1 if I/O succeeded, 0 if failed
+ *
+ * This callback is invoked after a buffer write completes. It sets the
+ * buffer's uptodate state based on the result and unlocks the buffer.
+ */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
+
+/**
  * submit_bh() - Submit a buffer_head for I/O
  * @op: Operation (REQ_OP_READ, REQ_OP_WRITE, etc.)
  * @bh: Buffer head to submit
@@ -564,26 +690,38 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block,
  */
 int submit_bh(int op, struct buffer_head *bh)
 {
-	int ret;
+	int ret = 0;
 	int op_type = op & REQ_OP_MASK;  /* Mask out flags, keep operation type */
+	int uptodate;
 
 	if (op_type == REQ_OP_READ) {
 		ret = ext4l_read_block(bh->b_blocknr, bh->b_size, bh->b_data);
 		if (ret) {
 			clear_buffer_uptodate(bh);
-			return ret;
+			uptodate = 0;
+		} else {
+			set_buffer_uptodate(bh);
+			uptodate = 1;
 		}
-		set_buffer_uptodate(bh);
 	} else if (op_type == REQ_OP_WRITE) {
 		ret = ext4l_write_block(bh->b_blocknr, bh->b_size, bh->b_data);
 		if (ret) {
 			clear_buffer_uptodate(bh);
-			return ret;
+			set_buffer_write_io_error(bh);
+			uptodate = 0;
+		} else {
+			clear_buffer_write_io_error(bh);
+			uptodate = 1;
 		}
-		/* Mark buffer as clean (not dirty) after write */
+	} else {
+		uptodate = 0;
 	}
 
-	return 0;
+	/* Call b_end_io callback if set - U-Boot does sync I/O */
+	if (bh->b_end_io)
+		bh->b_end_io(bh, uptodate);
+
+	return ret;
 }
 
 /**
@@ -599,4 +737,84 @@ int bh_read(struct buffer_head *bh, int flags)
 
 	submit_bh(REQ_OP_READ | flags, bh);
 	return buffer_uptodate(bh) ? 0 : -EIO;
+}
+
+/**
+ * __filemap_get_folio() - Get or create a folio for a mapping
+ * @mapping: The address_space to search
+ * @index: The page index
+ * @fgp_flags: Flags (FGP_CREAT to create if not found)
+ * @gfp: Memory allocation flags
+ * Return: Folio pointer or ERR_PTR on error
+ */
+struct folio *__filemap_get_folio(struct address_space *mapping,
+				  pgoff_t index, unsigned int fgp_flags,
+				  gfp_t gfp)
+{
+	struct folio *folio;
+	int i;
+
+	/* Search for existing folio in cache */
+	if (mapping) {
+		for (i = 0; i < mapping->folio_cache_count; i++) {
+			folio = mapping->folio_cache[i];
+			if (folio && folio->index == index) {
+				/* Found existing folio, bump refcount */
+				folio->_refcount++;
+				return folio;
+			}
+		}
+	}
+
+	/* If not creating, return error */
+	if (!(fgp_flags & FGP_CREAT))
+		return ERR_PTR(-ENOENT);
+
+	/* Create new folio */
+	folio = kzalloc(sizeof(struct folio), gfp);
+	if (!folio)
+		return ERR_PTR(-ENOMEM);
+
+	folio->data = kzalloc(PAGE_SIZE, gfp);
+	if (!folio->data) {
+		kfree(folio);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	folio->index = index;
+	folio->mapping = mapping;
+	folio->_refcount = 1;
+
+	/* Add to cache if there's room */
+	if (mapping && mapping->folio_cache_count < FOLIO_CACHE_MAX) {
+		mapping->folio_cache[mapping->folio_cache_count++] = folio;
+		/* Extra ref for cache */
+		folio->_refcount++;
+	}
+
+	return folio;
+}
+
+/**
+ * folio_put() - Release a reference to a folio
+ * @folio: The folio to release
+ */
+void folio_put(struct folio *folio)
+{
+	if (!folio)
+		return;
+	if (--folio->_refcount > 0)
+		return;
+	kfree(folio->data);
+	kfree(folio);
+}
+
+/**
+ * folio_get() - Acquire a reference to a folio
+ * @folio: The folio to reference
+ */
+void folio_get(struct folio *folio)
+{
+	if (folio)
+		folio->_refcount++;
 }

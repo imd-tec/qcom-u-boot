@@ -101,12 +101,12 @@ struct timespec64 {
 
 /* cmpxchg - compare and exchange, single-threaded version */
 #define cmpxchg(ptr, old, new) ({		\
-	typeof(*(ptr)) __old = (old);		\
-	typeof(*(ptr)) __new = (new);		\
-	typeof(*(ptr)) __ret = *(ptr);		\
-	if (__ret == __old)			\
-		*(ptr) = __new;			\
-	__ret;					\
+	typeof(*(ptr)) __cmpxchg_old = (old);	\
+	typeof(*(ptr)) __cmpxchg_new = (new);	\
+	typeof(*(ptr)) __cmpxchg_ret = *(ptr);	\
+	if (__cmpxchg_ret == __cmpxchg_old)	\
+		*(ptr) = __cmpxchg_new;		\
+	__cmpxchg_ret;				\
 })
 
 /* Reference count type */
@@ -328,8 +328,8 @@ extern struct user_namespace init_user_ns;
 /* Buffer operations - stubs */
 #define wait_on_buffer(bh)		do { } while (0)
 #define __bforget(bh)			do { } while (0)
-#define mark_buffer_dirty_inode(bh, i)	do { } while (0)
-#define mark_buffer_dirty(bh)		do { } while (0)
+#define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
+#define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
 #define lock_buffer(bh)			set_buffer_locked(bh)
 #define unlock_buffer(bh)		clear_buffer_locked(bh)
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
@@ -349,13 +349,15 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
  * We implement them in interface.c for sandbox.
  */
 
-/* Little-endian bit operations */
-#define __set_bit_le(nr, addr)		((void)(nr), (void)(addr))
-#define test_bit_le(nr, addr)		({ (void)(nr); (void)(addr); 0; })
+/* Little-endian bit operations - use arch-provided find_next_zero_bit */
 #define find_next_zero_bit_le(addr, size, offset) \
-	({ (void)(addr); (void)(size); (offset); })
-#define __test_and_clear_bit_le(nr, addr) ({ (void)(nr); (void)(addr); 0; })
-#define __test_and_set_bit_le(nr, addr)	({ (void)(nr); (void)(addr); 0; })
+	find_next_zero_bit((void *)addr, size, offset)
+#define __set_bit_le(nr, addr)		set_bit(nr, addr)
+#define test_bit_le(nr, addr)		test_bit(nr, addr)
+#define __test_and_clear_bit_le(nr, addr) \
+	({ int __old = test_bit(nr, addr); clear_bit(nr, addr); __old; })
+#define __test_and_set_bit_le(nr, addr) \
+	({ int __old = test_bit(nr, addr); set_bit(nr, addr); __old; })
 
 /* KUNIT stub */
 #define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
@@ -366,14 +368,15 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define percpu_counter_add(fbc, amount)		((fbc)->count += (amount))
 #define percpu_counter_inc(fbc)			((fbc)->count++)
 #define percpu_counter_dec(fbc)			((fbc)->count--)
-#define percpu_counter_initialized(fbc)		(1)
+#define percpu_counter_initialized(fbc)		((fbc)->initialized)
 
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
 
 /* Quota operations - stubs (only define if quotaops.h not included) */
 #ifndef _LINUX_QUOTAOPS_H
-#define dquot_alloc_block_nofail(inode, nr)	({ (void)(inode); (void)(nr); 0; })
+#define dquot_alloc_block_nofail(inode, nr)	\
+	({ (inode)->i_blocks += (nr) << ((inode)->i_blkbits - 9); 0; })
 #define dquot_initialize(inode)			({ (void)(inode); 0; })
 #define dquot_free_inode(inode)			do { (void)(inode); } while (0)
 #define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
@@ -397,10 +400,10 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 
 /* Buffer cache operations */
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
-#define sync_dirty_buffer(bh)			({ (void)(bh); 0; })
+#define sync_dirty_buffer(bh)			submit_bh(REQ_OP_WRITE, bh)
 
-/* Time functions */
-#define ktime_get_real_seconds()		(0)
+/* Time functions - use boot-relative time for timestamps */
+#define ktime_get_real_seconds()		(get_timer(0) / 1000)
 #define time_before32(a, b)			(0)
 
 /* Inode operations - iget_locked and new_inode are in interface.c */
@@ -408,7 +411,7 @@ extern struct inode *new_inode(struct super_block *sb);
 #define i_uid_write(inode, uid)			do { } while (0)
 #define i_gid_write(inode, gid)			do { } while (0)
 #define inode_fsuid_set(inode, idmap)		do { } while (0)
-#define inode_init_owner(idmap, i, dir, mode)	do { } while (0)
+#define inode_init_owner(idmap, i, dir, mode)	do { (i)->i_mode = (mode); } while (0)
 #define insert_inode_locked(inode)		(0)
 #define unlock_new_inode(inode)			do { } while (0)
 #define clear_nlink(inode)			do { } while (0)
@@ -488,8 +491,8 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* RCU barrier - stub */
 #define rcu_barrier()		do { } while (0)
 
-/* inode/dentry operations - stubs */
-#define iput(inode)		do { } while (0)
+/* inode/dentry operations */
+void iput(struct inode *inode);
 
 /* current task - from linux/sched.h */
 #include <linux/sched.h>
@@ -1213,7 +1216,8 @@ static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
 #define write_trylock(lock)		({ (void)(lock); 1; })
 
 /* percpu counter init/destroy */
-#define percpu_counter_init(fbc, val, gfp)	({ (fbc)->count = (val); 0; })
+#define percpu_counter_init(fbc, val, gfp)	\
+	({ (fbc)->count = (val); (fbc)->initialized = true; 0; })
 #define percpu_counter_destroy(fbc)		do { } while (0)
 
 /* ratelimit macros */
@@ -1245,16 +1249,21 @@ struct folio_batch {
 
 /* folio operations - stubs */
 #define folio_mark_dirty(f)			do { (void)(f); } while (0)
-#define offset_in_folio(f, p)			({ (void)(f); (unsigned int)((unsigned long)(p) & (PAGE_SIZE - 1)); })
+/*
+ * offset_in_folio - calculate offset of pointer within folio's data
+ * In Linux this uses page alignment, but in U-Boot we use the folio's
+ * actual data pointer since our buffers are malloc'd.
+ */
+#define offset_in_folio(f, p)			((f) ? (unsigned int)((uintptr_t)(p) - (uintptr_t)(f)->data) : 0U)
 #define folio_buffers(f)			({ (void)(f); (struct buffer_head *)NULL; })
 #define virt_to_folio(p)			({ (void)(p); (struct folio *)NULL; })
-#define folio_set_bh(bh, f, off)		do { (void)(bh); (void)(f); (void)(off); } while (0)
+#define folio_set_bh(bh, f, off)		do { if ((bh) && (f)) { (bh)->b_folio = (f); (bh)->b_data = (char *)(f)->data + (off); } } while (0)
 #define memcpy_from_folio(dst, f, off, len)	do { (void)(dst); (void)(f); (void)(off); (void)(len); } while (0)
 #define folio_test_uptodate(f)			({ (void)(f); 1; })
 #define folio_pos(f)				({ (void)(f); 0LL; })
 #define folio_size(f)				({ (void)(f); PAGE_SIZE; })
 #define folio_unlock(f)				do { (void)(f); } while (0)
-#define folio_put(f)				do { (void)(f); } while (0)
+/* folio_put and folio_get are implemented in support.c */
 #define folio_lock(f)				do { (void)(f); } while (0)
 #define folio_batch_init(fb)			do { (fb)->nr = 0; } while (0)
 #define filemap_get_folios(m, i, e, fb)		({ (void)(m); (void)(i); (void)(e); (void)(fb); 0U; })
@@ -1355,7 +1364,7 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 #define FGP_WRITEBEGIN	(FGP_LOCK | FGP_WRITE | FGP_CREAT | FGP_STABLE)
 
 /* kmap/kunmap stubs for inline.c */
-#define kmap_local_folio(folio, off)	({ (void)(folio); (void)(off); (void *)NULL; })
+#define kmap_local_folio(folio, off)	((folio) ? (char *)(folio)->data + (off) : NULL)
 #define kunmap_local(addr)		do { (void)(addr); } while (0)
 
 /* Folio zeroing stubs for inline.c */
@@ -1365,13 +1374,12 @@ static inline int generic_error_remove_folio(struct address_space *mapping,
 /* mapping_gfp_mask stub */
 #define mapping_gfp_mask(m)		({ (void)(m); GFP_KERNEL; })
 
-/* __filemap_get_folio stub */
-static inline struct folio *__filemap_get_folio(struct address_space *mapping,
-						pgoff_t index, unsigned int fgp_flags,
-						gfp_t gfp)
-{
-	return NULL;
-}
+/* Folio operations - implemented in support.c */
+struct folio *__filemap_get_folio(struct address_space *mapping,
+				  pgoff_t index, unsigned int fgp_flags,
+				  gfp_t gfp);
+void folio_put(struct folio *folio);
+void folio_get(struct folio *folio);
 
 /* projid_t - project ID type */
 typedef unsigned int projid_t;
@@ -1543,7 +1551,9 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 /* Buffer operations - additional */
 #define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
 #define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
-#define bh_offset(bh)				(0UL)
+/* bh_offset returns offset of b_data within the folio */
+#define bh_offset(bh)				((bh)->b_folio ? \
+	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
 #define block_invalidate_folio(f, o, l)		do { } while (0)
 #define block_write_end(pos, len, copied, folio) ({ (void)(pos); (void)(len); (void)(folio); (copied); })
 #define block_dirty_folio(m, f)			({ (void)(m); (void)(f); false; })
@@ -2067,8 +2077,9 @@ struct fs_context {
 	bool silent;
 };
 
-/* ext4 superblock initialisation */
+/* ext4 superblock initialisation and commit */
 int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
+int ext4_commit_super(struct super_block *sb);
 
 /* fs_parameter stubs */
 struct fs_parameter {
@@ -2173,8 +2184,8 @@ struct blk_holder_ops {
 };
 static const struct blk_holder_ops fs_holder_ops;
 
-/* end_buffer_write_sync */
-#define end_buffer_write_sync		NULL
+/* end_buffer_write_sync - implemented in support.c */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
 /* File system management time flag */
 #define FS_MGTIME			0
@@ -2540,8 +2551,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
 #define WARN_RATELIMIT(condition, ...) (condition)
 
-/* folio_get - increment folio refcount (no-op in U-Boot) */
-#define folio_get(f)			do { (void)(f); } while (0)
+/* folio_get - now implemented in support.c */
 
 /* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
 #define array_index_nospec(index, size) (index)
@@ -2879,7 +2889,9 @@ void free_buffer_head(struct buffer_head *bh);
 /* ext4l support functions (support.c) */
 void ext4l_crc32c_init(void);
 void bh_cache_clear(void);
+int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
+int ext4l_write_block(sector_t block, size_t size, void *buffer);
 
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
@@ -2914,7 +2926,8 @@ struct membuf *ext4l_get_msg_buf(void);
 
 /* JBD2 journal.c stubs */
 struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
-#define __getblk(bdev, block, size)	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size);
 int bmap(struct inode *inode, sector_t *block);
 #define trace_jbd2_update_log_tail(j, t, b, f) \
 	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
