@@ -102,6 +102,16 @@ int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
 int ext4l_unlink(const char *filename);
 
 /**
+ * ext4l_mkdir() - Create a directory
+ *
+ * @dirname: Path of directory to create
+ * Return: 0 on success, -EEXIST if directory already exists,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_mkdir(const char *dirname);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID

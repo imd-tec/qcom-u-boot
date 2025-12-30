@@ -1206,6 +1206,49 @@ out:
 	return ret;
 }
 
+int ext4l_mkdir(const char *dirname)
+{
+	struct dentry *dentry, *dir_dentry, *result;
+	char *path_copy;
+	int ret;
+
+	ret = ext4l_resolve_file(dirname, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	if (dentry->d_inode) {
+		/* Directory already exists */
+		ret = -EEXIST;
+		goto out;
+	}
+
+	/* Create the directory with mode 0755 (rwxr-xr-x) */
+	result = ext4_mkdir(&nop_mnt_idmap, dir_dentry->d_inode, dentry,
+			    S_IFDIR | 0755);
+	if (IS_ERR(result)) {
+		ret = PTR_ERR(result);
+		goto out;
+	}
+
+	ret = 0;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+	return ret;
+}
+
 void ext4l_close(void)
 {
 	ext4l_close_internal(false);

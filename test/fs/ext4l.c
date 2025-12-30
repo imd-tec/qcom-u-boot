@@ -479,3 +479,50 @@ static int fs_test_ext4l_unlink_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_unlink_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_mkdir_norun() - Test ext4l_mkdir function
+ *
+ * Verifies that ext4l can create directories on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_mkdir_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	static int test_counter;
+	char dir_name[32];
+	char subdir_name[64];
+	int ret;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique directory names to avoid issues with test re-runs */
+	snprintf(dir_name, sizeof(dir_name), "/testdir%d", test_counter);
+	snprintf(subdir_name, sizeof(subdir_name), "%s/subdir", dir_name);
+	test_counter++;
+
+	/* Create a new directory */
+	ret = ext4l_mkdir(dir_name);
+	ut_assertok(ret);
+
+	/* Verify directory exists */
+	ut_asserteq(1, ext4l_exists(dir_name));
+
+	/* Verify creating duplicate returns -EEXIST */
+	ut_asserteq(-EEXIST, ext4l_mkdir(dir_name));
+
+	/* Create nested directory */
+	ut_assertok(ext4l_mkdir(subdir_name));
+	ut_asserteq(1, ext4l_exists(subdir_name));
+
+	/* Verify creating directory in non-existent parent returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_mkdir("/nonexistent/dir"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_mkdir_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
