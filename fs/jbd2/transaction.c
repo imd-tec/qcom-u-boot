@@ -1938,6 +1938,24 @@ int jbd2_journal_stop(handle_t *handle)
 	 */
 	stop_this_handle(handle);
 
+#ifdef __UBOOT__
+	/*
+	 * U-Boot: Always commit synchronously for crash safety.
+	 * In single-threaded mode, we commit immediately after each
+	 * operation completes to ensure durability.
+	 */
+	if (IS_ENABLED(CONFIG_EXT4_WRITE) &&
+	    journal->j_running_transaction &&
+	    atomic_read(&journal->j_running_transaction->t_updates) == 0) {
+		jbd2_journal_commit_transaction(journal);
+		/*
+		 * Check if journal was aborted during commit
+		 * (e.g., due to I/O error) and propagate the error.
+		 */
+		if (is_journal_aborted(journal) && !err)
+			err = -EIO;
+	} else
+#endif
 	if (wait_for_commit)
 		err = jbd2_log_wait_commit(journal, tid);
 
