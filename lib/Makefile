@@ -58,6 +58,7 @@ obj-$(CONFIG_PHYSMEM) += physmem.o
 obj-y += rc4.o
 obj-$(CONFIG_RBTREE)	+= rbtree.o
 obj-$(CONFIG_BITREVERSE) += bitrev.o
+obj-$(CONFIG_SANDBOX) += find_bit.o
 obj-y += list_sort.o
 endif
 
