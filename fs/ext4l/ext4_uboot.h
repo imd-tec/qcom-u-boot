@@ -101,12 +101,12 @@ struct timespec64 {
 
 /* cmpxchg - compare and exchange, single-threaded version */
 #define cmpxchg(ptr, old, new) ({		\
-	typeof(*(ptr)) __old = (old);		\
-	typeof(*(ptr)) __new = (new);		\
-	typeof(*(ptr)) __ret = *(ptr);		\
-	if (__ret == __old)			\
-		*(ptr) = __new;			\
-	__ret;					\
+	typeof(*(ptr)) __cmpxchg_old = (old);	\
+	typeof(*(ptr)) __cmpxchg_new = (new);	\
+	typeof(*(ptr)) __cmpxchg_ret = *(ptr);	\
+	if (__cmpxchg_ret == __cmpxchg_old)	\
+		*(ptr) = __cmpxchg_new;		\
+	__cmpxchg_ret;				\
 })
 
 /* Reference count type */
