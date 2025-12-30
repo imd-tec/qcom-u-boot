@@ -123,3 +123,8 @@ class TestExt4l:
         """Test that ext4l can write file contents."""
         with ubman.log.section('Test ext4l write'):
             ubman.run_ut('fs', 'fs_test_ext4l_write', fs_image=ext4_image)
+
+    def test_unlink(self, ubman, ext4_image):
+        """Test that ext4l can delete files."""
+        with ubman.log.section('Test ext4l unlink'):
+            ubman.run_ut('fs', 'fs_test_ext4l_unlink', fs_image=ext4_image)

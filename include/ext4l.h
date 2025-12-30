@@ -93,6 +93,15 @@ int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
 		loff_t *actwrite);
 
 /**
+ * ext4l_unlink() - Delete a file
+ *
+ * @filename: Path to file to delete
+ * Return: 0 on success, -ENOENT if file not found, -EISDIR if path is a
+ *	   directory, -EROFS if read-only, negative on other errors
+ */
+int ext4l_unlink(const char *filename);
+
+/**
  * ext4l_get_uuid() - Get the filesystem UUID
  *
  * @uuid: Buffer to receive the 16-byte UUID

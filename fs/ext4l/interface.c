@@ -874,10 +874,109 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 	return 0;
 }
 
-static int ext4l_write_file(struct inode *dir, const char *filename, void *buf,
-			    loff_t offset, loff_t len, loff_t *actwrite)
+/**
+ * ext4l_resolve_file() - Resolve a file path for write operations
+ * @path: Path to process
+ * @dir_dentryp: Returns parent directory dentry (caller must kfree)
+ * @dentryp: Returns file dentry after lookup (caller must kfree)
+ * @path_copyp: Returns path copy (caller must free)
+ *
+ * Common setup for write operations. Validates inputs, checks read-write
+ * mount, parses path, resolves parent directory, creates dentries, and
+ * performs lookup.
+ *
+ * Return: 0 on success, negative on error
+ */
+static int ext4l_resolve_file(const char *path, struct dentry **dir_dentryp,
+			      struct dentry **dentryp, char **path_copyp)
 {
+	char *path_copy, *dir_path, *last_slash;
 	struct dentry *dir_dentry, *dentry, *result;
+	struct inode *dir_inode;
+	const char *basename;
+	int ret;
+
+	if (!ext4l_sb)
+		return -ENODEV;
+
+	if (!path)
+		return -EINVAL;
+
+	/* Check if filesystem is mounted read-write */
+	if (ext4l_sb->s_flags & SB_RDONLY)
+		return -EROFS;
+
+	/* Parse path to get parent directory and basename */
+	path_copy = strdup(path);
+	if (!path_copy)
+		return -ENOMEM;
+
+	last_slash = strrchr(path_copy, '/');
+	if (last_slash) {
+		*last_slash = '\0';
+		dir_path = path_copy;
+		basename = last_slash + 1;
+		if (*dir_path == '\0')
+			dir_path = "/";
+	} else {
+		dir_path = "/";
+		basename = path;
+	}
+
+	/* Resolve parent directory */
+	ret = ext4l_resolve_path(dir_path, &dir_inode);
+	if (ret) {
+		free(path_copy);
+		return ret;
+	}
+
+	if (!S_ISDIR(dir_inode->i_mode)) {
+		free(path_copy);
+		return -ENOTDIR;
+	}
+
+	/* Create dentry for parent directory */
+	dir_dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dir_dentry) {
+		free(path_copy);
+		return -ENOMEM;
+	}
+	dir_dentry->d_inode = dir_inode;
+	dir_dentry->d_sb = dir_inode->i_sb;
+
+	/* Create dentry for the file */
+	dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dentry) {
+		kfree(dir_dentry);
+		free(path_copy);
+		return -ENOMEM;
+	}
+	dentry->d_name.name = basename;
+	dentry->d_name.len = strlen(basename);
+	dentry->d_sb = dir_inode->i_sb;
+	dentry->d_parent = dir_dentry;
+
+	/* Look up the file */
+	result = ext4_lookup(dir_inode, dentry, 0);
+	if (IS_ERR(result)) {
+		kfree(dentry);
+		kfree(dir_dentry);
+		free(path_copy);
+		return PTR_ERR(result);
+	}
+
+	*dir_dentryp = dir_dentry;
+	*dentryp = dentry;
+	*path_copyp = path_copy;
+
+	return 0;
+}
+
+static int ext4l_write_file(struct dentry *dir_dentry, struct dentry *dentry,
+			    void *buf, loff_t offset, loff_t len,
+			    loff_t *actwrite)
+{
+	struct inode *dir = dir_dentry->d_inode;
 	handle_t *handle = NULL;
 	struct buffer_head *bh;
 	struct inode *inode;
@@ -885,64 +984,21 @@ static int ext4l_write_file(struct inode *dir, const char *filename, void *buf,
 	umode_t mode;
 	int ret;
 
-	/* Create dentry for the parent directory */
-	dir_dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
-	if (!dir_dentry)
-		return -ENOMEM;
-	dir_dentry->d_inode = dir;
-	dir_dentry->d_sb = dir->i_sb;
-
-	/* Create dentry for the filename */
-	dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
-	if (!dentry) {
-		kfree(dir_dentry);
-		return -ENOMEM;
-	}
-
-	/* Initialize dentry (kzalloc already zeros memory) */
-	dentry->d_name.name = filename;
-	dentry->d_name.len = strlen(filename);
-	dentry->d_sb = dir->i_sb;
-	dentry->d_parent = dir_dentry;
-
-	/* Lookup file */
-	result = ext4_lookup(dir, dentry, 0);
-
-	if (IS_ERR(result)) {
-		ret = PTR_ERR(result);
-		goto out_dentry;
-	}
-
-	if (result && result->d_inode) {
+	if (dentry->d_inode) {
 		/* File exists - use the existing inode for overwrite */
-		inode = result->d_inode;
-		if (result != dentry) {
-			/* Use the result dentry instead */
-			kfree(dentry);
-			dentry = result;
-		}
+		inode = dentry->d_inode;
 	} else {
-		/* ext4_lookup returned NULL or a dentry with NULL inode */
-		if (result && result != dentry) {
-			/* Free the result dentry since it doesn't have an inode */
-			kfree(result);
-		}
-		/* Keep using our original dentry */
-		dentry->d_inode = NULL;
-
 		/* File does not exist, create it */
 		/* Mode: 0644 (rw-r--r--) | S_IFREG */
 		mode = S_IFREG | 0644;
 		ret = ext4_create(&nop_mnt_idmap, dir, dentry, mode, true);
 		if (ret)
-			goto out_dentry;
+			return ret;
 
 		inode = dentry->d_inode;
 	}
-	if (!inode) {
-		ret = -EIO;
-		goto out_dentry;
-	}
+	if (!inode)
+		return -EIO;
 
 	/*
 	 * Attach jinode for journaling if needed (like ext4_file_open does).
@@ -950,7 +1006,7 @@ static int ext4l_write_file(struct inode *dir, const char *filename, void *buf,
 	 */
 	ret = ext4_inode_attach_jinode(inode);
 	if (ret < 0)
-		goto out_dentry;
+		return ret;
 
 	/*
 	 * Start a journal handle for the write operation.
@@ -959,11 +1015,8 @@ static int ext4l_write_file(struct inode *dir, const char *filename, void *buf,
 	 */
 	handle = ext4_journal_start(inode, EXT4_HT_WRITE_PAGE,
 				    EXT4_DATA_TRANS_BLOCKS(inode->i_sb));
-	if (IS_ERR(handle)) {
-		ret = PTR_ERR(handle);
-		handle = NULL;
-		goto out_dentry;
-	}
+	if (IS_ERR(handle))
+		return PTR_ERR(handle);
 
 	/* Write data to file */
 	pos = offset;
@@ -1063,75 +1116,29 @@ out_handle:
 	if (handle) {
 		int stop_ret = ext4_journal_stop(handle);
 
-		if (stop_ret) {
-			if (!ret)
-				ret = stop_ret;
-		}
+		if (stop_ret && !ret)
+			ret = stop_ret;
 	}
 
-out_dentry:
-	/*
-	 * Free our manually allocated dentries. In U-Boot's minimal dcache,
-	 * these won't be cached elsewhere.
-	 */
-	kfree(dir_dentry);
-	kfree(dentry);
 	return ret;
 }
 
 int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
 		loff_t *actwrite)
 {
-	struct inode *parent_inode = NULL;
-	char *parent_path = NULL;
-	const char *basename;
+	struct dentry *dir_dentry, *dentry;
 	char *path_copy;
-	char *last_slash;
 	int ret;
 
-	if (!ext4l_sb)
-		return -ENODEV;
-
-	if (!filename || !buf || !actwrite)
+	if (!buf || !actwrite)
 		return -EINVAL;
 
-	/* Check if filesystem is mounted read-write */
-	if (ext4l_sb->s_flags & SB_RDONLY)
-		return -EROFS;
-
-	/* Parse filename to get parent directory and basename */
-	path_copy = strdup(filename);
-	if (!path_copy)
-		return -ENOMEM;
-
-	last_slash = strrchr(path_copy, '/');
-
-	if (last_slash) {
-		*last_slash = '\0';
-		parent_path = path_copy;
-		basename = last_slash + 1;
-		if (*parent_path == '\0') /* Root directory */
-			parent_path = "/";
-	} else {
-		parent_path = "/";
-		basename = filename;
-	}
-
-	/* Resolve parent directory inode */
-	ret = ext4l_resolve_path(parent_path, &parent_inode);
-	if (ret) {
-		free(path_copy);
+	ret = ext4l_resolve_file(filename, &dir_dentry, &dentry, &path_copy);
+	if (ret)
 		return ret;
-	}
-
-	if (!S_ISDIR(parent_inode->i_mode)) {
-		free(path_copy);
-		return -ENOTDIR;
-	}
 
 	/* Call write implementation */
-	ret = ext4l_write_file(parent_inode, basename, buf, offset, len,
-			       actwrite);
+	ret = ext4l_write_file(dir_dentry, dentry, buf, offset, len, actwrite);
 
 	/* Sync all dirty buffers - U-Boot has no journal thread */
 	if (!ret) {
@@ -1141,6 +1148,60 @@ int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
 			ret = sync_ret;
 	}
 
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+	return ret;
+}
+
+int ext4l_unlink(const char *filename)
+{
+	struct dentry *dentry, *dir_dentry;
+	char *path_copy;
+	int ret;
+
+	ret = ext4l_resolve_file(filename, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	/* Check if file exists */
+	if (!dentry->d_inode) {
+		ret = -ENOENT;
+		goto out;
+	}
+
+	/* Cannot unlink directories with unlink - use rmdir */
+	if (S_ISDIR(dentry->d_inode->i_mode)) {
+		ret = -EISDIR;
+		goto out;
+	}
+
+	/* Unlink the file */
+	ret = __ext4_unlink(dir_dentry->d_inode, &dentry->d_name,
+			    dentry->d_inode, dentry);
+
+	/*
+	 * Release inode - this triggers ext4_evict_inode for nlink=0 inodes,
+	 * which frees the data blocks and inode.
+	 */
+	if (dentry->d_inode) {
+		iput(dentry->d_inode);
+		dentry->d_inode = NULL;
+	}
+
+	/* Sync all dirty buffers after inode eviction */
+	if (!ret) {
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
 	free(path_copy);
 	return ret;
 }

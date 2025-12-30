@@ -438,3 +438,44 @@ static int fs_test_ext4l_write_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_write_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_unlink_norun() - Test ext4l_unlink function
+ *
+ * Verifies that ext4l can delete files from the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_unlink_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "unlink test\n";
+	size_t test_len = strlen(test_data);
+	loff_t actwrite;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Create a new file to unlink */
+	ut_assertok(ext4l_write("/unlinkme.txt", (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify file exists (same mount) */
+	ut_asserteq(1, ext4l_exists("/unlinkme.txt"));
+
+	/* Unlink the file */
+	ut_assertok(ext4l_unlink("/unlinkme.txt"));
+
+	/* Verify file no longer exists */
+	ut_asserteq(0, ext4l_exists("/unlinkme.txt"));
+
+	/* Verify unlinking non-existent file returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_unlink("/nonexistent"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_unlink_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
