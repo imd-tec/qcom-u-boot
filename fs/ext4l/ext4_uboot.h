@@ -2892,12 +2892,14 @@ void bh_cache_clear(void);
 int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
 int ext4l_write_block(sector_t block, size_t size, void *buffer);
+void ext4l_msg_init(void);
+void ext4l_record_msg(const char *msg, int len);
+struct membuf *ext4l_get_msg_buf(void);
+void ext4l_print_msgs(void);
 
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
-void ext4l_record_msg(const char *msg, int len);
-struct membuf *ext4l_get_msg_buf(void);
 
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 

@@ -10,6 +10,7 @@
  */
 
 #include <blk.h>
+#include <membuf.h>
 #include <part.h>
 #include <malloc.h>
 #include <u-boot/crc.h>
@@ -18,6 +19,13 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
+
+/* Message buffer size */
+#define EXT4L_MSG_BUF_SIZE	4096
+
+/* Message recording buffer */
+static struct membuf ext4l_msg_buf;
+static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /*
  * Global task_struct for U-Boot.
@@ -44,6 +52,49 @@ void ext4l_crc32c_init(void)
 u32 ext4l_crc32c(u32 crc, const void *address, unsigned int length)
 {
 	return crc32c_cal(crc, address, length, ext4l_crc32c_table);
+}
+
+/**
+ * ext4l_msg_init() - Initialise the message buffer
+ */
+void ext4l_msg_init(void)
+{
+	membuf_init(&ext4l_msg_buf, ext4l_msg_data, EXT4L_MSG_BUF_SIZE);
+}
+
+/**
+ * ext4l_record_msg() - Record a message in the buffer
+ *
+ * @msg: Message string to record
+ * @len: Length of message
+ */
+void ext4l_record_msg(const char *msg, int len)
+{
+	membuf_put(&ext4l_msg_buf, msg, len);
+}
+
+/**
+ * ext4l_get_msg_buf() - Get the message buffer
+ *
+ * Return: Pointer to the message buffer
+ */
+struct membuf *ext4l_get_msg_buf(void)
+{
+	return &ext4l_msg_buf;
+}
+
+/**
+ * ext4l_print_msgs() - Print all recorded messages
+ *
+ * Prints the contents of the message buffer to the console.
+ */
+void ext4l_print_msgs(void)
+{
+	char *data;
+	int len;
+
+	while ((len = membuf_getraw(&ext4l_msg_buf, 80, true, &data)) > 0)
+		printf("%.*s", len, data);
 }
 
 /*

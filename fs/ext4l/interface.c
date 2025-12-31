@@ -13,7 +13,6 @@
 #include <env.h>
 #include <fs.h>
 #include <fs_legacy.h>
-#include <membuf.h>
 #include <part.h>
 #include <malloc.h>
 #include <u-boot/uuid.h>
@@ -23,9 +22,6 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
-
-/* Message buffer size */
-#define EXT4L_MSG_BUF_SIZE	4096
 
 /* Global state */
 static struct blk_desc *ext4l_dev_desc;
@@ -41,10 +37,6 @@ static int ext4l_open_dirs;
 
 /* Global super_block pointer for filesystem operations */
 static struct super_block *ext4l_sb;
-
-/* Message recording buffer */
-static struct membuf ext4l_msg_buf;
-static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /**
  * ext4l_get_blk_dev() - Get the current block device
@@ -148,49 +140,6 @@ void ext4l_clear_blk_dev(void)
 
 	ext4l_blk_dev = NULL;
 	ext4l_mounted = 0;
-}
-
-/**
- * ext4l_msg_init() - Initialize the message buffer
- */
-static void ext4l_msg_init(void)
-{
-	membuf_init(&ext4l_msg_buf, ext4l_msg_data, EXT4L_MSG_BUF_SIZE);
-}
-
-/**
- * ext4l_record_msg() - Record a message in the buffer
- *
- * @msg: Message string to record
- * @len: Length of message
- */
-void ext4l_record_msg(const char *msg, int len)
-{
-	membuf_put(&ext4l_msg_buf, msg, len);
-}
-
-/**
- * ext4l_get_msg_buf() - Get the message buffer
- *
- * Return: Pointer to the message buffer
- */
-struct membuf *ext4l_get_msg_buf(void)
-{
-	return &ext4l_msg_buf;
-}
-
-/**
- * ext4l_print_msgs() - Print all recorded messages
- *
- * Prints the contents of the message buffer to the console.
- */
-static void ext4l_print_msgs(void)
-{
-	char *data;
-	int len;
-
-	while ((len = membuf_getraw(&ext4l_msg_buf, 80, true, &data)) > 0)
-		printf("%.*s", len, data);
 }
 
 int ext4l_probe(struct blk_desc *fs_dev_desc,
