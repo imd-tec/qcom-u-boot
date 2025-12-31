@@ -476,6 +476,16 @@ static int sandbox_cmdline_cb_no_term_present(struct sandbox_state *state,
 SANDBOX_CMDLINE_OPT_SHORT(no_term_present, 'A', 0,
 			  "Assume no terminal present (for pager testing)");
 
+static int sandbox_cmdline_cb_quiet_vidconsole(struct sandbox_state *state,
+					       const char *arg)
+{
+	state->quiet_vidconsole = true;
+
+	return 0;
+}
+SANDBOX_CMDLINE_OPT_SHORT(quiet_vidconsole, 'Q', 0,
+			  "Don't use vidconsole for stdout/stderr");
+
 static int sandbox_cmdline_cb_upl(struct sandbox_state *state, const char *arg)
 {
 	state->upl = true;
