@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+
+<!-- Copyright (c) 2018, Heinrich Schuchardt <xypron.glpk@gmx.de> -->
+
+<svg
+   width="186"
+   height="186"
+   viewBox="0 0 186 186"
+   id="svg2"
+   version="1.1"
+   inkscape:version="1.4 (1:1.4+202410161351+e7c3feb100)"
+   sodipodi:docname="u-boot-logo-text.svg"
+   inkscape:export-filename="u-boot-logo-text-192.png"
+   inkscape:export-xdpi="99.096771"
+   inkscape:export-ydpi="99.096771"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title30">U-Boot Logo</title>
+  <metadata
+     id="metadata31">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>U-Boot Logo</dc:title>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Heinrich Schuchardt &lt;xypron.glpk@gmx.de&gt;</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:date>May 21st, 2018</dc:date>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#ShareAlike" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs29" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1792"
+     inkscape:window-height="1162"
+     id="namedview27"
+     showgrid="false"
+     inkscape:zoom="0.5"
+     inkscape:cx="94"
+     inkscape:cy="99"
+     inkscape:window-x="725"
+     inkscape:window-y="265"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="2"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <circle
+       style="fill:#004466;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path835"
+       cx="93"
+       cy="93"
+       r="93" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#ffcc88;fill-opacity:1;stroke:none;stroke-width:0"
+       d="M 116,76 A 20,20 0 0 1 96,56 20,20 0 0 1 116,36 v 11 a 9,9 0 0 0 -9,9 9,9 0 0 0 9,9 z"
+       id="path4136-6-6-1-6-3-5" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#ffcc88;fill-opacity:1;stroke:none;stroke-width:0"
+       d="M 116,66 A 10,10 0 0 1 106,56 10,10 0 0 1 116,46 v 1 a 9,9 0 0 0 -9,9 9,9 0 0 0 9,9 z"
+       id="path4136-6-6-1-6-3-5-1-9" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4136-6-6-1-6-3-5-1-2"
+       cx="116"
+       cy="41.5"
+       rx="4"
+       ry="5.5" />
+    <circle
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4352"
+       cx="86"
+       cy="66"
+       r="10" />
+    <circle
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4352-1"
+       cx="126"
+       cy="66"
+       r="10" />
+    <rect
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="rect4399"
+       width="39"
+       height="20"
+       x="86.5"
+       y="56" />
+    <rect
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="rect4660"
+       width="60"
+       height="9.5"
+       x="76"
+       y="66.5" />
+    <circle
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4549-5"
+       cx="36"
+       cy="81"
+       r="15" />
+    <circle
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4549-5-5"
+       cx="36"
+       cy="121"
+       r="15" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="path4136-6-6"
+       cx="15"
+       cy="91"
+       rx="4"
+       ry="10" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="path4136-6-6-1"
+       cx="15"
+       cy="111"
+       rx="4"
+       ry="10" />
+    <rect
+       style="fill:#dd9955;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="rect4213"
+       width="65"
+       height="4"
+       x="11"
+       y="99" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:#000000;stroke-width:0"
+       id="path4136"
+       cx="100.5"
+       cy="100.5"
+       rx="74.5"
+       ry="34.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416"
+       cx="70"
+       cy="95.5"
+       rx="15"
+       ry="12.5" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-9"
+       cx="70"
+       cy="95.5"
+       rx="14"
+       ry="11.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-0"
+       cx="70"
+       cy="95.5"
+       rx="11"
+       ry="8.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-94"
+       cx="110"
+       cy="95.5"
+       rx="15"
+       ry="12.5" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-9-1"
+       cx="110"
+       cy="95.5"
+       rx="14"
+       ry="11.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-0-1"
+       cx="110"
+       cy="95.5"
+       rx="11"
+       ry="8.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-94-2"
+       cx="150"
+       cy="95.5"
+       rx="15"
+       ry="12.5" />
+    <ellipse
+       style="fill:#ffcc88;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-9-1-2"
+       cx="150"
+       cy="95.5"
+       rx="14"
+       ry="11.5" />
+    <ellipse
+       style="fill:#dd9955;fill-opacity:1;stroke:none;stroke-width:0"
+       id="path4416-0-1-9"
+       cx="150"
+       cy="95.5"
+       rx="11"
+       ry="8.5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:35.3045px;line-height:0%;font-family:Calibri;-inkscape-font-specification:Calibri;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.94205px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="44.468121"
+       y="164.54073"
+       id="text3402"><tspan
+         sodipodi:role="line"
+         id="tspan3404"
+         x="44.468121"
+         y="164.54073"
+         style="font-size:33.098px;line-height:1.25;stroke-width:2.94205px">U-Boot</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:17.74px;line-height:0%;font-family:Calibri;-inkscape-font-specification:Calibri;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.47834px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="92.647697"
+       y="17.807617"
+       id="text3441"><tspan
+         sodipodi:role="line"
+         x="92.647697"
+         y="17.807617"
+         id="tspan3443"
+         style="font-size:10.5331px;line-height:1.25;stroke-width:1.47834px">Universal</tspan><tspan
+         sodipodi:role="line"
+         x="92.647697"
+         y="30.973991"
+         style="font-size:10.5331px;line-height:1.25;stroke-width:1.47834px"
+         id="tspan1">Boot Loader</tspan></text>
+  </g>
+</svg>
