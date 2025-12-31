@@ -355,6 +355,17 @@ config MCHECK_HEAP_PROTECTION
 	  significantly increases memory overhead and should only be used for
 	  debugging.
 
+config MCHECK_CALLER_LEN
+	int "Length of caller string in mcheck header"
+	depends on MCHECK_HEAP_PROTECTION
+	default 48
+	help
+	  Sets the maximum length of the caller string stored in each
+	  allocation header. This string records the function/file/line
+	  that allocated the memory, useful for debugging memory leaks.
+	  Larger values provide more context but increase memory overhead
+	  per allocation.
+
 config SPL_SYS_MALLOC_F
 	bool "Enable malloc() pool in SPL"
 	depends on SPL_FRAMEWORK && SYS_MALLOC_F && SPL
