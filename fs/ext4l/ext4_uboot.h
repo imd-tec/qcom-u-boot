@@ -2153,8 +2153,8 @@ struct fs_parse_result {
 /* ctype */
 #include <linux/ctype.h>
 
-/* crc16 */
-#define crc16(crc, buf, len)		(0)
+/* crc16 - use U-Boot's implementation */
+#include <linux/crc16.h>
 
 /* Timer and timing stubs */
 #define HZ				1000
