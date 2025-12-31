@@ -682,6 +682,9 @@ struct super_block {
 	const struct export_operations *s_export_op;
 	const struct xattr_handler * const *s_xattr;
 	struct dentry *d_sb;		/* Parent dentry - stub */
+
+	/* U-Boot: list of all inodes, for freeing on unmount */
+	struct list_head s_inodes;
 };
 
 /* Block device read-only check - stub */
@@ -859,6 +862,9 @@ struct inode {
 	struct rw_semaphore i_rwsem;	/* inode lock */
 	const char *i_link;		/* Symlink target for fast symlinks */
 	unsigned short i_write_hint;	/* Write life time hint */
+
+	/* U-Boot: linkage into super_block s_inodes list */
+	struct list_head i_sb_list;
 };
 
 /* Inode time accessors */

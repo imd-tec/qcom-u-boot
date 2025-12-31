@@ -126,6 +126,10 @@ struct inode *iget_locked(struct super_block *sb, unsigned long ino)
 	inode->i_mapping = &inode->i_data;
 	inode->i_data.host = inode;
 	INIT_LIST_HEAD(&ei->i_es_list);
+	INIT_LIST_HEAD(&inode->i_sb_list);
+
+	/* Add to superblock's inode list for eviction on unmount */
+	list_add(&inode->i_sb_list, &sb->s_inodes);
 
 	return inode;
 }
@@ -154,6 +158,10 @@ struct inode *new_inode(struct super_block *sb)
 	inode->i_mapping = &inode->i_data;
 	inode->i_data.host = inode;
 	INIT_LIST_HEAD(&ei->i_es_list);
+	INIT_LIST_HEAD(&inode->i_sb_list);
+
+	/* Add to superblock's inode list for eviction on unmount */
+	list_add(&inode->i_sb_list, &sb->s_inodes);
 
 	return inode;
 }
