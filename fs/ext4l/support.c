@@ -897,3 +897,27 @@ void folio_get(struct folio *folio)
 	if (folio)
 		folio->_refcount++;
 }
+
+/**
+ * mapping_clear_folio_cache() - Release all folios in an address_space cache
+ * @mapping: The address_space to clear
+ *
+ * Releases the cache's reference to each folio. If no other references exist,
+ * the folio will be freed.
+ */
+void mapping_clear_folio_cache(struct address_space *mapping)
+{
+	int i;
+
+	if (!mapping)
+		return;
+
+	for (i = 0; i < mapping->folio_cache_count; i++) {
+		struct folio *folio = mapping->folio_cache[i];
+
+		if (folio)
+			folio_put(folio);
+		mapping->folio_cache[i] = NULL;
+	}
+	mapping->folio_cache_count = 0;
+}

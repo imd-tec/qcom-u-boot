@@ -22,6 +22,8 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
+#include "ext4_jbd2.h"
+#include "xattr.h"
 
 /* Global state */
 static struct blk_desc *ext4l_dev_desc;
@@ -142,6 +144,134 @@ void ext4l_clear_blk_dev(void)
 	ext4l_mounted = 0;
 }
 
+/**
+ * ext4l_free_sb() - Free superblock and associated resources
+ * @sb: Superblock to free
+ * @skip_io: If true, skip all I/O operations (for forced close)
+ *
+ * Releases all resources associated with the superblock including the journal,
+ * caches, inodes, and the superblock structure itself.
+ */
+static void ext4l_free_sb(struct super_block *sb, bool skip_io)
+{
+	struct ext4_sb_info *sbi = EXT4_SB(sb);
+
+	/*
+	 * Destroy journal first to properly clean up all buffers.
+	 * If skip_io is set, the device may be invalid so skip
+	 * journal destroy entirely - it will be recovered on next mount.
+	 */
+	if (sbi->s_journal && !skip_io)
+		ext4_journal_destroy(sbi, sbi->s_journal);
+
+	/* Commit superblock if device is valid and I/O is allowed */
+	if (!skip_io)
+		ext4_commit_super(sb);
+
+	/* Release superblock buffer */
+	brelse(sbi->s_sbh);
+
+	/* Unregister lazy init and free if no longer needed */
+	ext4_unregister_li_request(sb);
+	ext4_destroy_lazy_init();
+
+	/* Free mballoc data */
+	ext4_mb_release(sb);
+
+	/* Release system zone */
+	ext4_release_system_zone(sb);
+
+	/* Destroy xattr caches */
+	ext4_xattr_destroy_cache(sbi->s_ea_inode_cache);
+	sbi->s_ea_inode_cache = NULL;
+	ext4_xattr_destroy_cache(sbi->s_ea_block_cache);
+	sbi->s_ea_block_cache = NULL;
+
+	/* Free group descriptors and flex groups */
+	ext4_group_desc_free(sbi);
+	ext4_flex_groups_free(sbi);
+
+	/* Evict all inodes before destroying caches */
+	while (!list_empty(&sb->s_inodes)) {
+		struct inode *inode;
+		struct ext4_inode_info *ei;
+
+		inode = list_first_entry(&sb->s_inodes,
+					 struct inode, i_sb_list);
+		list_del_init(&inode->i_sb_list);
+		/* Clear extent status and free the inode */
+		ext4_es_remove_extent(inode, 0, EXT_MAX_BLOCKS);
+		ei = EXT4_I(inode);
+		kfree(ei);
+	}
+
+	/* Free root dentry */
+	if (sb->s_root) {
+		kfree(sb->s_root);
+		sb->s_root = NULL;
+	}
+
+	/* Free sbi */
+	kfree(sbi->s_blockgroup_lock);
+	kfree(sbi);
+
+	/* Free structures allocated in ext4l_probe() */
+	kfree(sb->s_bdev->bd_mapping);
+	kfree(sb->s_bdev);
+	kfree(sb);
+}
+
+/**
+ * ext4l_close_internal() - Internal close function
+ * @skip_io: If true, skip all I/O operations (for forced close)
+ *
+ * When called from the safeguard in ext4l_probe(), the device may be
+ * invalid (rebound to a different file), so skip_io should be true to
+ * avoid crashes when trying to write to the device.
+ */
+static void ext4l_close_internal(bool skip_io)
+{
+	struct super_block *sb = ext4l_sb;
+
+	if (ext4l_open_dirs > 0)
+		return;
+
+	if (sb)
+		ext4l_free_sb(sb, skip_io);
+
+	ext4l_dev_desc = NULL;
+	ext4l_sb = NULL;
+
+	/*
+	 * Force cleanup of any remaining journal_heads before clearing
+	 * the buffer cache. This ensures no stale journal_head references
+	 * survive to the next mount. This is critical even when skip_io
+	 * is true - we MUST disconnect journal_heads before freeing
+	 * buffer_heads to avoid dangling pointers.
+	 */
+	bh_cache_release_jbd();
+
+	ext4l_clear_blk_dev();
+
+	/*
+	 * Clean up ext4 and JBD2 global state so it can be properly
+	 * reinitialised on the next mount. This is important in U-Boot
+	 * where we may mount/unmount filesystems multiple times in a
+	 * single session.
+	 *
+	 * Even when skip_io is true (journal wasn't properly destroyed),
+	 * we must destroy the caches to free all orphaned journal_heads.
+	 * The next mount will reinitialise fresh caches.
+	 */
+	ext4_exit_system_zone();
+	ext4_exit_es();
+	if (IS_ENABLED(CONFIG_EXT4_WRITE))
+		ext4_exit_mballoc();
+	if (IS_ENABLED(CONFIG_EXT4_JOURNAL))
+		jbd2_journal_exit_global();
+	destroy_inodecache();
+}
+
 int ext4l_probe(struct blk_desc *fs_dev_desc,
 		struct disk_partition *fs_partition)
 {
@@ -192,6 +322,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		ret = -ENOMEM;
 		goto err_exit_es;
 	}
+	INIT_LIST_HEAD(&sb->s_inodes);
 
 	/* Allocate block_device */
 	sb->s_bdev = kzalloc(sizeof(struct block_device), GFP_KERNEL);
@@ -278,6 +409,10 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Store super_block for later operations */
 	ext4l_sb = sb;
+
+	/* Free mount context - no longer needed after successful mount */
+	kfree(ctx);
+	kfree(fc);
 
 	/* Print messages if ext4l_msgs environment variable is set */
 	if (env_get_yesno("ext4l_msgs") == 1)

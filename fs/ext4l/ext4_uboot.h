@@ -1395,6 +1395,7 @@ struct folio *__filemap_get_folio(struct address_space *mapping,
 				  gfp_t gfp);
 void folio_put(struct folio *folio);
 void folio_get(struct folio *folio);
+void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* projid_t - project ID type */
 typedef unsigned int projid_t;
@@ -2095,6 +2096,7 @@ struct fs_context {
 /* ext4 superblock initialisation and commit */
 int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 int ext4_commit_super(struct super_block *sb);
+void ext4_unregister_li_request(struct super_block *sb);
 
 /* fs_parameter stubs */
 struct fs_parameter {
