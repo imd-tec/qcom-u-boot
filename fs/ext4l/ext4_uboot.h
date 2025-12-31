@@ -521,11 +521,20 @@ struct sb_writers {
 #include <linux/jbd2.h>
 
 /*
- * U-Boot: marks buffer owns b_data and should free it.
- * Use BH_JBDPrivateStart to avoid conflicts with JBD2 state bits.
+ * U-Boot buffer head private bits.
+ *
+ * Start at BH_JBDPrivateStart + 1 because ext4.h uses BH_JBDPrivateStart
+ * for BH_BITMAP_UPTODATE.
  */
-#define BH_OwnsData		BH_JBDPrivateStart
+#define BH_OwnsData		(BH_JBDPrivateStart + 1)
 BUFFER_FNS(OwnsData, ownsdata)
+
+/*
+ * U-Boot: marks buffer is in the buffer cache.
+ * Cached buffers are freed by bh_cache_clear(), not brelse().
+ */
+#define BH_Cached		(BH_JBDPrivateStart + 2)
+BUFFER_FNS(Cached, cached)
 
 /* Forward declare for get_block_t */
 struct inode;

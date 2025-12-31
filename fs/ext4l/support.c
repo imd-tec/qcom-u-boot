@@ -258,9 +258,10 @@ static void bh_cache_insert(struct buffer_head *bh)
 	unsigned int hash = bh_cache_hash(bh->b_blocknr);
 	struct bh_cache_entry *entry;
 
-	/* Check if already in cache */
+	/* Check if already in cache - must match block AND size */
 	for (entry = bh_cache[hash]; entry; entry = entry->next) {
-		if (entry->bh && entry->bh->b_blocknr == bh->b_blocknr)
+		if (entry->bh && entry->bh->b_blocknr == bh->b_blocknr &&
+		    entry->bh->b_size == bh->b_size)
 			return;  /* Already cached */
 	}
 
@@ -271,6 +272,9 @@ static void bh_cache_insert(struct buffer_head *bh)
 	entry->bh = bh;
 	entry->next = bh_cache[hash];
 	bh_cache[hash] = entry;
+
+	/* Mark as cached so brelse() knows not to free it */
+	set_buffer_cached(bh);
 
 	/* Add a reference to keep the buffer alive in cache */
 	atomic_inc(&bh->b_count);
@@ -316,7 +320,12 @@ void bh_cache_clear(void)
 				struct buffer_head *bh = entry->bh;
 
 				bh_clear_stale_jbd(bh);
-				/* Release the cache's reference */
+				/*
+				 * Force count to 1 so the buffer will be freed.
+				 * On unmount, ext4 code won't access these
+				 * buffers again, so extra references are stale.
+				 */
+				atomic_set(&bh->b_count, 1);
 				if (atomic_dec_and_test(&bh->b_count))
 					free_buffer_head(bh);
 			}
@@ -629,13 +638,24 @@ struct buffer_head *sb_bread(struct super_block *sb, sector_t block)
 /**
  * brelse() - Release a buffer_head
  * @bh: Buffer head to release
+ *
+ * Decrements the reference count on the buffer. Cached buffer heads are
+ * freed by bh_cache_clear() on unmount, so this just decrements the count.
+ * Non-cached buffers are freed when the count reaches zero.
  */
 void brelse(struct buffer_head *bh)
 {
 	if (!bh)
 		return;
 
-	if (atomic_dec_and_test(&bh->b_count))
+	/*
+	 * If buffer has JBD attached, don't let ref count go to zero.
+	 * The journal owns a reference and will clean up properly.
+	 */
+	if (buffer_jbd(bh) && atomic_read(&bh->b_count) <= 1)
+		return;
+
+	if (atomic_dec_and_test(&bh->b_count) && !buffer_cached(bh))
 		free_buffer_head(bh);
 }
 
