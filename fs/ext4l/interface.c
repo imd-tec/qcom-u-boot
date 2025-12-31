@@ -401,8 +401,6 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		goto err_free_buf;
 	}
 
-	free(buf);
-
 	/* Save device info for later operations */
 	ext4l_dev_desc = fs_dev_desc;
 	if (fs_partition)
@@ -410,6 +408,18 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Set block device for buffer I/O */
 	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
+
+	/*
+	 * Test if device supports writes by writing back the same data.
+	 * If write returns 0, the device is read-only (e.g. LUKS/blkmap_crypt)
+	 */
+	if (blk_dwrite(fs_dev_desc,
+		       (part_offset + BLOCK_SIZE) / fs_dev_desc->blksz,
+		       2, buf) != 2) {
+		sb->s_bdev->read_only = true;
+		sb->s_flags |= SB_RDONLY;
+	}
+	free(buf);
 
 	/* Mount the filesystem */
 	ret = ext4_fill_super(sb, fc);

@@ -315,8 +315,8 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - U-Boot mounts filesystems read-write */
-#define sb_rdonly(sb)	0
+/* sb_rdonly - check if filesystem is mounted read-only */
+#define sb_rdonly(sb)	((sb)->s_flags & SB_RDONLY)
 
 /* Trace stubs */
 #define trace_ext4_journal_start_inode(...)	do { } while (0)
@@ -696,10 +696,10 @@ struct super_block {
 	struct list_head s_inodes;
 };
 
-/* Block device read-only check - stub */
+/* Block device read-only check */
 static inline int bdev_read_only(struct block_device *bdev)
 {
-	return 0;
+	return bdev ? bdev->read_only : 0;
 }
 
 /* kuid_t and kgid_t - from linux/cred.h */

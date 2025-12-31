@@ -76,6 +76,7 @@ struct block_device {
 	void *bd_disk;
 	struct super_block *bd_super;
 	dev_t bd_dev;
+	bool read_only;
 };
 
 /* errseq functions - stubs */
