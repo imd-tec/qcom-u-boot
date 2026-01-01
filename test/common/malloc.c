@@ -535,11 +535,21 @@ COMMON_TEST(common_test_mallinfo, 0);
 /* Test allocating a very large size */
 static int common_test_malloc_very_large(struct unit_test_state *uts)
 {
-	size_t size, before;
+	size_t size, before, margin;
 	void *ptr;
 
 	before = get_alloced_size();
-	size = TOTAL_MALLOC_LEN - before - SZ_64K;
+
+	/*
+	 * When mcheck is enabled, it adds overhead per allocation (header +
+	 * canaries). With large CONFIG_MCHECK_CALLER_LEN, this can be
+	 * significant. Use a larger margin to account for mcheck overhead.
+	 */
+	if (CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION))
+		margin = SZ_256K;
+	else
+		margin = SZ_64K;
+	size = TOTAL_MALLOC_LEN - before - margin;
 
 	ptr = malloc(size);
 	ut_assertnonnull(ptr);
