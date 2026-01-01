@@ -102,6 +102,10 @@ def pytest_addoption(parser):
                      help='Show info on test timing')
     parser.addoption('-P', '--persist', default=False, action='store_true',
                      help='Persist test artifacts (do not clean up after tests)')
+    parser.addoption('--no-timeout', default=False, action='store_true',
+                     help='Disable console timeout (useful for debugging)')
+    parser.addoption('--no-full', default=False, action='store_true',
+                     help='Skip flat-tree tests (run live-tree only)')
 
 
 def run_build(config, source_dir, build_dir, board_type, log):
@@ -352,6 +356,8 @@ def pytest_configure(config):
     ubconfig.persist = config.getoption('persist')
     ubconfig.role = config.getoption('role')
     ubconfig.allow_exceptions = config.getoption('allow_exceptions')
+    ubconfig.no_timeout = config.getoption('no_timeout')
+    ubconfig.no_full = config.getoption('no_full')
 
     env_vars = (
         'board_type',

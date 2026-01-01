@@ -53,6 +53,10 @@ class ConsoleSandbox(ConsoleBase):
             cmd += ['-d', self.config.dtb]
         cmd += self.sandbox_flags
 
+        # Skip flat-tree tests if --no-full was passed
+        if self.config.no_full:
+            cmd.append('-F')
+
         # Always disable the pager
         cmd.append('-P')
 
