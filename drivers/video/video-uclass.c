@@ -669,10 +669,14 @@ static void video_idle(struct cyclic_info *cyc)
 {
 	struct video_uc_priv *uc_priv;
 	struct uclass *uc;
-	int ret;
 
-	ret = uclass_get(UCLASS_VIDEO, &uc);
-	if (ret)
+	/*
+	 * Use uclass_find() rather than uclass_get() since the latter may
+	 * create a new uclass if the test framework has reinitialised driver
+	 * model while this cyclic function is still registered.
+	 */
+	uc = uclass_find(UCLASS_VIDEO);
+	if (!uc)
 		return;
 
 	uc_priv = uclass_get_priv(uc);
@@ -683,13 +687,15 @@ static void video_idle(struct cyclic_info *cyc)
 
 	if (CONFIG_IS_ENABLED(CURSOR)) {
 		struct udevice *cons;
-		struct uclass *uc;
 
 		/* Handle cursor display for each video console */
-		uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, cons, uc) {
-			if (device_active(cons)) {
-				vidconsole_idle(cons);
-				video_sync(cons->parent, true);
+		uc = uclass_find(UCLASS_VIDEO_CONSOLE);
+		if (uc) {
+			list_for_each_entry(cons, &uc->dev_head, uclass_node) {
+				if (device_active(cons)) {
+					vidconsole_idle(cons);
+					video_sync(cons->parent, true);
+				}
 			}
 		}
 	} else {
