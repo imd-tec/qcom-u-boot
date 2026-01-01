@@ -11,6 +11,7 @@
 #include <event.h>
 #include <init.h>
 #include <log.h>
+#include <mcheck.h>
 #include <os.h>
 #include <pager.h>
 #include <sandbox_host.h>
@@ -523,6 +524,15 @@ static int sandbox_cmdline_cb_noflat(struct sandbox_state *state,
 }
 SANDBOX_CMDLINE_OPT_SHORT(noflat, 'F', 0, "Don't run second set of DM tests");
 
+static int sandbox_cmdline_cb_no_mcheck(struct sandbox_state *state,
+					const char *arg)
+{
+	state->disable_mcheck = true;
+
+	return 0;
+}
+SANDBOX_CMDLINE_OPT_SHORT(no_mcheck, 'M', 0, "Disable mcheck heap protection");
+
 static int sandbox_cmdline_cb_soft_fail(struct sandbox_state *state,
 					const char *arg)
 {
@@ -673,6 +683,9 @@ int sandbox_init(int argc, char *argv[], struct global_data *data)
 	state = state_get_current();
 	if (os_parse_args(state, argc, argv))
 		return 1;
+
+	if (state->disable_mcheck)
+		mcheck_set_disabled(true);
 
 	/* Remove old frame*.bmp files if video_frames_dir is set */
 	if (state->video_frames_dir) {

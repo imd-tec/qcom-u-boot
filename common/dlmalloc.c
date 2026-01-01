@@ -5965,6 +5965,14 @@ static bool in_backtrace __section(".data");
  */
 static bool mcheck_skip_backtrace __section(".data");
 
+/* Runtime flag to disable mcheck - allows bypassing heap protection */
+static bool mcheck_disabled __section(".data");
+
+void mcheck_set_disabled(bool disabled)
+{
+	mcheck_disabled = disabled;
+}
+
 void malloc_backtrace_skip(bool skip)
 {
 	mcheck_skip_backtrace = skip;
@@ -5993,6 +6001,9 @@ void *dlmalloc(size_t bytes)
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
 		return malloc_simple(bytes);
 
+	if (mcheck_disabled)
+		return dlmalloc_impl(bytes CALLER_NULL);
+
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
 	void *p = dlmalloc_impl(fullsz CALLER_NULL);
@@ -6009,12 +6020,15 @@ void dlfree(void *mem)
 		dlfree_impl(mem);
 		return;
 	}
+	if (mcheck_disabled) {
+		dlfree_impl(mem);
+		return;
+	}
 	dlfree_impl(mcheck_free_prehook(mem));
 }
 
 void *dlrealloc(void *oldmem, size_t bytes)
 {
-	mcheck_pedantic_prehook();
 #ifdef REALLOC_ZERO_BYTES_FREES
 	if (bytes == 0) {
 		if (oldmem)
@@ -6026,6 +6040,10 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	if (oldmem == NULL)
 		return dlmalloc(bytes);
 
+	if (mcheck_disabled)
+		return dlrealloc_impl(oldmem, bytes);
+
+	mcheck_pedantic_prehook();
 	void *p = mcheck_reallocfree_prehook(oldmem);
 	size_t newsz = mcheck_alloc_prehook(bytes);
 
@@ -6040,6 +6058,9 @@ void *dlmemalign(size_t alignment, size_t bytes)
 	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
 		return memalign_simple(alignment, bytes);
+
+	if (mcheck_disabled)
+		return dlmemalign_impl(alignment, bytes);
 
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
@@ -6063,6 +6084,9 @@ void *dlcalloc(size_t n, size_t elem_size)
 			memset(p, '\0', sz);
 		return p;
 	}
+
+	if (mcheck_disabled)
+		return dlcalloc_impl(n, elem_size);
 
 	mcheck_pedantic_prehook();
 	/* NB: no overflow check here */
@@ -6120,6 +6144,13 @@ void *dlcalloc(size_t n, size_t elem_size)
 	return dlcalloc_impl(n, elem_size);
 }
 #endif /* MCHECK_HEAP_PROTECTION */
+
+#if !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+/* Stub when mcheck is not enabled */
+void mcheck_set_disabled(bool disabled)
+{
+}
+#endif
 
 #endif /* !ONLY_MSPACES */
 

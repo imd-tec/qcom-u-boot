@@ -51,4 +51,15 @@ enum mcheck_status mprobe(void *__ptr);
 /* Called during RAM relocation to reset the heap registry */
 void mcheck_on_ramrelocation(size_t offset);
 
+/**
+ * mcheck_set_disabled() - Disable mcheck at runtime
+ *
+ * When disabled, mcheck wrapper functions pass through directly to the
+ * underlying allocator without adding headers or checking for corruption.
+ * This is useful for debugging when mcheck interferes with test results.
+ *
+ * @disabled: true to disable mcheck, false to enable
+ */
+void mcheck_set_disabled(bool disabled);
+
 #endif
