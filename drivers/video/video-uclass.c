@@ -874,6 +874,23 @@ __maybe_unused static int video_destroy(struct uclass *uc)
 	return 0;
 }
 
+__maybe_unused static int video_pre_remove(struct udevice *dev)
+{
+	struct video_uc_priv *uc_priv = uclass_get_priv(dev->uclass);
+
+	/*
+	 * Unregister the cyclic before removing the last video device. This
+	 * ensures the cyclic won't run after driver model is reinitialised
+	 * by the test framework.
+	 */
+	if (uc_priv->cyc_active && uclass_id_count(UCLASS_VIDEO) == 1) {
+		cyclic_unregister(&uc_priv->cyc);
+		uc_priv->cyc_active = false;
+	}
+
+	return 0;
+}
+
 void video_set_manual_sync(bool enable)
 {
 	struct video_uc_priv *uc_priv;
@@ -897,5 +914,6 @@ UCLASS_DRIVER(video) = {
 	.priv_auto	= sizeof(struct video_uc_priv),
 	.per_device_auto	= sizeof(struct video_priv),
 	.per_device_plat_auto	= sizeof(struct video_uc_plat),
+	CONFIG_IS_ENABLED(CYCLIC, (.pre_remove = video_pre_remove, ))
 	CONFIG_IS_ENABLED(CYCLIC, (.destroy = video_destroy, ))
 };
