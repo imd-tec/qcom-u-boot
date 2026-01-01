@@ -63,6 +63,10 @@ ifdef FTRACE
 PLATFORM_CPPFLAGS += -finstrument-functions -DFTRACE
 endif
 
+ifdef GPROF
+PLATFORM_CPPFLAGS += -pg
+endif
+
 #########################################################################
 
 RELFLAGS := $(PLATFORM_RELFLAGS)
