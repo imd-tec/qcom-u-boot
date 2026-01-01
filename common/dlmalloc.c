@@ -648,6 +648,7 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define dlrealloc_impl dlrealloc
 #define dlmemalign_impl dlmemalign
 #define dlcalloc_impl dlcalloc
+#define dlmalloc_usable_size_impl dlmalloc_usable_size
 #endif
 
 static bool malloc_testing;	/* enable test mode */
@@ -5943,13 +5944,15 @@ int dlmallopt(int param_number, int value) {
   return change_mparam(param_number, value);
 }
 
-size_t dlmalloc_usable_size(const void* mem) {
-  if (mem != 0) {
-    mchunkptr p = mem2chunk((void*)mem);
-    if (is_inuse(p))
-      return chunksize(p) - overhead_for(p);
-  }
-  return 0;
+STATIC_IF_MCHECK size_t dlmalloc_usable_size_impl(const void *mem)
+{
+	if (mem != 0) {
+		mchunkptr p = mem2chunk((void *)mem);
+
+		if (is_inuse(p))
+			return chunksize(p) - overhead_for(p);
+	}
+	return 0;
 }
 
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
@@ -6098,6 +6101,20 @@ void *dlcalloc(size_t n, size_t elem_size)
 	return mcheck_alloc_noclean_posthook(p, n * elem_size, mcheck_caller());
 }
 
+size_t dlmalloc_usable_size(const void *mem)
+{
+	if (!mem)
+		return 0;
+
+	if (mcheck_disabled)
+		return dlmalloc_usable_size_impl(mem);
+
+	/* Return the user-requested size from mcheck header */
+	const struct mcheck_hdr *hdr = &((const struct mcheck_hdr *)mem)[-1];
+
+	return hdr->size;
+}
+
 /* mcheck API */
 int mcheck_pedantic(mcheck_abortfunc_t f)
 {
@@ -6144,6 +6161,14 @@ void *dlcalloc(size_t n, size_t elem_size)
 	return dlcalloc_impl(n, elem_size);
 }
 #endif /* MCHECK_HEAP_PROTECTION */
+
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG) && !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+/* Wrapper needed when MALLOC_DEBUG makes dlmalloc_usable_size_impl static */
+size_t dlmalloc_usable_size(const void *mem)
+{
+	return dlmalloc_usable_size_impl(mem);
+}
+#endif
 
 #if !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 /* Stub when mcheck is not enabled */
