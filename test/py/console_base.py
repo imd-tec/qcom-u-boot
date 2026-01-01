@@ -813,11 +813,13 @@ class ConsoleBase():
                 c = self.p.receive(RECV_BUF_SIZE)
                 if self.logfile_read:
                     self.logfile_read.write(c)
-                self.buf += c
+                # Filter VT100 escapes from new data only, not entire buffer.
+                # This avoids O(n^2) behaviour when receiving large output.
                 # count=0 is supposed to be the default, which indicates
                 # unlimited substitutions, but in practice the version of
                 # Python in Ubuntu 14.04 appears to default to count=2!
-                self.buf = self.re_vt100.sub('', self.buf, count=1000000)
+                c = self.re_vt100.sub('', c, count=1000000)
+                self.buf += c
         finally:
             if self.logfile_read:
                 self.logfile_read.flush()
