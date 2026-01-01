@@ -32,6 +32,10 @@ pattern_lab_mode = re.compile('{lab mode.*}')
 TIMEOUT_MS = 30000                  # Standard timeout
 TIMEOUT_CMD_MS = 10000              # Command-echo timeout
 
+# Maximum bytes to read at once from the console. 4KB matches the typical
+# Linux PTY buffer size (N_TTY_BUF_SIZE), so there's no benefit to larger.
+RECV_BUF_SIZE = 4096
+
 # Timeout for board preparation in lab mode. This needs to be enough to build
 # U-Boot, write it to the board and then boot the board. Since this process is
 # under the control of another program (e.g. Labgrid), it will failure sooner
@@ -803,7 +807,10 @@ class ConsoleBase():
                 events = self.p.poll.poll(poll_maxwait)
                 if not events:
                     raise Timeout()
-                c = self.p.receive(1024)
+                # Small delay to let more data accumulate in PTY buffer, to
+                # reduce CPU usage for test.py from 100%
+                time.sleep(0.001)
+                c = self.p.receive(RECV_BUF_SIZE)
                 if self.logfile_read:
                     self.logfile_read.write(c)
                 self.buf += c
