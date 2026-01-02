@@ -6144,6 +6144,38 @@ void malloc_log_dump(void)
 	malloc_log_impl(log_to_console, NULL);
 }
 
+#if IS_ENABLED(CONFIG_SANDBOX)
+/* File output function for log */
+static void log_to_file(void *ctx, const char *fmt, ...)
+{
+	int fd = *(int *)ctx;
+	char buf[256];
+	va_list args;
+	int len;
+
+	va_start(args, fmt);
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (len > 0)
+		os_write(fd, buf, len);
+}
+
+int malloc_log_to_file(const char *fname)
+{
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	malloc_log_impl(log_to_file, &fd);
+	os_close(fd);
+
+	return 0;
+}
+#endif
+
 int malloc_log_info(struct mlog_info *info)
 {
 	if (!mlog.buf)
@@ -7481,6 +7513,26 @@ static void dump_to_console(void *ctx, const char *fmt, ...)
 	va_end(args);
 }
 
+#if IS_ENABLED(CONFIG_SANDBOX)
+#include <os.h>
+
+/* File output function for heap dump */
+static void dump_to_file(void *ctx, const char *fmt, ...)
+{
+	int fd = *(int *)ctx;
+	char buf[256];
+	va_list args;
+	int len;
+
+	va_start(args, fmt);
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (len > 0)
+		os_write(fd, buf, len);
+}
+#endif
+
 static void malloc_dump_impl(dump_out_fn out, void *ctx)
 {
 	mchunkptr q;
@@ -7567,6 +7619,22 @@ void malloc_dump(void)
 {
 	malloc_dump_impl(dump_to_console, NULL);
 }
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+int malloc_dump_to_file(const char *fname)
+{
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	malloc_dump_impl(dump_to_file, &fd);
+	os_close(fd);
+
+	return 0;
+}
+#endif
 
 int initf_malloc(void)
 {
