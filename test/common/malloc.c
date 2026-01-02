@@ -637,3 +637,55 @@ static int common_test_malloc_fill_pool(struct unit_test_state *uts)
 	return 0;
 }
 COMMON_TEST(common_test_malloc_fill_pool, 0);
+
+#if CONFIG_IS_ENABLED(MCHECK_LOG)
+/* Test malloc_log_info() and malloc_log_entry() */
+static int common_test_malloc_log_info(struct unit_test_state *uts)
+{
+	struct mlog_entry *entry;
+	struct mlog_info info;
+	void *ptr, *ptr2;
+
+	malloc_log_start();
+
+	/* Do an allocation, realloc, and free */
+	ptr = malloc(0x100);
+	ut_assertnonnull(ptr);
+
+	ptr2 = realloc(ptr, 0x200);
+	ut_assertnonnull(ptr2);
+
+	free(ptr2);
+
+	malloc_log_stop();
+
+	ut_assertok(malloc_log_info(&info));
+	ut_asserteq(3, info.entry_count);
+	ut_assert(info.max_entries > 0);
+	ut_asserteq(info.entry_count, info.total_count);  /* no wrapping */
+
+	/* Check the alloc entry */
+	ut_assertok(malloc_log_entry(0, &entry));
+	ut_asserteq(MLOG_ALLOC, entry->type);
+	ut_asserteq_ptr(ptr, entry->ptr);
+	ut_asserteq(0x100, entry->size);
+
+	/* Check the realloc entry */
+	ut_assertok(malloc_log_entry(1, &entry));
+	ut_asserteq(MLOG_REALLOC, entry->type);
+	ut_asserteq_ptr(ptr2, entry->ptr);
+	ut_asserteq(0x200, entry->size);
+	ut_asserteq(0x100, entry->old_size);
+
+	/* Check the free entry */
+	ut_assertok(malloc_log_entry(2, &entry));
+	ut_asserteq(MLOG_FREE, entry->type);
+	ut_asserteq_ptr(ptr2, entry->ptr);
+
+	/* Out of range should fail */
+	ut_asserteq(-ERANGE, malloc_log_entry(3, &entry));
+
+	return 0;
+}
+COMMON_TEST(common_test_malloc_log_info, 0);
+#endif /* MCHECK_LOG */

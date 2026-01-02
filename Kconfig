@@ -366,6 +366,28 @@ config MCHECK_CALLER_LEN
 	  Larger values provide more context but increase memory overhead
 	  per allocation.
 
+config MCHECK_LOG
+	bool "Enable malloc traffic log"
+	depends on MCHECK_HEAP_PROTECTION && SANDBOX
+	default y
+	help
+	  Enable a log of all malloc()/free()/realloc() calls. This records
+	  each call with its address, size, and caller backtrace. Useful for
+	  debugging allocation patterns and finding the source of memory
+	  leaks. The log uses host memory so it does not affect U-Boot's
+	  heap.
+
+config MCHECK_LOG_SIZE
+	int "Number of entries in malloc traffic log"
+	depends on MCHECK_LOG
+	default 65536
+	help
+	  Sets the number of entries in the malloc traffic log. Each entry
+	  records a malloc()/free()/realloc() call with address, size, and
+	  caller info. The log uses host memory (os_malloc()) so it does not
+	  affect U-Boot's heap. Use 'malloc log start' to begin logging and
+	  'malloc log' to dump the log.
+
 config SPL_SYS_MALLOC_F
 	bool "Enable malloc() pool in SPL"
 	depends on SPL_FRAMEWORK && SYS_MALLOC_F && SPL

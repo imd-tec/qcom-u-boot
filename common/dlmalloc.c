@@ -5957,6 +5957,7 @@ STATIC_IF_MCHECK size_t dlmalloc_usable_size_impl(const void *mem)
 
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #include <backtrace.h>
+#include <os.h>
 #include "mcheck_core.inc.h"
 
 /* Guard against recursive backtrace calls during malloc */
@@ -5993,8 +5994,152 @@ static const char *mcheck_caller(void)
 	return caller;
 }
 
+#if CONFIG_IS_ENABLED(MCHECK_LOG)
+/* Malloc traffic logging for debugging allocation patterns */
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+#define MLOG_SIZE	CONFIG_MCHECK_LOG_SIZE
+#else
+#define MLOG_SIZE	1024
+#endif
+
+/**
+ * struct mlog_hdr - Header for the malloc traffic log
+ *
+ * @buf: Array of log entries
+ * @size: Number of entries in @buf
+ * @head: Index of next entry to write
+ * @count: Total number of entries written (may exceed @size if wrapped)
+ * @enabled: true if logging is active
+ */
+struct mlog_hdr {
+	struct mlog_entry *buf;
+	uint size;
+	uint head;
+	uint count;
+	bool enabled;
+};
+
+static struct mlog_hdr mlog __section(".data");
+
+static void mlog_record(enum mlog_type type, void *ptr, size_t size,
+			size_t old_size, const char *caller)
+{
+	struct mlog_entry *ent;
+
+	if (!mlog.enabled || !mlog.buf)
+		return;
+
+	ent = &mlog.buf[mlog.head];
+	ent->type = type;
+	ent->ptr = ptr;
+	ent->size = size;
+	ent->old_size = old_size;
+	if (caller)
+		strlcpy(ent->caller, caller, MLOG_CALLER_LEN);
+	else
+		ent->caller[0] = '\0';
+	mlog.head = (mlog.head + 1) % mlog.size;
+	mlog.count++;
+}
+
+void malloc_log_start(void)
+{
+	if (!mlog.buf) {
+		if (IS_ENABLED(CONFIG_SANDBOX)) {
+			mlog.buf = os_malloc(MLOG_SIZE *
+					     sizeof(struct mlog_entry));
+			if (!mlog.buf) {
+				printf("Failed to allocate malloc log buffer\n");
+				return;
+			}
+			mlog.size = MLOG_SIZE;
+		} else {
+			printf("Malloc log not available on this platform\n");
+			return;
+		}
+	}
+	memset(mlog.buf, '\0', mlog.size * sizeof(struct mlog_entry));
+	mlog.head = 0;
+	mlog.count = 0;
+	mlog.enabled = true;
+}
+
+void malloc_log_stop(void)
+{
+	mlog.enabled = false;
+}
+
+int malloc_log_info(struct mlog_info *info)
+{
+	if (!mlog.buf)
+		return -ENOENT;
+
+	if (mlog.count > mlog.size)
+		info->entry_count = mlog.size;
+	else
+		info->entry_count = mlog.count;
+	info->max_entries = mlog.size;
+	info->total_count = mlog.count;
+
+	return 0;
+}
+
+int malloc_log_entry(uint idx, struct mlog_entry **entryp)
+{
+	uint start, count;
+
+	if (!mlog.buf)
+		return -ENOENT;
+
+	if (mlog.count > mlog.size) {
+		count = mlog.size;
+		start = mlog.head;
+	} else {
+		count = mlog.count;
+		start = 0;
+	}
+
+	if (idx >= count)
+		return -ERANGE;
+
+	*entryp = &mlog.buf[(start + idx) % mlog.size];
+
+	return 0;
+}
+
+#else /* !MCHECK_LOG */
+
+static inline void mlog_record(enum mlog_type type, void *ptr, size_t size,
+			       size_t old_size, const char *caller)
+{
+}
+
+void malloc_log_start(void)
+{
+}
+
+void malloc_log_stop(void)
+{
+}
+
+int malloc_log_info(struct mlog_info *info)
+{
+	return -ENOENT;
+}
+
+int malloc_log_entry(uint idx, struct mlog_entry **entryp)
+{
+	return -ENOENT;
+}
+
+#endif /* MCHECK_LOG */
+
 void *dlmalloc(size_t bytes)
 {
+	const char *caller;
+	void *p;
+
 	/*
 	 * Skip mcheck for simple malloc (pre-relocation). Simple malloc is a
 	 * bump allocator that can't free, so mcheck overhead is useless and
@@ -6007,13 +6152,17 @@ void *dlmalloc(size_t bytes)
 	if (mcheck_disabled)
 		return dlmalloc_impl(bytes CALLER_NULL);
 
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
-	void *p = dlmalloc_impl(fullsz CALLER_NULL);
 
+	p = dlmalloc_impl(fullsz CALLER_NULL);
 	if (!p)
 		return p;
-	return mcheck_alloc_posthook(p, bytes, mcheck_caller());
+	p = mcheck_alloc_posthook(p, bytes, caller);
+	mlog_record(MLOG_ALLOC, p, bytes, 0, caller);
+
+	return p;
 }
 
 void dlfree(void *mem)
@@ -6027,11 +6176,16 @@ void dlfree(void *mem)
 		dlfree_impl(mem);
 		return;
 	}
+	mlog_record(MLOG_FREE, mem, 0, 0, mcheck_caller());
 	dlfree_impl(mcheck_free_prehook(mem));
 }
 
 void *dlrealloc(void *oldmem, size_t bytes)
 {
+	const char *caller;
+	size_t old_size;
+	void *p;
+
 #ifdef REALLOC_ZERO_BYTES_FREES
 	if (bytes == 0) {
 		if (oldmem)
@@ -6046,18 +6200,26 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	if (mcheck_disabled)
 		return dlrealloc_impl(oldmem, bytes);
 
+	caller = mcheck_caller();
+	old_size = dlmalloc_usable_size(oldmem);
 	mcheck_pedantic_prehook();
-	void *p = mcheck_reallocfree_prehook(oldmem);
+	p = mcheck_reallocfree_prehook(oldmem);
 	size_t newsz = mcheck_alloc_prehook(bytes);
 
 	p = dlrealloc_impl(p, newsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, bytes, mcheck_caller());
+	p = mcheck_alloc_noclean_posthook(p, bytes, caller);
+	mlog_record(MLOG_REALLOC, p, bytes, old_size, caller);
+
+	return p;
 }
 
 void *dlmemalign(size_t alignment, size_t bytes)
 {
+	const char *caller;
+	void *p;
+
 	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
 		return memalign_simple(alignment, bytes);
@@ -6065,24 +6227,31 @@ void *dlmemalign(size_t alignment, size_t bytes)
 	if (mcheck_disabled)
 		return dlmemalign_impl(alignment, bytes);
 
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
-	void *p = dlmemalign_impl(alignment, fullsz);
 
+	p = dlmemalign_impl(alignment, fullsz);
 	if (!p)
 		return p;
-	return mcheck_memalign_posthook(alignment, p, bytes, mcheck_caller());
+	p = mcheck_memalign_posthook(alignment, p, bytes, caller);
+	mlog_record(MLOG_MEMALIGN, p, bytes, 0, caller);
+
+	return p;
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
 
 void *dlcalloc(size_t n, size_t elem_size)
 {
+	const char *caller;
+	size_t sz;
+	void *p;
+
 	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
-		size_t sz = n * elem_size;
-		void *p = malloc_simple(sz);
-
+		sz = n * elem_size;
+		p = malloc_simple(sz);
 		if (p)
 			memset(p, '\0', sz);
 		return p;
@@ -6091,14 +6260,19 @@ void *dlcalloc(size_t n, size_t elem_size)
 	if (mcheck_disabled)
 		return dlcalloc_impl(n, elem_size);
 
+	sz = n * elem_size;
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	/* NB: no overflow check here */
-	size_t fullsz = mcheck_alloc_prehook(n * elem_size);
-	void *p = dlcalloc_impl(1, fullsz);
+	size_t fullsz = mcheck_alloc_prehook(sz);
 
+	p = dlcalloc_impl(1, fullsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, n * elem_size, mcheck_caller());
+	p = mcheck_alloc_noclean_posthook(p, sz, caller);
+	mlog_record(MLOG_ALLOC, p, sz, 0, caller);
+
+	return p;
 }
 
 size_t dlmalloc_usable_size(const void *mem)

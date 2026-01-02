@@ -385,6 +385,20 @@ allocation was made::
 This caller information makes it easy to track down memory leaks by showing
 exactly where each allocation originated.
 
+Malloc-Traffic Log
+~~~~~~~~~~~~~~~~~~
+
+On sandbox, when mcheck is enabled, a malloc-traffic log can record all
+malloc/free/realloc calls. This is useful for debugging allocation patterns
+and finding where allocations without caller info originate.
+
+The log buffer is allocated from host memory using ``os_malloc()``, so it
+does not affect U-Boot's heap. The size is controlled by
+``CONFIG_MCHECK_LOG_SIZE`` (default 512K entries, about 80MB).
+
+If the log fills up, it wraps around and overwrites the oldest entries.
+A warning is shown when dumping if entries were lost.
+
 Valgrind
 ~~~~~~~~
 
