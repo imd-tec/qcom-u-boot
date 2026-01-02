@@ -507,16 +507,25 @@ static void video_flush_copy(struct udevice *vid)
 	if (!priv->copy_fb)
 		return;
 
-	if (damage->x1 && damage->y1) {
-		int lstart = damage->x0 * VNBYTES(priv->bpix);
-		int lend = damage->x1 * VNBYTES(priv->bpix);
+	if (!damage->x1 || !damage->y1)
+		return;
+
+	int lstart = damage->x0 * VNBYTES(priv->bpix);
+	int llen = damage->x1 * VNBYTES(priv->bpix) - lstart;
+
+	/* Copy entire region at once if full lines are damaged */
+	if (!lstart && llen == priv->line_length) {
+		ulong offset = damage->y0 * priv->line_length;
+		ulong len = (damage->y1 - damage->y0) * priv->line_length;
+
+		memcpy(priv->copy_fb + offset, priv->fb + offset, len);
+	} else {
 		int y;
 
 		for (y = damage->y0; y < damage->y1; y++) {
-			ulong offset = (y * priv->line_length) + lstart;
-			ulong len = lend - lstart;
+			ulong offset = y * priv->line_length + lstart;
 
-			memcpy(priv->copy_fb + offset, priv->fb + offset, len);
+			memcpy(priv->copy_fb + offset, priv->fb + offset, llen);
 		}
 	}
 }
