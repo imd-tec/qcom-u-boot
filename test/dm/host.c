@@ -16,7 +16,7 @@
 #include <test/ut.h>
 
 /* Basic test of host interface */
-static int dm_test_host(struct unit_test_state *uts)
+static int dm_test_host_base(struct unit_test_state *uts)
 {
 	static char label[] = "test";
 	struct udevice *dev, *part, *chk, *blk;
@@ -72,7 +72,7 @@ static int dm_test_host(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_host, UTF_SCAN_FDT);
+DM_TEST(dm_test_host_base, UTF_SCAN_FDT);
 
 /* reusing the same label should work */
 static int dm_test_host_dup(struct unit_test_state *uts)
