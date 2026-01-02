@@ -259,6 +259,29 @@ config CONSOLE_TRUETYPE_GLYPH_BUF
 	  The buffer starts at 4KB and grows via realloc() as needed to
 	  accommodate larger glyphs.
 
+config CONSOLE_TRUETYPE_SCRATCH
+	bool "TrueType scratch buffer to reduce malloc traffic"
+	depends on CONSOLE_TRUETYPE
+	default y
+	help
+	  Enable a pre-allocated scratch buffer for internal TrueType
+	  rendering allocations. This eliminates malloc/free calls during
+	  character rendering, improving performance and reducing heap
+	  fragmentation.
+
+	  With this disabled, stbtt allocates and frees around 26KB of
+	  temporary memory for each character rendered.
+
+config CONSOLE_TRUETYPE_SCRATCH_SIZE
+	int "TrueType scratch buffer size"
+	depends on CONSOLE_TRUETYPE_SCRATCH
+	default 32768
+	help
+	  Size of the scratch buffer in bytes for TrueType rendering.
+	  32KB is sufficient for most Latin characters. Complex glyphs
+	  (CJK, emoji) may need 64KB or more. Allocations exceeding this
+	  size fall back to malloc.
+
 config VIDEO_GLYPH_STATS
 	bool "Track glyph rendering statistics"
 	depends on CONSOLE_TRUETYPE

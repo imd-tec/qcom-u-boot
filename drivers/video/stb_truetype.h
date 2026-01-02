@@ -465,11 +465,53 @@ int main(int arg, char **argv)
    #define STBTT_fabs(x)      fabs(x)
    #endif
 
+   /* Scratch buffer for zero-malloc rendering */
+   #ifndef STBTT_SCRATCH_DEFINED
+   #define STBTT_SCRATCH_DEFINED
+   struct stbtt_scratch {
+       char *buf;
+       size_t size;
+       size_t used;
+   };
+
+   static inline void stbtt_scratch_reset(struct stbtt_scratch *s)
+   {
+       if (s)
+           s->used = 0;
+   }
+   #endif
+
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
    #ifndef STBTT_malloc
    #include <stdlib.h>
-   #define STBTT_malloc(x,u)  ((void)(u),malloc(x))
-   #define STBTT_free(x,u)    ((void)(u),free(x))
+
+   static inline void *stbtt__scratch_alloc(size_t size, void *userdata)
+   {
+       struct stbtt_scratch *s = userdata;
+       size_t aligned = (size + 7) & ~7;  /* 8-byte alignment */
+
+       if (s && s->used + aligned <= s->size) {
+           void *p = s->buf + s->used;
+
+           s->used += aligned;
+
+           return p;
+       }
+
+       return malloc(size);  /* fallback */
+   }
+
+   static inline void stbtt__scratch_free(void *ptr, void *userdata)
+   {
+       struct stbtt_scratch *s = userdata;
+
+       /* Only free if not from scratch buffer */
+       if (!s || ptr < (void *)s->buf || ptr >= (void *)(s->buf + s->size))
+           free(ptr);
+   }
+
+   #define STBTT_malloc(x,u)  stbtt__scratch_alloc(x, u)
+   #define STBTT_free(x,u)    stbtt__scratch_free(x, u)
    #endif
 
    #ifndef STBTT_assert
