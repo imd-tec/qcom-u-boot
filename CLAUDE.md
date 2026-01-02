@@ -4,15 +4,15 @@ This file contains information about building U-Boot for use with Claude Code.
 
 ## Building U-Boot
 
-### Using crosfw (Recommended)
+### Using uman (Recommended)
 
-To build U-Boot for sandbox testing, use the `crosfw` command:
+To build U-Boot for sandbox testing, use the `uman` command:
 
 ```bash
-# Build for sandbox
-crosfw sandbox -L
+# Build for sandbox without LTO (um is a symlink to uman)
+um -B sandbox build
 
-# The -L flag disables LTO (equivalent to NO_LTO=1)
+# The -l flag can be used to enable LTO
 # The build is silent unless there are warnings or errors
 # The build is done in /tmp/b/<board_name>, so /tmp/b/sandbox in this case
 ```
@@ -55,11 +55,11 @@ pyt <test_name>
 
 ## Notes
 
-- The `crosfw` tool is the preferred build method for this codebase
+- The `um` tool is the preferred build method for this codebase
 - Always run `make mrproper` if you encounter build issues
 - The sandbox build creates a test environment for U-Boot that runs on the host system
 - When using `git diff`, add `--no-ext-diff` to avoid external diff tools that may not work in this environment
-- crosfw shows no output if everything was ok!
+- `um build` shows no output if everything was ok!
 - Remember not to cd into the build directory; run U-Boot directly in the source dir
 - Do not run in-tree builds; always use the crosfw script or 'make O=/tmp/...'
 

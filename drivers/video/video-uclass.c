@@ -669,10 +669,14 @@ static void video_idle(struct cyclic_info *cyc)
 {
 	struct video_uc_priv *uc_priv;
 	struct uclass *uc;
-	int ret;
 
-	ret = uclass_get(UCLASS_VIDEO, &uc);
-	if (ret)
+	/*
+	 * Use uclass_find() rather than uclass_get() since the latter may
+	 * create a new uclass if the test framework has reinitialised driver
+	 * model while this cyclic function is still registered.
+	 */
+	uc = uclass_find(UCLASS_VIDEO);
+	if (!uc)
 		return;
 
 	uc_priv = uclass_get_priv(uc);
@@ -683,13 +687,15 @@ static void video_idle(struct cyclic_info *cyc)
 
 	if (CONFIG_IS_ENABLED(CURSOR)) {
 		struct udevice *cons;
-		struct uclass *uc;
 
 		/* Handle cursor display for each video console */
-		uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, cons, uc) {
-			if (device_active(cons)) {
-				vidconsole_idle(cons);
-				video_sync(cons->parent, true);
+		uc = uclass_find(UCLASS_VIDEO_CONSOLE);
+		if (uc) {
+			list_for_each_entry(cons, &uc->dev_head, uclass_node) {
+				if (device_active(cons)) {
+					vidconsole_idle(cons);
+					video_sync(cons->parent, true);
+				}
 			}
 		}
 	} else {
@@ -868,6 +874,23 @@ __maybe_unused static int video_destroy(struct uclass *uc)
 	return 0;
 }
 
+__maybe_unused static int video_pre_remove(struct udevice *dev)
+{
+	struct video_uc_priv *uc_priv = uclass_get_priv(dev->uclass);
+
+	/*
+	 * Unregister the cyclic before removing the last video device. This
+	 * ensures the cyclic won't run after driver model is reinitialised
+	 * by the test framework.
+	 */
+	if (uc_priv->cyc_active && uclass_id_count(UCLASS_VIDEO) == 1) {
+		cyclic_unregister(&uc_priv->cyc);
+		uc_priv->cyc_active = false;
+	}
+
+	return 0;
+}
+
 void video_set_manual_sync(bool enable)
 {
 	struct video_uc_priv *uc_priv;
@@ -891,5 +914,6 @@ UCLASS_DRIVER(video) = {
 	.priv_auto	= sizeof(struct video_uc_priv),
 	.per_device_auto	= sizeof(struct video_priv),
 	.per_device_plat_auto	= sizeof(struct video_uc_plat),
+	CONFIG_IS_ENABLED(CYCLIC, (.pre_remove = video_pre_remove, ))
 	CONFIG_IS_ENABLED(CYCLIC, (.destroy = video_destroy, ))
 };

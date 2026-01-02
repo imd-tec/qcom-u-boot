@@ -3947,4 +3947,10 @@ extern int ext4_block_write_begin(handle_t *handle, struct folio *folio,
 #define EFSBADCRC	EBADMSG		/* Bad CRC detected */
 #define EFSCORRUPTED	EUCLEAN		/* Filesystem is corrupted */
 
+/* Cleanup functions exported from super.c */
+void ext4_group_desc_free(struct ext4_sb_info *sbi);
+void ext4_flex_groups_free(struct ext4_sb_info *sbi);
+void ext4_destroy_lazy_init(void);
+void destroy_inodecache(void);
+
 #endif	/* _EXT4_H */

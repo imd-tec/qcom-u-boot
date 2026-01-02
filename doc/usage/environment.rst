@@ -322,6 +322,12 @@ ethrotate
     anything other than "no", U-Boot does go through all
     available network interfaces.
 
+ext4l_msgs
+    If set to "yes", the ext4l filesystem driver prints mount messages
+    when probing an ext4 filesystem, including the UUID, feature flags
+    and journal-recovery status. This is useful for debugging filesystem
+    issues.
+
 httpdstp
     If this is set, the value is used for HTTP's TCP
     destination port instead of the default port 80.

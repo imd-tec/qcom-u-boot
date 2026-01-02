@@ -10,6 +10,7 @@
  */
 
 #include <blk.h>
+#include <membuf.h>
 #include <part.h>
 #include <malloc.h>
 #include <u-boot/crc.h>
@@ -18,6 +19,13 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
+
+/* Message buffer size */
+#define EXT4L_MSG_BUF_SIZE	4096
+
+/* Message recording buffer */
+static struct membuf ext4l_msg_buf;
+static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /*
  * Global task_struct for U-Boot.
@@ -44,6 +52,49 @@ void ext4l_crc32c_init(void)
 u32 ext4l_crc32c(u32 crc, const void *address, unsigned int length)
 {
 	return crc32c_cal(crc, address, length, ext4l_crc32c_table);
+}
+
+/**
+ * ext4l_msg_init() - Initialise the message buffer
+ */
+void ext4l_msg_init(void)
+{
+	membuf_init(&ext4l_msg_buf, ext4l_msg_data, EXT4L_MSG_BUF_SIZE);
+}
+
+/**
+ * ext4l_record_msg() - Record a message in the buffer
+ *
+ * @msg: Message string to record
+ * @len: Length of message
+ */
+void ext4l_record_msg(const char *msg, int len)
+{
+	membuf_put(&ext4l_msg_buf, msg, len);
+}
+
+/**
+ * ext4l_get_msg_buf() - Get the message buffer
+ *
+ * Return: Pointer to the message buffer
+ */
+struct membuf *ext4l_get_msg_buf(void)
+{
+	return &ext4l_msg_buf;
+}
+
+/**
+ * ext4l_print_msgs() - Print all recorded messages
+ *
+ * Prints the contents of the message buffer to the console.
+ */
+void ext4l_print_msgs(void)
+{
+	char *data;
+	int len;
+
+	while ((len = membuf_getraw(&ext4l_msg_buf, 80, true, &data)) > 0)
+		printf("%.*s", len, data);
 }
 
 /*
@@ -75,6 +126,10 @@ struct inode *iget_locked(struct super_block *sb, unsigned long ino)
 	inode->i_mapping = &inode->i_data;
 	inode->i_data.host = inode;
 	INIT_LIST_HEAD(&ei->i_es_list);
+	INIT_LIST_HEAD(&inode->i_sb_list);
+
+	/* Add to superblock's inode list for eviction on unmount */
+	list_add(&inode->i_sb_list, &sb->s_inodes);
 
 	return inode;
 }
@@ -103,6 +158,10 @@ struct inode *new_inode(struct super_block *sb)
 	inode->i_mapping = &inode->i_data;
 	inode->i_data.host = inode;
 	INIT_LIST_HEAD(&ei->i_es_list);
+	INIT_LIST_HEAD(&inode->i_sb_list);
+
+	/* Add to superblock's inode list for eviction on unmount */
+	list_add(&inode->i_sb_list, &sb->s_inodes);
 
 	return inode;
 }
@@ -199,9 +258,10 @@ static void bh_cache_insert(struct buffer_head *bh)
 	unsigned int hash = bh_cache_hash(bh->b_blocknr);
 	struct bh_cache_entry *entry;
 
-	/* Check if already in cache */
+	/* Check if already in cache - must match block AND size */
 	for (entry = bh_cache[hash]; entry; entry = entry->next) {
-		if (entry->bh && entry->bh->b_blocknr == bh->b_blocknr)
+		if (entry->bh && entry->bh->b_blocknr == bh->b_blocknr &&
+		    entry->bh->b_size == bh->b_size)
 			return;  /* Already cached */
 	}
 
@@ -212,6 +272,9 @@ static void bh_cache_insert(struct buffer_head *bh)
 	entry->bh = bh;
 	entry->next = bh_cache[hash];
 	bh_cache[hash] = entry;
+
+	/* Mark as cached so brelse() knows not to free it */
+	set_buffer_cached(bh);
 
 	/* Add a reference to keep the buffer alive in cache */
 	atomic_inc(&bh->b_count);
@@ -257,13 +320,54 @@ void bh_cache_clear(void)
 				struct buffer_head *bh = entry->bh;
 
 				bh_clear_stale_jbd(bh);
-				/* Release the cache's reference */
+				/*
+				 * Force count to 1 so the buffer will be freed.
+				 * On unmount, ext4 code won't access these
+				 * buffers again, so extra references are stale.
+				 */
+				atomic_set(&bh->b_count, 1);
 				if (atomic_dec_and_test(&bh->b_count))
 					free_buffer_head(bh);
 			}
 			free(entry);
 		}
 		bh_cache[i] = NULL;
+	}
+}
+
+/**
+ * bh_cache_release_jbd() - Release all JBD references from buffer cache
+ *
+ * This must be called after journal destroy but before bh_cache_clear().
+ * It ensures all journal_heads are properly released from buffer_heads
+ * even if the journal destroy didn't fully clean up (e.g., on abort).
+ */
+void bh_cache_release_jbd(void)
+{
+	int i;
+	struct bh_cache_entry *entry;
+
+	for (i = 0; i < BH_CACHE_SIZE; i++) {
+		for (entry = bh_cache[i]; entry; entry = entry->next) {
+			if (entry->bh && buffer_jbd(entry->bh)) {
+				struct buffer_head *bh = entry->bh;
+				struct journal_head *jh = bh2jh(bh);
+
+				/*
+				 * Forcibly release the journal_head.
+				 * Clear b_bh to prevent use-after-free when
+				 * the buffer_head is later freed.
+				 */
+				if (jh) {
+					jh->b_bh = NULL;
+					jh->b_transaction = NULL;
+					jh->b_next_transaction = NULL;
+					jh->b_cp_transaction = NULL;
+				}
+				clear_buffer_jbd(bh);
+				bh->b_private = NULL;
+			}
+		}
 	}
 }
 
@@ -363,6 +467,15 @@ static struct buffer_head *alloc_buffer_head_with_data(size_t size)
 void free_buffer_head(struct buffer_head *bh)
 {
 	if (!bh)
+		return;
+
+	/*
+	 * Never free a buffer_head that has a journal_head attached.
+	 * This would cause use-after-free when the journal tries to access it.
+	 * The journal owns a reference and the buffer will be cleaned up when
+	 * the journal_head is properly released.
+	 */
+	if (buffer_jbd(bh))
 		return;
 
 	/*
@@ -570,13 +683,24 @@ struct buffer_head *sb_bread(struct super_block *sb, sector_t block)
 /**
  * brelse() - Release a buffer_head
  * @bh: Buffer head to release
+ *
+ * Decrements the reference count on the buffer. Cached buffer heads are
+ * freed by bh_cache_clear() on unmount, so this just decrements the count.
+ * Non-cached buffers are freed when the count reaches zero.
  */
 void brelse(struct buffer_head *bh)
 {
 	if (!bh)
 		return;
 
-	if (atomic_dec_and_test(&bh->b_count))
+	/*
+	 * If buffer has JBD attached, don't let ref count go to zero.
+	 * The journal owns a reference and will clean up properly.
+	 */
+	if (buffer_jbd(bh) && atomic_read(&bh->b_count) <= 1)
+		return;
+
+	if (atomic_dec_and_test(&bh->b_count) && !buffer_cached(bh))
 		free_buffer_head(bh);
 }
 
@@ -817,4 +941,28 @@ void folio_get(struct folio *folio)
 {
 	if (folio)
 		folio->_refcount++;
+}
+
+/**
+ * mapping_clear_folio_cache() - Release all folios in an address_space cache
+ * @mapping: The address_space to clear
+ *
+ * Releases the cache's reference to each folio. If no other references exist,
+ * the folio will be freed.
+ */
+void mapping_clear_folio_cache(struct address_space *mapping)
+{
+	int i;
+
+	if (!mapping)
+		return;
+
+	for (i = 0; i < mapping->folio_cache_count; i++) {
+		struct folio *folio = mapping->folio_cache[i];
+
+		if (folio)
+			folio_put(folio);
+		mapping->folio_cache[i] = NULL;
+	}
+	mapping->folio_cache_count = 0;
 }

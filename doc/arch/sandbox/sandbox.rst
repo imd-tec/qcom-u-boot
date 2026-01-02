@@ -208,6 +208,13 @@ available options. Some of these are described below:
 -P, --pager_bypass
   Enable pager bypass mode for testing.
 
+-Q, --quiet_vidconsole
+  Don't use vidconsole for stdout/stderr. By default, sandbox outputs to both
+  serial and vidconsole. This can be slow when there is a lot of output, due to
+  truetype font rendering to the internal framebuffer. Use this option to use
+  only serial output, which can provide a significant speedup for output-heavy
+  operations.
+
 -r, --read
   Read driver state from a dtb file. In conjunction with `-w`, this allows
   sandbox to save and restore emulated hardware state (such as a TPM) across

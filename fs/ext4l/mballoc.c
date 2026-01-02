@@ -3890,6 +3890,10 @@ void ext4_mb_release(struct super_block *sb)
 	ext4_mb_largest_free_orders_destroy(sbi);
 	kfree(sbi->s_mb_offsets);
 	kfree(sbi->s_mb_maxs);
+#ifdef __UBOOT__
+	if (sbi->s_buddy_cache)
+		mapping_clear_folio_cache(sbi->s_buddy_cache->i_mapping);
+#endif
 	iput(sbi->s_buddy_cache);
 	if (sbi->s_mb_stats) {
 		ext4_msg(sb, KERN_INFO,

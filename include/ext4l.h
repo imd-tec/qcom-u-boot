@@ -15,6 +15,13 @@ struct fs_dir_stream;
 struct fs_dirent;
 struct fs_statfs;
 
+/* Select op when EXT4_WRITE is enabled, fallback otherwise */
+#if CONFIG_IS_ENABLED(EXT4_WRITE)
+#define ext4l_op_ptr(op, fallback)	op
+#else
+#define ext4l_op_ptr(op, fallback)	fallback
+#endif
+
 /**
  * ext4l_probe() - Probe a block device for an ext4 filesystem
  *
@@ -68,6 +75,66 @@ int ext4l_size(const char *filename, loff_t *sizep);
  */
 int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 	       loff_t *actread);
+
+/**
+ * ext4l_write() - Write data to a file
+ *
+ * Creates the file if it doesn't exist. Overwrites existing content.
+ *
+ * @filename: Path to file
+ * @buf: Buffer containing data to write
+ * @offset: Byte offset to start writing at
+ * @len: Number of bytes to write
+ * @actwrite: Returns actual bytes written
+ * Return: 0 on success, -EROFS if read-only, -ENODEV if not mounted,
+ *	   -ENOTDIR if parent is not a directory, negative on other errors
+ */
+int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
+		loff_t *actwrite);
+
+/**
+ * ext4l_unlink() - Delete a file
+ *
+ * @filename: Path to file to delete
+ * Return: 0 on success, -ENOENT if file not found, -EISDIR if path is a
+ *	   directory, -EROFS if read-only, negative on other errors
+ */
+int ext4l_unlink(const char *filename);
+
+/**
+ * ext4l_mkdir() - Create a directory
+ *
+ * @dirname: Path of directory to create
+ * Return: 0 on success, -EEXIST if directory already exists,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_mkdir(const char *dirname);
+
+/**
+ * ext4l_ln() - Create a symbolic link
+ *
+ * Creates the symlink, replacing any existing file (like ln -sf).
+ * Refuses to replace a directory.
+ *
+ * @filename: Path of symlink to create
+ * @target: Target path the symlink points to
+ * Return: 0 on success, -EISDIR if target is a directory,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_ln(const char *filename, const char *target);
+
+/**
+ * ext4l_rename() - Rename a file or directory
+ *
+ * @old_path: Current path of file or directory
+ * @new_path: New path for file or directory
+ * Return: 0 on success, -ENOENT if source not found,
+ *	   -ENOTDIR if parent is not a directory, -EROFS if read-only,
+ *	   negative on other errors
+ */
+int ext4l_rename(const char *old_path, const char *new_path);
 
 /**
  * ext4l_get_uuid() - Get the filesystem UUID

@@ -48,7 +48,6 @@ static int ext4_unfreeze(struct super_block *sb);
 static int ext4_freeze(struct super_block *sb);
 static inline int ext2_feature_set_ok(struct super_block *sb);
 static inline int ext3_feature_set_ok(struct super_block *sb);
-static void ext4_unregister_li_request(struct super_block *sb);
 static void ext4_clear_request_list(void);
 static struct inode *ext4_get_journal_inode(struct super_block *sb,
 					    unsigned int journal_inum);
@@ -1228,7 +1227,7 @@ static void ext4_percpu_param_destroy(struct ext4_sb_info *sbi)
 	percpu_free_rwsem(&sbi->s_writepages_rwsem);
 }
 
-static void ext4_group_desc_free(struct ext4_sb_info *sbi)
+void ext4_group_desc_free(struct ext4_sb_info *sbi)
 {
 	struct buffer_head **group_desc;
 	int i;
@@ -1241,7 +1240,7 @@ static void ext4_group_desc_free(struct ext4_sb_info *sbi)
 	rcu_read_unlock();
 }
 
-static void ext4_flex_groups_free(struct ext4_sb_info *sbi)
+void ext4_flex_groups_free(struct ext4_sb_info *sbi)
 {
 	struct flex_groups **flex_groups;
 	int i;
@@ -1484,7 +1483,7 @@ static int __init init_inodecache(void)
 	return 0;
 }
 
-static void destroy_inodecache(void)
+void destroy_inodecache(void)
 {
 	/*
 	 * Make sure all delayed rcu free inodes are flushed before we
@@ -3708,7 +3707,7 @@ static void ext4_remove_li_request(struct ext4_li_request *elr)
 	kfree(elr);
 }
 
-static void ext4_unregister_li_request(struct super_block *sb)
+void ext4_unregister_li_request(struct super_block *sb)
 {
 	mutex_lock(&ext4_li_mtx);
 	if (!ext4_li_info) {
@@ -3719,6 +3718,22 @@ static void ext4_unregister_li_request(struct super_block *sb)
 	mutex_lock(&ext4_li_info->li_list_mtx);
 	ext4_remove_li_request(EXT4_SB(sb)->s_li_request);
 	mutex_unlock(&ext4_li_info->li_list_mtx);
+	mutex_unlock(&ext4_li_mtx);
+}
+
+/*
+ * ext4_destroy_lazy_init() - Free lazy init info if no longer needed
+ *
+ * In U-Boot, there is no lazy init thread, so this must be called after
+ * ext4_unregister_li_request() to free ext4_li_info when the list is empty.
+ */
+void ext4_destroy_lazy_init(void)
+{
+	mutex_lock(&ext4_li_mtx);
+	if (ext4_li_info && list_empty(&ext4_li_info->li_request_list)) {
+		kfree(ext4_li_info);
+		ext4_li_info = NULL;
+	}
 	mutex_unlock(&ext4_li_mtx);
 }
 

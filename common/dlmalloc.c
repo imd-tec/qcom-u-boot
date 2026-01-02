@@ -5984,6 +5984,15 @@ static const char *mcheck_caller(void)
 
 void *dlmalloc(size_t bytes)
 {
+	/*
+	 * Skip mcheck for simple malloc (pre-relocation). Simple malloc is a
+	 * bump allocator that can't free, so mcheck overhead is useless and
+	 * wastes the limited pre-relocation heap space.
+	 */
+	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
+	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+		return malloc_simple(bytes);
+
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
 	void *p = dlmalloc_impl(fullsz CALLER_NULL);
@@ -5993,7 +6002,15 @@ void *dlmalloc(size_t bytes)
 	return mcheck_alloc_posthook(p, bytes, mcheck_caller());
 }
 
-void dlfree(void *mem) { dlfree_impl(mcheck_free_prehook(mem)); }
+void dlfree(void *mem)
+{
+	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
+	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
+		dlfree_impl(mem);
+		return;
+	}
+	dlfree_impl(mcheck_free_prehook(mem));
+}
 
 void *dlrealloc(void *oldmem, size_t bytes)
 {
@@ -6020,6 +6037,10 @@ void *dlrealloc(void *oldmem, size_t bytes)
 
 void *dlmemalign(size_t alignment, size_t bytes)
 {
+	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
+	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
+		return memalign_simple(alignment, bytes);
+
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
 	void *p = dlmemalign_impl(alignment, fullsz);
@@ -6033,6 +6054,16 @@ void *dlmemalign(size_t alignment, size_t bytes)
 
 void *dlcalloc(size_t n, size_t elem_size)
 {
+	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
+	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
+		size_t sz = n * elem_size;
+		void *p = malloc_simple(sz);
+
+		if (p)
+			memset(p, '\0', sz);
+		return p;
+	}
+
 	mcheck_pedantic_prehook();
 	/* NB: no overflow check here */
 	size_t fullsz = mcheck_alloc_prehook(n * elem_size);

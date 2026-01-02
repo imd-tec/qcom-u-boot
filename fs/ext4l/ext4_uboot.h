@@ -315,8 +315,8 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - U-Boot mounts filesystems read-write */
-#define sb_rdonly(sb)	0
+/* sb_rdonly - check if filesystem is mounted read-only */
+#define sb_rdonly(sb)	((sb)->s_flags & SB_RDONLY)
 
 /* Trace stubs */
 #define trace_ext4_journal_start_inode(...)	do { } while (0)
@@ -521,11 +521,20 @@ struct sb_writers {
 #include <linux/jbd2.h>
 
 /*
- * U-Boot: marks buffer owns b_data and should free it.
- * Use BH_JBDPrivateStart to avoid conflicts with JBD2 state bits.
+ * U-Boot buffer head private bits.
+ *
+ * Start at BH_JBDPrivateStart + 1 because ext4.h uses BH_JBDPrivateStart
+ * for BH_BITMAP_UPTODATE.
  */
-#define BH_OwnsData		BH_JBDPrivateStart
+#define BH_OwnsData		(BH_JBDPrivateStart + 1)
 BUFFER_FNS(OwnsData, ownsdata)
+
+/*
+ * U-Boot: marks buffer is in the buffer cache.
+ * Cached buffers are freed by bh_cache_clear(), not brelse().
+ */
+#define BH_Cached		(BH_JBDPrivateStart + 2)
+BUFFER_FNS(Cached, cached)
 
 /* Forward declare for get_block_t */
 struct inode;
@@ -682,12 +691,15 @@ struct super_block {
 	const struct export_operations *s_export_op;
 	const struct xattr_handler * const *s_xattr;
 	struct dentry *d_sb;		/* Parent dentry - stub */
+
+	/* U-Boot: list of all inodes, for freeing on unmount */
+	struct list_head s_inodes;
 };
 
-/* Block device read-only check - stub */
+/* Block device read-only check */
 static inline int bdev_read_only(struct block_device *bdev)
 {
-	return 0;
+	return bdev ? bdev->read_only : 0;
 }
 
 /* kuid_t and kgid_t - from linux/cred.h */
@@ -859,6 +871,9 @@ struct inode {
 	struct rw_semaphore i_rwsem;	/* inode lock */
 	const char *i_link;		/* Symlink target for fast symlinks */
 	unsigned short i_write_hint;	/* Write life time hint */
+
+	/* U-Boot: linkage into super_block s_inodes list */
+	struct list_head i_sb_list;
 };
 
 /* Inode time accessors */
@@ -1380,6 +1395,7 @@ struct folio *__filemap_get_folio(struct address_space *mapping,
 				  gfp_t gfp);
 void folio_put(struct folio *folio);
 void folio_get(struct folio *folio);
+void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* projid_t - project ID type */
 typedef unsigned int projid_t;
@@ -1573,7 +1589,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define fscrypt_dio_supported(i)		(1)
 #define fscrypt_has_permitted_context(p, c)	({ (void)(p); (void)(c); 1; })
 #define fscrypt_is_nokey_name(d)		({ (void)(d); 0; })
-#define fscrypt_prepare_symlink(d, s, l, m, dl)	({ (void)(d); (void)(s); (void)(l); (void)(m); (void)(dl); 0; })
+#define fscrypt_prepare_symlink(d, s, l, m, dl)	({ (void)(d); (void)(m); (dl)->name = (unsigned char *)(s); (dl)->len = (l) + 1; 0; })
 #define fscrypt_encrypt_symlink(i, s, l, d)	({ (void)(i); (void)(s); (void)(l); (void)(d); 0; })
 #define fscrypt_prepare_link(o, d, n)		({ (void)(o); (void)(d); (void)(n); 0; })
 #define fscrypt_prepare_rename(od, ode, nd, nde, f) ({ (void)(od); (void)(ode); (void)(nd); (void)(nde); (void)(f); 0; })
@@ -2080,6 +2096,7 @@ struct fs_context {
 /* ext4 superblock initialisation and commit */
 int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 int ext4_commit_super(struct super_block *sb);
+void ext4_unregister_li_request(struct super_block *sb);
 
 /* fs_parameter stubs */
 struct fs_parameter {
@@ -2136,8 +2153,8 @@ struct fs_parse_result {
 /* ctype */
 #include <linux/ctype.h>
 
-/* crc16 */
-#define crc16(crc, buf, len)		(0)
+/* crc16 - use U-Boot's implementation */
+#include <linux/crc16.h>
 
 /* Timer and timing stubs */
 #define HZ				1000
@@ -2302,10 +2319,6 @@ void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
 void *kvzalloc(size_t size, gfp_t flags);
 #define kvmalloc(size, flags)	kvzalloc(size, flags)
 unsigned long roundup_pow_of_two(unsigned long n);
-
-/* Atomic operations - declarations for stub.c */
-void atomic_add(int val, atomic_t *v);
-void atomic64_add(s64 val, atomic64_t *v);
 
 /* Power of 2 check - declaration for stub.c */
 int is_power_of_2(unsigned long n);
@@ -2888,16 +2901,19 @@ void free_buffer_head(struct buffer_head *bh);
 
 /* ext4l support functions (support.c) */
 void ext4l_crc32c_init(void);
+void bh_cache_release_jbd(void);
 void bh_cache_clear(void);
 int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
 int ext4l_write_block(sector_t block, size_t size, void *buffer);
+void ext4l_msg_init(void);
+void ext4l_record_msg(const char *msg, int len);
+struct membuf *ext4l_get_msg_buf(void);
+void ext4l_print_msgs(void);
 
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
-void ext4l_record_msg(const char *msg, int len);
-struct membuf *ext4l_get_msg_buf(void);
 
 #define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 

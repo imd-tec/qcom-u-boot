@@ -5,6 +5,9 @@
 
 config FS_EXT4L
 	bool "Enable ext4 filesystem support (Linux port)"
+	depends on FS
+	select RBTREE
+	select CRC32C
 	help
 	  This provides support for reading images from the ext4 filesystem,
 	  using code ported from Linux. This is mutually exclusive with

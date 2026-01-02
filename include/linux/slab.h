@@ -84,29 +84,14 @@ static inline void *krealloc(const void *p, size_t new_size, gfp_t flags)
 
 void *kmemdup(const void *src, size_t len, gfp_t gfp);
 
-/* kmem_cache implementation / stubs */
+/* kmem_cache stubs */
 struct kmem_cache {
 	int sz;
 };
 
 struct kmem_cache *get_mem(int element_sz);
-#define kmem_cache_create(a, sz, c, d, e)	get_mem(sz)
+#define kmem_cache_create(a, sz, c, d, e)	({ (void)(a); (void)(e); get_mem(sz); })
 void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag);
-
-#if CONFIG_IS_ENABLED(LIB_KMEM_CACHE)
-void kmem_cache_free(struct kmem_cache *cachep, void *obj);
-void kmem_cache_destroy(struct kmem_cache *cachep);
-#else
-static inline void kmem_cache_free(struct kmem_cache *cachep, void *obj)
-{
-	free(obj);
-}
-
-static inline void kmem_cache_destroy(struct kmem_cache *cachep)
-{
-	free(cachep);
-}
-#endif
 
 static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)
 {
@@ -115,6 +100,16 @@ static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)
 	if (ret)
 		memset(ret, 0, obj->sz);
 	return ret;
+}
+
+static inline void kmem_cache_free(struct kmem_cache *cachep, void *obj)
+{
+	free(obj);
+}
+
+static inline void kmem_cache_destroy(struct kmem_cache *cachep)
+{
+	free(cachep);
 }
 
 #endif /* _LINUX_SLAB_H */

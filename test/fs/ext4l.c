@@ -396,3 +396,254 @@ static int fs_test_ext4l_statfs_norun(struct unit_test_state *uts)
 }
 FS_TEST_ARGS(fs_test_ext4l_statfs_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
 	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_write_norun() - Test ext4l_write function
+ *
+ * Verifies that ext4l can write file contents to the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_write_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "test write data\n";
+	size_t test_len = strlen(test_data);
+	loff_t actwrite, actread;
+	char read_buf[32];
+	loff_t size;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Write a new file */
+	ut_assertok(ext4l_write("/newfile.txt", (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify the file exists and has correct size */
+	ut_asserteq(1, ext4l_exists("/newfile.txt"));
+	ut_assertok(ext4l_size("/newfile.txt", &size));
+	ut_asserteq(test_len, size);
+
+	/* Read back and verify contents */
+	memset(read_buf, '\0', sizeof(read_buf));
+	ut_assertok(ext4l_read("/newfile.txt", read_buf, 0, 0, &actread));
+	ut_asserteq(test_len, actread);
+	ut_asserteq_str(test_data, read_buf);
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_write_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_unlink_norun() - Test ext4l_unlink function
+ *
+ * Verifies that ext4l can delete files from the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_unlink_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "unlink test\n";
+	size_t test_len = strlen(test_data);
+	loff_t actwrite;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Create a new file to unlink */
+	ut_assertok(ext4l_write("/unlinkme.txt", (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify file exists (same mount) */
+	ut_asserteq(1, ext4l_exists("/unlinkme.txt"));
+
+	/* Unlink the file */
+	ut_assertok(ext4l_unlink("/unlinkme.txt"));
+
+	/* Verify file no longer exists */
+	ut_asserteq(0, ext4l_exists("/unlinkme.txt"));
+
+	/* Verify unlinking non-existent file returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_unlink("/nonexistent"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_unlink_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_mkdir_norun() - Test ext4l_mkdir function
+ *
+ * Verifies that ext4l can create directories on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_mkdir_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	static int test_counter;
+	char dir_name[32];
+	char subdir_name[64];
+	int ret;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique directory names to avoid issues with test re-runs */
+	snprintf(dir_name, sizeof(dir_name), "/testdir%d", test_counter);
+	snprintf(subdir_name, sizeof(subdir_name), "%s/subdir", dir_name);
+	test_counter++;
+
+	/* Create a new directory */
+	ret = ext4l_mkdir(dir_name);
+	ut_assertok(ret);
+
+	/* Verify directory exists */
+	ut_asserteq(1, ext4l_exists(dir_name));
+
+	/* Verify creating duplicate returns -EEXIST */
+	ut_asserteq(-EEXIST, ext4l_mkdir(dir_name));
+
+	/* Create nested directory */
+	ut_assertok(ext4l_mkdir(subdir_name));
+	ut_asserteq(1, ext4l_exists(subdir_name));
+
+	/* Verify creating directory in non-existent parent returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_mkdir("/nonexistent/dir"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_mkdir_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_ln_norun() - Test ext4l_ln function
+ *
+ * Verifies that ext4l can create symbolic links on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_ln_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	static int test_counter;
+	char link_name[32];
+	const char *target = "/testfile.txt";
+	loff_t size;
+	loff_t actread;
+	char buf[32];
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique symlink names to avoid issues with test re-runs */
+	snprintf(link_name, sizeof(link_name), "/testlink%d", test_counter);
+	test_counter++;
+
+	/*
+	 * Create a symbolic link. ext4l_ln follows U-Boot's ln command
+	 * convention: ext4l_ln(target, linkname) creates linkname pointing
+	 * to target.
+	 */
+	ut_assertok(ext4l_ln(target, link_name));
+
+	/* Verify symlink exists */
+	ut_asserteq(1, ext4l_exists(link_name));
+
+	/*
+	 * Size through symlink should be target file's size (12 bytes),
+	 * since ext4l_resolve_path follows symlinks (like stat, not lstat)
+	 */
+	ut_assertok(ext4l_size(link_name, &size));
+	ut_asserteq(12, size);
+
+	/* Verify we can read through the symlink */
+	memset(buf, '\0', sizeof(buf));
+	ut_assertok(ext4l_read(link_name, buf, 0, 0, &actread));
+	ut_asserteq(12, actread);
+	ut_asserteq_str("hello world\n", buf);
+
+	/* Verify creating duplicate succeeds (like ln -sf) */
+	ut_assertok(ext4l_ln(target, link_name));
+
+	/* Verify creating symlink in non-existent parent returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_ln(target, "/nonexistent/link"));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_ln_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });
+
+/**
+ * fs_test_ext4l_rename_norun() - Test ext4l_rename function
+ *
+ * Verifies that ext4l can rename files and directories on the filesystem.
+ *
+ * Arguments:
+ *   fs_image: Path to the ext4 filesystem image
+ */
+static int fs_test_ext4l_rename_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(EXT4L_ARG_IMAGE);
+	const char *test_data = "rename test\n";
+	size_t test_len = strlen(test_data);
+	static int test_counter;
+	char old_name[32], new_name[32], subdir_name[32], moved_name[64];
+	loff_t actwrite, size;
+
+	ut_assertnonnull(fs_image);
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+	ut_assertok(fs_set_blk_dev("host", "0", FS_TYPE_ANY));
+
+	/* Use unique names to avoid issues with test re-runs */
+	snprintf(old_name, sizeof(old_name), "/renameme%d.txt", test_counter);
+	snprintf(new_name, sizeof(new_name), "/renamed%d.txt", test_counter);
+	snprintf(subdir_name, sizeof(subdir_name), "/renamedir%d", test_counter);
+	snprintf(moved_name, sizeof(moved_name), "%s/moved.txt", subdir_name);
+	test_counter++;
+
+	/* Create a file to rename */
+	ut_assertok(ext4l_write(old_name, (void *)test_data, 0,
+				test_len, &actwrite));
+	ut_asserteq(test_len, actwrite);
+
+	/* Verify file exists */
+	ut_asserteq(1, ext4l_exists(old_name));
+
+	/* Rename the file */
+	ut_assertok(ext4l_rename(old_name, new_name));
+
+	/* Verify old name no longer exists, new name does */
+	ut_asserteq(0, ext4l_exists(old_name));
+	ut_asserteq(1, ext4l_exists(new_name));
+
+	/* Verify file size is preserved */
+	ut_assertok(ext4l_size(new_name, &size));
+	ut_asserteq(test_len, size);
+
+	/* Verify renaming non-existent file returns -ENOENT */
+	ut_asserteq(-ENOENT, ext4l_rename("/nonexistent", "/newname"));
+
+	/* Test cross-directory rename */
+	ut_assertok(ext4l_mkdir(subdir_name));
+	ut_assertok(ext4l_rename(new_name, moved_name));
+	ut_asserteq(0, ext4l_exists(new_name));
+	ut_asserteq(1, ext4l_exists(moved_name));
+
+	return 0;
+}
+FS_TEST_ARGS(fs_test_ext4l_rename_norun, UTF_SCAN_FDT | UTF_CONSOLE | UTF_MANUAL,
+	     { "fs_image", UT_ARG_STR });

@@ -5,6 +5,7 @@
 
 #define _GNU_SOURCE
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -338,10 +339,30 @@ int os_persistent_file(char *buf, int maxsize, const char *fname)
 	}
 	strcpy(ptr, fname);
 
-	if (access(buf, F_OK) == -1)
-		return -ENOENT;
+	if (access(buf, F_OK) == 0)
+		return 0;
 
-	return 0;
+	/*
+	 * If no directory was specified and the file wasn't found, try the
+	 * executable's directory with "persistent-data" appended.
+	 */
+	if (!dirname) {
+		struct sandbox_state *state = state_get_current();
+		const char *prog;
+		char *slash;
+
+		prog = state->prog_fname ? state->prog_fname : state->argv[0];
+		assert(prog);
+		slash = strrchr(prog, '/');
+		if (slash) {
+			snprintf(buf, maxsize, "%.*s/persistent-data/%s",
+				 (int)(slash - prog), prog, fname);
+			if (access(buf, F_OK) == 0)
+				return 0;
+		}
+	}
+
+	return -ENOENT;
 }
 
 int os_mktemp(char *fname, off_t size)

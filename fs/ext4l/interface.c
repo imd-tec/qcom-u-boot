@@ -13,7 +13,6 @@
 #include <env.h>
 #include <fs.h>
 #include <fs_legacy.h>
-#include <membuf.h>
 #include <part.h>
 #include <malloc.h>
 #include <u-boot/uuid.h>
@@ -23,9 +22,8 @@
 
 #include "ext4_uboot.h"
 #include "ext4.h"
-
-/* Message buffer size */
-#define EXT4L_MSG_BUF_SIZE	4096
+#include "ext4_jbd2.h"
+#include "xattr.h"
 
 /* Global state */
 static struct blk_desc *ext4l_dev_desc;
@@ -41,10 +39,6 @@ static int ext4l_open_dirs;
 
 /* Global super_block pointer for filesystem operations */
 static struct super_block *ext4l_sb;
-
-/* Message recording buffer */
-static struct membuf ext4l_msg_buf;
-static char ext4l_msg_data[EXT4L_MSG_BUF_SIZE];
 
 /**
  * ext4l_get_blk_dev() - Get the current block device
@@ -151,46 +145,131 @@ void ext4l_clear_blk_dev(void)
 }
 
 /**
- * ext4l_msg_init() - Initialize the message buffer
+ * ext4l_free_sb() - Free superblock and associated resources
+ * @sb: Superblock to free
+ * @skip_io: If true, skip all I/O operations (for forced close)
+ *
+ * Releases all resources associated with the superblock including the journal,
+ * caches, inodes, and the superblock structure itself.
  */
-static void ext4l_msg_init(void)
+static void ext4l_free_sb(struct super_block *sb, bool skip_io)
 {
-	membuf_init(&ext4l_msg_buf, ext4l_msg_data, EXT4L_MSG_BUF_SIZE);
+	struct ext4_sb_info *sbi = EXT4_SB(sb);
+
+	/*
+	 * Destroy journal first to properly clean up all buffers.
+	 * If skip_io is set, the device may be invalid so skip
+	 * journal destroy entirely - it will be recovered on next mount.
+	 */
+	if (sbi->s_journal && !skip_io)
+		ext4_journal_destroy(sbi, sbi->s_journal);
+
+	/* Commit superblock if device is valid and I/O is allowed */
+	if (!skip_io)
+		ext4_commit_super(sb);
+
+	/* Release superblock buffer */
+	brelse(sbi->s_sbh);
+
+	/* Unregister lazy init and free if no longer needed */
+	ext4_unregister_li_request(sb);
+	ext4_destroy_lazy_init();
+
+	/* Free mballoc data */
+	ext4_mb_release(sb);
+
+	/* Release system zone */
+	ext4_release_system_zone(sb);
+
+	/* Destroy xattr caches */
+	ext4_xattr_destroy_cache(sbi->s_ea_inode_cache);
+	sbi->s_ea_inode_cache = NULL;
+	ext4_xattr_destroy_cache(sbi->s_ea_block_cache);
+	sbi->s_ea_block_cache = NULL;
+
+	/* Free group descriptors and flex groups */
+	ext4_group_desc_free(sbi);
+	ext4_flex_groups_free(sbi);
+
+	/* Evict all inodes before destroying caches */
+	while (!list_empty(&sb->s_inodes)) {
+		struct inode *inode;
+		struct ext4_inode_info *ei;
+
+		inode = list_first_entry(&sb->s_inodes,
+					 struct inode, i_sb_list);
+		list_del_init(&inode->i_sb_list);
+		/* Clear extent status and free the inode */
+		ext4_es_remove_extent(inode, 0, EXT_MAX_BLOCKS);
+		ei = EXT4_I(inode);
+		kfree(ei);
+	}
+
+	/* Free root dentry */
+	if (sb->s_root) {
+		kfree(sb->s_root);
+		sb->s_root = NULL;
+	}
+
+	/* Free sbi */
+	kfree(sbi->s_blockgroup_lock);
+	kfree(sbi);
+
+	/* Free structures allocated in ext4l_probe() */
+	kfree(sb->s_bdev->bd_mapping);
+	kfree(sb->s_bdev);
+	kfree(sb);
 }
 
 /**
- * ext4l_record_msg() - Record a message in the buffer
+ * ext4l_close_internal() - Internal close function
+ * @skip_io: If true, skip all I/O operations (for forced close)
  *
- * @msg: Message string to record
- * @len: Length of message
+ * When called from the safeguard in ext4l_probe(), the device may be
+ * invalid (rebound to a different file), so skip_io should be true to
+ * avoid crashes when trying to write to the device.
  */
-void ext4l_record_msg(const char *msg, int len)
+static void ext4l_close_internal(bool skip_io)
 {
-	membuf_put(&ext4l_msg_buf, msg, len);
-}
+	struct super_block *sb = ext4l_sb;
 
-/**
- * ext4l_get_msg_buf() - Get the message buffer
- *
- * Return: Pointer to the message buffer
- */
-struct membuf *ext4l_get_msg_buf(void)
-{
-	return &ext4l_msg_buf;
-}
+	if (ext4l_open_dirs > 0)
+		return;
 
-/**
- * ext4l_print_msgs() - Print all recorded messages
- *
- * Prints the contents of the message buffer to the console.
- */
-static void ext4l_print_msgs(void)
-{
-	char *data;
-	int len;
+	if (sb)
+		ext4l_free_sb(sb, skip_io);
 
-	while ((len = membuf_getraw(&ext4l_msg_buf, 80, true, &data)) > 0)
-		printf("%.*s", len, data);
+	ext4l_dev_desc = NULL;
+	ext4l_sb = NULL;
+
+	/*
+	 * Force cleanup of any remaining journal_heads before clearing
+	 * the buffer cache. This ensures no stale journal_head references
+	 * survive to the next mount. This is critical even when skip_io
+	 * is true - we MUST disconnect journal_heads before freeing
+	 * buffer_heads to avoid dangling pointers.
+	 */
+	bh_cache_release_jbd();
+
+	ext4l_clear_blk_dev();
+
+	/*
+	 * Clean up ext4 and JBD2 global state so it can be properly
+	 * reinitialised on the next mount. This is important in U-Boot
+	 * where we may mount/unmount filesystems multiple times in a
+	 * single session.
+	 *
+	 * Even when skip_io is true (journal wasn't properly destroyed),
+	 * we must destroy the caches to free all orphaned journal_heads.
+	 * The next mount will reinitialise fresh caches.
+	 */
+	ext4_exit_system_zone();
+	ext4_exit_es();
+	if (IS_ENABLED(CONFIG_EXT4_WRITE))
+		ext4_exit_mballoc();
+	if (IS_ENABLED(CONFIG_EXT4_JOURNAL))
+		jbd2_journal_exit_global();
+	destroy_inodecache();
 }
 
 int ext4l_probe(struct blk_desc *fs_dev_desc,
@@ -206,6 +285,17 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	if (!fs_dev_desc)
 		return -EINVAL;
+
+	/*
+	 * Ensure any previous mount is properly closed before mounting again.
+	 * This prevents resource leaks if probe is called without close.
+	 *
+	 * Since we're being called while a previous mount exists, we can't
+	 * trust the old device state (it may have been rebound to a different
+	 * file). Use skip_io=true to skip all I/O during close.
+	 */
+	if (ext4l_sb)
+		ext4l_close_internal(true);
 
 	/* Initialise message buffer for recording ext4 messages */
 	ext4l_msg_init();
@@ -243,6 +333,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		ret = -ENOMEM;
 		goto err_exit_es;
 	}
+	INIT_LIST_HEAD(&sb->s_inodes);
 
 	/* Allocate block_device */
 	sb->s_bdev = kzalloc(sizeof(struct block_device), GFP_KERNEL);
@@ -310,8 +401,6 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 		goto err_free_buf;
 	}
 
-	free(buf);
-
 	/* Save device info for later operations */
 	ext4l_dev_desc = fs_dev_desc;
 	if (fs_partition)
@@ -319,6 +408,18 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Set block device for buffer I/O */
 	ext4l_set_blk_dev(fs_dev_desc, fs_partition);
+
+	/*
+	 * Test if device supports writes by writing back the same data.
+	 * If write returns 0, the device is read-only (e.g. LUKS/blkmap_crypt)
+	 */
+	if (blk_dwrite(fs_dev_desc,
+		       (part_offset + BLOCK_SIZE) / fs_dev_desc->blksz,
+		       2, buf) != 2) {
+		sb->s_bdev->read_only = true;
+		sb->s_flags |= SB_RDONLY;
+	}
+	free(buf);
 
 	/* Mount the filesystem */
 	ret = ext4_fill_super(sb, fc);
@@ -329,6 +430,10 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Store super_block for later operations */
 	ext4l_sb = sb;
+
+	/* Free mount context - no longer needed after successful mount */
+	kfree(ctx);
+	kfree(fc);
 
 	/* Print messages if ext4l_msgs environment variable is set */
 	if (env_get_yesno("ext4l_msgs") == 1)
@@ -769,14 +874,498 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 	return 0;
 }
 
+/**
+ * ext4l_resolve_file() - Resolve a file path for write operations
+ * @path: Path to process
+ * @dir_dentryp: Returns parent directory dentry (caller must kfree)
+ * @dentryp: Returns file dentry after lookup (caller must kfree)
+ * @path_copyp: Returns path copy (caller must free)
+ *
+ * Common setup for write operations. Validates inputs, checks read-write
+ * mount, parses path, resolves parent directory, creates dentries, and
+ * performs lookup.
+ *
+ * Return: 0 on success, negative on error
+ */
+static int ext4l_resolve_file(const char *path, struct dentry **dir_dentryp,
+			      struct dentry **dentryp, char **path_copyp)
+{
+	char *path_copy, *dir_path, *last_slash;
+	struct dentry *dir_dentry, *dentry, *result;
+	struct inode *dir_inode;
+	const char *basename;
+	int ret;
+
+	if (!ext4l_sb)
+		return -ENODEV;
+
+	if (!path)
+		return -EINVAL;
+
+	/* Check if filesystem is mounted read-write */
+	if (ext4l_sb->s_flags & SB_RDONLY)
+		return -EROFS;
+
+	/* Parse path to get parent directory and basename */
+	path_copy = strdup(path);
+	if (!path_copy)
+		return -ENOMEM;
+
+	last_slash = strrchr(path_copy, '/');
+	if (last_slash) {
+		*last_slash = '\0';
+		dir_path = path_copy;
+		basename = last_slash + 1;
+		if (*dir_path == '\0')
+			dir_path = "/";
+	} else {
+		dir_path = "/";
+		basename = path;
+	}
+
+	/* Resolve parent directory */
+	ret = ext4l_resolve_path(dir_path, &dir_inode);
+	if (ret) {
+		free(path_copy);
+		return ret;
+	}
+
+	if (!S_ISDIR(dir_inode->i_mode)) {
+		free(path_copy);
+		return -ENOTDIR;
+	}
+
+	/* Create dentry for parent directory */
+	dir_dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dir_dentry) {
+		free(path_copy);
+		return -ENOMEM;
+	}
+	dir_dentry->d_inode = dir_inode;
+	dir_dentry->d_sb = dir_inode->i_sb;
+
+	/* Create dentry for the file */
+	dentry = kzalloc(sizeof(struct dentry), GFP_KERNEL);
+	if (!dentry) {
+		kfree(dir_dentry);
+		free(path_copy);
+		return -ENOMEM;
+	}
+	dentry->d_name.name = basename;
+	dentry->d_name.len = strlen(basename);
+	dentry->d_sb = dir_inode->i_sb;
+	dentry->d_parent = dir_dentry;
+
+	/* Look up the file */
+	result = ext4_lookup(dir_inode, dentry, 0);
+	if (IS_ERR(result)) {
+		kfree(dentry);
+		kfree(dir_dentry);
+		free(path_copy);
+		return PTR_ERR(result);
+	}
+
+	*dir_dentryp = dir_dentry;
+	*dentryp = dentry;
+	*path_copyp = path_copy;
+
+	return 0;
+}
+
+static int ext4l_write_file(struct dentry *dir_dentry, struct dentry *dentry,
+			    void *buf, loff_t offset, loff_t len,
+			    loff_t *actwrite)
+{
+	struct inode *dir = dir_dentry->d_inode;
+	handle_t *handle = NULL;
+	struct buffer_head *bh;
+	struct inode *inode;
+	loff_t pos, end;
+	umode_t mode;
+	int ret;
+
+	if (dentry->d_inode) {
+		/* File exists - use the existing inode for overwrite */
+		inode = dentry->d_inode;
+	} else {
+		/* File does not exist, create it */
+		/* Mode: 0644 (rw-r--r--) | S_IFREG */
+		mode = S_IFREG | 0644;
+		ret = ext4_create(&nop_mnt_idmap, dir, dentry, mode, true);
+		if (ret)
+			return ret;
+
+		inode = dentry->d_inode;
+	}
+	if (!inode)
+		return -EIO;
+
+	/*
+	 * Attach jinode for journaling if needed (like ext4_file_open does).
+	 * This is required for ordered data mode.
+	 */
+	ret = ext4_inode_attach_jinode(inode);
+	if (ret < 0)
+		return ret;
+
+	/*
+	 * Start a journal handle for the write operation.
+	 * U-Boot uses a synchronous single-transaction model where
+	 * ext4_journal_stop() commits immediately for crash safety.
+	 */
+	handle = ext4_journal_start(inode, EXT4_HT_WRITE_PAGE,
+				    EXT4_DATA_TRANS_BLOCKS(inode->i_sb));
+	if (IS_ERR(handle))
+		return PTR_ERR(handle);
+
+	/* Write data to file */
+	pos = offset;
+	end = offset + len;
+	while (pos < end) {
+		ext4_lblk_t block = pos >> inode->i_blkbits;
+		uint block_offset = pos & (inode->i_sb->s_blocksize - 1);
+		uint bytes_to_write = inode->i_sb->s_blocksize - block_offset;
+		int needed_credits = EXT4_DATA_TRANS_BLOCKS(inode->i_sb);
+
+		if (pos + bytes_to_write > end)
+			bytes_to_write = end - pos;
+
+		/*
+		 * Ensure we have enough journal credits for this block.
+		 * Each block allocation can use up to EXT4_DATA_TRANS_BLOCKS
+		 * credits. Try to extend, or restart the transaction if needed.
+		 */
+		ret = ext4_journal_ensure_credits(handle, needed_credits, 0);
+		if (ret < 0)
+			goto out_handle;
+
+		bh = ext4_getblk(handle, inode, block, 0);
+
+		if (IS_ERR(bh)) {
+			ret = PTR_ERR(bh);
+			goto out_handle;
+		}
+		if (!bh) {
+			/* Block doesn't exist, allocate it */
+			bh = ext4_getblk(handle, inode, block,
+					 EXT4_GET_BLOCKS_CREATE);
+			if (IS_ERR(bh)) {
+				ret = PTR_ERR(bh);
+				goto out_handle;
+			}
+			if (!bh) {
+				ret = -EIO;
+				goto out_handle;
+			}
+		}
+
+		/* Get write access for journaling */
+		ret = ext4_journal_get_write_access(handle, inode->i_sb, bh,
+						    EXT4_JTR_NONE);
+		if (ret) {
+			brelse(bh);
+			goto out_handle;
+		}
+
+		/* Copy data to buffer */
+		memcpy(bh->b_data + block_offset, buf + (pos - offset),
+		       bytes_to_write);
+
+		/*
+		 * In data=journal mode, file data goes through the journal.
+		 * In data=ordered mode, write directly to disk.
+		 */
+		if (ext4_should_journal_data(inode)) {
+			/* data=journal: write through journal */
+			ret = ext4_handle_dirty_metadata(handle, inode, bh);
+			if (ret) {
+				brelse(bh);
+				goto out_handle;
+			}
+		} else {
+			/* data=ordered: write directly to disk */
+			mark_buffer_dirty(bh);
+			ret = sync_dirty_buffer(bh);
+			if (ret) {
+				brelse(bh);
+				goto out_handle;
+			}
+		}
+
+		brelse(bh);
+		pos += bytes_to_write;
+	}
+
+	/* Update inode size */
+	if (end > inode->i_size) {
+		i_size_write(inode, end);
+		/*
+		 * Also update i_disksize in ext4_inode_info - this is what gets
+		 * written to disk via ext4_fill_raw_inode -> ext4_isize_set
+		 */
+		EXT4_I(inode)->i_disksize = end;
+		/* Mark inode dirty to update on disk */
+		ext4_mark_inode_dirty(handle, inode);
+	}
+
+	*actwrite = len;
+	ret = 0;
+
+out_handle:
+	/* Stop handle - this commits the transaction synchronously in U-Boot */
+	if (handle) {
+		int stop_ret = ext4_journal_stop(handle);
+
+		if (stop_ret && !ret)
+			ret = stop_ret;
+	}
+
+	return ret;
+}
+
+int ext4l_write(const char *filename, void *buf, loff_t offset, loff_t len,
+		loff_t *actwrite)
+{
+	struct dentry *dir_dentry, *dentry;
+	char *path_copy;
+	int ret;
+
+	if (!buf || !actwrite)
+		return -EINVAL;
+
+	ret = ext4l_resolve_file(filename, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	/* Call write implementation */
+	ret = ext4l_write_file(dir_dentry, dentry, buf, offset, len, actwrite);
+
+	/* Sync all dirty buffers - U-Boot has no journal thread */
+	if (!ret) {
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+	}
+
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+	return ret;
+}
+
+int ext4l_unlink(const char *filename)
+{
+	struct dentry *dentry, *dir_dentry;
+	char *path_copy;
+	int ret;
+
+	ret = ext4l_resolve_file(filename, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	/* Check if file exists */
+	if (!dentry->d_inode) {
+		ret = -ENOENT;
+		goto out;
+	}
+
+	/* Cannot unlink directories with unlink - use rmdir */
+	if (S_ISDIR(dentry->d_inode->i_mode)) {
+		ret = -EISDIR;
+		goto out;
+	}
+
+	/* Unlink the file */
+	ret = __ext4_unlink(dir_dentry->d_inode, &dentry->d_name,
+			    dentry->d_inode, dentry);
+
+	/*
+	 * Release inode - this triggers ext4_evict_inode for nlink=0 inodes,
+	 * which frees the data blocks and inode.
+	 */
+	if (dentry->d_inode) {
+		iput(dentry->d_inode);
+		dentry->d_inode = NULL;
+	}
+
+	/* Sync all dirty buffers after inode eviction */
+	if (!ret) {
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+	return ret;
+}
+
+int ext4l_mkdir(const char *dirname)
+{
+	struct dentry *dentry, *dir_dentry, *result;
+	char *path_copy;
+	int ret;
+
+	ret = ext4l_resolve_file(dirname, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	if (dentry->d_inode) {
+		/* Directory already exists */
+		ret = -EEXIST;
+		goto out;
+	}
+
+	/* Create the directory with mode 0755 (rwxr-xr-x) */
+	result = ext4_mkdir(&nop_mnt_idmap, dir_dentry->d_inode, dentry,
+			    S_IFDIR | 0755);
+	if (IS_ERR(result)) {
+		ret = PTR_ERR(result);
+		goto out;
+	}
+
+	ret = 0;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+	return ret;
+}
+
+int ext4l_ln(const char *filename, const char *linkname)
+{
+	struct dentry *dentry, *dir_dentry;
+	char *path_copy;
+	int ret;
+
+	/*
+	 * Note: The parameter naming follows U-Boot's convention:
+	 * - filename: the target file the link should point to
+	 * - linkname: the path of the symlink to create
+	 */
+	if (!filename)
+		return -EINVAL;
+
+	ret = ext4l_resolve_file(linkname, &dir_dentry, &dentry, &path_copy);
+	if (ret)
+		return ret;
+
+	if (dentry->d_inode) {
+		/* File already exists - delete it first (like ln -sf) */
+		if (S_ISDIR(dentry->d_inode->i_mode)) {
+			/* Cannot replace a directory with a symlink */
+			ret = -EISDIR;
+			goto out;
+		}
+
+		ret = __ext4_unlink(dir_dentry->d_inode, &dentry->d_name,
+				    dentry->d_inode, dentry);
+		if (ret)
+			goto out;
+
+		/* Release inode to free data blocks */
+		iput(dentry->d_inode);
+		dentry->d_inode = NULL;
+	}
+
+	/* Create the symlink - filename is what the link points to */
+	ret = ext4_symlink(&nop_mnt_idmap, dir_dentry->d_inode, dentry,
+			   filename);
+	if (ret)
+		goto out;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out:
+	kfree(dentry);
+	kfree(dir_dentry);
+	free(path_copy);
+
+	return ret;
+}
+
+int ext4l_rename(const char *old_path, const char *new_path)
+{
+	struct dentry *old_dentry, *new_dentry;
+	struct dentry *old_dir_dentry, *new_dir_dentry;
+	char *old_path_copy, *new_path_copy;
+	int ret;
+
+	/* Check new_path before ext4l_resolve_file checks old_path */
+	if (!new_path)
+		return -EINVAL;
+
+	ret = ext4l_resolve_file(old_path, &old_dir_dentry, &old_dentry,
+				 &old_path_copy);
+	if (ret)
+		return ret;
+
+	if (!old_dentry->d_inode) {
+		/* Source file doesn't exist */
+		ret = -ENOENT;
+		goto out_old;
+	}
+
+	ret = ext4l_resolve_file(new_path, &new_dir_dentry, &new_dentry,
+				 &new_path_copy);
+	if (ret)
+		goto out_old;
+
+	/* Perform the rename */
+	ret = ext4_rename(&nop_mnt_idmap, old_dir_dentry->d_inode, old_dentry,
+			  new_dir_dentry->d_inode, new_dentry, 0);
+	if (ret)
+		goto out_new;
+
+	/* Sync all dirty buffers */
+	{
+		int sync_ret = bh_cache_sync();
+
+		if (sync_ret)
+			ret = sync_ret;
+		/* Commit superblock with updated free counts */
+		ext4_commit_super(ext4l_sb);
+	}
+
+out_new:
+	kfree(new_dentry);
+	kfree(new_dir_dentry);
+	free(new_path_copy);
+out_old:
+	kfree(old_dentry);
+	kfree(old_dir_dentry);
+	free(old_path_copy);
+	return ret;
+}
+
 void ext4l_close(void)
 {
-	if (ext4l_open_dirs > 0)
-		return;
-
-	ext4l_dev_desc = NULL;
-	ext4l_sb = NULL;
-	ext4l_clear_blk_dev();
+	ext4l_close_internal(false);
 }
 
 /**

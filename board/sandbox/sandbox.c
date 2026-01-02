@@ -10,7 +10,9 @@
 #include <dm.h>
 #include <efi.h>
 #include <efi_loader.h>
+#include <env.h>
 #include <env_internal.h>
+#include <event.h>
 #include <extension_board.h>
 #include <init.h>
 #include <led.h>
@@ -19,6 +21,7 @@
 #include <os.h>
 #include <acpi/acpi_table.h>
 #include <asm/global_data.h>
+#include <asm/state.h>
 #include <asm/test.h>
 #include <asm/u-boot-sandbox.h>
 #include <linux/kernel.h>
@@ -185,3 +188,16 @@ void fwu_plat_get_bootidx(uint *boot_idx)
 	*boot_idx = 0;
 }
 #endif
+
+static int sandbox_settings(void)
+{
+	struct sandbox_state *state = state_get_current();
+
+	if (state->quiet_vidconsole) {
+		env_set("stdout", "serial");
+		env_set("stderr", "serial");
+	}
+
+	return 0;
+}
+EVENT_SPY_SIMPLE(EVT_SETTINGS_R, sandbox_settings);
