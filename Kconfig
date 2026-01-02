@@ -355,6 +355,16 @@ config MCHECK_HEAP_PROTECTION
 	  significantly increases memory overhead and should only be used for
 	  debugging.
 
+config MCHECK_BACKTRACE
+	bool "Enable backtrace for mcheck caller info"
+	depends on MCHECK_HEAP_PROTECTION
+	default y
+	help
+	  Enable collection of stack backtrace for each allocation. This
+	  records the function/file/line that allocated the memory, useful
+	  for debugging memory leaks. Disable this to reduce the overhead
+	  of mcheck, since backtrace collection is relatively expensive.
+
 config MCHECK_CALLER_LEN
 	int "Length of caller string in mcheck header"
 	depends on MCHECK_HEAP_PROTECTION

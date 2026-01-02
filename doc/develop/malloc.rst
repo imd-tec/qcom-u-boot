@@ -130,6 +130,13 @@ Main U-Boot (post-relocation)
     ``malloc dump``. This significantly increases memory overhead and should
     only be used for debugging. Default: n
 
+``CONFIG_MCHECK_BACKTRACE``
+    Bool to enable backtrace collection for mcheck caller information. When
+    enabled (the default), each allocation records a stack backtrace showing
+    where it was made. This is useful for debugging memory leaks but adds
+    overhead to every malloc call. Disable this to reduce mcheck overhead
+    while keeping the canary checks and double-free detection. Default: y
+
 xPL Boot Phases
 ~~~~~~~~~~~~~~~
 

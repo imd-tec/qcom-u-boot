@@ -5960,6 +5960,7 @@ STATIC_IF_MCHECK size_t dlmalloc_usable_size_impl(const void *mem)
 #include <os.h>
 #include "mcheck_core.inc.h"
 
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 /* Guard against recursive backtrace calls during malloc */
 static bool in_backtrace __section(".data");
 
@@ -5968,6 +5969,7 @@ static bool in_backtrace __section(".data");
  * Set via malloc_backtrace_skip() before calling panic().
  */
 static bool mcheck_skip_backtrace __section(".data");
+#endif
 
 /* Runtime flag to disable mcheck - allows bypassing heap protection */
 static bool mcheck_disabled __section(".data");
@@ -5979,11 +5981,14 @@ void mcheck_set_disabled(bool disabled)
 
 void malloc_backtrace_skip(bool skip)
 {
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 	mcheck_skip_backtrace = skip;
+#endif
 }
 
 static const char *mcheck_caller(void)
 {
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 	const char *caller = NULL;
 
 	if (!in_backtrace && !mcheck_skip_backtrace) {
@@ -5992,6 +5997,9 @@ static const char *mcheck_caller(void)
 		in_backtrace = false;
 	}
 	return caller;
+#else
+	return NULL;
+#endif
 }
 
 #if CONFIG_IS_ENABLED(MCHECK_LOG)
