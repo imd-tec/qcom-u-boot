@@ -6070,6 +6070,72 @@ void malloc_log_stop(void)
 	mlog.enabled = false;
 }
 
+/* Output function type for malloc_log_impl */
+typedef void (*log_out_fn)(void *ctx, const char *fmt, ...)
+	__printf(2, 3);
+
+/* Console output function for log */
+static void log_to_console(void *ctx, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+static void malloc_log_impl(log_out_fn out, void *ctx)
+{
+	static const char * const mlog_type_names[] = {
+		"alloc", "free", "realloc", "memalign"
+	};
+	uint i, start, count;
+
+	if (!mlog.buf) {
+		out(ctx, "Malloc log not started\n");
+		return;
+	}
+
+	if (mlog.enabled) {
+		out(ctx, "Warning: log still active, results may be incomplete\n");
+		malloc_log_stop();
+	}
+
+	if (mlog.count > mlog.size) {
+		out(ctx, "Warning: log wrapped, %u entries lost\n",
+		    mlog.count - mlog.size);
+		count = mlog.size;
+		start = mlog.head;  /* oldest entry is at current head */
+	} else {
+		count = mlog.count;
+		start = 0;
+	}
+
+	out(ctx, "Malloc log: %u entries (max %u, total %u)\n", count, mlog.size,
+	    mlog.count);
+	out(ctx, "%4s  %-8s  %10s  %8s  %s\n", "Seq", "Type", "Address", "Size",
+	    "Caller");
+	out(ctx, "----  --------  ----------  --------  ------\n");
+
+	for (i = 0; i < count; i++) {
+		uint idx = (start + i) % mlog.size;
+		struct mlog_entry *ent = &mlog.buf[idx];
+
+		out(ctx, "%4u  %-8s  %10lx  %8lx", i, mlog_type_names[ent->type],
+		    (ulong)map_to_sysmem(ent->ptr), (ulong)ent->size);
+		if (ent->type == MLOG_REALLOC)
+			out(ctx, " (was %lx)", (ulong)ent->old_size);
+		if (ent->caller[0])
+			out(ctx, "  %s", ent->caller);
+		out(ctx, "\n");
+	}
+}
+
+void malloc_log_dump(void)
+{
+	malloc_log_impl(log_to_console, NULL);
+}
+
 int malloc_log_info(struct mlog_info *info)
 {
 	if (!mlog.buf)
@@ -6120,6 +6186,10 @@ void malloc_log_start(void)
 }
 
 void malloc_log_stop(void)
+{
+}
+
+void malloc_log_dump(void)
 {
 }
 

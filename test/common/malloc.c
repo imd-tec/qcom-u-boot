@@ -688,4 +688,45 @@ static int common_test_malloc_log_info(struct unit_test_state *uts)
 	return 0;
 }
 COMMON_TEST(common_test_malloc_log_info, 0);
+
+/* Test malloc_log_dump() */
+static int common_test_malloc_log_dump(struct unit_test_state *uts)
+{
+	struct mlog_info info;
+	void *ptr, *ptr2;
+
+	malloc_log_start();
+
+	/* Do an allocation, realloc, and free */
+	ptr = malloc(0x100);
+	ut_assertnonnull(ptr);
+
+	ptr2 = realloc(ptr, 0x200);
+	ut_assertnonnull(ptr2);
+
+	free(ptr2);
+
+	malloc_log_stop();
+
+	ut_assertok(malloc_log_info(&info));
+
+	console_record_reset_enable();
+	malloc_log_dump();
+
+	ut_assert_nextline("Malloc log: 3 entries (max %u, total 3)",
+			   info.max_entries);
+	ut_assert_nextline("%4s  %-8s  %10s  %8s  %s", "Seq", "Type", "Address",
+			   "Size", "Caller");
+	ut_assert_nextline("----  --------  ----------  --------  ------");
+	ut_assert_nextlinen("   0  alloc     %10lx       100",
+			    (ulong)map_to_sysmem(ptr));
+	ut_assert_nextlinen("   1  realloc   %10lx       200 (was 100)",
+			    (ulong)map_to_sysmem(ptr2));
+	ut_assert_nextlinen("   2  free      %10lx         0",
+			    (ulong)map_to_sysmem(ptr2));
+	ut_assert_console_end();
+
+	return 0;
+}
+COMMON_TEST(common_test_malloc_log_dump, 0);
 #endif /* MCHECK_LOG */

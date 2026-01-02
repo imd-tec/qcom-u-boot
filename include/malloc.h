@@ -726,6 +726,14 @@ void malloc_log_start(void);
 void malloc_log_stop(void);
 
 /**
+ * malloc_log_dump() - Dump the malloc traffic log
+ *
+ * Prints all recorded malloc/free/realloc calls with their addresses,
+ * sizes, and caller information.
+ */
+void malloc_log_dump(void);
+
+/**
  * enum mlog_type - Type of malloc log entry
  */
 enum mlog_type {
