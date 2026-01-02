@@ -301,6 +301,7 @@ def pytest_configure(config):
     ubconfig = ArbitraryAttributeContainer()
     ubconfig.brd = dict()
     ubconfig.env = dict()
+    ubconfig.timing = None
     not_found = []
 
     with log.section('Loading lab modules', 'load_modules'):
