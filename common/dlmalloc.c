@@ -7215,7 +7215,21 @@ static struct mcheck_hdr *find_freed_mcheck_hdr(void *mem, size_t sz)
 }
 #endif
 
-void malloc_dump(void)
+/* Output function type for malloc_dump_impl */
+typedef void (*dump_out_fn)(void *ctx, const char *fmt, ...)
+	__printf(2, 3);
+
+/* Console output function for heap dump */
+static void dump_to_console(void *ctx, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+static void malloc_dump_impl(dump_out_fn out, void *ctx)
 {
 	mchunkptr q;
 	msegmentptr s;
@@ -7223,21 +7237,21 @@ void malloc_dump(void)
 	int used_count = 0, free_count = 0;
 
 	if (!is_initialized(gm)) {
-		printf("dlmalloc not initialized\n");
+		out(ctx, "dlmalloc not initialized\n");
 		return;
 	}
 
-	printf("Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
-	printf("%12s  %10s  %s\n", "Address", "Size", "Status");
-	printf("----------------------------------\n");
+	out(ctx, "Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
+	out(ctx, "%12s  %10s  %s\n", "Address", "Size", "Status");
+	out(ctx, "----------------------------------\n");
 
 	s = &gm->seg;
 	while (s != 0) {
 		q = align_as_chunk(s->base);
 
 		/* Show chunk header before first allocation */
-		printf("%12lx  %10zx  (chunk header)\n", (ulong)s->base,
-		       (size_t)((char *)chunk2mem(q) - (char *)s->base));
+		out(ctx, "%12lx  %10zx  (chunk header)\n", (ulong)s->base,
+		    (size_t)((char *)chunk2mem(q) - (char *)s->base));
 
 		while (segment_holds(s, q) &&
 		       q != gm->top && q->head != FENCEPOST_HEAD) {
@@ -7250,14 +7264,14 @@ void malloc_dump(void)
 
 				hdr = find_mcheck_hdr_in_chunk(mem, sz);
 				if (hdr && hdr->caller[0])
-					printf("%12lx  %10zx        %s\n",
-					       (ulong)mem, sz, hdr->caller);
+					out(ctx, "%12lx  %10zx        %s\n",
+					    (ulong)mem, sz, hdr->caller);
 				else
-					printf("%12lx  %10zx\n",
-					       (ulong)mem, sz);
+					out(ctx, "%12lx  %10zx\n",
+					    (ulong)mem, sz);
 #else
-				printf("%12lx  %10zx\n",
-				       (ulong)mem, sz);
+				out(ctx, "%12lx  %10zx\n",
+				    (ulong)mem, sz);
 #endif
 				used += sz;
 				used_count++;
@@ -7267,14 +7281,14 @@ void malloc_dump(void)
 
 				hdr = find_freed_mcheck_hdr(mem, sz);
 				if (hdr && hdr->caller[0])
-					printf("%12lx  %10zx  free  %s\n",
-					       (ulong)mem, sz, hdr->caller);
+					out(ctx, "%12lx  %10zx  free  %s\n",
+					    (ulong)mem, sz, hdr->caller);
 				else
-					printf("%12lx  %10zx  free\n",
-					       (ulong)mem, sz);
+					out(ctx, "%12lx  %10zx  free\n",
+					    (ulong)mem, sz);
 #else
-				printf("%12lx  %10zx  free\n",
-				       (ulong)mem, sz);
+				out(ctx, "%12lx  %10zx  free\n",
+				    (ulong)mem, sz);
 #endif
 				free_space += sz;
 				free_count++;
@@ -7286,15 +7300,20 @@ void malloc_dump(void)
 
 	/* Print top chunk (wilderness) */
 	if (gm->top && gm->topsize > 0) {
-		printf("%12lx  %10zx  top\n",
-		       (ulong)chunk2mem(gm->top), gm->topsize);
+		out(ctx, "%12lx  %10zx  top\n",
+		    (ulong)chunk2mem(gm->top), gm->topsize);
 		free_space += gm->topsize;
 	}
 
-	printf("%12lx  %10s  end\n", mem_malloc_end, "");
-	printf("----------------------------------\n");
-	printf("Used: %zx bytes in %d chunks\n", used, used_count);
-	printf("Free: %zx bytes in %d chunks + top\n", free_space, free_count);
+	out(ctx, "%12lx  %10s  end\n", mem_malloc_end, "");
+	out(ctx, "----------------------------------\n");
+	out(ctx, "Used: %zx bytes in %d chunks\n", used, used_count);
+	out(ctx, "Free: %zx bytes in %d chunks + top\n", free_space, free_count);
+}
+
+void malloc_dump(void)
+{
+	malloc_dump_impl(dump_to_console, NULL);
 }
 
 int initf_malloc(void)
