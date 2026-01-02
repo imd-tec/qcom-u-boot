@@ -390,7 +390,8 @@ Malloc-Traffic Log
 
 On sandbox, when mcheck is enabled, a malloc-traffic log can record all
 malloc/free/realloc calls. This is useful for debugging allocation patterns
-and finding where allocations without caller info originate.
+and finding where allocations without caller info originate. See
+:doc:`../usage/cmd/malloc` for usage.
 
 The log buffer is allocated from host memory using ``os_malloc()``, so it
 does not affect U-Boot's heap. The size is controlled by

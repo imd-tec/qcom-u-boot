@@ -3049,6 +3049,16 @@ config CMD_MALLOC
 	  about memory allocation, such as total memory allocated and
 	  currently in use.
 
+config CMD_MALLOC_LOG
+	bool "malloc log - Log malloc traffic"
+	depends on CMD_MALLOC && MCHECK_LOG
+	default y
+	help
+	  This adds the 'malloc log' subcommand which records all
+	  malloc/free/realloc calls with their addresses, sizes, and caller
+	  information. Use 'malloc log start' to begin recording and
+	  'malloc log' to display the recorded entries.
+
 config CMD_MOUSE
 	bool "mouse - Show mouse input"
 	default y if MOUSE
