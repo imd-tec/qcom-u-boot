@@ -795,8 +795,10 @@ static int video_post_probe(struct udevice *dev)
 	ret = device_bind_driver(dev, drv_name, str, &cons);
 	if (ret) {
 		debug("%s: Cannot bind console driver\n", __func__);
+		free(str);
 		return ret;
 	}
+	device_set_name_alloced(cons);
 
 	ret = device_probe(cons);
 	if (ret) {
