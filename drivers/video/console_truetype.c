@@ -1243,6 +1243,16 @@ static int console_truetype_probe(struct udevice *dev)
 	return 0;
 }
 
+static int console_truetype_remove(struct udevice *dev)
+{
+	struct console_tt_priv *priv = dev_get_priv(dev);
+
+	free(priv->scratch_buf);
+	free(priv->glyph_buf);
+
+	return 0;
+}
+
 struct vidconsole_ops console_truetype_ops = {
 	.putc_xy	= console_truetype_putc_xy,
 	.move_rows	= console_truetype_move_rows,
@@ -1265,5 +1275,6 @@ U_BOOT_DRIVER(vidconsole_truetype) = {
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_truetype_ops,
 	.probe	= console_truetype_probe,
+	.remove	= console_truetype_remove,
 	.priv_auto	= sizeof(struct console_tt_priv),
 };
