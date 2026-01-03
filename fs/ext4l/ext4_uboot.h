@@ -1565,7 +1565,14 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define folio_zero_range(f, s, l)		do { } while (0)
 #define folio_mark_uptodate(f)			do { } while (0)
 #define folio_next_index(f)			((f)->index + 1)
+#define folio_next_pos(f)			((loff_t)folio_next_index(f) << PAGE_SHIFT)
 #define folio_mapped(f)				(0)
+
+/*
+ * fgf_set_order - Set the order (size) for folio allocation
+ * U-Boot doesn't support large folios, so this is a no-op stub.
+ */
+#define fgf_set_order(size)			(0)
 #define folio_clear_dirty_for_io(f)		({ (void)(f); 1; })
 #define folio_clear_uptodate(f)			do { } while (0)
 #define folio_batch_release(fb)			do { } while (0)
