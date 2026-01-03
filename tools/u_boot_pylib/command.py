@@ -136,9 +136,10 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
         if result.stdout and oneline:
             result.output = result.stdout.rstrip(b'\r\n')
     result.return_code = last_pipe.wait()
+    result = result.to_output(binary)
     if raise_on_error and result.return_code:
         raise CommandExc(f"Error running '{user_pipestr}'", result)
-    return result.to_output(binary)
+    return result
 
 
 def output(*cmd, **kwargs):

@@ -713,6 +713,108 @@ void malloc_disable_testing(void);
 void malloc_dump(void);
 
 /**
+ * malloc_dump_to_file() - Write heap dump to a host file
+ *
+ * @fname: Path to the output file on the host filesystem
+ * Return: 0 on success, negative error code on failure
+ *
+ * This is only available in sandbox builds. It writes the same information
+ * as malloc_dump() but to a file instead of the console.
+ */
+int malloc_dump_to_file(const char *fname);
+
+/**
+ * malloc_log_start() - Start logging malloc traffic
+ *
+ * Enables recording of malloc/free/realloc calls to a circular buffer.
+ * Use malloc_log_dump() to print the recorded entries.
+ */
+void malloc_log_start(void);
+
+/**
+ * malloc_log_stop() - Stop logging malloc traffic
+ */
+void malloc_log_stop(void);
+
+/**
+ * malloc_log_dump() - Dump the malloc traffic log
+ *
+ * Prints all recorded malloc/free/realloc calls with their addresses,
+ * sizes, and caller information.
+ */
+void malloc_log_dump(void);
+
+/**
+ * malloc_log_to_file() - Write malloc()-traffic log to a host file
+ *
+ * @fname: Path to the output file on the host filesystem
+ * Return: 0 on success, negative error code on failure
+ *
+ * This is only available in sandbox builds. It writes the same information
+ * as malloc_log_dump() but to a file instead of the console.
+ */
+int malloc_log_to_file(const char *fname);
+
+/**
+ * enum mlog_type - Type of malloc log entry
+ */
+enum mlog_type {
+	MLOG_ALLOC,
+	MLOG_FREE,
+	MLOG_REALLOC,
+	MLOG_MEMALIGN,
+};
+
+#define MLOG_CALLER_LEN	128
+
+/**
+ * struct mlog_entry - Entry in the malloc traffic log
+ *
+ * @type: Operation type (alloc, free, realloc, memalign)
+ * @ptr: Pointer returned by or passed to the operation
+ * @size: Size of allocation (0 for free)
+ * @old_size: Previous size for realloc, 0 otherwise
+ * @caller: Backtrace string showing where the call originated
+ */
+struct mlog_entry {
+	enum mlog_type type;
+	void *ptr;
+	size_t size;
+	size_t old_size;
+	char caller[MLOG_CALLER_LEN];
+};
+
+/**
+ * struct mlog_info - Information about the malloc log
+ *
+ * @entry_count: Number of entries currently available in the log
+ * @max_entries: Maximum number of entries the log can hold
+ * @total_count: Total number of entries recorded (may exceed max if wrapped)
+ */
+struct mlog_info {
+	uint entry_count;
+	uint max_entries;
+	uint total_count;
+};
+
+/**
+ * malloc_log_info() - Get information about the malloc log
+ *
+ * @info: Returns log statistics
+ * Return: 0 on success, -ENOENT if log not started
+ */
+int malloc_log_info(struct mlog_info *info);
+
+/**
+ * malloc_log_entry() - Get a specific entry from the malloc log
+ *
+ * @idx: Index of entry to retrieve (0 = oldest available)
+ * @entryp: Returns pointer to the log entry
+ * Return: 0 on success, -ENOENT if log not started, -ERANGE if idx out of range
+ */
+int malloc_log_entry(uint idx, struct mlog_entry **entryp);
+
+/**
  * malloc_backtrace_skip() - Control backtrace collection in malloc
  *
  * When the stack is corrupted (e.g., by a stack overflow), collecting

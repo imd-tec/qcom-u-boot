@@ -491,6 +491,46 @@ can dramatically increase the size of the trace output as well as the execution
 time.
 
 
+Wall-clock Profiling with gprof (Sandbox)
+-----------------------------------------
+
+For sandbox builds, an alternative to U-Boot's internal tracing is to use
+the standard GNU gprof profiler. This provides wall-clock profiling with
+less overhead than function instrumentation, and produces output that can
+be analysed with standard tools.
+
+To build sandbox with gprof support::
+
+    make GPROF=1 O=/tmp/b/sandbox sandbox_defconfig
+    make GPROF=1 O=/tmp/b/sandbox
+
+Then run U-Boot. A `gmon.out` file is created in the current directory when
+the program exits::
+
+    cd /tmp/b/sandbox
+    ./u-boot -T -c "ut dm dm_test_rtc_set_get"
+
+Analyse the results with gprof::
+
+    gprof u-boot gmon.out | less
+
+This shows a flat profile (functions sorted by time) and a call graph. The
+flat profile shows which functions consume the most CPU time::
+
+    %   cumulative   self              self     total
+    time   seconds   seconds    calls  ms/call  ms/call  name
+    29.41      0.05     0.05    36922     0.00     0.00  memset
+    17.65      0.08     0.03                             read_uleb128
+    11.76      0.10     0.02   328472     0.00     0.00  string
+    ...
+
+The call graph shows the call hierarchy and time spent in each call chain.
+
+Note that gprof measures CPU time, not wall-clock time, so I/O wait time is
+not captured. For boot-time optimisation where I/O is significant, use
+bootstage or the internal trace system instead.
+
+
 Future Work
 -----------
 

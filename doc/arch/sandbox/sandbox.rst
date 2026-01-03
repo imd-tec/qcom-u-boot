@@ -181,6 +181,13 @@ available options. Some of these are described below:
   all log statements at LOGL_DEBUG and below. The higher the number, the more
   info is shown.
 
+-M, --no_mcheck
+  Disable mcheck heap protection at runtime. When enabled, the mcheck wrapper
+  functions pass through directly to the underlying allocator without adding
+  headers or checking for corruption. This is useful for debugging when mcheck
+  interferes with test results, such as when memory-leak detection reports false
+  positives due to accumulated allocations from other tests.
+
 -m, --memory <filename>
   Sets the location of the file which holds sandbox's emulated RAM. This can be
   read and written across phases, so that sandbox behaves like a normal board.

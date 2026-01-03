@@ -54,7 +54,7 @@
 //       Hou Qiming                 Derek Vinyard
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         Brian Costabile
-//       Ken Voskuil (kaesve)
+//       Ken Voskuil (kaesve)       Yakov Galka
 //
 // VERSION HISTORY
 //
@@ -412,6 +412,7 @@ int main(int arg, char **argv)
 }
 #endif
 
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 ////
@@ -464,11 +465,53 @@ int main(int arg, char **argv)
    #define STBTT_fabs(x)      fabs(x)
    #endif
 
+   /* Scratch buffer for zero-malloc rendering */
+   #ifndef STBTT_SCRATCH_DEFINED
+   #define STBTT_SCRATCH_DEFINED
+   struct stbtt_scratch {
+       char *buf;
+       size_t size;
+       size_t used;
+   };
+
+   static inline void stbtt_scratch_reset(struct stbtt_scratch *s)
+   {
+       if (s)
+           s->used = 0;
+   }
+   #endif
+
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
    #ifndef STBTT_malloc
    #include <stdlib.h>
-   #define STBTT_malloc(x,u)  ((void)(u),malloc(x))
-   #define STBTT_free(x,u)    ((void)(u),free(x))
+
+   static inline void *stbtt__scratch_alloc(size_t size, void *userdata)
+   {
+       struct stbtt_scratch *s = userdata;
+       size_t aligned = (size + 7) & ~7;  /* 8-byte alignment */
+
+       if (s && s->used + aligned <= s->size) {
+           void *p = s->buf + s->used;
+
+           s->used += aligned;
+
+           return p;
+       }
+
+       return malloc(size);  /* fallback */
+   }
+
+   static inline void stbtt__scratch_free(void *ptr, void *userdata)
+   {
+       struct stbtt_scratch *s = userdata;
+
+       /* Only free if not from scratch buffer */
+       if (!s || ptr < (void *)s->buf || ptr >= (void *)(s->buf + s->size))
+           free(ptr);
+   }
+
+   #define STBTT_malloc(x,u)  stbtt__scratch_alloc(x, u)
+   #define STBTT_free(x,u)    stbtt__scratch_free(x, u)
    #endif
 
    #ifndef STBTT_assert
@@ -482,7 +525,7 @@ int main(int arg, char **argv)
    #endif
 
    #ifndef STBTT_memcpy
-   #include <memory.h>
+   #include <string.h>
    #define STBTT_memcpy       memcpy
    #define STBTT_memset       memset
    #endif
@@ -562,6 +605,7 @@ STBTT_DEF void stbtt_GetBakedQuad(const stbtt_bakedchar *chardata, int pw, int p
 
 STBTT_DEF void stbtt_GetScaledFontVMetrics(const unsigned char *fontdata, int index, float size, float *ascent, float *descent, float *lineGap);
 // Query the font vertical metrics without having to create a font first.
+
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -735,6 +779,7 @@ STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, in
 // need to do anything special to free it, because the contents are pure
 // value data with no additional data structures. Returns 0 on failure.
 
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // CHARACTER TO GLYPH-INDEX CONVERSIOn
@@ -745,6 +790,7 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
 // going to process, then use glyph-based functions instead of the
 // codepoint-based functions.
 // Returns 0 if the character codepoint is not defined in the font.
+
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -915,6 +961,7 @@ STBTT_DEF void stbtt_MakeGlyphBitmapSubpixelPrefilter(const stbtt_fontinfo *info
 STBTT_DEF void stbtt_GetGlyphBitmapBox(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y, int *ix0, int *iy0, int *ix1, int *iy1);
 STBTT_DEF void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y,float shift_x, float shift_y, int *ix0, int *iy0, int *ix1, int *iy1);
 
+
 // @TODO: don't expose this structure
 typedef struct
 {
@@ -989,6 +1036,8 @@ STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, floa
 // The algorithm has not been optimized at all, so expect it to be slow
 // if computing lots of characters or very large sizes.
 
+
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Finding the right font...
@@ -1009,6 +1058,7 @@ STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, floa
 //     stbtt_GetFontNameString() lets you get any of the various strings
 //             from the file yourself and do your own comparisons on them.
 //             You have to have called stbtt_InitFont() first.
+
 
 STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *fontdata, const char *name, int flags);
 // returns the offset (not index) of the font that matches, or -1 if none
@@ -2800,6 +2850,7 @@ typedef struct stbtt__edge {
    float x0,y0, x1,y1;
    int invert;
 } stbtt__edge;
+
 
 typedef struct stbtt__active_edge
 {
@@ -4595,6 +4646,8 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    scale_y = -scale_y;
 
    {
+      // distance from singular values (in the same units as the pixel grid)
+      const float eps = 1./1024, eps2 = eps*eps;
       int x,y,i,j;
       float *precompute;
       stbtt_vertex *verts;
@@ -4607,15 +4660,15 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
             float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
             float x1 = verts[j].x*scale_x, y1 = verts[j].y*scale_y;
             float dist = (float) STBTT_sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
-            precompute[i] = (dist == 0) ? 0.0f : 1.0f / dist;
+            precompute[i] = (dist < eps) ? 0.0f : 1.0f / dist;
          } else if (verts[i].type == STBTT_vcurve) {
             float x2 = verts[j].x *scale_x, y2 = verts[j].y *scale_y;
             float x1 = verts[i].cx*scale_x, y1 = verts[i].cy*scale_y;
             float x0 = verts[i].x *scale_x, y0 = verts[i].y *scale_y;
             float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
             float len2 = bx*bx + by*by;
-            if (len2 != 0.0f)
-               precompute[i] = 1.0f / (bx*bx + by*by);
+            if (len2 >= eps2)
+               precompute[i] = 1.0f / len2;
             else
                precompute[i] = 0.0f;
          } else
@@ -4680,8 +4733,8 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
                         float a = 3*(ax*bx + ay*by);
                         float b = 2*(ax*ax + ay*ay) + (mx*bx+my*by);
                         float c = mx*ax+my*ay;
-                        if (a == 0.0) { // if a is 0, it's linear
-                           if (b != 0.0) {
+                        if (STBTT_fabs(a) < eps2) { // if a is 0, it's linear
+                           if (STBTT_fabs(b) >= eps2) {
                               res[num++] = -c/b;
                            }
                         } else {
@@ -4960,6 +5013,7 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 #endif
 
 #endif // STB_TRUETYPE_IMPLEMENTATION
+
 
 // FULL VERSION HISTORY
 //

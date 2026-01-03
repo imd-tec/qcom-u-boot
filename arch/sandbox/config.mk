@@ -10,6 +10,10 @@ PLATFORM_LIBS += -L$(GCC_LIB_DIR) -lbacktrace
 endif
 PLATFORM_LIBS += -lrt
 
+ifdef GPROF
+PLATFORM_LIBS += -pg
+endif
+
 SDL_CONFIG ?= sdl2-config
 
 # Define this to avoid linking with SDL, which requires SDL libraries

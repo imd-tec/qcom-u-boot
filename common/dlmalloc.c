@@ -648,6 +648,7 @@ static inline void MALLOC_COPY(void *dest, const void *src, size_t sz) { memcpy(
 #define dlrealloc_impl dlrealloc
 #define dlmemalign_impl dlmemalign
 #define dlcalloc_impl dlcalloc
+#define dlmalloc_usable_size_impl dlmalloc_usable_size
 #endif
 
 static bool malloc_testing;	/* enable test mode */
@@ -5943,19 +5944,23 @@ int dlmallopt(int param_number, int value) {
   return change_mparam(param_number, value);
 }
 
-size_t dlmalloc_usable_size(const void* mem) {
-  if (mem != 0) {
-    mchunkptr p = mem2chunk((void*)mem);
-    if (is_inuse(p))
-      return chunksize(p) - overhead_for(p);
-  }
-  return 0;
+STATIC_IF_MCHECK size_t dlmalloc_usable_size_impl(const void *mem)
+{
+	if (mem != 0) {
+		mchunkptr p = mem2chunk((void *)mem);
+
+		if (is_inuse(p))
+			return chunksize(p) - overhead_for(p);
+	}
+	return 0;
 }
 
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 #include <backtrace.h>
+#include <os.h>
 #include "mcheck_core.inc.h"
 
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 /* Guard against recursive backtrace calls during malloc */
 static bool in_backtrace __section(".data");
 
@@ -5964,14 +5969,26 @@ static bool in_backtrace __section(".data");
  * Set via malloc_backtrace_skip() before calling panic().
  */
 static bool mcheck_skip_backtrace __section(".data");
+#endif
+
+/* Runtime flag to disable mcheck - allows bypassing heap protection */
+static bool mcheck_disabled __section(".data");
+
+void mcheck_set_disabled(bool disabled)
+{
+	mcheck_disabled = disabled;
+}
 
 void malloc_backtrace_skip(bool skip)
 {
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 	mcheck_skip_backtrace = skip;
+#endif
 }
 
 static const char *mcheck_caller(void)
 {
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
 	const char *caller = NULL;
 
 	if (!in_backtrace && !mcheck_skip_backtrace) {
@@ -5980,10 +5997,259 @@ static const char *mcheck_caller(void)
 		in_backtrace = false;
 	}
 	return caller;
+#else
+	return NULL;
+#endif
 }
+
+#if CONFIG_IS_ENABLED(MCHECK_LOG)
+/* Malloc traffic logging for debugging allocation patterns */
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+#define MLOG_SIZE	CONFIG_MCHECK_LOG_SIZE
+#else
+#define MLOG_SIZE	1024
+#endif
+
+/**
+ * struct mlog_hdr - Header for the malloc traffic log
+ *
+ * @buf: Array of log entries
+ * @size: Number of entries in @buf
+ * @head: Index of next entry to write
+ * @count: Total number of entries written (may exceed @size if wrapped)
+ * @enabled: true if logging is active
+ */
+struct mlog_hdr {
+	struct mlog_entry *buf;
+	uint size;
+	uint head;
+	uint count;
+	bool enabled;
+};
+
+static struct mlog_hdr mlog __section(".data");
+
+static void mlog_record(enum mlog_type type, void *ptr, size_t size,
+			size_t old_size, const char *caller)
+{
+	struct mlog_entry *ent;
+
+	if (!mlog.enabled || !mlog.buf)
+		return;
+
+	ent = &mlog.buf[mlog.head];
+	ent->type = type;
+	ent->ptr = ptr;
+	ent->size = size;
+	ent->old_size = old_size;
+	if (caller)
+		strlcpy(ent->caller, caller, MLOG_CALLER_LEN);
+	else
+		ent->caller[0] = '\0';
+	mlog.head = (mlog.head + 1) % mlog.size;
+	mlog.count++;
+}
+
+void malloc_log_start(void)
+{
+	if (!mlog.buf) {
+		if (IS_ENABLED(CONFIG_SANDBOX)) {
+			mlog.buf = os_malloc(MLOG_SIZE *
+					     sizeof(struct mlog_entry));
+			if (!mlog.buf) {
+				printf("Failed to allocate malloc log buffer\n");
+				return;
+			}
+			mlog.size = MLOG_SIZE;
+		} else {
+			printf("Malloc log not available on this platform\n");
+			return;
+		}
+	}
+	memset(mlog.buf, '\0', mlog.size * sizeof(struct mlog_entry));
+	mlog.head = 0;
+	mlog.count = 0;
+	mlog.enabled = true;
+}
+
+void malloc_log_stop(void)
+{
+	mlog.enabled = false;
+}
+
+/* Output function type for malloc_log_impl */
+typedef void (*log_out_fn)(void *ctx, const char *fmt, ...)
+	__printf(2, 3);
+
+/* Console output function for log */
+static void log_to_console(void *ctx, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+static void malloc_log_impl(log_out_fn out, void *ctx)
+{
+	static const char * const mlog_type_names[] = {
+		"alloc", "free", "realloc", "memalign"
+	};
+	uint i, start, count;
+
+	if (!mlog.buf) {
+		out(ctx, "Malloc log not started\n");
+		return;
+	}
+
+	if (mlog.enabled) {
+		out(ctx, "Warning: log still active, results may be incomplete\n");
+		malloc_log_stop();
+	}
+
+	if (mlog.count > mlog.size) {
+		out(ctx, "Warning: log wrapped, %u entries lost\n",
+		    mlog.count - mlog.size);
+		count = mlog.size;
+		start = mlog.head;  /* oldest entry is at current head */
+	} else {
+		count = mlog.count;
+		start = 0;
+	}
+
+	out(ctx, "Malloc log: %u entries (max %u, total %u)\n", count, mlog.size,
+	    mlog.count);
+	out(ctx, "%4s  %-8s  %10s  %8s  %s\n", "Seq", "Type", "Address", "Size",
+	    "Caller");
+	out(ctx, "----  --------  ----------  --------  ------\n");
+
+	for (i = 0; i < count; i++) {
+		uint idx = (start + i) % mlog.size;
+		struct mlog_entry *ent = &mlog.buf[idx];
+
+		out(ctx, "%4u  %-8s  %10lx  %8lx", i, mlog_type_names[ent->type],
+		    (ulong)map_to_sysmem(ent->ptr), (ulong)ent->size);
+		if (ent->type == MLOG_REALLOC)
+			out(ctx, " (was %lx)", (ulong)ent->old_size);
+		if (ent->caller[0])
+			out(ctx, "  %s", ent->caller);
+		out(ctx, "\n");
+	}
+}
+
+void malloc_log_dump(void)
+{
+	malloc_log_impl(log_to_console, NULL);
+}
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+/* File output function for log */
+static void log_to_file(void *ctx, const char *fmt, ...)
+{
+	int fd = *(int *)ctx;
+	char buf[256];
+	va_list args;
+	int len;
+
+	va_start(args, fmt);
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (len > 0)
+		os_write(fd, buf, len);
+}
+
+int malloc_log_to_file(const char *fname)
+{
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	malloc_log_impl(log_to_file, &fd);
+	os_close(fd);
+
+	return 0;
+}
+#endif
+
+int malloc_log_info(struct mlog_info *info)
+{
+	if (!mlog.buf)
+		return -ENOENT;
+
+	if (mlog.count > mlog.size)
+		info->entry_count = mlog.size;
+	else
+		info->entry_count = mlog.count;
+	info->max_entries = mlog.size;
+	info->total_count = mlog.count;
+
+	return 0;
+}
+
+int malloc_log_entry(uint idx, struct mlog_entry **entryp)
+{
+	uint start, count;
+
+	if (!mlog.buf)
+		return -ENOENT;
+
+	if (mlog.count > mlog.size) {
+		count = mlog.size;
+		start = mlog.head;
+	} else {
+		count = mlog.count;
+		start = 0;
+	}
+
+	if (idx >= count)
+		return -ERANGE;
+
+	*entryp = &mlog.buf[(start + idx) % mlog.size];
+
+	return 0;
+}
+
+#else /* !MCHECK_LOG */
+
+static inline void mlog_record(enum mlog_type type, void *ptr, size_t size,
+			       size_t old_size, const char *caller)
+{
+}
+
+void malloc_log_start(void)
+{
+}
+
+void malloc_log_stop(void)
+{
+}
+
+void malloc_log_dump(void)
+{
+}
+
+int malloc_log_info(struct mlog_info *info)
+{
+	return -ENOENT;
+}
+
+int malloc_log_entry(uint idx, struct mlog_entry **entryp)
+{
+	return -ENOENT;
+}
+
+#endif /* MCHECK_LOG */
 
 void *dlmalloc(size_t bytes)
 {
+	const char *caller;
+	void *p;
+
 	/*
 	 * Skip mcheck for simple malloc (pre-relocation). Simple malloc is a
 	 * bump allocator that can't free, so mcheck overhead is useless and
@@ -5993,13 +6259,20 @@ void *dlmalloc(size_t bytes)
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
 		return malloc_simple(bytes);
 
+	if (mcheck_disabled)
+		return dlmalloc_impl(bytes CALLER_NULL);
+
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_alloc_prehook(bytes);
-	void *p = dlmalloc_impl(fullsz CALLER_NULL);
 
+	p = dlmalloc_impl(fullsz CALLER_NULL);
 	if (!p)
 		return p;
-	return mcheck_alloc_posthook(p, bytes, mcheck_caller());
+	p = mcheck_alloc_posthook(p, bytes, caller);
+	mlog_record(MLOG_ALLOC, p, bytes, 0, caller);
+
+	return p;
 }
 
 void dlfree(void *mem)
@@ -6009,12 +6282,20 @@ void dlfree(void *mem)
 		dlfree_impl(mem);
 		return;
 	}
+	if (mcheck_disabled) {
+		dlfree_impl(mem);
+		return;
+	}
+	mlog_record(MLOG_FREE, mem, 0, 0, mcheck_caller());
 	dlfree_impl(mcheck_free_prehook(mem));
 }
 
 void *dlrealloc(void *oldmem, size_t bytes)
 {
-	mcheck_pedantic_prehook();
+	const char *caller;
+	size_t old_size;
+	void *p;
+
 #ifdef REALLOC_ZERO_BYTES_FREES
 	if (bytes == 0) {
 		if (oldmem)
@@ -6026,52 +6307,96 @@ void *dlrealloc(void *oldmem, size_t bytes)
 	if (oldmem == NULL)
 		return dlmalloc(bytes);
 
-	void *p = mcheck_reallocfree_prehook(oldmem);
+	if (mcheck_disabled)
+		return dlrealloc_impl(oldmem, bytes);
+
+	caller = mcheck_caller();
+	old_size = dlmalloc_usable_size(oldmem);
+	mcheck_pedantic_prehook();
+	p = mcheck_reallocfree_prehook(oldmem);
 	size_t newsz = mcheck_alloc_prehook(bytes);
 
 	p = dlrealloc_impl(p, newsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, bytes, mcheck_caller());
+	p = mcheck_alloc_noclean_posthook(p, bytes, caller);
+	mlog_record(MLOG_REALLOC, p, bytes, old_size, caller);
+
+	return p;
 }
 
 void *dlmemalign(size_t alignment, size_t bytes)
 {
+	const char *caller;
+	void *p;
+
 	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT))
 		return memalign_simple(alignment, bytes);
 
+	if (mcheck_disabled)
+		return dlmemalign_impl(alignment, bytes);
+
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	size_t fullsz = mcheck_memalign_prehook(alignment, bytes);
-	void *p = dlmemalign_impl(alignment, fullsz);
 
+	p = dlmemalign_impl(alignment, fullsz);
 	if (!p)
 		return p;
-	return mcheck_memalign_posthook(alignment, p, bytes, mcheck_caller());
+	p = mcheck_memalign_posthook(alignment, p, bytes, caller);
+	mlog_record(MLOG_MEMALIGN, p, bytes, 0, caller);
+
+	return p;
 }
 
 /* dlpvalloc, dlvalloc redirect to dlmemalign, so they need no wrapping */
 
 void *dlcalloc(size_t n, size_t elem_size)
 {
+	const char *caller;
+	size_t sz;
+	void *p;
+
 	if (CONFIG_IS_ENABLED(SYS_MALLOC_F) &&
 	    !(gd->flags & GD_FLG_FULL_MALLOC_INIT)) {
-		size_t sz = n * elem_size;
-		void *p = malloc_simple(sz);
-
+		sz = n * elem_size;
+		p = malloc_simple(sz);
 		if (p)
 			memset(p, '\0', sz);
 		return p;
 	}
 
+	if (mcheck_disabled)
+		return dlcalloc_impl(n, elem_size);
+
+	sz = n * elem_size;
+	caller = mcheck_caller();
 	mcheck_pedantic_prehook();
 	/* NB: no overflow check here */
-	size_t fullsz = mcheck_alloc_prehook(n * elem_size);
-	void *p = dlcalloc_impl(1, fullsz);
+	size_t fullsz = mcheck_alloc_prehook(sz);
 
+	p = dlcalloc_impl(1, fullsz);
 	if (!p)
 		return p;
-	return mcheck_alloc_noclean_posthook(p, n * elem_size, mcheck_caller());
+	p = mcheck_alloc_noclean_posthook(p, sz, caller);
+	mlog_record(MLOG_ALLOC, p, sz, 0, caller);
+
+	return p;
+}
+
+size_t dlmalloc_usable_size(const void *mem)
+{
+	if (!mem)
+		return 0;
+
+	if (mcheck_disabled)
+		return dlmalloc_usable_size_impl(mem);
+
+	/* Return the user-requested size from mcheck header */
+	const struct mcheck_hdr *hdr = &((const struct mcheck_hdr *)mem)[-1];
+
+	return hdr->size;
 }
 
 /* mcheck API */
@@ -6120,6 +6445,21 @@ void *dlcalloc(size_t n, size_t elem_size)
 	return dlcalloc_impl(n, elem_size);
 }
 #endif /* MCHECK_HEAP_PROTECTION */
+
+#if CONFIG_IS_ENABLED(MALLOC_DEBUG) && !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+/* Wrapper needed when MALLOC_DEBUG makes dlmalloc_usable_size_impl static */
+size_t dlmalloc_usable_size(const void *mem)
+{
+	return dlmalloc_usable_size_impl(mem);
+}
+#endif
+
+#if !CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+/* Stub when mcheck is not enabled */
+void mcheck_set_disabled(bool disabled)
+{
+}
+#endif
 
 #endif /* !ONLY_MSPACES */
 
@@ -7159,7 +7499,41 @@ static struct mcheck_hdr *find_freed_mcheck_hdr(void *mem, size_t sz)
 }
 #endif
 
-void malloc_dump(void)
+/* Output function type for malloc_dump_impl */
+typedef void (*dump_out_fn)(void *ctx, const char *fmt, ...)
+	__printf(2, 3);
+
+/* Console output function for heap dump */
+static void dump_to_console(void *ctx, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+}
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+#include <os.h>
+
+/* File output function for heap dump */
+static void dump_to_file(void *ctx, const char *fmt, ...)
+{
+	int fd = *(int *)ctx;
+	char buf[256];
+	va_list args;
+	int len;
+
+	va_start(args, fmt);
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (len > 0)
+		os_write(fd, buf, len);
+}
+#endif
+
+static void malloc_dump_impl(dump_out_fn out, void *ctx)
 {
 	mchunkptr q;
 	msegmentptr s;
@@ -7167,21 +7541,21 @@ void malloc_dump(void)
 	int used_count = 0, free_count = 0;
 
 	if (!is_initialized(gm)) {
-		printf("dlmalloc not initialized\n");
+		out(ctx, "dlmalloc not initialized\n");
 		return;
 	}
 
-	printf("Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
-	printf("%12s  %10s  %s\n", "Address", "Size", "Status");
-	printf("----------------------------------\n");
+	out(ctx, "Heap dump: %lx - %lx\n", mem_malloc_start, mem_malloc_end);
+	out(ctx, "%12s  %10s  %s\n", "Address", "Size", "Status");
+	out(ctx, "----------------------------------\n");
 
 	s = &gm->seg;
 	while (s != 0) {
 		q = align_as_chunk(s->base);
 
 		/* Show chunk header before first allocation */
-		printf("%12lx  %10zx  (chunk header)\n", (ulong)s->base,
-		       (size_t)((char *)chunk2mem(q) - (char *)s->base));
+		out(ctx, "%12lx  %10zx  (chunk header)\n", (ulong)s->base,
+		    (size_t)((char *)chunk2mem(q) - (char *)s->base));
 
 		while (segment_holds(s, q) &&
 		       q != gm->top && q->head != FENCEPOST_HEAD) {
@@ -7194,14 +7568,14 @@ void malloc_dump(void)
 
 				hdr = find_mcheck_hdr_in_chunk(mem, sz);
 				if (hdr && hdr->caller[0])
-					printf("%12lx  %10zx        %s\n",
-					       (ulong)mem, sz, hdr->caller);
+					out(ctx, "%12lx  %10zx        %s\n",
+					    (ulong)mem, sz, hdr->caller);
 				else
-					printf("%12lx  %10zx\n",
-					       (ulong)mem, sz);
+					out(ctx, "%12lx  %10zx\n",
+					    (ulong)mem, sz);
 #else
-				printf("%12lx  %10zx\n",
-				       (ulong)mem, sz);
+				out(ctx, "%12lx  %10zx\n",
+				    (ulong)mem, sz);
 #endif
 				used += sz;
 				used_count++;
@@ -7211,14 +7585,14 @@ void malloc_dump(void)
 
 				hdr = find_freed_mcheck_hdr(mem, sz);
 				if (hdr && hdr->caller[0])
-					printf("%12lx  %10zx  free  %s\n",
-					       (ulong)mem, sz, hdr->caller);
+					out(ctx, "%12lx  %10zx  free  %s\n",
+					    (ulong)mem, sz, hdr->caller);
 				else
-					printf("%12lx  %10zx  free\n",
-					       (ulong)mem, sz);
+					out(ctx, "%12lx  %10zx  free\n",
+					    (ulong)mem, sz);
 #else
-				printf("%12lx  %10zx  free\n",
-				       (ulong)mem, sz);
+				out(ctx, "%12lx  %10zx  free\n",
+				    (ulong)mem, sz);
 #endif
 				free_space += sz;
 				free_count++;
@@ -7230,16 +7604,37 @@ void malloc_dump(void)
 
 	/* Print top chunk (wilderness) */
 	if (gm->top && gm->topsize > 0) {
-		printf("%12lx  %10zx  top\n",
-		       (ulong)chunk2mem(gm->top), gm->topsize);
+		out(ctx, "%12lx  %10zx  top\n",
+		    (ulong)chunk2mem(gm->top), gm->topsize);
 		free_space += gm->topsize;
 	}
 
-	printf("%12lx  %10s  end\n", mem_malloc_end, "");
-	printf("----------------------------------\n");
-	printf("Used: %zx bytes in %d chunks\n", used, used_count);
-	printf("Free: %zx bytes in %d chunks + top\n", free_space, free_count);
+	out(ctx, "%12lx  %10s  end\n", mem_malloc_end, "");
+	out(ctx, "----------------------------------\n");
+	out(ctx, "Used: %zx bytes in %d chunks\n", used, used_count);
+	out(ctx, "Free: %zx bytes in %d chunks + top\n", free_space, free_count);
 }
+
+void malloc_dump(void)
+{
+	malloc_dump_impl(dump_to_console, NULL);
+}
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+int malloc_dump_to_file(const char *fname)
+{
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	malloc_dump_impl(dump_to_file, &fd);
+	os_close(fd);
+
+	return 0;
+}
+#endif
 
 int initf_malloc(void)
 {

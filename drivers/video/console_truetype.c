@@ -105,8 +105,47 @@ static double tt_acos(double val)
 #define STBTT_fmod		tt_fmod
 #define STBTT_cos		tt_cos
 #define STBTT_acos		tt_acos
-#define STBTT_malloc(size, u)	((void)(u), malloc(size))
-#define STBTT_free(size, u)	((void)(u), free(size))
+
+/* Scratch buffer for zero-malloc rendering - must match stb_truetype.h */
+#define STBTT_SCRATCH_DEFINED
+struct stbtt_scratch {
+	char *buf;
+	size_t size;
+	size_t used;
+};
+
+static inline void stbtt_scratch_reset(struct stbtt_scratch *s)
+{
+	if (s)
+		s->used = 0;
+}
+
+static inline void *stbtt__scratch_alloc(size_t size, void *userdata)
+{
+	struct stbtt_scratch *s = userdata;
+	size_t aligned = (size + 7) & ~7;
+
+	if (s && s->used + aligned <= s->size) {
+		void *p = s->buf + s->used;
+
+		s->used += aligned;
+
+		return p;
+	}
+
+	return malloc(size);
+}
+
+static inline void stbtt__scratch_free(void *ptr, void *userdata)
+{
+	struct stbtt_scratch *s = userdata;
+
+	if (!s || ptr < (void *)s->buf || ptr >= (void *)(s->buf + s->size))
+		free(ptr);
+}
+
+#define STBTT_malloc(size, u)	stbtt__scratch_alloc(size, u)
+#define STBTT_free(ptr, u)	stbtt__scratch_free(ptr, u)
 #define STBTT_assert(x)
 #define STBTT_strlen(x)		strlen(x)
 #define STBTT_memcpy		memcpy
@@ -184,6 +223,8 @@ struct console_tt_metrics {
  *	this avoids malloc/free per character. Allocated lazily after
  *	relocation to avoid using early malloc space.
  * @glyph_buf_size: Current size of glyph_buf in bytes
+ * @scratch: Scratch buffer state for stbtt internal allocations
+ * @scratch_buf: Memory for scratch buffer
  */
 struct console_tt_priv {
 	struct console_tt_metrics *cur_met;
@@ -196,6 +237,8 @@ struct console_tt_priv {
 	int pos_count;
 	u8 *glyph_buf;
 	int glyph_buf_size;
+	struct stbtt_scratch scratch;
+	char *scratch_buf;
 };
 
 /**
@@ -376,6 +419,9 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	/* Use fixed font if selected */
 	if (priv->cur_fontdata)
 		return console_fixed_putc_xy(dev, x, y, cp, priv->cur_fontdata);
+
+	/* Reset scratch buffer for this character */
+	stbtt_scratch_reset(&priv->scratch);
 
 	/* First get some basic metrics about this character */
 	font = &met->font;
@@ -813,6 +859,7 @@ static int truetype_add_metrics(struct udevice *dev, const char *font_name,
 		debug("%s: Font init failed\n", __func__);
 		return -EPERM;
 	}
+	font->userdata = &priv->scratch;
 
 	/* Pre-calculate some things we will need regularly */
 	met->scale = stbtt_ScaleForPixelHeight(font, font_size);
@@ -1217,6 +1264,17 @@ static int console_truetype_probe(struct udevice *dev)
 	int ret;
 
 	debug("%s: start\n", __func__);
+
+	/* Allocate scratch buffer for stbtt internal allocations */
+	if (CONFIG_IS_ENABLED(CONSOLE_TRUETYPE_SCRATCH)) {
+		priv->scratch_buf = malloc(CONFIG_CONSOLE_TRUETYPE_SCRATCH_SIZE);
+		if (priv->scratch_buf) {
+			priv->scratch.buf = priv->scratch_buf;
+			priv->scratch.size = CONFIG_CONSOLE_TRUETYPE_SCRATCH_SIZE;
+			priv->scratch.used = 0;
+		}
+	}
+
 	if (vid_priv->font_size)
 		font_size = vid_priv->font_size;
 	else
@@ -1243,6 +1301,16 @@ static int console_truetype_probe(struct udevice *dev)
 	return 0;
 }
 
+static int console_truetype_remove(struct udevice *dev)
+{
+	struct console_tt_priv *priv = dev_get_priv(dev);
+
+	free(priv->scratch_buf);
+	free(priv->glyph_buf);
+
+	return 0;
+}
+
 struct vidconsole_ops console_truetype_ops = {
 	.putc_xy	= console_truetype_putc_xy,
 	.move_rows	= console_truetype_move_rows,
@@ -1265,5 +1333,6 @@ U_BOOT_DRIVER(vidconsole_truetype) = {
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_truetype_ops,
 	.probe	= console_truetype_probe,
+	.remove	= console_truetype_remove,
 	.priv_auto	= sizeof(struct console_tt_priv),
 };

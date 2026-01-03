@@ -62,98 +62,108 @@ def progress(msg, warning=False, trailer='...'):
         else:
             terminal.tprint(_progress)
 
-def _output(level, msg, color=None):
+def _output(level, msg, color=None, newline=True):
     """Output a message to the terminal.
 
     Args:
         level: Verbosity level for this message. It will only be displayed if
                 this as high as the currently selected level.
-        msg; Message to display.
-        error: True if this is an error message, else False.
+        msg: Message to display.
+        color: Colour to use for the text, None for default.
+        newline: True to add a newline at the end.
     """
     if verbose >= level:
         clear_progress()
         if level <= WARNING:
-            terminal.tprint(msg, colour=color, col=_color, stderr=True)
+            terminal.tprint(msg, newline=newline, colour=color, col=_color,
+                            stderr=True)
         else:
-            terminal.tprint(msg, colour=color, col=_color)
+            terminal.tprint(msg, newline=newline, colour=color, col=_color)
     if level == FATAL:
         sys.exit(1)
 
-def do_output(level, msg):
+def do_output(level, msg, newline=True):
     """Output a message to the terminal.
 
     Args:
         level: Verbosity level for this message. It will only be displayed if
                 this as high as the currently selected level.
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(level, msg)
+    _output(level, msg, newline=newline)
 
 def fatal(msg):
     """Display an error message and exit
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
     """
     _output(FATAL, msg, _color.RED)
 
-def error(msg):
+def error(msg, newline=True):
     """Display an error message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(ERROR, msg, _color.RED)
+    _output(ERROR, msg, _color.RED, newline=newline)
 
-def warning(msg):
+def warning(msg, newline=True):
     """Display a warning message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(WARNING, msg, _color.YELLOW)
+    _output(WARNING, msg, _color.YELLOW, newline=newline)
 
-def notice(msg):
+def notice(msg, newline=True):
     """Display an important infomation message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(NOTICE, msg)
+    _output(NOTICE, msg, newline=newline)
 
-def info(msg):
+def info(msg, newline=True):
     """Display an infomation message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(INFO, msg)
+    _output(INFO, msg, newline=newline)
 
-def detail(msg):
+def detail(msg, newline=True):
     """Display a detailed message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(DETAIL, msg)
+    _output(DETAIL, msg, newline=newline)
 
-def debug(msg):
+def debug(msg, newline=True):
     """Display a debug message
 
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(DEBUG, msg)
+    _output(DEBUG, msg, newline=newline)
 
-def user_output(msg):
+def user_output(msg, newline=True):
     """Display a message regardless of the current output level.
 
     This is used when the output was specifically requested by the user.
     Args:
-        msg; Message to display.
+        msg: Message to display.
+        newline: True to add a newline at the end.
     """
-    _output(ERROR, msg)
+    _output(ERROR, msg, newline=newline)
 
 def init(_verbose=WARNING, stdout=sys.stdout, allow_colour=True):
     """Initialize a new output object.

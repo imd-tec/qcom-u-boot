@@ -7,6 +7,7 @@
  */
 
 #include <malloc.h>
+#include <mapmem.h>
 #include <dm/test.h>
 #include <test/cmd.h>
 #include <test/ut.h>
@@ -52,3 +53,50 @@ static int cmd_test_malloc_dump(struct unit_test_state *uts)
 	return 0;
 }
 CMD_TEST(cmd_test_malloc_dump, UTF_CONSOLE);
+
+#if CONFIG_IS_ENABLED(MCHECK_LOG)
+/* Test 'malloc log' command */
+static int cmd_test_malloc_log(struct unit_test_state *uts)
+{
+	struct mlog_info info;
+	void *ptr, *ptr2;
+	int seq;
+
+	ut_assertok(run_command("malloc log start", 0));
+	ut_assert_nextline("Malloc logging started");
+	ut_assert_console_end();
+
+	/* Get current log position so we know our sequence numbers */
+	ut_assertok(malloc_log_info(&info));
+	seq = info.total_count;
+
+	/* Do allocations with distinctive sizes we can search for */
+	ptr = malloc(12345);
+	ut_assertnonnull(ptr);
+	ptr2 = realloc(ptr, 23456);
+	ut_assertnonnull(ptr2);
+	free(ptr2);
+
+	ut_assertok(run_command("malloc log stop", 0));
+	ut_assert_nextline("Malloc logging stopped");
+	ut_assert_console_end();
+
+	/* Dump the log and find our allocations by sequence number and size */
+	ut_assertok(run_command("malloc log", 0));
+	ut_assert_nextlinen("Malloc log: ");
+	ut_assert_nextline("%4s  %-8s  %10s  %8s  %s",
+			   "Seq", "Type", "Address", "Size", "Caller");
+	ut_assert_nextline("----  --------  ----------  --------  ------");
+	/* 12345 = 0x3039, 23456 = 0x5ba0 */
+	ut_assert_skip_to_linen("%4d  alloc     %10lx      3039", seq,
+				(ulong)map_to_sysmem(ptr));
+	ut_assert_skip_to_linen("%4d  realloc   %10lx      5ba0", seq + 1,
+				(ulong)map_to_sysmem(ptr2));
+	ut_assert_skip_to_linen("%4d  free      %10lx         0", seq + 2,
+				(ulong)map_to_sysmem(ptr2));
+	console_record_reset_enable();	/* discard remaining output */
+
+	return 0;
+}
+CMD_TEST(cmd_test_malloc_log, UTF_CONSOLE);
+#endif /* MCHECK_LOG */

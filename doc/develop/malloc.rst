@@ -130,6 +130,13 @@ Main U-Boot (post-relocation)
     ``malloc dump``. This significantly increases memory overhead and should
     only be used for debugging. Default: n
 
+``CONFIG_MCHECK_BACKTRACE``
+    Bool to enable backtrace collection for mcheck caller information. When
+    enabled (the default), each allocation records a stack backtrace showing
+    where it was made. This is useful for debugging memory leaks but adds
+    overhead to every malloc call. Disable this to reduce mcheck overhead
+    while keeping the canary checks and double-free detection. Default: y
+
 xPL Boot Phases
 ~~~~~~~~~~~~~~~
 
@@ -385,6 +392,21 @@ allocation was made::
 This caller information makes it easy to track down memory leaks by showing
 exactly where each allocation originated.
 
+Malloc-Traffic Log
+~~~~~~~~~~~~~~~~~~
+
+On sandbox, when mcheck is enabled, a malloc-traffic log can record all
+malloc/free/realloc calls. This is useful for debugging allocation patterns
+and finding where allocations without caller info originate. See
+:doc:`../usage/cmd/malloc` for usage.
+
+The log buffer is allocated from host memory using ``os_malloc()``, so it
+does not affect U-Boot's heap. The size is controlled by
+``CONFIG_MCHECK_LOG_SIZE`` (default 512K entries, about 80MB).
+
+If the log fills up, it wraps around and overwrites the oldest entries.
+A warning is shown when dumping if entries were lost.
+
 Valgrind
 ~~~~~~~~
 
@@ -395,6 +417,99 @@ malloc testing
 ~~~~~~~~~~~~~~
 
 Unit tests can use malloc_enable_testing() to simulate allocation failures.
+
+Finding Memory Leaks
+~~~~~~~~~~~~~~~~~~~~
+
+U-Boot provides several tools for detecting and diagnosing memory leaks.
+These techniques are primarily supported on sandbox, which has the full
+debugging infrastructure enabled by default (``CONFIG_MALLOC_DEBUG``,
+``CONFIG_MCHECK_HEAP_PROTECTION``) and access to host filesystem functions
+for writing dump files.
+
+**Leak detection in unit tests**
+
+Unit tests can use ``ut_check_delta()`` to detect memory leaks::
+
+    ulong mem_start;
+
+    mem_start = ut_check_delta(0);  /* Record starting heap usage */
+
+    /* ... test code that allocates and frees memory ... */
+
+    ut_asserteq(0, ut_check_delta(mem_start));  /* Verify no leak */
+
+This uses ``mallinfo().uordblks`` to compare heap usage before and after.
+
+**Heap dump comparison**
+
+When a leak is detected, use ``malloc_dump()`` to capture heap state before
+and after the operation. In sandbox builds, ``malloc_dump_to_file()`` writes
+the dump to a host file for easier comparison::
+
+    malloc_dump_to_file("/tmp/before.txt");
+
+    /* ... operation that may leak ... */
+
+    malloc_dump_to_file("/tmp/after.txt");
+
+Then compare the dumps to find leaked allocations::
+
+    $ diff /tmp/before.txt /tmp/after.txt
+
+Or extract just the addresses and sizes for comparison::
+
+    $ awk '{print $1, $2}' /tmp/before.txt | sort > /tmp/b.txt
+    $ awk '{print $1, $2}' /tmp/after.txt | sort > /tmp/a.txt
+    $ comm -13 /tmp/b.txt /tmp/a.txt   # Show allocations only in 'after'
+
+The dump includes caller information when ``CONFIG_MCHECK_HEAP_PROTECTION``
+is enabled, showing exactly where each leaked allocation originated.
+
+**Malloc-traffic logging**
+
+For more detailed analysis, use the malloc-traffic log to record all
+allocations during an operation::
+
+    malloc_log_start();
+
+    /* ... operation to trace ... */
+
+    malloc_log_stop();
+    malloc_log_to_file("/tmp/malloc_log.txt");  /* Sandbox only */
+
+The log shows every malloc(), free(), and realloc() call with addresses, sizes,
+and caller backtraces (if enabled). Search for allocations that were never
+freed::
+
+    $ grep "alloc" /tmp/malloc_log.txt   # Find all allocations
+    $ grep "16ad1290" /tmp/malloc_log.txt  # Check if a specific address was freed
+
+**Verifying debug functions don't allocate**
+
+When using these debugging functions, verify they don't affect heap state
+by checking ``malloc_get_info()`` before and after::
+
+    struct malloc_info before, after;
+
+    malloc_get_info(&before);
+    malloc_dump_to_file("/tmp/dump.txt");
+    malloc_get_info(&after);
+
+    /* Verify no allocations occurred */
+    assert(before.malloc_count == after.malloc_count);
+    assert(before.in_use_bytes == after.in_use_bytes);
+
+**Practical workflow**
+
+1. Add ``ut_check_delta()`` assertions to your test to detect leaks
+2. When a leak is detected, add ``malloc_dump_to_file()`` calls before and
+   after the leaking operation
+3. Run the test and compare the dump files to identify leaked allocations
+4. Use the caller backtrace in the dump to find the allocation site
+5. If more detail is needed, enable ``malloc_log_start()`` to trace all
+   allocations during the operation
+6. Fix the leak and verify the test passes
 
 API Reference
 -------------

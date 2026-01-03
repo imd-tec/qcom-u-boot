@@ -6,11 +6,11 @@ This file contains information about building U-Boot for use with Claude Code.
 
 ### Using uman (Recommended)
 
-To build U-Boot for sandbox testing, use the `uman` command:
+To build U-Boot for sandbox testing, use the `um` command:
 
 ```bash
 # Build for sandbox without LTO (um is a symlink to uman)
-um -B sandbox build
+um build sandbox [flags]
 
 # The -l flag can be used to enable LTO
 # The build is silent unless there are warnings or errors
@@ -40,17 +40,17 @@ There are aliases in ~/bin/git-alias which you can use.
 To run a sandbox test:
 
 ```bash
-rtv <test_name>
+um test <test_name>
 # For example: rtv dm_test_video_box
-# which translates to: /tmp/b/sandbox/u-boot -v -Tf -c "ut dm video_box"
+# similar to: /tmp/b/sandbox/u-boot -v -Tf -c "ut dm video_box"
 # test output is silenced unless -v is given
 ```
 
 To run using the Python suite:
 
 ```bash
-pyt <test_name>
-# alias for: test/py/test.py -B sandbox --build-dir /tmp/b/sandbox -k <test_name>
+um py -B sandbox <test_name>
+# similar to: test/py/test.py -B sandbox --build-dir /tmp/b/sandbox -k <test_name>
 ```
 
 ## Notes

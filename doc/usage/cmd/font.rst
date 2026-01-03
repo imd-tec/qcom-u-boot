@@ -85,6 +85,15 @@ CONFIG_CONSOLE_TRUETYPE_GLYPH_BUF enables a pre-allocated buffer for glyph
 rendering, avoiding malloc/free per character. The buffer starts at 4KB and
 grows as needed via realloc().
 
+CONFIG_CONSOLE_TRUETYPE_SCRATCH enables a scratch buffer for internal stbtt
+allocations. Without this, the TrueType library performs around 5 allocations
+per character (totalling ~26KB), creating malloc/free overhead and heap
+fragmentation. With the scratch buffer, memory is allocated once at probe time
+and reused for each character. CONFIG_CONSOLE_TRUETYPE_SCRATCH_SIZE sets the
+buffer size (default 32KB), which is sufficient for most Latin characters.
+Complex glyphs (CJK, emoji) or very large font sizes may need 64KB or more.
+Allocations exceeding the buffer size fall back to malloc transparently.
+
 CONFIG_VIDEO_GLYPH_STATS enables tracking of glyph-rendering statistics.
 
 Return value

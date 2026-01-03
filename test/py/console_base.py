@@ -32,6 +32,10 @@ pattern_lab_mode = re.compile('{lab mode.*}')
 TIMEOUT_MS = 30000                  # Standard timeout
 TIMEOUT_CMD_MS = 10000              # Command-echo timeout
 
+# Maximum bytes to read at once from the console. 4KB matches the typical
+# Linux PTY buffer size (N_TTY_BUF_SIZE), so there's no benefit to larger.
+RECV_BUF_SIZE = 4096
+
 # Timeout for board preparation in lab mode. This needs to be enough to build
 # U-Boot, write it to the board and then boot the board. Since this process is
 # under the control of another program (e.g. Labgrid), it will failure sooner
@@ -267,6 +271,19 @@ class ConsoleBase():
         #   call, where the function returns None (assignment-from-none)
         return spawn.Spawn([])
 
+    def get_default_timeout(self):
+        """Get the default timeout for commands.
+
+        Subclasses can override this to provide a different timeout.
+        For example, sandbox may need a longer timeout when mcheck is enabled.
+
+        Returns:
+            int: Timeout in milliseconds, or None if timeout is disabled
+        """
+        if self.config.gdbserver or self.config.no_timeout:
+            return None
+        return TIMEOUT_MS
+
     def eval_patterns(self):
         """Set up lists of regexes for patterns we don't expect on console"""
         self.bad_patterns = [pat.pattern for pat in self.avail_patterns
@@ -324,7 +341,7 @@ class ConsoleBase():
                     m = pattern_ready_prompt.search(self.after)
                     self.u_boot_version_string = m.group(2)
                     self.log.info('Lab: Board is ready')
-                    self.timeout = TIMEOUT_MS
+                    self.timeout = self.get_default_timeout()
                     break
                 if m == 2:
                     self.log.info(f'Found autoboot prompt {m}')
@@ -612,8 +629,7 @@ class ConsoleBase():
         if self.p:
             # Reset the console timeout value as some tests may change
             # its default value during the execution
-            if not self.config.gdbserver:
-                self.timeout = TIMEOUT_MS
+            self.timeout = self.get_default_timeout()
             return
         try:
             self.log.start_section('Starting U-Boot')
@@ -624,8 +640,7 @@ class ConsoleBase():
             # text if LCD is enabled. This value may need tweaking in the
             # future, possibly per-test to be optimal. This works for 'help'
             # on board 'seaboard'.
-            if not self.config.gdbserver:
-                self.timeout = TIMEOUT_MS
+            self.timeout = self.get_default_timeout()
             self.logfile_read = self.logstream
             if self.config.use_running_system:
                 # Send an empty command to set up the 'expect' logic. This has
@@ -803,14 +818,19 @@ class ConsoleBase():
                 events = self.p.poll.poll(poll_maxwait)
                 if not events:
                     raise Timeout()
-                c = self.p.receive(1024)
+                # Small delay to let more data accumulate in PTY buffer, to
+                # reduce CPU usage for test.py from 100%
+                time.sleep(0.001)
+                c = self.p.receive(RECV_BUF_SIZE)
                 if self.logfile_read:
                     self.logfile_read.write(c)
-                self.buf += c
+                # Filter VT100 escapes from new data only, not entire buffer.
+                # This avoids O(n^2) behaviour when receiving large output.
                 # count=0 is supposed to be the default, which indicates
                 # unlimited substitutions, but in practice the version of
                 # Python in Ubuntu 14.04 appears to default to count=2!
-                self.buf = self.re_vt100.sub('', self.buf, count=1000000)
+                c = self.re_vt100.sub('', c, count=1000000)
+                self.buf += c
         finally:
             if self.logfile_read:
                 self.logfile_read.flush()

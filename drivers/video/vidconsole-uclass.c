@@ -14,6 +14,7 @@
 #include <command.h>
 #include <console.h>
 #include <log.h>
+#include <malloc.h>
 #include <dm.h>
 #include <video.h>
 #include <video_console.h>
@@ -865,11 +866,21 @@ static int vidconsole_post_probe(struct udevice *dev)
 	return stdio_register(sdev);
 }
 
+static int vidconsole_pre_remove(struct udevice *dev)
+{
+	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+
+	free(vc_priv->curs.save_data);
+
+	return 0;
+}
+
 UCLASS_DRIVER(vidconsole) = {
 	.id		= UCLASS_VIDEO_CONSOLE,
 	.name		= "vidconsole0",
 	.pre_probe	= vidconsole_pre_probe,
 	.post_probe	= vidconsole_post_probe,
+	.pre_remove	= vidconsole_pre_remove,
 	.per_device_auto	= sizeof(struct vidconsole_priv),
 };
 
