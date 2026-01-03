@@ -85,6 +85,9 @@ static int run_test_nand(struct unit_test_state *uts, int dev, bool end)
 	ut_asserteq(size, length);
 	ut_asserteq_mem(gold, buf, size);
 
+	free(buf);
+	free(gold);
+
 	return 0;
 }
 
