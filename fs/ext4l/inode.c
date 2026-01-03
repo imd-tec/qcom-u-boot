@@ -1140,8 +1140,7 @@ int ext4_block_write_begin(handle_t *handle, struct folio *folio,
 	unsigned block_start, block_end;
 	sector_t block;
 	int err = 0;
-	unsigned blocksize = inode->i_sb->s_blocksize;
-	unsigned bbits;
+	unsigned int blocksize = i_blocksize(inode);
 	struct buffer_head *bh, *head, *wait[2];
 	int nr_wait = 0;
 	int i;
@@ -1150,12 +1149,12 @@ int ext4_block_write_begin(handle_t *handle, struct folio *folio,
 	BUG_ON(!folio_test_locked(folio));
 	BUG_ON(to > folio_size(folio));
 	BUG_ON(from > to);
+	WARN_ON_ONCE(blocksize > folio_size(folio));
 
 	head = folio_buffers(folio);
 	if (!head)
 		head = create_empty_buffers(folio, blocksize, 0);
-	bbits = ilog2(blocksize);
-	block = (sector_t)folio->index << (PAGE_SHIFT - bbits);
+	block = EXT4_PG_TO_LBLK(inode, folio->index);
 
 	for (bh = head, block_start = 0; bh != head || !block_start;
 	    block++, block_start = block_end, bh = bh->b_this_page) {
@@ -1296,8 +1295,8 @@ retry_grab:
 	if (IS_ERR(folio))
 		return PTR_ERR(folio);
 
-	if (pos + len > folio_pos(folio) + folio_size(folio))
-		len = folio_pos(folio) + folio_size(folio) - pos;
+	if (len > folio_next_pos(folio) - pos)
+		len = folio_next_pos(folio) - pos;
 
 	from = offset_in_folio(folio, pos);
 	to = from + len;
@@ -2202,7 +2201,6 @@ static int mpage_process_folio(struct mpage_da_data *mpd, struct folio *folio,
 	ext4_lblk_t lblk = *m_lblk;
 	ext4_fsblk_t pblock = *m_pblk;
 	int err = 0;
-	int blkbits = mpd->inode->i_blkbits;
 	ssize_t io_end_size = 0;
 	struct ext4_io_end_vec *io_end_vec = ext4_last_io_end_vec(io_end);
 
@@ -2228,7 +2226,8 @@ static int mpage_process_folio(struct mpage_da_data *mpd, struct folio *folio,
 					err = PTR_ERR(io_end_vec);
 					goto out;
 				}
-				io_end_vec->offset = (loff_t)mpd->map.m_lblk << blkbits;
+				io_end_vec->offset = EXT4_LBLK_TO_B(mpd->inode,
+								mpd->map.m_lblk);
 			}
 			*map_bh = true;
 			goto out;
@@ -2238,7 +2237,7 @@ static int mpage_process_folio(struct mpage_da_data *mpd, struct folio *folio,
 			bh->b_blocknr = pblock++;
 		}
 		clear_buffer_unwritten(bh);
-		io_end_size += (1 << blkbits);
+		io_end_size += i_blocksize(mpd->inode);
 	} while (lblk++, (bh = bh->b_this_page) != head);
 
 	io_end_vec->size += io_end_size;
@@ -2268,15 +2267,14 @@ static int mpage_map_and_submit_buffers(struct mpage_da_data *mpd)
 	struct folio_batch fbatch;
 	unsigned nr, i;
 	struct inode *inode = mpd->inode;
-	int bpp_bits = PAGE_SHIFT - inode->i_blkbits;
 	pgoff_t start, end;
 	ext4_lblk_t lblk;
 	ext4_fsblk_t pblock;
 	int err;
 	bool map_bh = false;
 
-	start = mpd->map.m_lblk >> bpp_bits;
-	end = (mpd->map.m_lblk + mpd->map.m_len - 1) >> bpp_bits;
+	start = EXT4_LBLK_TO_PG(inode, mpd->map.m_lblk);
+	end = EXT4_LBLK_TO_PG(inode, mpd->map.m_lblk + mpd->map.m_len - 1);
 	pblock = mpd->map.m_pblk;
 
 	folio_batch_init(&fbatch);
@@ -2287,7 +2285,7 @@ static int mpage_map_and_submit_buffers(struct mpage_da_data *mpd)
 		for (i = 0; i < nr; i++) {
 			struct folio *folio = fbatch.folios[i];
 
-			lblk = folio->index << bpp_bits;
+			lblk = EXT4_PG_TO_LBLK(inode, folio->index);
 			err = mpage_process_folio(mpd, folio, &lblk, &pblock,
 						 &map_bh);
 			/*
@@ -2590,16 +2588,12 @@ static int mpage_prepare_extent_to_map(struct mpage_da_data *mpd)
 	pgoff_t end = mpd->end_pos >> PAGE_SHIFT;
 	xa_mark_t tag;
 	int i, err = 0;
-	int blkbits = mpd->inode->i_blkbits;
 	ext4_lblk_t lblk;
 	struct buffer_head *head;
 	handle_t *handle = NULL;
 	int bpp = ext4_journal_blocks_per_folio(mpd->inode);
 
-	if (mpd->wbc->sync_mode == WB_SYNC_ALL || mpd->wbc->tagged_writepages)
-		tag = PAGECACHE_TAG_TOWRITE;
-	else
-		tag = PAGECACHE_TAG_DIRTY;
+	tag = wbc_to_tag(mpd->wbc);
 
 	mpd->map.m_len = 0;
 	mpd->next_pos = mpd->start_pos;
@@ -2629,7 +2623,7 @@ static int mpage_prepare_extent_to_map(struct mpage_da_data *mpd)
 			 */
 			if (mpd->wbc->sync_mode == WB_SYNC_NONE &&
 			    mpd->wbc->nr_to_write <=
-			    mpd->map.m_len >> (PAGE_SHIFT - blkbits))
+			    EXT4_LBLK_TO_PG(mpd->inode, mpd->map.m_len))
 				goto out;
 
 			/* If we can't merge this page, we are done. */
@@ -2681,7 +2675,7 @@ static int mpage_prepare_extent_to_map(struct mpage_da_data *mpd)
 
 			if (mpd->map.m_len == 0)
 				mpd->start_pos = folio_pos(folio);
-			mpd->next_pos = folio_pos(folio) + folio_size(folio);
+			mpd->next_pos = folio_next_pos(folio);
 			/*
 			 * Writeout when we cannot modify metadata is simple.
 			 * Just submit the page. For data=journal mode we
@@ -2707,8 +2701,7 @@ static int mpage_prepare_extent_to_map(struct mpage_da_data *mpd)
 				mpage_folio_done(mpd, folio);
 			} else {
 				/* Add all dirty buffers to mpd */
-				lblk = ((ext4_lblk_t)folio->index) <<
-					(PAGE_SHIFT - blkbits);
+				lblk = EXT4_PG_TO_LBLK(mpd->inode, folio->index);
 				head = folio_buffers(folio);
 				err = mpage_process_page_bufs(mpd, head, head,
 						lblk);
@@ -3123,8 +3116,8 @@ retry:
 	if (IS_ERR(folio))
 		return PTR_ERR(folio);
 
-	if (pos + len > folio_pos(folio) + folio_size(folio))
-		len = folio_pos(folio) + folio_size(folio) - pos;
+	if (len > folio_next_pos(folio) - pos)
+		len = folio_next_pos(folio) - pos;
 
 	ret = ext4_block_write_begin(NULL, folio, pos, len,
 				     ext4_da_get_block_prep);

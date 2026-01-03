@@ -1337,6 +1337,13 @@ typedef unsigned int xa_mark_t;
 #define PAGECACHE_TAG_TOWRITE	1
 #define PAGECACHE_TAG_WRITEBACK	2
 
+static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
+{
+	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
+		return PAGECACHE_TAG_TOWRITE;
+	return PAGECACHE_TAG_DIRTY;
+}
+
 /* blk_plug - block I/O plugging stub */
 struct blk_plug {
 	int dummy;
