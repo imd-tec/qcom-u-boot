@@ -803,9 +803,8 @@ found:
 		    !(flags & EXT4_GET_BLOCKS_ZERO) &&
 		    !ext4_is_quota_file(inode) &&
 		    ext4_should_order_data(inode)) {
-			loff_t start_byte =
-				(loff_t)map->m_lblk << inode->i_blkbits;
-			loff_t length = (loff_t)map->m_len << inode->i_blkbits;
+			loff_t start_byte = EXT4_LBLK_TO_B(inode, map->m_lblk);
+			loff_t length = EXT4_LBLK_TO_B(inode, map->m_len);
 
 			if (flags & EXT4_GET_BLOCKS_IO_SUBMIT)
 				ret = ext4_jbd2_inode_add_wait(handle, inode,
@@ -2384,7 +2383,7 @@ static int mpage_submit_partial_folio(struct mpage_da_data *mpd)
 	 * The mapped position should be within the current processing folio
 	 * but must not be the folio start position.
 	 */
-	pos = ((loff_t)mpd->map.m_lblk) << inode->i_blkbits;
+	pos = EXT4_LBLK_TO_B(inode, mpd->map.m_lblk);
 	if (WARN_ON_ONCE((folio_pos(folio) == pos) ||
 			 !folio_contains(folio, pos >> PAGE_SHIFT)))
 		return -EINVAL;
@@ -2441,7 +2440,7 @@ static int mpage_map_and_submit_extent(handle_t *handle,
 	io_end_vec = ext4_alloc_io_end_vec(io_end);
 	if (IS_ERR(io_end_vec))
 		return PTR_ERR(io_end_vec);
-	io_end_vec->offset = ((loff_t)map->m_lblk) << inode->i_blkbits;
+	io_end_vec->offset = EXT4_LBLK_TO_B(inode, map->m_lblk);
 	do {
 		err = mpage_map_one_extent(handle, mpd);
 		if (err < 0) {
@@ -3481,8 +3480,8 @@ static void ext4_set_iomap(struct inode *inode, struct iomap *iomap,
 		iomap->dax_dev = EXT4_SB(inode->i_sb)->s_daxdev;
 	else
 		iomap->bdev = inode->i_sb->s_bdev;
-	iomap->offset = (u64) map->m_lblk << blkbits;
-	iomap->length = (u64) map->m_len << blkbits;
+	iomap->offset = EXT4_LBLK_TO_B(inode, map->m_lblk);
+	iomap->length = EXT4_LBLK_TO_B(inode, map->m_len);
 
 	if ((map->m_flags & EXT4_MAP_MAPPED) &&
 	    !ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
@@ -3715,7 +3714,7 @@ retry:
 	 * i_disksize out to i_size. This could be beyond where direct I/O is
 	 * happening and thus expose allocated blocks to direct I/O reads.
 	 */
-	else if (((loff_t)map->m_lblk << blkbits) >= i_size_read(inode))
+	else if (EXT4_LBLK_TO_B(inode, map->m_lblk) >= i_size_read(inode))
 		m_flags = EXT4_GET_BLOCKS_CREATE;
 	else if (ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))
 		m_flags = EXT4_GET_BLOCKS_IO_CREATE_EXT;
