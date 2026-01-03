@@ -934,6 +934,52 @@ static inline void simple_inode_init_ts(struct inode *inode)
 	inode->i_ctime = ts;
 }
 
+/*
+ * Inode state accessors - simplified for single-threaded U-Boot.
+ * Linux uses READ_ONCE/WRITE_ONCE and lockdep assertions; we use direct access.
+ */
+static inline unsigned long inode_state_read_once(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline unsigned long inode_state_read(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline void inode_state_set_raw(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_set(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_clear_raw(struct inode *inode,
+					 unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_clear(struct inode *inode, unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_assign_raw(struct inode *inode,
+					  unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
+static inline void inode_state_assign(struct inode *inode, unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
 #define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
 
 /* dotdot_name for ".." lookups */
