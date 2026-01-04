@@ -58,7 +58,6 @@ um py -B sandbox <test_name>
 - The `um` tool is the preferred build method for this codebase
 - Always run `make mrproper` if you encounter build issues
 - The sandbox build creates a test environment for U-Boot that runs on the host system
-- When using `git diff`, add `--no-ext-diff` to avoid external diff tools that may not work in this environment
 - `um build` shows no output if everything was ok!
 - Remember not to cd into the build directory; run U-Boot directly in the source dir
 - Do not run in-tree builds; always use the crosfw script or 'make O=/tmp/...'
