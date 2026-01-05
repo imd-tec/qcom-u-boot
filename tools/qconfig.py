@@ -506,14 +506,14 @@ class Slot:
 
         arch = self.parser.get_arch()
         try:
-            tchain = self.toolchains.Select(arch)
+            tchain = self.toolchains.select(arch)
         except ValueError:
             self.log.append(self.col.build(
                 self.col.YELLOW,
                 f"Tool chain for '{arch}' is missing: do nothing"))
             self.finish(False)
             return
-        env = tchain.MakeEnvironment(False)
+        env = tchain.make_environment(False)
 
         cmd = list(self.make_cmd)
         cmd.append('KCONFIG_IGNORE_DUPLICATES=1')
@@ -745,8 +745,8 @@ def move_config(args):
 
     # Get toolchains to use
     toolchains = toolchain.Toolchains()
-    toolchains.GetSettings()
-    toolchains.Scan(verbose=False)
+    toolchains.get_settings()
+    toolchains.scan(verbose=False)
 
     if args.git_ref:
         reference_src = ReferenceSource(args.git_ref)
