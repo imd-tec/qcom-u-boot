@@ -79,6 +79,34 @@ CheckResult = namedtuple('CheckResult', [
 CommitInfo = namedtuple('CommitInfo',
                         ['hash', 'chash', 'subject', 'author'])
 
+
+def parse_log_output(log_output, has_parents=False):
+    """Parse git log output to extract CommitInfo tuples
+
+    Args:
+        log_output (str): Output from git log with format '%H|%h|%an|%s'
+            or '%H|%h|%an|%s|%P' if has_parents is True
+        has_parents (bool): If True, expects parents field at end and
+            excludes it from subject parsing
+
+    Returns:
+        list: List of CommitInfo tuples
+    """
+    commits = []
+    for line in log_output.split('\n'):
+        if not line:
+            continue
+        parts = line.split('|')
+        commit_hash = parts[0]
+        chash = parts[1]
+        author = parts[2]
+        if has_parents:
+            subject = '|'.join(parts[3:-1])
+        else:
+            subject = '|'.join(parts[3:])
+        commits.append(CommitInfo(commit_hash, chash, subject, author))
+    return commits
+
 # Named tuple for simplified commit data passed to agent
 # hash: Full SHA-1 commit hash (40 characters)
 # chash: Abbreviated commit hash (typically 7-8 characters)
@@ -677,7 +705,6 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
-# pylint: disable=too-many-locals,too-many-branches
 def get_next_commits(dbs, source):
     """Get the next set of commits to cherry-pick from a source
 
@@ -735,21 +762,8 @@ def get_next_commits(dbs, source):
             continue
 
         # Parse commits, filtering out those already in database
-        commits = []
-        for line in log_output.split('\n'):
-            if not line:
-                continue
-            parts = line.split('|')
-            commit_hash = parts[0]
-            chash = parts[1]
-            author = parts[2]
-            subject = '|'.join(parts[3:-1])  # Subject may contain separator
-
-            # Skip commits already in the database (already in a pending MR)
-            if dbs.commit_get(commit_hash):
-                continue
-
-            commits.append(CommitInfo(commit_hash, chash, subject, author))
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
         if commits:
             return commits, True, None
@@ -766,22 +780,70 @@ def get_next_commits(dbs, source):
     if not log_output:
         return [], False, None
 
-    commits = []
-    for line in log_output.split('\n'):
-        if not line:
-            continue
-        parts = line.split('|')
-        commit_hash = parts[0]
-        chash = parts[1]
-        author = parts[2]
-        subject = '|'.join(parts[3:-1])
-
-        if dbs.commit_get(commit_hash):
-            continue
-
-        commits.append(CommitInfo(commit_hash, chash, subject, author))
+    all_commits = parse_log_output(log_output, has_parents=True)
+    commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
     return commits, False, None
+
+
+def get_commits_for_pick(commit_spec):
+    """Get commits to cherry-pick from a commit specification
+
+    Supports two formats:
+    - Commit range: 'hash1..hash2' returns all commits in that range
+    - Merge commit: Returns all non-merge commits that were part of the merge
+
+    Args:
+        commit_spec (str): Either 'hash1..hash2' for a range, or a single
+            hash (which if it's a merge, gets all its child commits)
+
+    Returns:
+        tuple: (list of CommitInfo, error_message) - error_message is None
+            on success
+    """
+    commits = None
+    error = None
+
+    if '..' in commit_spec:
+        # Commit range format: hash1..hash2
+        try:
+            log_output = run_git([
+                'log', '--reverse', '--format=%H|%h|%an|%s',
+                commit_spec
+            ])
+            if log_output:
+                commits = parse_log_output(log_output)
+            else:
+                commits, error = [], f"No commits found in range: {commit_spec}"
+        except Exception:  # pylint: disable=broad-except
+            error = f"Invalid commit range: {commit_spec}"
+    else:
+        # Single commit - check if it's a merge
+        try:
+            parents = run_git(['rev-parse', f'{commit_spec}^@'])
+            parent_list = parents.strip().split('\n') if parents.strip() else []
+
+            if len(parent_list) < 2:
+                # Not a merge - return just this commit
+                log_output = run_git(['log', '-1', '--format=%H|%h|%an|%s',
+                                      commit_spec])
+                commits = parse_log_output(log_output)
+            else:
+                # It's a merge - get commits from the merged branch
+                # parent_list[0] is main branch, parent_list[1] is merged branch
+                log_output = run_git([
+                    'log', '--reverse', '--format=%H|%h|%an|%s',
+                    f'^{parent_list[0]}', parent_list[1]
+                ])
+                if log_output:
+                    commits = parse_log_output(log_output)
+                else:
+                    commits = []
+                    error = f"No commits found in merge: {commit_spec}"
+        except Exception:  # pylint: disable=broad-except
+            error = f"Invalid commit: {commit_spec}"
+
+    return commits, error
 
 
 def do_next_set(args, dbs):
@@ -1118,6 +1180,24 @@ def write_history(source, commits, branch_name, conv_log):
     tout.info(f'Updated {HISTORY_FILE}')
 
 
+def push_mr(args, branch_name, title, description):
+    """Push branch and create merge request
+
+    Args:
+        args (Namespace): Parsed arguments with 'remote' and 'target'
+        branch_name (str): Branch name to push
+        title (str): MR title
+        description (str): MR description
+
+    Returns:
+        bool: True on success, False on failure
+    """
+    mr_url = gitlab_api.push_and_create_mr(
+        args.remote, branch_name, args.target, title, description
+    )
+    return bool(mr_url)
+
+
 def prepare_apply(dbs, source, branch):
     """Prepare for applying commits from a source branch
 
@@ -1311,19 +1391,10 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     if success:
         # Push and create MR if requested
         if args.push:
-            remote = args.remote
-            target = args.target
-            # Use merge commit subject as title (last commit is the merge)
             title = f'[pickman] {commits[-1].subject}'
-            # Description matches .pickman-history entry
-            # (summary + conversation)
             summary = format_history(source, commits, branch_name)
             description = f'{summary}\n\n### Conversation log\n{conv_log}'
-
-            mr_url = gitlab_api.push_and_create_mr(
-                remote, branch_name, target, title, description
-            )
-            if not mr_url:
+            if not push_mr(args, branch_name, title, description):
                 ret = 1
         else:
             tout.info(f"Use 'pickman commit-source {source} "
@@ -1362,6 +1433,92 @@ def do_apply(args, dbs):
     # Write history file if successful
     if success:
         write_history(source, commits, branch_name, conv_log)
+
+    # Return to original branch
+    current_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+    if current_branch != original_branch:
+        tout.info(f'Returning to {original_branch}')
+        run_git(['checkout', original_branch])
+
+    return ret
+
+
+def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
+    """Cherry-pick commits ad-hoc using Claude agent
+
+    This allows cherry-picking a commit range or merge commit children without
+    tracking in the database. Useful for one-off cherry-picks.
+
+    Args:
+        args (Namespace): Parsed arguments with 'commits', 'branch', etc.
+        dbs (Database): Database instance (unused for ad-hoc picks)
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    commit_spec = args.commits
+
+    # Get commits to cherry-pick
+    commits, error = get_commits_for_pick(commit_spec)
+    if error:
+        tout.error(error)
+        return 1
+
+    if not commits:
+        tout.info('No commits to cherry-pick')
+        return 0
+
+    # Save current branch to return to later
+    original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+    # Generate branch name if not provided
+    branch_name = args.branch
+    if not branch_name:
+        branch_name = f'pick-{commits[0].chash}'
+
+    # Delete branch if it already exists
+    try:
+        run_git(['rev-parse', '--verify', branch_name])
+        tout.info(f'Deleting existing branch {branch_name}')
+        run_git(['branch', '-D', branch_name])
+    except Exception:  # pylint: disable=broad-except
+        pass  # Branch doesn't exist, which is fine
+
+    tout.info(f'Cherry-picking {len(commits)} commit(s):')
+    tout.info(f'  Branch: {branch_name}')
+    for commit in commits:
+        tout.info(f'  {commit.chash} {commit.subject}')
+    tout.info('')
+
+    # Convert CommitInfo to AgentCommit format (no applied_as for ad-hoc)
+    agent_commits = [AgentCommit(c.hash, c.chash, c.subject, None)
+                     for c in commits]
+
+    # Run the agent to cherry-pick
+    success, conv_log = agent.cherry_pick_commits(agent_commits, 'ad-hoc',
+                                                  branch_name)
+
+    # Verify the branch actually exists - agent may have aborted and deleted it
+    if success:
+        try:
+            run_git(['rev-parse', '--verify', branch_name])
+        except Exception:  # pylint: disable=broad-except
+            tout.warning(f'Branch {branch_name} does not exist - '
+                         'agent may have aborted')
+            success = False
+
+    ret = 0 if success else 1
+
+    if success and args.push:
+        title = f'[pick] {commits[-1].subject}'
+        commit_list = '\n'.join(f'- {c.chash} {c.subject}' for c in commits)
+        description = (f'Ad-hoc cherry-pick of {len(commits)} commit(s)\n\n'
+                       f'### Commits\n{commit_list}\n\n'
+                       f'### Conversation log\n{conv_log}')
+        if not push_mr(args, branch_name, title, description):
+            ret = 1
+    elif success:
+        tout.info(f'Commits cherry-picked to branch {branch_name}')
 
     # Return to original branch
     current_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -1848,6 +2005,7 @@ COMMANDS = {
     'list-sources': do_list_sources,
     'next-merges': do_next_merges,
     'next-set': do_next_set,
+    'pick': do_pick,
     'poll': do_poll,
     'push-branch': do_push_branch,
     'review': do_review,
