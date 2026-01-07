@@ -164,6 +164,9 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
+	/* Process any include files */
+	ut_assertok(pxe_process_includes(&ctx, cfg, addr));
+
 	/* Verify no console output during parsing (say is printed on boot) */
 	ut_assert_console_end();
 
@@ -621,7 +624,6 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	struct pxe_menu *cfg;
 	ulong addr = PXE_LOAD_ADDR;
 	void *fdt;
-	uint i;
 
 	ut_assertnonnull(fs_image);
 	ut_assertnonnull(cfg_path);
@@ -635,17 +637,17 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
 				  false, false, NULL));
 
-	/* Read and parse the config file */
+	/* Read and parse the config file (quiet since we're just parsing) */
+	ctx.quiet = true;
 	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
 
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
-	/* Consume parsing output (say message is printed on boot, not parsing) */
-	ut_assert_nextline("Retrieving file: %s", cfg_path);
-	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
-	for (i = 3; i <= 16; i++)
-		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
+	/* Process any include files */
+	ut_assertok(pxe_process_includes(&ctx, cfg, addr));
+
+	/* Verify no console output during parsing (say is printed on boot) */
 	ut_assert_console_end();
 
 	/*
@@ -661,6 +663,9 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	label = list_first_entry(&cfg->labels, struct pxe_label, list);
 	ut_asserteq_str("linux", label->name);
 	ut_assertnonnull(label->fdtoverlays);
+
+	/* Enable output for loading phase */
+	ctx.quiet = false;
 
 	/* Load the label - should succeed but skip overlays */
 	ut_assertok(pxe_load_label(&ctx, label));

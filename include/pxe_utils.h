@@ -3,6 +3,7 @@
 #ifndef __PXE_UTILS_H
 #define __PXE_UTILS_H
 
+#include <alist.h>
 #include <bootflow.h>
 #include <linux/list.h>
 
@@ -68,6 +69,19 @@ struct pxe_label {
 	struct list_head list;
 };
 
+/**
+ * struct pxe_include - an include file that needs to be loaded
+ *
+ * @path: Path to the include file
+ * @cfg: Menu to parse the include into
+ * @nest_level: Nesting level to use when parsing this include
+ */
+struct pxe_include {
+	char *path;
+	struct pxe_menu *cfg;
+	int nest_level;
+};
+
 /*
  * Describes a pxe menu as given via pxe files.
  *
@@ -81,6 +95,7 @@ struct pxe_label {
  *          interrupted.  If 1, always prompt for a choice regardless of
  *          timeout.
  * labels - a list of labels defined for the menu.
+ * includes - list of struct pxe_include for files that need loading/parsing
  */
 struct pxe_menu {
 	char *title;
@@ -90,6 +105,7 @@ struct pxe_menu {
 	int timeout;
 	int prompt;
 	struct list_head labels;
+	struct alist includes;
 };
 
 struct pxe_context;
@@ -242,17 +258,47 @@ int get_pxelinux_path(struct pxe_context *ctx, const char *file,
 void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
 
 /**
- * parse_pxefile() - Parsing a pxe file
+ * parse_pxefile() - Parse a pxe file
  *
- * This is only used for the top-level file.
+ * Parse the top-level file. Any includes are stored in cfg->includes and
+ * should be processed by calling pxe_process_includes().
  *
  * @ctx: PXE context (provided by the caller)
- * Returns NULL if there is an error, otherwise, returns a pointer to a
- * pxe_menu struct populated with the results of parsing the pxe file (and any
- * files it includes). The resulting pxe_menu struct can be free()'d by using
- * the pxe_menu_uninit() function.
+ * @menucfg: Address of the PXE file in memory
+ * Return: NULL on error, otherwise a pointer to a pxe_menu struct. Use
+ * pxe_menu_uninit() to free it.
  */
 struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
+
+/**
+ * pxe_process_includes() - Process include files in a parsed menu
+ *
+ * Load and parse all include files referenced in cfg->includes. This may
+ * add more includes if nested includes are found.
+ *
+ * @ctx: PXE context with getfile callback
+ * @cfg: Parsed PXE menu with includes to process
+ * @base: Memory address for loading include files
+ * Return: 0 on success, -ve on error
+ */
+int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
+			 ulong base);
+
+/**
+ * pxe_parse_include() - Parse an included file into its target menu
+ *
+ * After loading an include file referenced in cfg->includes, call this
+ * to parse it and merge any labels into the target menu. This may add
+ * more entries to cfg->includes if the included file has its own includes.
+ *
+ * @ctx: PXE context
+ * @inc: Include info with path and target menu
+ * @buf: Buffer containing the included file content
+ * @base: Memory address where buf is located
+ * Return: 1 on success, -ve on error
+ */
+int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
+		      char *buf, ulong base);
 
 /**
  * format_mac_pxe() - Convert a MAC address to PXE format

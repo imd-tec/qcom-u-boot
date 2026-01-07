@@ -910,12 +910,14 @@ struct pxe_menu *pxe_menu_init(void)
 
 	memset(cfg, '\0', sizeof(struct pxe_menu));
 	INIT_LIST_HEAD(&cfg->labels);
+	alist_init(&cfg->includes, sizeof(struct pxe_include), 0);
 
 	return cfg;
 }
 
 void pxe_menu_uninit(struct pxe_menu *cfg)
 {
+	struct pxe_include *inc;
 	struct list_head *pos, *n;
 	struct pxe_label *label;
 
@@ -928,6 +930,10 @@ void pxe_menu_uninit(struct pxe_menu *cfg)
 
 		label_destroy(label);
 	}
+
+	alist_for_each(inc, &cfg->includes)
+		free(inc->path);
+	alist_uninit(&cfg->includes);
 
 	free(cfg);
 }
@@ -944,6 +950,12 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 
 	buf = map_sysmem(menucfg, 0);
 	r = parse_pxefile_top(ctx, buf, menucfg, cfg, 1);
+	unmap_sysmem(buf);
+
+	if (r < 0) {
+		pxe_menu_uninit(cfg);
+		return NULL;
+	}
 
 	if (ctx->use_fallback) {
 		if (cfg->fallback_label) {
@@ -954,13 +966,46 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 		}
 	}
 
-	unmap_sysmem(buf);
-	if (r < 0) {
-		pxe_menu_uninit(cfg);
-		return NULL;
+	return cfg;
+}
+
+int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
+			 ulong base)
+{
+	struct pxe_include *inc;
+	char *buf;
+	uint i;
+	int r;
+
+	/*
+	 * Process includes - load each file and parse it. Get the include
+	 * fresh each iteration since parsing may add more includes and cause
+	 * alist reallocation.
+	 */
+	for (i = 0; i < cfg->includes.count; i++) {
+		inc = alist_getw(&cfg->includes, i, struct pxe_include);
+
+		r = get_pxe_file(ctx, inc->path, base);
+		if (r < 0) {
+			printf("Couldn't retrieve %s\n", inc->path);
+			return r;
+		}
+
+		buf = map_sysmem(base, 0);
+		r = pxe_parse_include(ctx, inc, buf, base);
+		unmap_sysmem(buf);
+
+		if (r < 0)
+			return r;
 	}
 
-	return cfg;
+	return 0;
+}
+
+int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
+		      char *buf, ulong base)
+{
+	return parse_pxefile_top(ctx, buf, base, inc->cfg, inc->nest_level);
 }
 
 /*
@@ -1179,10 +1224,17 @@ struct pxe_menu *pxe_prepare(struct pxe_context *ctx, ulong pxefile_addr_r,
 			     bool prompt)
 {
 	struct pxe_menu *cfg;
+	int ret;
 
 	cfg = parse_pxefile(ctx, pxefile_addr_r);
 	if (!cfg) {
 		printf("Error parsing config file\n");
+		return NULL;
+	}
+
+	ret = pxe_process_includes(ctx, cfg, pxefile_addr_r);
+	if (ret) {
+		pxe_menu_uninit(cfg);
 		return NULL;
 	}
 
