@@ -71,6 +71,7 @@ SUITE_DECL(measurement);
 SUITE_DECL(mem);
 SUITE_DECL(optee);
 SUITE_DECL(pci_mps);
+SUITE_DECL(pxe);
 SUITE_DECL(seama);
 SUITE_DECL(setexpr);
 SUITE_DECL(upl);
@@ -100,6 +101,7 @@ static struct suite suites[] = {
 	SUITE(mem, "memory-related commands"),
 	SUITE(optee, "OP-TEE"),
 	SUITE(pci_mps, "PCI Express Maximum Payload Size"),
+	SUITE(pxe, "PXE/extlinux parser tests"),
 	SUITE(seama, "seama command parameters loading and decoding"),
 	SUITE(setexpr, "setexpr command"),
 	SUITE(upl, "Universal payload support"),
