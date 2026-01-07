@@ -934,6 +934,52 @@ static inline void simple_inode_init_ts(struct inode *inode)
 	inode->i_ctime = ts;
 }
 
+/*
+ * Inode state accessors - simplified for single-threaded U-Boot.
+ * Linux uses READ_ONCE/WRITE_ONCE and lockdep assertions; we use direct access.
+ */
+static inline unsigned long inode_state_read_once(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline unsigned long inode_state_read(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline void inode_state_set_raw(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_set(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_clear_raw(struct inode *inode,
+					 unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_clear(struct inode *inode, unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_assign_raw(struct inode *inode,
+					  unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
+static inline void inode_state_assign(struct inode *inode, unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
 #define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
 
 /* dotdot_name for ".." lookups */
@@ -1291,6 +1337,13 @@ typedef unsigned int xa_mark_t;
 #define PAGECACHE_TAG_TOWRITE	1
 #define PAGECACHE_TAG_WRITEBACK	2
 
+static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
+{
+	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
+		return PAGECACHE_TAG_TOWRITE;
+	return PAGECACHE_TAG_DIRTY;
+}
+
 /* blk_plug - block I/O plugging stub */
 struct blk_plug {
 	int dummy;
@@ -1519,7 +1572,14 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define folio_zero_range(f, s, l)		do { } while (0)
 #define folio_mark_uptodate(f)			do { } while (0)
 #define folio_next_index(f)			((f)->index + 1)
+#define folio_next_pos(f)			((loff_t)folio_next_index(f) << PAGE_SHIFT)
 #define folio_mapped(f)				(0)
+
+/*
+ * fgf_set_order - Set the order (size) for folio allocation
+ * U-Boot doesn't support large folios, so this is a no-op stub.
+ */
+#define fgf_set_order(size)			(0)
 #define folio_clear_dirty_for_io(f)		({ (void)(f); 1; })
 #define folio_clear_uptodate(f)			do { } while (0)
 #define folio_batch_release(fb)			do { } while (0)

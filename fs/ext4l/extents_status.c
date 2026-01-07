@@ -1037,7 +1037,7 @@ void ext4_es_cache_extent(struct inode *inode, ext4_lblk_t lblk,
  */
 int ext4_es_lookup_extent(struct inode *inode, ext4_lblk_t lblk,
 			  ext4_lblk_t *next_lblk,
-			  struct extent_status *es)
+			  struct extent_status *es, u64 *m_seqp)
 {
 	struct ext4_es_tree *tree;
 	struct ext4_es_stats *stats;
