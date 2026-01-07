@@ -81,24 +81,19 @@ static int pxe_test_getfile(struct pxe_context *ctx, const char *file_path,
  *
  * This helper checks all the console output lines from loading and displaying
  * the PXE menu, including config file retrieval, include files, background
- * image attempt, and the menu itself.
+ * image attempt, and the menu itself. Note: 'say' messages are now printed
+ * when the label is booted, not during parsing.
  *
  * @uts: Unit test state
- * @say_msg: Expected 'say' message (shown before menu), or NULL if none
  * @error_msg: Expected error message after background image, or NULL if none
  * Return: 0 if OK, -ve on error
  */
-static int pxe_check_menu(struct unit_test_state *uts, const char *say_msg,
-			  const char *error_msg)
+static int pxe_check_menu(struct unit_test_state *uts, const char *error_msg)
 {
 	int i;
 
 	/* Config file retrieval */
 	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
-
-	/* Say message appears before includes are processed */
-	if (say_msg)
-		ut_assert_nextline(say_msg);
 
 	/* Include file retrievals */
 	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
@@ -169,11 +164,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
-	/*
-	 * Verify 'say' keyword printed its message during parsing (quiet
-	 * suppresses file messages)
-	 */
-	ut_assert_nextline("Booting default Linux kernel");
+	/* Verify no console output during parsing (say is printed on boot) */
 	ut_assert_console_end();
 
 	/* Verify menu properties */
@@ -198,6 +189,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdtdir);
 	ut_asserteq_str("/dtb/overlay1.dtbo /dtb/overlay2.dtbo",
 			label->fdtoverlays);
+	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
 	ut_asserteq(0, label->localboot);
@@ -217,6 +209,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdt);
 	ut_asserteq_str("/dtb/", label->fdtdir);
 	ut_assertnull(label->fdtoverlays);
+	ut_assertnull(label->say);
 	ut_asserteq(3, label->ipappend);
 	ut_asserteq(0, label->attempted);
 	ut_asserteq(0, label->localboot);
@@ -236,6 +229,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_assertnull(label->fdtoverlays);
+	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
 	ut_asserteq(1, label->localboot);
@@ -255,6 +249,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_assertnull(label->fdtoverlays);
+	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
 	ut_asserteq(0, label->localboot);
@@ -337,9 +332,9 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
-	/* Check menu output */
-	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
-	ut_assert_nextline("Enter choice: 1:\tBoot Linux");
+	/* Skip menu output and find the first label boot attempt */
+	ut_assert_skip_to_line("Enter choice: Booting default Linux kernel");
+	ut_assert_nextline("1:\tBoot Linux");
 
 	/* Verify files were loaded in order */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
@@ -646,9 +641,8 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
-	/* Consume parsing output */
+	/* Consume parsing output (say message is printed on boot, not parsing) */
 	ut_assert_nextline("Retrieving file: %s", cfg_path);
-	ut_assert_nextline("Booting default Linux kernel");
 	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
 	for (i = 3; i <= 16; i++)
 		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
@@ -842,7 +836,7 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 				 PXE_LOAD_ADDR, cfg_path));
 
 	/* Check menu output */
-	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
+	ut_assertok(pxe_check_menu(uts, NULL));
 	ut_assert_nextline("Enter choice: 2:\tRescue Mode");
 
 	/* Rescue label boot attempt */
@@ -962,7 +956,7 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 				 PXE_LOAD_ADDR, cfg_path));
 
 	/* Check menu output - say message is from default label */
-	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
+	ut_assertok(pxe_check_menu(uts, NULL));
 
 	/* Should boot 'local' label instead of default 'linux' */
 	ut_assert_nextline("Enter choice: 3:\tLocal Boot");
@@ -982,9 +976,11 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 				 PXE_LOAD_ADDR, cfg_path));
 
 	/* Check menu with error message before it */
-	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel",
-				   "Missing override pxe label: nonexistent"));
-	ut_assert_nextline("Enter choice: 1:\tBoot Linux");
+	ut_assertok(pxe_check_menu(uts, "Missing override pxe label: nonexistent"));
+
+	/* Say message is printed when label is selected (after "Enter choice:") */
+	ut_assert_nextline("Enter choice: Booting default Linux kernel");
+	ut_assert_nextline("1:\tBoot Linux");
 
 	/* Default label boot attempt - FDT/overlays loaded before append */
 	ut_assert_nextline("Retrieving file: /vmlinuz");

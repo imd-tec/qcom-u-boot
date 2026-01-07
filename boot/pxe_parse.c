@@ -121,6 +121,7 @@ void label_destroy(struct pxe_label *label)
 	free(label->fdt);
 	free(label->fdtdir);
 	free(label->fdtoverlays);
+	free(label->say);
 	free(label);
 }
 
@@ -553,8 +554,9 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			char *p = strchr(s, '\n');
 
 			if (p) {
-				printf("%.*s\n", (int)(p - *c) - 1, *c + 1);
-
+				label->say = strndup(*c + 1, p - *c - 1);
+				if (!label->say)
+					return -ENOMEM;
 				*c = p;
 			}
 			break;

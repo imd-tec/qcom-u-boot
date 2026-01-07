@@ -39,6 +39,7 @@
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
  * @fdtoverlays: space-separated list of paths of FDT overlays to apply
+ * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
  * @attempted: 0 if we haven't tried to boot this label, 1 if we have
  * @localboot: 1 if this label specified 'localboot', 0 otherwise
@@ -58,6 +59,7 @@ struct pxe_label {
 	char *fdt;
 	char *fdtdir;
 	char *fdtoverlays;
+	char *say;
 	int ipappend;
 	int attempted;
 	int localboot;

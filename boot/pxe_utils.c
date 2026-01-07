@@ -812,6 +812,9 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	char ip_str[68] = "";
 	int ret;
 
+	if (label->say)
+		printf("%s\n", label->say);
+
 	label_print(label);
 
 	label->attempted = 1;
@@ -897,8 +900,6 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	return 1;
 }
 
-/*
- */
 void destroy_pxe_menu(struct pxe_menu *cfg)
 {
 	struct list_head *pos, *n;
