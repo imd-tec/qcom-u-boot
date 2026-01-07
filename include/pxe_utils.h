@@ -120,6 +120,7 @@ typedef int (*pxe_getfile_func)(struct pxe_context *ctx, const char *file_path,
  * @use_fallback: TRUE : use "fallback" option as default, FALSE : use
  *	"default" option as default
  * @no_boot: Stop show of actually booting and just return
+ * @quiet: Suppress "Retrieving file" messages when loading files
  * @bflow: Bootflow being booted, or NULL if none (must be valid if @no_boot)
  * @cfg: PXE menu (NULL if not yet probed)
  *
@@ -157,6 +158,7 @@ struct pxe_context {
 	bool use_ipv6;
 	bool use_fallback;
 	bool no_boot;
+	bool quiet;
 	struct bootflow *bflow;
 	struct pxe_menu *cfg;
 

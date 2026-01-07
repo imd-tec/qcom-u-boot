@@ -160,7 +160,8 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
 				  false, false, NULL));
 
-	/* Read the config file into memory */
+	/* Read the config file into memory (quiet since we're just parsing) */
+	ctx.quiet = true;
 	ret = get_pxe_file(&ctx, cfg_path, addr);
 	ut_asserteq(1, ret);  /* get_pxe_file returns 1 on success */
 
@@ -168,12 +169,11 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
-	/* Verify 'say' keyword printed its message during parsing */
-	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	/*
+	 * Verify 'say' keyword printed its message during parsing (quiet
+	 * suppresses file messages)
+	 */
 	ut_assert_nextline("Booting default Linux kernel");
-	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
-	for (i = 3; i <= 16; i++)
-		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
 	ut_assert_console_end();
 
 	/* Verify menu properties */

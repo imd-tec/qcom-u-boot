@@ -124,7 +124,8 @@ static int get_relfile(struct pxe_context *ctx, const char *file_path,
 
 	strcat(relfile, file_path);
 
-	printf("Retrieving file: %s\n", relfile);
+	if (!ctx->quiet)
+		printf("Retrieving file: %s\n", relfile);
 
 	ret = ctx->getfile(ctx, relfile, addrp, align, type, &size);
 	if (ret < 0)
