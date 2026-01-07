@@ -678,6 +678,113 @@ static int generate_localboot(struct pxe_label *label)
 	return 0;
 }
 
+int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
+{
+	char fit_addr[200];
+	const char *conf_fdt_str;
+	ulong kern_addr = 0;
+	ulong initrd_addr = 0;
+	ulong initrd_size = 0;
+	ulong kern_size;
+	ulong conf_fdt = 0;
+	char initrd_str[28] = "";
+	int ret;
+
+	if (label->localboot) {
+		if (label->localboot_val >= 0) {
+			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT)) {
+				ret = generate_localboot(label);
+				if (ret)
+					return ret;
+			}
+		}
+		/* negative localboot_val means skip loading */
+		if (!label->kernel)
+			return 0;
+	}
+
+	if (!label->kernel) {
+		printf("No kernel given, skipping %s\n", label->name);
+		return -ENOENT;
+	}
+
+	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
+				(enum bootflow_img_t)IH_TYPE_KERNEL,
+				&kern_addr, &kern_size) < 0) {
+		printf("Skipping %s for failure retrieving kernel\n",
+		       label->name);
+		return -EIO;
+	}
+
+	/* for FIT, append the configuration identifier */
+	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", kern_addr,
+		 label->config ? label->config : "");
+
+	/* For FIT, the label can be identical to kernel one */
+	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
+		initrd_addr = kern_addr;
+	} else if (label->initrd) {
+		ulong size;
+
+		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
+					  SZ_2M,
+					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
+					  &initrd_addr, &size);
+		if (ret < 0) {
+			printf("Skipping %s for failure retrieving initrd\n",
+			       label->name);
+			return -EIO;
+		}
+		initrd_size = size;
+		size = snprintf(initrd_str, sizeof(initrd_str), "%lx:%lx",
+				initrd_addr, size);
+		if (size >= sizeof(initrd_str))
+			return -ENOSPC;
+	}
+
+	conf_fdt_str = env_get("fdt_addr_r");
+	ret = label_process_fdt(ctx, label, fit_addr, &conf_fdt_str);
+	if (ret)
+		return ret;
+
+	if (!conf_fdt_str)
+		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
+	if (conf_fdt_str)
+		conf_fdt = hextoul(conf_fdt_str, NULL);
+	log_debug("conf_fdt %lx\n", conf_fdt);
+
+	if (ctx->bflow && conf_fdt_str)
+		ctx->bflow->fdt_addr = conf_fdt;
+
+	/* Save the loaded info to context */
+	ctx->label = label;
+	ctx->kern_addr_str = strdup(fit_addr);
+	ctx->kern_addr = kern_addr;
+	ctx->kern_size = kern_size;
+	if (initrd_addr) {
+		ctx->initrd_addr = initrd_addr;
+		ctx->initrd_size = initrd_size;
+		ctx->initrd_str = strdup(initrd_str);
+	}
+	ctx->conf_fdt_str = strdup(conf_fdt_str);
+	ctx->conf_fdt = conf_fdt;
+
+	log_debug("Loaded label '%s':\n", label->name);
+	log_debug("- kern_addr_str '%s' conf_fdt_str '%s' conf_fdt %lx\n",
+		  ctx->kern_addr_str, ctx->conf_fdt_str, conf_fdt);
+	if (initrd_addr) {
+		log_debug("- initrd addr %lx filesize %lx str '%s'\n",
+			  ctx->initrd_addr, ctx->initrd_size, ctx->initrd_str);
+	}
+	if (!ctx->kern_addr_str || (conf_fdt_str && !ctx->conf_fdt_str) ||
+	    (initrd_addr && !ctx->initrd_str)) {
+		printf("malloc fail (saving label)\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 /**
  * label_boot() - Boot according to the contents of a pxe_label
  *
@@ -700,17 +807,8 @@ static int generate_localboot(struct pxe_label *label)
  */
 static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 {
-	char *kern_addr_str;
-	ulong kern_addr = 0;
-	ulong initrd_addr = 0;
-	ulong initrd_size = 0;
-	char initrd_str[28] = "";
 	char mac_str[29] = "";
 	char ip_str[68] = "";
-	char fit_addr[200];
-	const char *conf_fdt_str;
-	ulong conf_fdt = 0;
-	ulong kern_size;
 	int ret;
 
 	label_print(label);
@@ -731,45 +829,10 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 		}
 	}
 
-	if (!label->kernel) {
-		printf("No kernel given, skipping %s\n",
-		       label->name);
-		return 1;
-	}
-
-	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
-				(enum bootflow_img_t)IH_TYPE_KERNEL,
-				&kern_addr, &kern_size) < 0) {
-		printf("Skipping %s for failure retrieving kernel\n",
-		       label->name);
-		return 1;
-	}
-
-	/* for FIT, append the configuration identifier */
-	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", kern_addr,
-		 label->config ? label->config : "");
-	kern_addr_str = fit_addr;
-
-	/* For FIT, the label can be identical to kernel one */
-	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
-		initrd_addr = kern_addr;
-	} else if (label->initrd) {
-		ulong size;
-		int ret;
-
-		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
-					  SZ_2M,
-					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
-					  &initrd_addr, &size);
-		if (ret < 0) {
-			printf("Skipping %s for failure retrieving initrd\n",
-			       label->name);
-			return 1;
-		}
-		initrd_size = size;
-		size = snprintf(initrd_str, sizeof(initrd_str), "%lx:%lx",
-				initrd_addr, size);
-		if (size >= sizeof(initrd_str))
+	/* Load files if not already loaded */
+	if (!ctx->label) {
+		ret = pxe_load_label(ctx, label);
+		if (ret)
 			return 1;
 	}
 
@@ -815,51 +878,13 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 		printf("append: %s\n", finalbootargs);
 	}
 
-	conf_fdt_str = env_get("fdt_addr_r");
-	ret = label_process_fdt(ctx, label, kern_addr_str, &conf_fdt_str);
-	if (ret)
-		return ret;
-
-	if (!conf_fdt_str)
-		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
-	if (conf_fdt_str)
-		conf_fdt = hextoul(conf_fdt_str, NULL);
-	log_debug("conf_fdt %lx\n", conf_fdt);
-
-	if (ctx->bflow && conf_fdt_str)
-		ctx->bflow->fdt_addr = conf_fdt;
-
-	if (IS_ENABLED(CONFIG_BOOTSTD_FULL) && ctx->no_boot) {
-		ctx->label = label;
-		ctx->kern_addr_str = strdup(kern_addr_str);
-		ctx->kern_addr = kern_addr;
-		ctx->kern_size = kern_size;
-		if (initrd_addr) {
-			ctx->initrd_addr = initrd_addr;
-			ctx->initrd_size = initrd_size;
-			ctx->initrd_str = strdup(initrd_str);
-		}
-		ctx->conf_fdt_str = strdup(conf_fdt_str);
-		ctx->conf_fdt = conf_fdt;
-		log_debug("Saving label '%s':\n", label->name);
-		log_debug("- kern_addr_str '%s' conf_fdt_str '%s' conf_fdt %lx\n",
-			  ctx->kern_addr_str, ctx->conf_fdt_str, conf_fdt);
-		if (initrd_addr) {
-			log_debug("- initrd addr %lx filesize %lx str '%s'\n",
-				  ctx->initrd_addr, ctx->initrd_size,
-				  ctx->initrd_str);
-		}
-		if (!ctx->kern_addr_str || (conf_fdt_str && !ctx->conf_fdt_str) ||
-		    (initrd_addr && !ctx->initrd_str)) {
-			printf("malloc fail (saving label)\n");
-			return 1;
-		}
+	if (IS_ENABLED(CONFIG_BOOTSTD_FULL) && ctx->no_boot)
 		return 0;
-	}
 
-	label_run_boot(ctx, label, kern_addr_str, kern_addr, kern_size,
-		       initrd_addr, initrd_size, initrd_str, conf_fdt_str,
-		       conf_fdt);
+	label_run_boot(ctx, label, ctx->kern_addr_str, ctx->kern_addr,
+		       ctx->kern_size, ctx->initrd_addr, ctx->initrd_size,
+		       ctx->initrd_str, ctx->conf_fdt_str, ctx->conf_fdt);
+	/* ignore the error value since we are going to fail anyway */
 
 	/*
 	 * Sandbox cannot boot a real kernel, so stop after the first attempt.
@@ -1017,10 +1042,42 @@ static void boot_unattempted_labels(struct pxe_context *ctx,
 	}
 }
 
-void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
+int pxe_select_label(struct pxe_menu *cfg, bool prompt,
+		     struct pxe_label **labelp)
 {
 	void *choice;
 	struct menu *m;
+	int err;
+
+	if (prompt)
+		cfg->prompt = 1;
+
+	m = pxe_menu_to_menu(cfg);
+	if (!m)
+		return -ENOMEM;
+
+	err = menu_get_choice(m, &choice);
+	menu_destroy(m);
+
+	/*
+	 * err == 1 means we got a choice back from menu_get_choice.
+	 *
+	 * err == -ENOENT if the menu was setup to select the default but no
+	 * default was set.
+	 *
+	 * otherwise, the user interrupted or there was some other error.
+	 */
+	if (err == 1) {
+		*labelp = choice;
+		return 0;
+	}
+
+	return err == -ENOENT ? -ENOENT : -ECANCELED;
+}
+
+void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
+{
+	struct pxe_label *label;
 	int err;
 
 	if (IS_ENABLED(CONFIG_CMD_BMP)) {
@@ -1044,15 +1101,10 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
 		}
 	}
 
-	m = pxe_menu_to_menu(cfg);
-	if (!m)
-		return;
-
-	err = menu_get_choice(m, &choice);
-	menu_destroy(m);
+	err = pxe_select_label(cfg, false, &label);
 
 	/*
-	 * err == 1 means we got a choice back from menu_get_choice.
+	 * err == 0 means we got a choice back.
 	 *
 	 * err == -ENOENT if the menu was setup to select the default but no
 	 * default was set. in that case, we should continue trying to boot
@@ -1062,8 +1114,8 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
 	 * we give up.
 	 */
 
-	if (err == 1) {
-		err = label_boot(ctx, choice);
+	if (!err) {
+		err = label_boot(ctx, label);
 		log_debug("label_boot() returns %d\n", err);
 		if (!err)
 			return;

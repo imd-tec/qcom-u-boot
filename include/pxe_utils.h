@@ -358,6 +358,35 @@ int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
  */
 int pxe_do_boot(struct pxe_context *ctx);
 
+/**
+ * pxe_select_label() - Select a label from a parsed menu
+ *
+ * Uses the menu system to get the user's choice or the default.
+ * Does NOT load any files or attempt to boot.
+ *
+ * @cfg: Parsed PXE menu
+ * @prompt: Force user prompt regardless of timeout
+ * @labelp: Returns selected label (not a copy, points into cfg)
+ * Return: 0 on success, -ENOMEM if out of memory, -ENOENT if no default set,
+ *	-ECANCELED if user cancelled
+ */
+int pxe_select_label(struct pxe_menu *cfg, bool prompt,
+		     struct pxe_label **labelp);
+
+/**
+ * pxe_load_label() - Load kernel/initrd/FDT for a label
+ *
+ * Loads the files specified in the label into memory and saves the
+ * addresses and sizes in @ctx. Call this only when ready to boot or
+ * inspect loaded files.
+ *
+ * @ctx: PXE context with getfile callback
+ * @label: Label whose files to load
+ * Return: 0 on success, -ENOENT if no kernel specified, -EIO if file
+ *	retrieval failed, -ENOMEM if out of memory
+ */
+int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label);
+
 /*
  * Entry point for parsing a menu file. nest_level indicates how many times
  * we've nested in includes.  It will be 1 for the top level menu file.

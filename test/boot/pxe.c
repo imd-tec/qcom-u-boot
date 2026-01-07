@@ -145,11 +145,11 @@ static int pxe_check_fdtdir(struct unit_test_state *uts, const char *dtb_name)
 	ut_assert_nextline("2:\tTest soc/board construction");
 	ut_assert_nextline("Enter choice: 1:\tTest fdtfile env var");
 
-	/* Boot file retrieval */
+	/* Boot file retrieval - FDT/overlays loaded before append is printed */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
-	ut_assert_nextline("append: console=ttyS0");
 	ut_assert_nextline("Retrieving file: /dtb/%s", dtb_name);
 	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_nextline("append: console=ttyS0");
 
 	/* Boot fails on sandbox */
 	ut_assert_nextline("Unrecognized zImage");
@@ -375,10 +375,10 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 	/* Verify files were loaded in order */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /initrd.img");
-	ut_assert_nextline("append: root=/dev/sda1 quiet");
 	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
 	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
 	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("append: root=/dev/sda1 quiet");
 
 	/* Boot fails on sandbox */
 	ut_assert_nextline("Unrecognized zImage");
@@ -711,6 +711,13 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assert_nextline("Retrieving file: /vmlinuz-rescue");
 
 	/*
+	 * Rescue label has fdtdir=/dtb/ but no fdtfile is set, so it tries
+	 * to load /dtb/.dtb which fails. FDT is loaded before append.
+	 */
+	ut_assert_nextline("Retrieving file: /dtb/.dtb");
+	ut_assert_nextline("Skipping fdtdir /dtb/ for failure retrieving dts");
+
+	/*
 	 * Verify ipappend output - should have:
 	 * - original append: "single"
 	 * - ip= string from ipappend bit 0x1
@@ -719,12 +726,6 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assert_nextlinen("append: single ip=192.168.1.10:192.168.1.1:"
 			    "192.168.1.254:255.255.255.0 BOOTIF=01-");
 
-	/*
-	 * Rescue label has fdtdir=/dtb/ but no fdtfile is set, so it tries
-	 * to load /dtb/.dtb which fails. Boot still proceeds without FDT.
-	 */
-	ut_assert_nextline("Retrieving file: /dtb/.dtb");
-	ut_assert_nextline("Skipping fdtdir /dtb/ for failure retrieving dts");
 	ut_assert_nextline("Unrecognized zImage");
 	ut_assert_console_end();
 
@@ -847,13 +848,13 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 				   "Missing override pxe label: nonexistent"));
 	ut_assert_nextline("Enter choice: 1:\tBoot Linux");
 
-	/* Default label boot attempt */
+	/* Default label boot attempt - FDT/overlays loaded before append */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /initrd.img");
-	ut_assert_nextline("append: root=/dev/sda1 quiet");
 	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
 	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
 	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("append: root=/dev/sda1 quiet");
 	ut_assert_nextline("Unrecognized zImage");
 	ut_assert_console_end();
 
