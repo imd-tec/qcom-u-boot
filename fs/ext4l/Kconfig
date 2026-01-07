@@ -49,4 +49,32 @@ config EXT4L_PRINT
 	  Messages are always recorded and can be retrieved programmatically;
 	  this option controls whether they are also printed.
 
+config EXT4_RESIZE
+	bool "Enable ext4 online resize support"
+	depends on FS_EXT4L
+	help
+	  Enable support for online filesystem resize. This allows
+	  growing an ext4 filesystem while it is mounted.
+
+	  This adds about 10K to the image size. Not needed for U-Boot
+	  in most cases. If unsure, say N.
+
+config EXT4_MIGRATE
+	bool "Enable ext4 extent migration support"
+	depends on FS_EXT4L
+	help
+	  Enable support for migrating inodes between indirect block
+	  mapping and extent mapping formats.
+
+	  This adds about 2.5K to the image size. Not needed for U-Boot
+	  in most cases. If unsure, say N.
+
+config EXT4_MOVE_EXTENT
+	bool "Enable ext4 move extent ioctl support"
+	depends on FS_EXT4L
+	help
+	  Enable support for the EXT4_IOC_MOVE_EXT ioctl which moves
+	  extents between files.
+
+	  This adds about 1.5K to the image size. Not needed for U-Boot.
 	  If unsure, say N.
