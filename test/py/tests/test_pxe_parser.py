@@ -84,8 +84,11 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
             - initrd: Initrd path (optional)
             - append: Kernel arguments (optional)
             - fdt: Device tree path (optional)
+            - devicetree: Device tree path (alias for fdt)
             - fdtdir: Device tree directory (optional)
+            - devicetreedir: Device tree directory (alias for fdtdir)
             - fdtoverlays: Device tree overlays (optional)
+            - devicetree-overlay: Device tree overlays (alias)
             - localboot: Local boot flag (optional)
             - ipappend: IP append flags (optional)
             - fit: FIT config path (optional)
@@ -145,10 +148,16 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
                 fd.write(f"    append {label['append']}\n")
             if 'fdt' in label:
                 fd.write(f"    fdt {label['fdt']}\n")
+            if 'devicetree' in label:
+                fd.write(f"    devicetree {label['devicetree']}\n")
             if 'fdtdir' in label:
                 fd.write(f"    fdtdir {label['fdtdir']}\n")
+            if 'devicetreedir' in label:
+                fd.write(f"    devicetreedir {label['devicetreedir']}\n")
             if 'fdtoverlays' in label:
                 fd.write(f"    fdtoverlays {label['fdtoverlays']}\n")
+            if 'devicetree-overlay' in label:
+                fd.write(f"    devicetree-overlay {label['devicetree-overlay']}\n")
             if 'localboot' in label:
                 fd.write(f"    localboot {label['localboot']}\n")
             if 'ipappend' in label:
@@ -181,8 +190,9 @@ def pxe_image(u_boot_config):
             'kernel': '/vmlinuz',
             'initrd': '/initrd.img',
             'append': 'root=/dev/sda1 quiet',
-            'fdt': '/dtb/board.dtb',
-            'fdtoverlays': '/dtb/overlay1.dtbo /dtb/overlay2.dtbo',
+            # Use aliases to test devicetree/devicetree-overlay keywords
+            'devicetree': '/dtb/board.dtb',
+            'devicetree-overlay': '/dtb/overlay1.dtbo /dtb/overlay2.dtbo',
             'kaslrseed': True,
             'say': 'Booting default Linux kernel',
             'default': True,
@@ -192,7 +202,7 @@ def pxe_image(u_boot_config):
             'menu': 'Rescue Mode',
             'linux': '/vmlinuz-rescue',  # test 'linux' keyword
             'append': 'single',
-            'fdtdir': '/dtb/',
+            'devicetreedir': '/dtb/',  # test alias for fdtdir
             'ipappend': '3',
         },
         {
