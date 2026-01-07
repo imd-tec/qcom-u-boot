@@ -84,6 +84,17 @@ def add_main_commands(subparsers):
         'next-set', help='Show next set of commits to cherry-pick')
     next_set.add_argument('source', help='Source branch name')
 
+    pick_cmd = subparsers.add_parser('pick',
+                                      help='Cherry-pick commits ad-hoc')
+    pick_cmd.add_argument('commits', help='Commit range (a..b) or merge commit')
+    pick_cmd.add_argument('-b', '--branch', help='Branch name to create')
+    pick_cmd.add_argument('-p', '--push', action='store_true',
+                          help='Push branch and create GitLab MR')
+    pick_cmd.add_argument('-r', '--remote', default='ci',
+                          help='Git remote for push (default: ci)')
+    pick_cmd.add_argument('-t', '--target', default='master',
+                          help='Target branch for MR (default: master)')
+
     review_cmd = subparsers.add_parser(
         'review', help='Check open MRs and handle comments')
     review_cmd.add_argument('-r', '--remote', default='ci',

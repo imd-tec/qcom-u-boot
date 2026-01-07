@@ -35,6 +35,10 @@ For fully automated workflows, use ``poll`` which runs ``step`` in a loop. The
 This allows hands-off operation: just run ``poll`` and approve/merge MRs in
 GitLab as they come in.
 
+For ad-hoc cherry-picks without tracking, use the ``pick`` command. This
+supports commit ranges (``hash1..hash2``) or merge commits, and doesn't require
+a registered source branch. See `Ad-hoc Cherry-picking`_ for details.
+
 Commit Selection
 ----------------
 
@@ -315,6 +319,51 @@ On successful cherry-pick, an entry is appended to ``.pickman-history`` with:
 
 This file is committed automatically and included in the MR description when
 using ``-p``.
+
+Ad-hoc Cherry-picking
+~~~~~~~~~~~~~~~~~~~~~
+
+To cherry-pick commits without using a registered source branch::
+
+    ./tools/pickman/pickman pick <commit-spec>
+
+The ``pick`` command supports three input formats:
+
+1. **Commit range**: Cherry-pick all commits in a range::
+
+       ./tools/pickman/pickman pick abc123..def456
+
+2. **Merge commit**: Cherry-pick all commits that were part of a merge::
+
+       ./tools/pickman/pickman pick <merge-hash>
+
+   This extracts all commits from the merged branch (excluding the merge
+   commit itself) and cherry-picks them.
+
+3. **Single commit**: Cherry-pick a single non-merge commit::
+
+       ./tools/pickman/pickman pick <commit-hash>
+
+Like ``apply``, this uses a Claude agent to handle the cherry-picks and resolve
+simple conflicts. However, unlike ``apply``:
+
+- No source branch registration is required
+- Commits are not tracked in the database
+- No automatic position updates after completion
+
+This is useful for one-off cherry-picks or when you need to quickly grab
+specific commits without setting up full tracking.
+
+To push the branch and create a GitLab merge request::
+
+    ./tools/pickman/pickman pick abc123..def456 -p
+
+Options for the pick command:
+
+- ``-b, --branch``: Branch name to create (default: pick-<hash>)
+- ``-p, --push``: Push branch and create GitLab MR
+- ``-r, --remote``: Git remote for push (default: ci)
+- ``-t, --target``: Target branch for MR (default: master)
 
 After successfully applying commits, update the database to record progress::
 

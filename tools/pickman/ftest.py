@@ -3628,5 +3628,323 @@ class TestCheckAlreadyApplied(unittest.TestCase):
         self.assertEqual(new_commits, self.single_commit)
 
 
+class TestGetCommitsForPick(unittest.TestCase):
+    """Tests for get_commits_for_pick function."""
+
+    @mock.patch('pickman.control.run_git')
+    def test_commit_range(self, mock_run_git):
+        """Test parsing a commit range."""
+        mock_run_git.return_value = (
+            'aaa111|aaa111a|Author1|First commit\n'
+            'bbb222|bbb222b|Author2|Second commit'
+        )
+
+        commits, error = control.get_commits_for_pick('abc123..def456')
+
+        self.assertIsNone(error)
+        self.assertEqual(len(commits), 2)
+        self.assertEqual(commits[0].hash, 'aaa111')
+        self.assertEqual(commits[0].chash, 'aaa111a')
+        self.assertEqual(commits[0].subject, 'First commit')
+        self.assertEqual(commits[1].hash, 'bbb222')
+        mock_run_git.assert_called_with([
+            'log', '--reverse', '--format=%H|%h|%an|%s', 'abc123..def456'
+        ])
+
+    @mock.patch('pickman.control.run_git')
+    def test_commit_range_empty(self, mock_run_git):
+        """Test empty commit range returns error."""
+        mock_run_git.return_value = ''
+
+        commits, error = control.get_commits_for_pick('abc123..abc123')
+
+        self.assertEqual(commits, [])
+        self.assertIn('No commits found', error)
+
+    @mock.patch('pickman.control.run_git')
+    def test_commit_range_invalid(self, mock_run_git):
+        """Test invalid commit range returns error."""
+        mock_run_git.side_effect = Exception('bad revision')
+
+        commits, error = control.get_commits_for_pick('invalid..range')
+
+        self.assertIsNone(commits)
+        self.assertIn('Invalid commit range', error)
+
+    @mock.patch('pickman.control.run_git')
+    def test_single_commit_non_merge(self, mock_run_git):
+        """Test single non-merge commit returns just that commit."""
+        def git_handler(args):
+            if 'rev-parse' in args:
+                return 'parent123'  # Single parent = not a merge
+            return 'abc123full|abc123|Author|Single commit'
+
+        mock_run_git.side_effect = git_handler
+
+        commits, error = control.get_commits_for_pick('abc123')
+
+        self.assertIsNone(error)
+        self.assertEqual(len(commits), 1)
+        self.assertEqual(commits[0].hash, 'abc123full')
+        self.assertEqual(commits[0].subject, 'Single commit')
+
+    @mock.patch('pickman.control.run_git')
+    def test_merge_commit(self, mock_run_git):
+        """Test merge commit returns all child commits."""
+        def git_handler(args):
+            if 'rev-parse' in args:
+                # Two parents = merge commit
+                return 'parent1\nparent2'
+            if '^parent1' in args:
+                return (
+                    'ccc333|ccc333c|Author1|Child commit 1\n'
+                    'ddd444|ddd444d|Author2|Child commit 2'
+                )
+            return ''
+
+        mock_run_git.side_effect = git_handler
+
+        commits, error = control.get_commits_for_pick('merge123')
+
+        self.assertIsNone(error)
+        self.assertEqual(len(commits), 2)
+        self.assertEqual(commits[0].hash, 'ccc333')
+        self.assertEqual(commits[1].hash, 'ddd444')
+
+    @mock.patch('pickman.control.run_git')
+    def test_merge_commit_empty(self, mock_run_git):
+        """Test merge commit with no children returns error."""
+        def git_handler(args):
+            if 'rev-parse' in args:
+                return 'parent1\nparent2'
+            return ''
+
+        mock_run_git.side_effect = git_handler
+
+        commits, error = control.get_commits_for_pick('merge123')
+
+        self.assertEqual(commits, [])
+        self.assertIn('No commits found in merge', error)
+
+    @mock.patch('pickman.control.run_git')
+    def test_invalid_single_commit(self, mock_run_git):
+        """Test invalid single commit returns error."""
+        mock_run_git.side_effect = Exception('unknown revision')
+
+        commits, error = control.get_commits_for_pick('badcommit')
+
+        self.assertIsNone(commits)
+        self.assertIn('Invalid commit', error)
+
+    @mock.patch('pickman.control.run_git')
+    def test_subject_with_separator(self, mock_run_git):
+        """Test commit subject containing pipe character."""
+        mock_run_git.return_value = 'aaa111|aaa111a|Author|Subject|with|pipes'
+
+        commits, error = control.get_commits_for_pick('abc..def')
+
+        self.assertIsNone(error)
+        self.assertEqual(commits[0].subject, 'Subject|with|pipes')
+
+
+class TestParsePick(unittest.TestCase):
+    """Tests for parsing pick command arguments."""
+
+    def test_parse_pick_basic(self):
+        """Test parsing basic pick command."""
+        args = pickman.parse_args(['pick', 'abc123..def456'])
+        self.assertEqual(args.cmd, 'pick')
+        self.assertEqual(args.commits, 'abc123..def456')
+        self.assertIsNone(args.branch)
+        self.assertFalse(args.push)
+
+    def test_parse_pick_with_branch(self):
+        """Test parsing pick command with branch."""
+        args = pickman.parse_args(['pick', 'abc123', '-b', 'my-branch'])
+        self.assertEqual(args.commits, 'abc123')
+        self.assertEqual(args.branch, 'my-branch')
+
+    def test_parse_pick_with_push(self):
+        """Test parsing pick command with push options."""
+        args = pickman.parse_args([
+            'pick', 'abc123..def456', '-p', '-r', 'origin', '-t', 'main'
+        ])
+        self.assertTrue(args.push)
+        self.assertEqual(args.remote, 'origin')
+        self.assertEqual(args.target, 'main')
+
+
+class TestDoPick(unittest.TestCase):
+    """Tests for do_pick function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_pick_error(self):
+        """Test do_pick with invalid commit spec."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            args = argparse.Namespace(commits='invalid..range', branch=None,
+                                      push=False)
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(None, 'Invalid commit')):
+                ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_pick_no_commits(self):
+        """Test do_pick with empty commit range."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            args = argparse.Namespace(commits='abc..abc', branch=None,
+                                      push=False)
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=([], None)):
+                ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_pick_success(self):
+        """Test do_pick with successful cherry-pick."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            commits = [control.CommitInfo('aaa111', 'aaa111a', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(commits='abc..def', branch=None,
+                                      push=False)
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(commits, None)):
+                with mock.patch.object(control, 'run_git',
+                                       return_value='main'):
+                    with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                           return_value=(True, 'log')):
+                        ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_pick_with_custom_branch(self):
+        """Test do_pick with custom branch name."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            commits = [control.CommitInfo('bbb222', 'bbb222b', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(commits='abc..def', branch='my-branch',
+                                      push=False)
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(commits, None)):
+                with mock.patch.object(control, 'run_git',
+                                       return_value='main'):
+                    with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                           return_value=(True, 'log')) as mock_agent:
+                        ret = control.do_pick(args, dbs)
+
+            # Verify agent was called with correct branch name
+            call_args = mock_agent.call_args
+            self.assertEqual(call_args[0][2], 'my-branch')
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_pick_with_push(self):
+        """Test do_pick with push enabled."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            commits = [control.CommitInfo('ccc333', 'ccc333c', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(commits='abc..def', branch=None,
+                                      push=True, remote='origin', target='main')
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(commits, None)):
+                with mock.patch.object(control, 'run_git',
+                                       return_value='main'):
+                    with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                           return_value=(True, 'log')):
+                        with mock.patch.object(gitlab, 'push_and_create_mr',
+                                               return_value='https://mr/url'):
+                            ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_pick_agent_fails(self):
+        """Test do_pick when agent fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            commits = [control.CommitInfo('ddd444', 'ddd444d', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(commits='abc..def', branch=None,
+                                      push=False)
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(commits, None)):
+                with mock.patch.object(control, 'run_git',
+                                       return_value='main'):
+                    with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                           return_value=(False, 'error log')):
+                        ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_pick_agent_aborts(self):
+        """Test do_pick when agent aborts and branch doesn't exist."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            commits = [control.CommitInfo('eee555', 'eee555e', 'Test commit',
+                                          'Author')]
+            args = argparse.Namespace(commits='abc..def', branch=None,
+                                      push=False)
+
+            def run_git_handler(args):
+                if '--verify' in args:
+                    raise Exception('branch not found')
+                return 'main'
+
+            with mock.patch.object(control, 'get_commits_for_pick',
+                                   return_value=(commits, None)):
+                with mock.patch.object(control, 'run_git',
+                                       side_effect=run_git_handler):
+                    with mock.patch.object(control.agent, 'cherry_pick_commits',
+                                           return_value=(True, 'aborted')):
+                        ret = control.do_pick(args, dbs)
+
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+
 if __name__ == '__main__':
     unittest.main()
