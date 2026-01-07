@@ -5421,7 +5421,7 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
 		needs_recovery = 0;
 	}
 
-	if (!test_opt(sb, NO_MBCACHE)) {
+	if (!test_opt(sb, NO_MBCACHE) && IS_ENABLED(CONFIG_EXT4_XATTR)) {
 		sbi->s_ea_block_cache = ext4_xattr_create_cache();
 		if (!sbi->s_ea_block_cache) {
 			ext4_msg(sb, KERN_ERR,

@@ -420,9 +420,11 @@ struct super_block;
 struct buffer_head;
 struct qstr;
 
+#ifdef CONFIG_EXT4_XATTR
 int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 			     struct buffer_head *block_bh, size_t value_len,
 			     bool is_create);
+#endif
 /* ext4_init_security is provided by xattr.h */
 
 /* inode state stubs */

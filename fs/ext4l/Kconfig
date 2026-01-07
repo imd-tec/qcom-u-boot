@@ -78,3 +78,13 @@ config EXT4_MOVE_EXTENT
 
 	  This adds about 1.5K to the image size. Not needed for U-Boot.
 	  If unsure, say N.
+
+config EXT4_XATTR
+	bool "Enable ext4 extended attributes support"
+	depends on FS_EXT4L
+	help
+	  Enable support for extended attributes (xattrs) on ext4
+	  filesystems. This is required for ACLs, security labels,
+	  and user-defined attributes.
+
+	  This adds about 14K to the image size. If unsure, say N.

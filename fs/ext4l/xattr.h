@@ -175,6 +175,7 @@ static inline void ext4_write_unlock_xattr(struct inode *inode, int *save)
 	up_write(&EXT4_I(inode)->xattr_sem);
 }
 
+#ifdef CONFIG_EXT4_XATTR
 extern ssize_t ext4_listxattr(struct dentry *, char *, size_t);
 
 extern int ext4_xattr_get(struct inode *, int, const char *, void *, size_t);
@@ -215,6 +216,88 @@ __xattr_check_inode(struct inode *inode, struct ext4_xattr_ibody_header *header,
 
 #define xattr_check_inode(inode, header, end) \
 	__xattr_check_inode((inode), (header), (end), __func__, __LINE__)
+
+#else /* !CONFIG_EXT4_XATTR */
+
+static inline ssize_t ext4_listxattr(struct dentry *d, char *b, size_t s)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int ext4_xattr_delete_inode(handle_t *handle, struct inode *inode,
+					  struct ext4_xattr_inode_array **array,
+					  int extra_credits)
+{
+	return 0;
+}
+
+static inline void ext4_xattr_inode_array_free(struct ext4_xattr_inode_array *a)
+{
+}
+
+static inline void ext4_evict_ea_inode(struct inode *inode)
+{
+}
+
+#define ext4_xattr_handlers NULL
+
+static inline struct mb_cache *ext4_xattr_create_cache(void)
+{
+	return NULL;
+}
+
+static inline void ext4_xattr_destroy_cache(struct mb_cache *c)
+{
+}
+
+static inline int
+__xattr_check_inode(struct inode *inode, struct ext4_xattr_ibody_header *header,
+		    void *end, const char *function, unsigned int line)
+{
+	return 0;
+}
+
+#define xattr_check_inode(inode, header, end) \
+	__xattr_check_inode((inode), (header), (end), __func__, __LINE__)
+
+static inline int __ext4_xattr_set_credits(struct super_block *sb,
+					   struct inode *inode,
+					   struct buffer_head *block_bh,
+					   size_t value_len, bool is_create)
+{
+	return 0;
+}
+
+static inline int ext4_expand_extra_isize_ea(struct inode *inode,
+					     int new_extra_isize,
+					     struct ext4_inode *raw_inode,
+					     handle_t *handle)
+{
+	return 0;
+}
+
+static inline int ext4_xattr_ibody_find(struct inode *inode,
+					struct ext4_xattr_info *i,
+					struct ext4_xattr_ibody_find *is)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int ext4_xattr_ibody_get(struct inode *inode, int name_index,
+				       const char *name, void *buffer,
+				       size_t buffer_size)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
+				       struct ext4_xattr_info *i,
+				       struct ext4_xattr_ibody_find *is)
+{
+	return -EOPNOTSUPP;
+}
+
+#endif /* CONFIG_EXT4_XATTR */
 
 #ifdef CONFIG_EXT4_FS_SECURITY
 extern int ext4_init_security(handle_t *handle, struct inode *inode,
