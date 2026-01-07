@@ -153,3 +153,14 @@ config EXT4_FS_POSIX_ACL
 
 	  ACLs require extended attributes support (EXT4_XATTR).
 	  If unsure, say N.
+
+config EXT4_FS_SECURITY
+	bool "Enable ext4 security labels"
+	depends on FS_EXT4L && EXT4_XATTR
+	help
+	  Enable security labels support for ext4 filesystems. This
+	  provides an extended attribute handler for file security
+	  labels used by security modules like SELinux.
+
+	  Security labels require extended attributes support (EXT4_XATTR).
+	  If unsure, say N.
