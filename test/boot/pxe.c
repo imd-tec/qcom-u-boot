@@ -79,6 +79,8 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	struct pxe_context ctx;
 	struct pxe_label *label;
 	struct pxe_menu *cfg;
+	char name[16];
+	uint i;
 	int ret;
 
 	ut_assertnonnull(fs_image);
@@ -105,6 +107,8 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assert_nextline("Retrieving file: %s", cfg_path);
 	ut_assert_nextline("Booting default Linux kernel");
 	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
+	for (i = 3; i <= 16; i++)
+		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
 
 	/* Verify menu properties */
 	ut_asserteq_str("Test Boot Menu", cfg->title);
@@ -209,6 +213,13 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq(0, label->localboot);
 	ut_asserteq(0, label->localboot_val);
 	ut_asserteq(0, label->kaslrseed);
+
+	/* Verify labels from nested includes (levels 3-16) - just check names */
+	for (i = 3; i <= 16; i++) {
+		label = list_entry(label->list.next, struct pxe_label, list);
+		snprintf(name, sizeof(name), "level%d", i);
+		ut_asserteq_str(name, label->name);
+	}
 
 	/* Verify no more console output */
 	ut_assert_console_end();

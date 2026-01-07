@@ -166,14 +166,29 @@ def pxe_image(u_boot_config):
 
     cfg_path = create_extlinux_conf(fsh.srcdir, labels, menu_opts)
 
-    # Create an included config file with an additional label
-    extra_path = os.path.join(fsh.srcdir, 'extlinux', 'extra.conf')
-    with open(extra_path, 'w', encoding='ascii') as fd:
-        fd.write("# Included configuration\n")
-        fd.write("label included\n")
-        fd.write("    menu label Included Label\n")
-        fd.write("    kernel /boot/included-kernel\n")
-        fd.write("    append root=/dev/sdb1\n")
+    # Create a chain of 16 nested include files to test MAX_NEST_LEVEL
+    # Level 1 is extlinux.conf, levels 2-16 are extra.conf, nest3.conf, etc.
+    for level in range(2, 17):
+        if level == 2:
+            fname = 'extra.conf'
+            label_name = 'included'
+            label_menu = 'Included Label'
+        else:
+            fname = f'nest{level}.conf'
+            label_name = f'level{level}'
+            label_menu = f'Level {level} Label'
+
+        fpath = os.path.join(fsh.srcdir, 'extlinux', fname)
+        with open(fpath, 'w', encoding='ascii') as fd:
+            fd.write(f"# Level {level} configuration\n")
+            fd.write(f"label {label_name}\n")
+            fd.write(f"    menu label {label_menu}\n")
+            fd.write(f"    kernel /boot/{label_name}-kernel\n")
+            fd.write(f"    append root=/dev/sd{chr(ord('a') + level - 1)}1\n")
+            # Include next level unless we're at level 16
+            if level < 16:
+                next_fname = f'nest{level + 1}.conf'
+                fd.write(f"\ninclude /extlinux/{next_fname}\n")
 
     # Create the filesystem
     fsh.mk_fs()
