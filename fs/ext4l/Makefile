@@ -19,3 +19,4 @@ obj-$(CONFIG_EXT4_XATTR)	+= xattr.o xattr_hurd.o xattr_trusted.o \
 				   xattr_user.o
 obj-$(CONFIG_EXT4_INLINE_DATA)	+= inline.o
 obj-$(CONFIG_EXT4_INDIRECT)	+= indirect.o
+obj-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
