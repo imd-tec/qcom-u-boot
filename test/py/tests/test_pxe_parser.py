@@ -105,6 +105,8 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
                 fd.write(f"    fit {label['fit']}\n")
             if label.get('kaslrseed'):
                 fd.write("    kaslrseed\n")
+            if 'say' in label:
+                fd.write(f"    say {label['say']}\n")
 
     return '/extlinux/extlinux.conf'
 
@@ -126,6 +128,7 @@ def pxe_image(u_boot_config):
             'fdt': '/dtb/board.dtb',
             'fdtoverlays': '/dtb/overlay1.dtbo /dtb/overlay2.dtbo',
             'kaslrseed': True,
+            'say': 'Booting default Linux kernel',
             'default': True,
         },
         {

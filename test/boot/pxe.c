@@ -101,6 +101,10 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	cfg = parse_pxefile(&ctx, addr);
 	ut_assertnonnull(cfg);
 
+	/* Verify 'say' keyword printed its message during parsing */
+	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	ut_assert_nextline("Booting default Linux kernel");
+
 	/* Verify menu properties */
 	ut_asserteq_str("Test Boot Menu", cfg->title);
 	ut_asserteq_str("linux", cfg->default_label);
@@ -185,6 +189,9 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq(0, label->localboot);
 	ut_asserteq(0, label->localboot_val);
 	ut_asserteq(0, label->kaslrseed);
+
+	/* Verify no more console output */
+	ut_assert_console_end();
 
 	/* Clean up */
 	destroy_pxe_menu(cfg);
