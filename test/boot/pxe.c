@@ -104,6 +104,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	/* Verify 'say' keyword printed its message during parsing */
 	ut_assert_nextline("Retrieving file: %s", cfg_path);
 	ut_assert_nextline("Booting default Linux kernel");
+	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
 
 	/* Verify menu properties */
 	ut_asserteq_str("Test Boot Menu", cfg->title);
@@ -180,6 +181,25 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/boot/image.fit", label->kernel);
 	ut_asserteq_str("#config-1", label->config);
 	ut_asserteq_str("console=ttyS0", label->append);
+	ut_assertnull(label->initrd);
+	ut_assertnull(label->fdt);
+	ut_assertnull(label->fdtdir);
+	ut_assertnull(label->fdtoverlays);
+	ut_asserteq(0, label->ipappend);
+	ut_asserteq(0, label->attempted);
+	ut_asserteq(0, label->localboot);
+	ut_asserteq(0, label->localboot_val);
+	ut_asserteq(0, label->kaslrseed);
+
+	/* Verify fifth label: included (from include directive) */
+	label = list_entry(label->list.next, struct pxe_label, list);
+	ut_asserteq_str("", label->num);
+	ut_asserteq_str("included", label->name);
+	ut_asserteq_str("Included Label", label->menu);
+	ut_asserteq_str("/boot/included-kernel", label->kernel_label);
+	ut_asserteq_str("/boot/included-kernel", label->kernel);
+	ut_assertnull(label->config);
+	ut_asserteq_str("root=/dev/sdb1", label->append);
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);

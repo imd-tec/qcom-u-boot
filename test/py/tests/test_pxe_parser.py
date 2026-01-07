@@ -72,8 +72,6 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
             fd.write(f"menu background {menu_opts['background']}\n")
         if 'say' in menu_opts:
             fd.write(f"say {menu_opts['say']}\n")
-        if 'include' in menu_opts:
-            fd.write(f"include {menu_opts['include']}\n")
 
         for label in labels:
             if label.get('default'):
@@ -107,6 +105,10 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
                 fd.write("    kaslrseed\n")
             if 'say' in label:
                 fd.write(f"    say {label['say']}\n")
+
+        # Write include at the end so included labels come after main labels
+        if 'include' in menu_opts:
+            fd.write(f"\ninclude {menu_opts['include']}\n")
 
     return '/extlinux/extlinux.conf'
 
@@ -159,9 +161,19 @@ def pxe_image(u_boot_config):
         'fallback': 'rescue',
         'ontimeout': 'linux',
         'background': '/boot/background.bmp',
+        'include': '/extlinux/extra.conf',
     }
 
     cfg_path = create_extlinux_conf(fsh.srcdir, labels, menu_opts)
+
+    # Create an included config file with an additional label
+    extra_path = os.path.join(fsh.srcdir, 'extlinux', 'extra.conf')
+    with open(extra_path, 'w', encoding='ascii') as fd:
+        fd.write("# Included configuration\n")
+        fd.write("label included\n")
+        fd.write("    menu label Included Label\n")
+        fd.write("    kernel /boot/included-kernel\n")
+        fd.write("    append root=/dev/sdb1\n")
 
     # Create the filesystem
     fsh.mk_fs()
