@@ -19,6 +19,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+#include <div64.h>
 #include <linux/types.h>
 #include <linux/bitops.h>
 #include <vsprintf.h>		/* For panic() */
@@ -28,6 +29,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/list.h>
+#include <linux/log2.h>
 #include <linux/init.h>
 #include <linux/workqueue.h>
 #include <linux/cred.h>
@@ -36,7 +38,6 @@
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
-#include <div64.h>
 
 /*
  * Enable ext4_msg() and other diagnostic macros to pass full messages.
@@ -1458,10 +1459,6 @@ typedef unsigned int projid_t;
 	__ret == __old;				\
 })
 
-/* ilog2 - log base 2 */
-#include <log.h>
-#define ilog2(n) (fls(n) - 1)
-
 /* hash_64 - simple 64-bit hash */
 #define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
 
@@ -2370,10 +2367,6 @@ void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
 #define kvmalloc(size, flags)	kvzalloc(size, flags)
-unsigned long roundup_pow_of_two(unsigned long n);
-
-/* Power of 2 check - declaration for stub.c */
-int is_power_of_2(unsigned long n);
 
 /* Time operations */
 #define ktime_get_ns()			(0ULL)
@@ -2650,9 +2643,6 @@ struct seq_operations {
 
 /* Block layer constants */
 #define BLK_MAX_SEGMENT_SIZE		65536
-
-/* order_base_2 - log2 rounded up */
-#define order_base_2(n)			ilog2(roundup_pow_of_two(n))
 
 /* num_possible_cpus - number of possible CPUs (always 1 in U-Boot) */
 #define num_possible_cpus()		1
