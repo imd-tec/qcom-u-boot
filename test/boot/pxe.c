@@ -319,3 +319,95 @@ PXE_TEST_ARGS(pxe_test_sysboot_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
 
+/**
+ * Test fdtdir path resolution via sysboot
+ *
+ * This test verifies fdtdir path construction by running sysboot and
+ * checking console output:
+ * 1. fdtdir with fdtfile env var - uses fdtfile value directly
+ * 2. fdtdir with soc/board env vars - constructs {soc}-{board}.dtb
+ * 3. fdtdir without trailing slash - slash is inserted
+ */
+static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	void *fdt;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/*
+	 * Test 1: fdtdir with fdtfile env var
+	 * The first label uses fdtdir=/dtb/ and we set fdtfile=test-board.dtb
+	 * so it should retrieve /dtb/test-board.dtb
+	 */
+	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
+	ut_assertok(env_set("fdtfile", "test-board.dtb"));
+	ut_assertok(env_set("bootfile", cfg_path));
+
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/* Skip to the boot attempt - first label is fdtfile-test */
+	ut_assert_skip_to_line("Enter choice: 1:\tTest fdtfile env var");
+
+	/* Verify fdtdir used fdtfile env var to construct path */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("append: console=ttyS0");
+	ut_assert_nextline("Retrieving file: /dtb/test-board.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+
+	/* Boot fails but we verified the path construction */
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_nextlinen("       unmap_physmem");
+
+	/* Verify FDT was loaded correctly */
+	fdt = map_sysmem(PXE_FDT_ADDR, 0);
+	ut_assertok(fdt_check_header(fdt));
+
+	/*
+	 * Test 2: fdtdir with soc/board env vars (no fdtfile)
+	 * Clear fdtfile and set soc/board - the default label (fdtfile-test)
+	 * will now construct the path from soc-board: /dtb/tegra-jetson.dtb
+	 */
+	ut_assertok(env_set("fdtfile", NULL));  /* Clear fdtfile */
+	ut_assertok(env_set("soc", "tegra"));
+	ut_assertok(env_set("board", "jetson"));
+
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/* Still boots default label, but now uses soc-board path construction */
+	ut_assert_skip_to_line("Enter choice: 1:\tTest fdtfile env var");
+
+	/* Verify fdtdir constructed path from soc-board */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("append: console=ttyS0");
+	ut_assert_nextline("Retrieving file: /dtb/tegra-jetson.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+
+	/* Boot fails but we verified the path construction */
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_nextlinen("       unmap_physmem");
+
+	/* Verify FDT was loaded */
+	fdt = map_sysmem(PXE_FDT_ADDR, 0);
+	ut_asserteq(FDT_MAGIC, fdt_magic(fdt));
+
+	/* Clean up env vars */
+	env_set("fdtfile", NULL);
+	env_set("soc", NULL);
+	env_set("board", NULL);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_fdtdir_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });

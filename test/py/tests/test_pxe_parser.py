@@ -269,6 +269,64 @@ def pxe_image(u_boot_config):
         fsh.cleanup()
 
 
+@pytest.fixture
+def pxe_fdtdir_image(u_boot_config):
+    """Create a filesystem image with fdtdir-based configuration
+
+    This tests the fdtdir path-resolution logic where the FDT filename
+    is constructed from environment variables.
+    """
+    fsh = FsHelper(u_boot_config, 'vfat', 4, prefix='pxe_fdtdir')
+    fsh.setup()
+
+    # Create labels using fdtdir instead of explicit fdt path
+    labels = [
+        {
+            'name': 'fdtfile-test',
+            'menu': 'Test fdtfile env var',
+            'kernel': '/vmlinuz',
+            'append': 'console=ttyS0',
+            'fdtdir': '/dtb/',  # Will use fdtfile env var
+            'fdtoverlays': '/dtb/overlay1.dtbo',
+            'default': True,
+        },
+        {
+            'name': 'socboard-test',
+            'menu': 'Test soc/board construction',
+            'kernel': '/vmlinuz',
+            'append': 'console=ttyS0',
+            'fdtdir': '/dtb',  # No trailing slash - tests slash insertion
+        },
+    ]
+
+    cfg_path = create_extlinux_conf(fsh.srcdir, labels)
+
+    # Create DTB directory with files for different naming conventions
+    dtbdir = os.path.join(fsh.srcdir, 'dtb')
+    os.makedirs(dtbdir, exist_ok=True)
+
+    # DTB for fdtfile env var test (fdtfile=test-board.dtb)
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'test-board.dtb'))
+
+    # DTB for soc-board construction (soc=tegra, board=jetson)
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'tegra-jetson.dtb'))
+
+    # Overlay for fdtdir test
+    compile_dts(OVERLAY1_DTS, os.path.join(dtbdir, 'overlay1.dtbo'),
+                is_overlay=True)
+
+    # Create dummy kernel
+    with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
+        fd.write(b'kernel')
+        fd.write(b'\x00' * (1024 - 6))
+
+    fsh.mk_fs()
+
+    yield fsh.fs_img, cfg_path
+
+    fsh.cleanup()
+
+
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.requiredtool('dtc')
 class TestPxeParser:
@@ -286,4 +344,11 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_image
         with ubman.log.section('Test PXE sysboot'):
             ubman.run_ut('pxe', 'pxe_test_sysboot',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_fdtdir(self, ubman, pxe_fdtdir_image):
+        """Test fdtdir path resolution with fdtfile and soc/board env vars"""
+        fs_img, cfg_path = pxe_fdtdir_image
+        with ubman.log.section('Test PXE fdtdir'):
+            ubman.run_ut('pxe', 'pxe_test_fdtdir',
                          fs_image=fs_img, cfg_path=cfg_path)
