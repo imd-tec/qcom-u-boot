@@ -1368,7 +1368,7 @@ struct address_space_operations {
 	int (*read_folio)(struct file *, struct folio *);
 	void (*readahead)(struct readahead_control *);
 	sector_t (*bmap)(struct address_space *, sector_t);
-	void (*invalidate_folio)(struct folio *, unsigned long, unsigned long);
+	void (*invalidate_folio)(struct folio *, size_t, size_t);
 	bool (*release_folio)(struct folio *, gfp_t);
 	int (*write_begin)(const struct kiocb *, struct address_space *, loff_t, unsigned, struct folio **, void **);
 	int (*write_end)(const struct kiocb *, struct address_space *, loff_t, unsigned, unsigned, struct folio *, void *);
