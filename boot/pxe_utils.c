@@ -396,6 +396,37 @@ skip_overlay:
 }
 #endif
 
+const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
+{
+	const char *conf_fdt_str = NULL;
+	void *buf;
+
+	/*
+	 * Fallback to fdt_addr env var if label doesn't specify FDT
+	 * and it's not ATAG mode (fdt="-")
+	 */
+	if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
+	    !label->fdt || strcmp("-", label->fdt)) {
+		conf_fdt_str = env_get("fdt_addr");
+		if (conf_fdt_str)
+			return conf_fdt_str;
+	}
+
+	/*
+	 * Fallback to fdtcontroladdr if not a FIT image and not ATAG mode
+	 */
+	buf = map_sysmem(kern_addr, 0);
+	if (genimg_get_format(buf) != IMAGE_FORMAT_FIT) {
+		if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
+		    !label->fdt || strcmp("-", label->fdt)) {
+			conf_fdt_str = env_get("fdtcontroladdr");
+		}
+	}
+	unmap_sysmem(buf);
+
+	return conf_fdt_str;
+}
+
 /*
  * label_process_fdt() - Process FDT for the label
  *
@@ -789,28 +820,8 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	if (ret)
 		return ret;
 
-	if (!conf_fdt_str) {
-		if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
-		    strcmp("-", label->fdt)) {
-			conf_fdt_str = env_get("fdt_addr");
-			log_debug("using fdt_addr '%s'\n", conf_fdt_str);
-		}
-	}
-
-	if (!conf_fdt_str) {
-		void *buf;
-
-		buf = map_sysmem(kern_addr, 0);
-		if (genimg_get_format(buf) != IMAGE_FORMAT_FIT) {
-			if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
-			    strcmp("-", label->fdt)) {
-				conf_fdt_str = env_get("fdtcontroladdr");
-				log_debug("using fdtcontroladdr '%s'\n",
-					  conf_fdt_str);
-			}
-		}
-		unmap_sysmem(buf);
-	}
+	if (!conf_fdt_str)
+		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
 	if (conf_fdt_str)
 		conf_fdt = hextoul(conf_fdt_str, NULL);
 	log_debug("conf_fdt %lx\n", conf_fdt);

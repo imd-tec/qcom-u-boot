@@ -660,3 +660,52 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 PXE_TEST_ARGS(pxe_test_ipappend_norun, UTF_CONSOLE | UTF_MANUAL | UTF_ETH_BOOTDEV,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * Test pxe_get_fdt_fallback() function
+ *
+ * This tests the FDT address fallback logic when a label doesn't specify
+ * an FDT file via 'fdt' or 'fdtdir' keywords.
+ */
+static int pxe_test_fdt_fallback(struct unit_test_state *uts)
+{
+	const char *orig_fdt_addr, *orig_fdtcontroladdr;
+	ulong kern_addr = 0x1000000;
+	struct pxe_label label;
+	void *kern_buf;
+
+	/* Create a dummy kernel buffer (not FIT format) */
+	kern_buf = map_sysmem(kern_addr, 64);
+	memset(kern_buf, '\0', 64);
+	unmap_sysmem(kern_buf);
+
+	memset(&label, '\0', sizeof(label));
+
+	/* Save and clear env vars (fdtcontroladdr is set by U-Boot) */
+	orig_fdt_addr = env_get("fdt_addr");
+	orig_fdtcontroladdr = env_get("fdtcontroladdr");
+	ut_assertok(env_set("fdt_addr", NULL));
+	ut_assertok(env_set("fdtcontroladdr", NULL));
+
+	/* Test 1: No fallback env vars set - should return NULL */
+	ut_assertnull(pxe_get_fdt_fallback(&label, kern_addr));
+
+	/* Test 2: fdt_addr set - should return fdt_addr */
+	ut_assertok(env_set_hex("fdt_addr", 0x2000000));
+	ut_asserteq_str("2000000", pxe_get_fdt_fallback(&label, kern_addr));
+
+	/* Test 3: Both set - fdt_addr takes priority */
+	ut_assertok(env_set_hex("fdtcontroladdr", 0x3000000));
+	ut_asserteq_str("2000000", pxe_get_fdt_fallback(&label, kern_addr));
+
+	/* Test 4: Only fdtcontroladdr set - should return fdtcontroladdr */
+	ut_assertok(env_set("fdt_addr", NULL));
+	ut_asserteq_str("3000000", pxe_get_fdt_fallback(&label, kern_addr));
+
+	/* Restore env vars */
+	ut_assertok(env_set("fdt_addr", orig_fdt_addr));
+	ut_assertok(env_set("fdtcontroladdr", orig_fdtcontroladdr));
+
+	return 0;
+}
+PXE_TEST(pxe_test_fdt_fallback, 0);
