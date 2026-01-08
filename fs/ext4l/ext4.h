@@ -23,6 +23,17 @@
 #include <linux/compiler.h>
 
 /*
+ * Macro for write operation function pointers in inode_operations structs.
+ * When CONFIG_EXT4_WRITE is disabled, these return NULL so the linker
+ * doesn't pull in the write functions.
+ */
+#ifdef CONFIG_EXT4_WRITE
+#define EXT4_WR_OP(func) (func)
+#else
+#define EXT4_WR_OP(func) NULL
+#endif
+
+/*
  * The fourth extended filesystem constants/structures
  */
 
