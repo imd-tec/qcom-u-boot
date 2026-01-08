@@ -611,8 +611,8 @@ PXE_TEST_ARGS(pxe_test_errors_norun, UTF_CONSOLE | UTF_MANUAL,
  * Test overlay loading when fdtoverlay_addr_r is not set
  *
  * This tests that when a label has fdtoverlays but fdtoverlay_addr_r is not
- * set, the overlay loading is skipped with an appropriate warning message,
- * but the FDT is still loaded successfully.
+ * set, overlay loading is attempted via LMB allocation. The FDT is still
+ * loaded successfully even if overlays fail to load.
  */
 static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 {
@@ -676,13 +676,16 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	ut_assertok(fdt_check_header(fdt));
 
 	/*
-	 * Check console output - FDT loaded, but overlays skipped with
-	 * warning about missing fdtoverlay_addr_r
+	 * Check console output - FDT loaded, overlays attempted via LMB
+	 * allocation but fail since test environment cannot load them
 	 */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /initrd.img");
 	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
-	ut_assert_nextline("Invalid fdtoverlay_addr_r for loading overlays");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_nextline("Failed loading overlay /dtb/overlay1.dtbo");
+	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("Failed loading overlay /dtb/overlay2.dtbo");
 	ut_assert_console_end();
 
 	/* Clean up */

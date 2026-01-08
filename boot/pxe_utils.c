@@ -307,22 +307,11 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
 	char *fdtoverlay = label->fdtoverlays;
-	char *fdtoverlay_addr_env;
-	ulong fdtoverlay_addr;
 	int err;
 
 	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
-
-	/* Get the specific overlay loading address */
-	fdtoverlay_addr_env = env_get("fdtoverlay_addr_r");
-	if (!fdtoverlay_addr_env) {
-		printf("Invalid fdtoverlay_addr_r for loading overlays\n");
-		return;
-	}
-
-	fdtoverlay_addr = hextoul(fdtoverlay_addr_env, NULL);
 
 	/* Cycle over the overlay files and apply them in order */
 	do {
@@ -362,7 +351,7 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		/* Resize main fdt */
 		fdt_shrink_to_minimum(ctx->fdt, 8192);
 
-		blob = map_sysmem(fdtoverlay_addr, 0);
+		blob = map_sysmem(addr, 0);
 		err = fdt_check_header(blob);
 		if (err) {
 			printf("Invalid overlay %s, skipping\n",
