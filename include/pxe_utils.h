@@ -446,6 +446,22 @@ int pxe_select_label(struct pxe_menu *cfg, bool prompt,
 		     struct pxe_label **labelp);
 
 /**
+ * pxe_load_files() - Load kernel/initrd/FDT/overlays for a label
+ *
+ * Loads the files specified in the label into memory and saves the
+ * addresses in @ctx. This does not process the FDT or set up boot
+ * parameters - use pxe_load_label() for that.
+ *
+ * @ctx: PXE context with getfile callback
+ * @label: Label whose files to load
+ * @fdtfile: Path to FDT file (may be NULL)
+ * Return: 0 on success, -ENOENT if no kernel specified, -EIO if file
+ *	retrieval failed
+ */
+int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
+		   char *fdtfile);
+
+/**
  * pxe_load_label() - Load kernel/initrd/FDT for a label
  *
  * Loads the files specified in the label into memory and saves the

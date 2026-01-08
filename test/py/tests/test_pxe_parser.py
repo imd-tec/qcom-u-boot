@@ -233,6 +233,15 @@ def pxe_image(u_boot_config):
 
     cfg_path = create_extlinux_conf(fsh.srcdir, labels, menu_opts)
 
+    # Create DTB and overlay files for testing
+    dtbdir = os.path.join(fsh.srcdir, 'dtb')
+    os.makedirs(dtbdir, exist_ok=True)
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'board.dtb'))
+    compile_dts(OVERLAY1_DTS, os.path.join(dtbdir, 'overlay1.dtbo'),
+                is_overlay=True)
+    compile_dts(OVERLAY2_DTS, os.path.join(dtbdir, 'overlay2.dtbo'),
+                is_overlay=True)
+
     # Create a chain of 16 nested include files to test MAX_NEST_LEVEL
     # Level 1 is extlinux.conf, levels 2-16 are extra.conf, nest3.conf, etc.
     for level in range(2, 17):

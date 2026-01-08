@@ -289,6 +289,42 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 		ut_asserteq_str(name, label->name);
 	}
 
+	/*
+	 * Test FDT overlay loading
+	 *
+	 * Get the first label (linux) which has fdtoverlays, set up the
+	 * environment, and verify overlay files can be loaded.
+	 */
+	label = list_first_entry(&cfg->labels, struct pxe_label, list);
+	ut_asserteq(2, label->fdtoverlays.count);
+
+	/* Set environment variables for file loading */
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
+
+	/*
+	 * Load files via pxe_load_files(). Note: pxe_load_files takes
+	 * ownership of fdtfile and frees it, so we must strdup here.
+	 */
+	ret = pxe_load_files(&ctx, label, strdup(label->fdt));
+	ut_assertok(ret);
+
+	/* Verify kernel and FDT were loaded */
+	ut_asserteq(PXE_KERNEL_ADDR, ctx.kern_addr);
+	ut_asserteq(PXE_FDT_ADDR, ctx.fdt_addr);
+
+	/* Verify overlays were loaded to valid addresses */
+	ut_assert(alist_get(&label->fdtoverlays, 0,
+			    struct pxe_fdtoverlay)->addr >= PXE_OVERLAY_ADDR);
+	ut_assert(alist_get(&label->fdtoverlays, 1,
+			    struct pxe_fdtoverlay)->addr >= PXE_OVERLAY_ADDR);
+
+	/* Second overlay should be at a higher address than the first */
+	ut_assert(alist_get(&label->fdtoverlays, 1, struct pxe_fdtoverlay)->addr >
+		  alist_get(&label->fdtoverlays, 0, struct pxe_fdtoverlay)->addr);
+
 	/* Verify no more console output */
 	ut_assert_console_end();
 

@@ -627,8 +627,8 @@ static int generate_localboot(struct pxe_label *label)
 	return 0;
 }
 
-static int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
-			  char *fdtfile)
+int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
+		   char *fdtfile)
 {
 	int ret;
 
