@@ -3266,7 +3266,11 @@ void __ext4_grp_locked_error(const char *, unsigned int,
 #define ext4_abort(sb, err, fmt, a...)					\
 	__ext4_error((sb), __func__, __LINE__, true, (err), 0, (fmt), ## a)
 
-#ifdef EXT4L_PRINTF
+/*
+ * When CONFIG_EXT4L_DEBUG is enabled, pass full messages through the error
+ * macros. When disabled, use empty strings to save rodata space.
+ */
+#ifdef CONFIG_EXT4L_DEBUG
 
 #define ext4_error_inode(inode, func, line, block, fmt, ...)		\
 	__ext4_error_inode(inode, func, line, block, 0, fmt, ##__VA_ARGS__)

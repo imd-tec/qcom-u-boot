@@ -971,8 +971,8 @@ void __ext4_msg(struct super_block *sb,
 	/* Record in message buffer */
 	ext4l_record_msg(buf, len);
 
-	/* Also print if debug is enabled */
-	if (IS_ENABLED(CONFIG_EXT4L_DEBUG))
+	/* Also print if requested */
+	if (IS_ENABLED(CONFIG_EXT4L_PRINT))
 		printf("%s", buf);
 }
 

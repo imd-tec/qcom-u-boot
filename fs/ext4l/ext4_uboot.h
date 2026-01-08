@@ -41,16 +41,6 @@
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
- * Enable ext4_msg() and other diagnostic macros to pass full messages.
- * This is required for message recording to work. Without this, the
- * ext4_msg macro passes empty strings to __ext4_msg().
- *
- * Use EXT4L_PRINTF instead of CONFIG_PRINTK since U-Boot requires CONFIG_
- * options to be defined in Kconfig.
- */
-#define EXT4L_PRINTF		1
-
-/*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
  *
  * The ext4 filesystem uses different hash algorithms for directory indexing

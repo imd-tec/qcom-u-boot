@@ -29,8 +29,24 @@ config EXT4_JOURNAL
 config EXT4L_DEBUG
 	bool "Enable ext4l debug messages"
 	depends on FS_EXT4L
+	default y if SANDBOX
 	help
 	  Enable debug and informational messages from the ext4l filesystem.
-	  This includes mount messages and other ext4_msg() output.
+	  This includes mount messages, error details, and other ext4_msg()
+	  output with full format strings.
+
+	  Disabling this option replaces detailed error messages with generic
+	  strings, saving about 20K of rodata. Mount failures will still be
+	  reported but without specific details about what went wrong.
+
+	  If unsure, say N.
+
+config EXT4L_PRINT
+	bool "Print ext4l messages to console"
+	depends on EXT4L_DEBUG
+	help
+	  Print ext4l messages to the console in addition to recording them.
+	  Messages are always recorded and can be retrieved programmatically;
+	  this option controls whether they are also printed.
 
 	  If unsure, say N.
