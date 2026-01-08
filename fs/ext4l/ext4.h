@@ -2987,6 +2987,7 @@ int __init ext4_fc_init_dentry_cache(void);
 void ext4_fc_destroy_dentry_cache(void);
 
 /* mballoc.c */
+#ifdef CONFIG_EXT4_MBALLOC
 extern const struct seq_operations ext4_mb_seq_groups_ops;
 extern const struct seq_operations ext4_mb_seq_structs_summary_ops;
 extern int ext4_seq_mb_stats_show(struct seq_file *seq, void *offset);
@@ -2997,6 +2998,19 @@ extern ext4_fsblk_t ext4_mb_new_blocks(handle_t *,
 extern void ext4_discard_preallocations(struct inode *);
 extern int __init ext4_init_mballoc(void);
 extern void ext4_exit_mballoc(void);
+#else
+static inline int ext4_mb_init(struct super_block *sb) { return 0; }
+static inline void ext4_mb_release(struct super_block *sb) {}
+static inline ext4_fsblk_t ext4_mb_new_blocks(handle_t *h,
+		struct ext4_allocation_request *ar, int *err)
+{
+	*err = -EROFS;
+	return 0;
+}
+static inline void ext4_discard_preallocations(struct inode *i) {}
+static inline int ext4_init_mballoc(void) { return 0; }
+static inline void ext4_exit_mballoc(void) {}
+#endif
 extern int __init ext4_init_es(void);
 extern void ext4_exit_es(void);
 
@@ -3028,29 +3042,57 @@ struct ext4_fs_context {
 	ext4_fsblk_t	s_sb_block;
 };
 
+#ifdef CONFIG_EXT4_MBALLOC
 extern ext4_group_t ext4_mb_prefetch(struct super_block *sb,
 				     ext4_group_t group,
 				     unsigned int nr, int *cnt);
 extern void ext4_mb_prefetch_fini(struct super_block *sb, ext4_group_t group,
 				  unsigned int nr);
-
-extern void ext4_free_blocks(handle_t *handle, struct inode *inode,
-			     struct buffer_head *bh, ext4_fsblk_t block,
-			     unsigned long count, int flags);
 extern int ext4_mb_alloc_groupinfo(struct super_block *sb,
 				   ext4_group_t ngroups);
 extern int ext4_mb_add_groupinfo(struct super_block *sb,
 		ext4_group_t i, struct ext4_group_desc *desc);
+extern void ext4_mb_mark_bb(struct super_block *sb, ext4_fsblk_t block,
+			    int len, bool state);
+extern void ext4_free_blocks(handle_t *handle, struct inode *inode,
+			     struct buffer_head *bh, ext4_fsblk_t block,
+			     unsigned long count, int flags);
 extern int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 				ext4_fsblk_t block, unsigned long count);
 extern int ext4_trim_fs(struct super_block *, struct fstrim_range *);
 extern void ext4_process_freed_data(struct super_block *sb, tid_t commit_tid);
-extern void ext4_mb_mark_bb(struct super_block *sb, ext4_fsblk_t block,
-			    int len, bool state);
 static inline bool ext4_mb_cr_expensive(enum criteria cr)
 {
 	return cr >= CR_GOAL_LEN_SLOW;
 }
+#else
+static inline ext4_group_t ext4_mb_prefetch(struct super_block *sb,
+		ext4_group_t group, unsigned int nr, int *cnt)
+{
+	*cnt = 0;
+	return group;
+}
+static inline void ext4_mb_prefetch_fini(struct super_block *sb,
+		ext4_group_t group, unsigned int nr) {}
+static inline int ext4_mb_alloc_groupinfo(struct super_block *sb,
+		ext4_group_t ngroups) { return 0; }
+static inline int ext4_mb_add_groupinfo(struct super_block *sb,
+		ext4_group_t i, struct ext4_group_desc *desc) { return 0; }
+static inline void ext4_mb_mark_bb(struct super_block *sb, ext4_fsblk_t block,
+		int len, bool state) {}
+static inline void ext4_free_blocks(handle_t *handle, struct inode *inode,
+		struct buffer_head *bh, ext4_fsblk_t block,
+		unsigned long count, int flags) {}
+static inline int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
+		ext4_fsblk_t block, unsigned long count) { return -EROFS; }
+static inline int ext4_trim_fs(struct super_block *sb, struct fstrim_range *r)
+{
+	return -EOPNOTSUPP;
+}
+static inline void ext4_process_freed_data(struct super_block *sb,
+		tid_t commit_tid) {}
+static inline bool ext4_mb_cr_expensive(enum criteria cr) { return false; }
+#endif
 
 /* inode.c */
 void ext4_inode_csum_set(struct inode *inode, struct ext4_inode *raw,

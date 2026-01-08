@@ -111,9 +111,20 @@ config EXT4_INDIRECT
 	  Filesystems without the extents feature will be rejected if
 	  this is disabled. Adds about 5K. If unsure, say N.
 
+config EXT4_MBALLOC
+	bool "Enable ext4 multiblock allocator"
+	depends on FS_EXT4L
+	help
+	  Enable the multiblock allocator (mballoc) which is required for
+	  writing to ext4 filesystems. This handles block allocation for
+	  new files and extending existing files.
+
+	  For read-only builds, this can be disabled to save about 22K.
+	  If unsure, say Y if you need write support, N for read-only.
+
 config EXT4_MBALLOC_PREFETCH
 	bool "Enable ext4 block bitmap prefetch support"
-	depends on FS_EXT4L
+	depends on FS_EXT4L && EXT4_MBALLOC
 	help
 	  Enable prefetching of block allocation bitmaps to improve
 	  allocation performance. When enabled, the multiblock allocator
