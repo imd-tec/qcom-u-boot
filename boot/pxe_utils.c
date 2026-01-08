@@ -303,7 +303,6 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
  * @ctx: PXE context
  * @label: Label to process
  */
-#ifdef CONFIG_OF_LIBFDT_OVERLAY
 static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
@@ -383,7 +382,6 @@ skip_overlay:
 			free(overlayfile);
 	} while ((fdtoverlay = strstr(fdtoverlay, " ")));
 }
-#endif
 
 const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
 {
