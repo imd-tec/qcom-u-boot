@@ -687,10 +687,6 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 
 int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 {
-	char fit_addr[200];
-	const char *conf_fdt_str;
-	ulong conf_fdt = 0;
-	char initrd_str[28] = "";
 	char *fdtfile = NULL;
 	bool is_fit;
 	int ret;
@@ -721,6 +717,25 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 	ret = pxe_load_files(ctx, label, fdtfile);
 	if (ret)
 		return ret;
+
+	/* Copy fdt_addr to conf_fdt for callers that don't use pxe_setup_label */
+	ctx->conf_fdt = ctx->fdt_addr;
+
+	return 0;
+}
+
+int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label)
+{
+	char fit_addr[200];
+	const char *conf_fdt_str;
+	ulong conf_fdt = 0;
+	char initrd_str[28] = "";
+	bool is_fit;
+	int ret;
+
+	/* Check for FIT case: FDT comes from FIT image, not a separate file */
+	is_fit = label->fdt && label->kernel_label &&
+		 !strcmp(label->kernel_label, label->fdt);
 
 	/* for FIT, append the configuration identifier */
 	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", ctx->kern_addr,
@@ -850,9 +865,12 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 		}
 	}
 
-	/* Load files if not already loaded */
+	/* Load files and set up boot params if not already done */
 	if (!ctx->label) {
 		ret = pxe_load_label(ctx, label);
+		if (ret)
+			return 1;
+		ret = pxe_setup_label(ctx, label);
 		if (ret)
 			return 1;
 	}

@@ -464,9 +464,9 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 /**
  * pxe_load_label() - Load kernel/initrd/FDT for a label
  *
- * Loads the files specified in the label into memory and saves the
- * addresses and sizes in @ctx. Call this only when ready to boot or
- * inspect loaded files.
+ * Loads the files specified in the label into memory. Call
+ * pxe_setup_label() after this to process the FDT and set up
+ * boot parameters.
  *
  * @ctx: PXE context with getfile callback
  * @label: Label whose files to load
@@ -474,6 +474,19 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
  *	retrieval failed, -ENOMEM if out of memory
  */
 int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label);
+
+/**
+ * pxe_setup_label() - Set up boot parameters for a loaded label
+ *
+ * Processes the FDT (applying overlays if needed) and saves the boot
+ * parameters in @ctx. Call this after pxe_load_label().
+ *
+ * @ctx: PXE context with loaded files
+ * @label: Label to set up
+ * Return: 0 on success, -ENOSPC if initrd string too long, -ENOMEM if
+ *	out of memory
+ */
+int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label);
 
 /*
  * Entry point for parsing a menu file. nest_level indicates how many times
