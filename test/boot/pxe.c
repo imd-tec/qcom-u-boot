@@ -5,6 +5,11 @@
  * Copyright 2026 Canonical Ltd
  *
  * These tests verify the extlinux.conf parser APIs.
+ *
+ * Note: The 'ontimeout' keyword is tested via the test fixtures which include
+ * it. Since ontimeout is handled identically to 'default' (both set
+ * cfg->default_label), it cannot be distinguished after parsing.
+ *
  */
 
 #include <dm.h>
