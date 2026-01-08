@@ -428,6 +428,84 @@ const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
 	return conf_fdt_str;
 }
 
+/**
+ * label_get_fdt_path() - Get the FDT path for a label
+ *
+ * Determine the FDT filename from label->fdt or by constructing it from
+ * label->fdtdir and environment variables.
+ *
+ * @label: Label to get FDT path for
+ * @fdtfilep: Returns allocated FDT path, or NULL if none. Caller must free.
+ * Return: 0 on success, -ENOMEM on allocation failure
+ */
+static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
+{
+	char *fdtfile = NULL;
+
+	if (label->fdt) {
+		if (IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS)) {
+			if (strcmp("-", label->fdt))
+				fdtfile = strdup(label->fdt);
+		} else {
+			fdtfile = strdup(label->fdt);
+		}
+	} else if (label->fdtdir) {
+		char *f1, *f2, *f3, *f4, *slash;
+		int len;
+
+		f1 = env_get("fdtfile");
+		if (f1) {
+			f2 = "";
+			f3 = "";
+			f4 = "";
+		} else {
+			/*
+			 * For complex cases where this code doesn't
+			 * generate the correct filename, the board
+			 * code should set $fdtfile during early boot,
+			 * or the boot scripts should set $fdtfile
+			 * before invoking "pxe" or "sysboot".
+			 */
+			f1 = env_get("soc");
+			f2 = "-";
+			f3 = env_get("board");
+			f4 = ".dtb";
+			if (!f1) {
+				f1 = "";
+				f2 = "";
+			}
+			if (!f3) {
+				f2 = "";
+				f3 = "";
+			}
+		}
+
+		len = strlen(label->fdtdir);
+		if (!len)
+			slash = "./";
+		else if (label->fdtdir[len - 1] != '/')
+			slash = "/";
+		else
+			slash = "";
+
+		len = strlen(label->fdtdir) + strlen(slash) +
+			strlen(f1) + strlen(f2) + strlen(f3) +
+			strlen(f4) + 1;
+		fdtfile = malloc(len);
+		if (!fdtfile) {
+			printf("malloc fail (FDT filename)\n");
+			return -ENOMEM;
+		}
+
+		snprintf(fdtfile, len, "%s%s%s%s%s%s",
+			 label->fdtdir, slash, f1, f2, f3, f4);
+	}
+
+	*fdtfilep = fdtfile;
+
+	return 0;
+}
+
 /*
  * label_process_fdt() - Process FDT for the label
  *
@@ -459,6 +537,9 @@ const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
 static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
 			     char *kernel_addr, const char **fdt_argp)
 {
+	char *fdtfile;
+	int ret;
+
 	log_debug("label '%s' kernel_addr '%s' label->fdt '%s' fdtdir '%s' "
 		  "kernel_label '%s' fdt_argp '%s'\n",
 		  label->name, kernel_addr, label->fdt, label->fdtdir,
@@ -469,68 +550,9 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
 		*fdt_argp = kernel_addr;
 	/* if fdt label is defined then get fdt from server */
 	} else if (*fdt_argp) {
-		char *fdtfile = NULL;
-		char *fdtfilefree = NULL;
-
-		if (label->fdt) {
-			if (IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS)) {
-				if (strcmp("-", label->fdt))
-					fdtfile = label->fdt;
-			} else {
-				fdtfile = label->fdt;
-			}
-		} else if (label->fdtdir) {
-			char *f1, *f2, *f3, *f4, *slash;
-			int len;
-
-			f1 = env_get("fdtfile");
-			if (f1) {
-				f2 = "";
-				f3 = "";
-				f4 = "";
-			} else {
-				/*
-				 * For complex cases where this code doesn't
-				 * generate the correct filename, the board
-				 * code should set $fdtfile during early boot,
-				 * or the boot scripts should set $fdtfile
-				 * before invoking "pxe" or "sysboot".
-				 */
-				f1 = env_get("soc");
-				f2 = "-";
-				f3 = env_get("board");
-				f4 = ".dtb";
-				if (!f1) {
-					f1 = "";
-					f2 = "";
-				}
-				if (!f3) {
-					f2 = "";
-					f3 = "";
-				}
-			}
-
-			len = strlen(label->fdtdir);
-			if (!len)
-				slash = "./";
-			else if (label->fdtdir[len - 1] != '/')
-				slash = "/";
-			else
-				slash = "";
-
-			len = strlen(label->fdtdir) + strlen(slash) +
-				strlen(f1) + strlen(f2) + strlen(f3) +
-				strlen(f4) + 1;
-			fdtfilefree = malloc(len);
-			if (!fdtfilefree) {
-				printf("malloc fail (FDT filename)\n");
-				return -ENOMEM;
-			}
-
-			snprintf(fdtfilefree, len, "%s%s%s%s%s%s",
-				 label->fdtdir, slash, f1, f2, f3, f4);
-			fdtfile = fdtfilefree;
-		}
+		ret = label_get_fdt_path(label, &fdtfile);
+		if (ret)
+			return ret;
 
 		if (fdtfile) {
 			ulong addr;
@@ -541,7 +563,7 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
 					(enum bootflow_img_t)IH_TYPE_FLATDT,
 					&addr, NULL);
 
-			free(fdtfilefree);
+			free(fdtfile);
 			if (err < 0) {
 				*fdt_argp = NULL;
 
