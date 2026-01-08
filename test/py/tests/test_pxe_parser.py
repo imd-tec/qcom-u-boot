@@ -13,8 +13,62 @@ Python handles filesystem image setup and configuration.
 
 import os
 import pytest
+import subprocess
 
 from fs_helper import FsHelper
+
+
+# Simple base DTS with symbols enabled (for overlay support)
+BASE_DTS = """\
+/dts-v1/;
+
+/ {
+	model = "Test Board";
+	compatible = "test,board";
+
+	test: test-node {
+		test-property = <42>;
+		status = "okay";
+	};
+};
+"""
+
+# Simple overlay that modifies the test node
+OVERLAY1_DTS = """\
+/dts-v1/;
+/plugin/;
+
+&test {
+	overlay1-property = "from-overlay1";
+};
+"""
+
+# Another overlay that adds a different property
+OVERLAY2_DTS = """\
+/dts-v1/;
+/plugin/;
+
+&test {
+	overlay2-property = "from-overlay2";
+};
+"""
+
+
+def compile_dts(dts_content, output_path, is_overlay=False):
+    """Compile DTS content to DTB/DTBO file
+
+    Args:
+        dts_content (str): DTS source content
+        output_path (str): Path to output DTB/DTBO file
+        is_overlay (bool): True if this is an overlay (needs -@)
+
+    Raises:
+        subprocess.CalledProcessError: If dtc fails
+    """
+    # Use -@ for both base (to generate __symbols__) and overlays
+    cmd = ['dtc', '-@', '-I', 'dts', '-O', 'dtb', '-o', output_path]
+    subprocess.run(cmd, input=dts_content.encode(), check=True,
+                   capture_output=True)
 
 
 def create_extlinux_conf(srcdir, labels, menu_opts=None):
@@ -190,6 +244,21 @@ def pxe_image(u_boot_config):
                 next_fname = f'nest{level + 1}.conf'
                 fd.write(f"\ninclude /extlinux/{next_fname}\n")
 
+    # Create DTB and overlay files for testing
+    dtbdir = os.path.join(fsh.srcdir, 'dtb')
+    os.makedirs(dtbdir, exist_ok=True)
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'board.dtb'))
+    compile_dts(OVERLAY1_DTS, os.path.join(dtbdir, 'overlay1.dtbo'),
+                is_overlay=True)
+    compile_dts(OVERLAY2_DTS, os.path.join(dtbdir, 'overlay2.dtbo'),
+                is_overlay=True)
+
+    # Create dummy kernel and initrd files with identifiable content
+    with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
+        fd.write(b'kernel')
+    with open(os.path.join(fsh.srcdir, 'initrd.img'), 'wb') as fd:
+        fd.write(b'ramdisk')
+
     # Create the filesystem
     fsh.mk_fs()
 
@@ -201,6 +270,7 @@ def pxe_image(u_boot_config):
 
 
 @pytest.mark.boardspec('sandbox')
+@pytest.mark.requiredtool('dtc')
 class TestPxeParser:
     """Test PXE/extlinux parser APIs via C unit tests"""
 
@@ -209,4 +279,11 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_image
         with ubman.log.section('Test PXE parse'):
             ubman.run_ut('pxe', 'pxe_test_parse',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_sysboot(self, ubman, pxe_image):
+        """Test booting via sysboot command"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE sysboot'):
+            ubman.run_ut('pxe', 'pxe_test_sysboot',
                          fs_image=fs_img, cfg_path=cfg_path)

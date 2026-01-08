@@ -9,7 +9,9 @@
 
 #include <dm.h>
 #include <env.h>
+#include <fdt_support.h>
 #include <fs_legacy.h>
+#include <linux/libfdt.h>
 #include <mapmem.h>
 #include <pxe_utils.h>
 #include <test/test.h>
@@ -25,6 +27,10 @@
 
 /* Memory address for loading files */
 #define PXE_LOAD_ADDR		0x01000000
+#define PXE_KERNEL_ADDR		0x02000000
+#define PXE_INITRD_ADDR		0x02800000
+#define PXE_FDT_ADDR		0x03000000
+#define PXE_OVERLAY_ADDR	0x03100000
 
 /**
  * struct pxe_test_info - context for the test getfile callback
@@ -231,6 +237,85 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	return 0;
 }
 PXE_TEST_ARGS(pxe_test_parse_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * Test booting via sysboot command
+ *
+ * This test:
+ * 1. Binds a filesystem image containing extlinux.conf
+ * 2. Sets up environment variables for file loading
+ * 3. Runs sysboot to boot the default label
+ * 4. Verifies files were loaded by checking console output
+ */
+static int pxe_test_sysboot_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	void *kernel, *initrd, *fdt;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set environment variables for file loading */
+	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
+	ut_assertok(env_set("bootfile", cfg_path));
+
+	/*
+	 * Run sysboot - it will try all labels and return 0 after failing
+	 * to boot them all (since sandbox can't actually boot Linux)
+	 */
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/* Skip menu output and find the first label boot attempt */
+	ut_assert_skip_to_line("Enter choice: 1:\tBoot Linux");
+
+	/* Verify files were loaded in order */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /initrd.img");
+	ut_assert_nextline("append: root=/dev/sda1 quiet");
+	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+
+	/* Boot fails on sandbox */
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_nextlinen("       unmap_physmem");
+
+	/* Verify files were loaded at the correct addresses */
+	kernel = map_sysmem(PXE_KERNEL_ADDR, 0);
+	initrd = map_sysmem(PXE_INITRD_ADDR, 0);
+	fdt = map_sysmem(PXE_FDT_ADDR, 0);
+
+	/* Kernel should contain "kernel" at start */
+	ut_asserteq_mem("kernel", kernel, 6);
+
+	/* Initrd should contain "ramdisk" at start */
+	ut_asserteq_mem("ramdisk", initrd, 7);
+
+	/* FDT should have valid magic number */
+	ut_assertok(fdt_check_header(fdt));
+
+	/* Verify overlays were applied - check for properties added by overlays */
+	ut_asserteq_str("from-overlay1",
+			fdt_getprop(fdt, fdt_path_offset(fdt, "/test-node"),
+				    "overlay1-property", NULL));
+	ut_asserteq_str("from-overlay2",
+			fdt_getprop(fdt, fdt_path_offset(fdt, "/test-node"),
+				    "overlay2-property", NULL));
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_sysboot_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
 
