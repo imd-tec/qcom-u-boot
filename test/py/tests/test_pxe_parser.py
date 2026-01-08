@@ -256,6 +256,8 @@ def pxe_image(u_boot_config):
     # Create dummy kernel and initrd files with identifiable content
     with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
         fd.write(b'kernel')
+    with open(os.path.join(fsh.srcdir, 'vmlinuz-rescue'), 'wb') as fd:
+        fd.write(b'rescue')
     with open(os.path.join(fsh.srcdir, 'initrd.img'), 'wb') as fd:
         fd.write(b'ramdisk')
 
@@ -427,3 +429,10 @@ class TestPxeParser:
         with ubman.log.section('Test PXE pxelinux path'):
             ubman.run_ut('pxe', 'pxe_test_pxelinux_path',
                          fs_image=fs_img)
+
+    def test_pxe_ipappend(self, ubman, pxe_image):
+        """Test ipappend functionality for IP and MAC appending"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE ipappend'):
+            ubman.run_ut('pxe', 'pxe_test_ipappend',
+                         fs_image=fs_img, cfg_path=cfg_path)

@@ -594,3 +594,69 @@ static int pxe_test_pxelinux_path_norun(struct unit_test_state *uts)
 }
 PXE_TEST_ARGS(pxe_test_pxelinux_path_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR });
+
+/**
+ * Test ipappend functionality
+ *
+ * This tests that ipappend correctly appends IP and MAC information to
+ * bootargs. The rescue label has ipappend=3 which enables both:
+ *   - bit 0x1: ip=<ipaddr>:<serverip>:<gatewayip>:<netmask>
+ *   - bit 0x2: BOOTIF=01-xx-xx-xx-xx-xx-xx
+ */
+static int pxe_test_ipappend_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set environment variables for file loading */
+	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set("bootfile", cfg_path));
+
+	/* Set network environment variables for ipappend */
+	ut_assertok(env_set("ipaddr", "192.168.1.10"));
+	ut_assertok(env_set("serverip", "192.168.1.1"));
+	ut_assertok(env_set("gatewayip", "192.168.1.254"));
+	ut_assertok(env_set("netmask", "255.255.255.0"));
+
+	/* Override to boot the rescue label which has ipappend=3 */
+	ut_assertok(env_set("pxe_label_override", "rescue"));
+	ut_assertok(env_set("pxe_timeout", "1"));
+
+	/* Run sysboot */
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/* Skip to the rescue label boot */
+	ut_assert_skip_to_line("Retrieving file: /vmlinuz-rescue");
+
+	/*
+	 * Verify ipappend output - should have:
+	 * - original append: "single"
+	 * - ip= string from ipappend bit 0x1
+	 * - BOOTIF= string from ipappend bit 0x2
+	 */
+	ut_assert_nextlinen("append: single ip=192.168.1.10:192.168.1.1:"
+			    "192.168.1.254:255.255.255.0 BOOTIF=01-");
+
+	/* Clean up */
+	env_set("ipaddr", NULL);
+	env_set("serverip", NULL);
+	env_set("gatewayip", NULL);
+	env_set("netmask", NULL);
+	env_set("pxe_label_override", NULL);
+	env_set("pxe_timeout", NULL);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_ipappend_norun, UTF_CONSOLE | UTF_MANUAL | UTF_ETH_BOOTDEV,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });
