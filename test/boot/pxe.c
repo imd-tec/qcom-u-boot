@@ -286,7 +286,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Clean up */
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 	pxe_destroy_ctx(&ctx);
 
 	return 0;
@@ -476,7 +476,7 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 	env_set("soc", NULL);
 	env_set("board", NULL);
 
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 	pxe_destroy_ctx(&ctx);
 
 	return 0;
@@ -595,7 +595,7 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 
 	/* Clean up */
 	env_set("fdtfile", NULL);
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 	pxe_destroy_ctx(&ctx);
 
 	return 0;
@@ -681,7 +681,7 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Clean up */
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 	pxe_destroy_ctx(&ctx);
 
 	return 0;
@@ -1151,7 +1151,7 @@ static int pxe_test_alloc_norun(struct unit_test_state *uts)
 	ut_asserteq(false, ctx.fake_go);
 
 	/* Clean up */
-	destroy_pxe_menu(ctx.cfg);
+	pxe_menu_uninit(ctx.cfg);
 	pxe_destroy_ctx(&ctx);
 	ut_assertok(env_set("pxe_timeout", NULL));
 	ut_assertok(env_set("fdt_addr", orig_fdt_addr));
@@ -1245,7 +1245,7 @@ static int pxe_test_fit_embedded_fdt_norun(struct unit_test_state *uts)
 	ut_asserteq(0, ctx.conf_fdt);
 
 	/* Clean up */
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 	pxe_destroy_ctx(&ctx);
 
 	return 0;

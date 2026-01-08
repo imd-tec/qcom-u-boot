@@ -900,7 +900,7 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	return 1;
 }
 
-void destroy_pxe_menu(struct pxe_menu *cfg)
+void pxe_menu_uninit(struct pxe_menu *cfg)
 {
 	struct list_head *pos, *n;
 	struct pxe_label *label;
@@ -946,7 +946,7 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 
 	unmap_sysmem(buf);
 	if (r < 0) {
-		destroy_pxe_menu(cfg);
+		pxe_menu_uninit(cfg);
 		return NULL;
 	}
 
@@ -1192,7 +1192,7 @@ int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 
 	handle_pxe_menu(ctx, cfg);
 
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 
 	return 0;
 }

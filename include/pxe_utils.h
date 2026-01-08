@@ -179,13 +179,13 @@ struct pxe_context {
 };
 
 /**
- * destroy_pxe_menu() - Destroy an allocated pxe structure
+ * pxe_menu_uninit() - Destroy an allocated pxe structure
  *
  * Free the memory used by a pxe_menu and its labels
  *
  * @cfg: Config to destroy, previous returned from parse_pxefile()
  */
-void destroy_pxe_menu(struct pxe_menu *cfg);
+void pxe_menu_uninit(struct pxe_menu *cfg);
 
 /**
  * get_pxe_file() - Read a file
@@ -243,7 +243,7 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
  * Returns NULL if there is an error, otherwise, returns a pointer to a
  * pxe_menu struct populated with the results of parsing the pxe file (and any
  * files it includes). The resulting pxe_menu struct can be free()'d by using
- * the destroy_pxe_menu() function.
+ * the pxe_menu_uninit() function.
  */
 struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
 
