@@ -297,25 +297,21 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
 }
 
 /**
- * label_boot_fdtoverlay() - Loads fdt overlays specified in 'fdtoverlays'
- * or 'devicetree-overlay'
+ * label_load_fdtoverlays() - Load FDT overlay files
+ *
+ * Load all overlay files specified in the label. The loaded addresses are
+ * stored in each overlay's addr field.
  *
  * @ctx: PXE context
  * @label: Label to process
  */
-static void label_boot_fdtoverlay(struct pxe_context *ctx,
-				  struct pxe_label *label)
+static void label_load_fdtoverlays(struct pxe_context *ctx,
+				   struct pxe_label *label)
 {
 	struct pxe_fdtoverlay *overlay;
-	struct fdt_header *blob;
 	ulong fdtoverlay_addr;
 	bool use_lmb;
 	char *envaddr;
-	int err;
-
-	err = fdt_check_header(ctx->fdt);
-	if (err)
-		return;
 
 	/*
 	 * Get the overlay load address. If fdtoverlay_addr_r is defined,
@@ -331,10 +327,10 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		use_lmb = true;
 	}
 
-	/* First pass: load all overlay files */
 	alist_for_each(overlay, &label->fdtoverlays) {
 		ulong addr = fdtoverlay_addr;
 		ulong size;
+		int err;
 
 		err = get_relfile(ctx, overlay->path, &addr, SZ_4K,
 				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
@@ -348,11 +344,30 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		if (!use_lmb)
 			fdtoverlay_addr = addr + size;
 	}
+}
+
+/**
+ * label_apply_fdtoverlays() - Apply loaded FDT overlays to working FDT
+ *
+ * Apply all previously loaded overlays to the working FDT.
+ *
+ * @ctx: PXE context
+ * @label: Label containing overlays to apply
+ */
+static void label_apply_fdtoverlays(struct pxe_context *ctx,
+				    struct pxe_label *label)
+{
+	struct pxe_fdtoverlay *overlay;
+	struct fdt_header *blob;
+	int err;
+
+	err = fdt_check_header(ctx->fdt);
+	if (err)
+		return;
 
 	/* Resize main fdt to make room for overlays */
 	fdt_shrink_to_minimum(ctx->fdt, 8192);
 
-	/* Second pass: apply all loaded overlays */
 	alist_for_each(overlay, &label->fdtoverlays) {
 		if (!overlay->addr)
 			continue;
@@ -500,8 +515,10 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
 	if (label->kaslrseed)
 		label_boot_kaslrseed(ctx);
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
-		label_boot_fdtoverlay(ctx, label);
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count) {
+		label_load_fdtoverlays(ctx, label);
+		label_apply_fdtoverlays(ctx, label);
+	}
 
 	return 0;
 }
