@@ -420,3 +420,10 @@ class TestPxeParser:
         with ubman.log.section('Test PXE errors'):
             ubman.run_ut('pxe', 'pxe_test_errors',
                          fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_pxelinux_path(self, ubman, pxe_image):
+        """Test get_pxelinux_path() path length checking"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE pxelinux path'):
+            ubman.run_ut('pxe', 'pxe_test_pxelinux_path',
+                         fs_image=fs_img)

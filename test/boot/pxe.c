@@ -13,11 +13,14 @@
 #include <fs_legacy.h>
 #include <linux/libfdt.h>
 #include <mapmem.h>
+#include <net-common.h>
 #include <pxe_utils.h>
 #include <test/test.h>
 #include <test/ut.h>
 
-/* Define test macro for pxe suite - no init function needed */
+/* Define test macros for pxe suite */
+#define PXE_TEST(_name, _flags) \
+	UNIT_TEST(_name, _flags, pxe)
 #define PXE_TEST_ARGS(_name, _flags, ...) \
 	UNIT_TEST_ARGS(_name, _flags, pxe, __VA_ARGS__)
 
@@ -483,3 +486,105 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 PXE_TEST_ARGS(pxe_test_errors_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * Test pxe_get_file_size() function
+ *
+ * This tests reading the filesize from the environment variable.
+ */
+static int pxe_test_get_file_size(struct unit_test_state *uts)
+{
+	ulong size;
+
+	/* Test with no filesize set - should return -ENOENT */
+	env_set("filesize", NULL);
+	ut_asserteq(-ENOENT, pxe_get_file_size(&size));
+
+	/* Test with valid hex filesize */
+	env_set("filesize", "1234");
+	ut_assertok(pxe_get_file_size(&size));
+	ut_asserteq(0x1234, size);
+
+	/* Test with larger value */
+	env_set("filesize", "abcdef");
+	ut_assertok(pxe_get_file_size(&size));
+	ut_asserteq(0xabcdef, size);
+
+	/* Test with invalid (non-hex) value */
+	env_set("filesize", "not_hex");
+	ut_asserteq(-EINVAL, pxe_get_file_size(&size));
+
+	/* Clean up */
+	env_set("filesize", NULL);
+
+	return 0;
+}
+PXE_TEST(pxe_test_get_file_size, 0);
+
+/**
+ * Test format_mac_pxe() function
+ *
+ * This tests MAC address formatting for PXE boot paths.
+ */
+static int pxe_test_format_mac(struct unit_test_state *uts)
+{
+	char buf[21];
+
+	/* Test with buffer too small */
+	ut_asserteq(-ENOSPC, format_mac_pxe(buf, 20));
+	ut_asserteq(-ENOSPC, format_mac_pxe(buf, 1));
+
+	/* Test with valid buffer - sandbox has an ethernet device */
+	ut_asserteq(1, format_mac_pxe(buf, sizeof(buf)));
+
+	/* Verify format: 01-xx-xx-xx-xx-xx-xx */
+	ut_asserteq(20, strlen(buf));
+	ut_asserteq('0', buf[0]);
+	ut_asserteq('1', buf[1]);
+	ut_asserteq('-', buf[2]);
+	ut_asserteq('-', buf[5]);
+	ut_asserteq('-', buf[8]);
+	ut_asserteq('-', buf[11]);
+	ut_asserteq('-', buf[14]);
+	ut_asserteq('-', buf[17]);
+
+	return 0;
+}
+PXE_TEST(pxe_test_format_mac, UTF_ETH_BOOTDEV);
+
+/**
+ * Test get_pxelinux_path() with path too long
+ *
+ * This tests the path length check in get_pxelinux_path().
+ */
+static int pxe_test_pxelinux_path_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	struct pxe_test_info info;
+	struct pxe_context ctx;
+	char path[600];
+
+	ut_assertnonnull(fs_image);
+	info.uts = uts;
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set up the PXE context */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, false, "/",
+				  false, false, NULL));
+
+	/* Create a path that's too long (> 512 - 13 for "pxelinux.cfg/") */
+	memset(path, 'a', sizeof(path) - 1);
+	path[sizeof(path) - 1] = '\0';
+
+	/* Should fail with -ENAMETOOLONG */
+	ut_asserteq(-ENAMETOOLONG, get_pxelinux_path(&ctx, path,
+						     PXE_LOAD_ADDR));
+
+	pxe_destroy_ctx(&ctx);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_pxelinux_path_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR });
