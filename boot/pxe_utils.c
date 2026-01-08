@@ -506,33 +506,24 @@ static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
  *
  * @ctx: PXE context
  * @label: Label to process
- * @fdt_argp: Updated to NULL if FDT retrieval fails or no FDT is specified
+ * @fdtfile: FDT file path to load (freed by this function), or NULL
  * Return: 0 if OK, -ENOMEM if out of memory, -ENOENT if FDT file specified
  *	by "fdt" label could not be loaded
  */
 static int label_load_fdt(struct pxe_context *ctx, struct pxe_label *label,
-			  const char **fdt_argp)
+			  char *fdtfile)
 {
-	char *fdtfile;
 	ulong addr;
 	int ret;
 
-	ret = label_get_fdt_path(label, &fdtfile);
-	if (ret)
-		return ret;
-
-	if (!fdtfile) {
-		*fdt_argp = NULL;
+	if (!fdtfile)
 		return 0;
-	}
 
 	ret = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r", SZ_4K,
 				  (enum bootflow_img_t)IH_TYPE_FLATDT,
 				  &addr, NULL);
 	free(fdtfile);
 	if (ret < 0) {
-		*fdt_argp = NULL;
-
 		if (label->fdt) {
 			printf("Skipping %s for failure retrieving FDT\n",
 			       label->name);
@@ -704,6 +695,8 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 	const char *conf_fdt_str;
 	ulong conf_fdt = 0;
 	char initrd_str[28] = "";
+	char *fdtfile = NULL;
+	bool is_fit;
 	int ret;
 
 	if (label->localboot) {
@@ -719,9 +712,21 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 			return 0;
 	}
 
+	/* Check for FIT case: FDT comes from FIT image, not a separate file */
+	is_fit = label->fdt && label->kernel_label &&
+		 !strcmp(label->kernel_label, label->fdt);
+
+	if (!is_fit) {
+		ret = label_get_fdt_path(label, &fdtfile);
+		if (ret)
+			return ret;
+	}
+
 	ret = pxe_load_files(ctx, label);
-	if (ret)
+	if (ret) {
+		free(fdtfile);
 		return ret;
+	}
 
 	/* for FIT, append the configuration identifier */
 	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", ctx->kern_addr,
@@ -757,13 +762,17 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 		  label->kernel_label, conf_fdt_str);
 
 	/* Scenario 1: FIT with embedded FDT */
-	if (label->fdt && !strcmp(label->kernel_label, label->fdt)) {
+	if (is_fit) {
 		conf_fdt_str = fit_addr;
-	} else if (conf_fdt_str) {
+	} else if (fdtfile) {
 		/* Scenario 2: load FDT file if fdt_addr_r is set */
-		ret = label_load_fdt(ctx, label, &conf_fdt_str);
+		ret = label_load_fdt(ctx, label, fdtfile);
 		if (ret)
 			return ret;
+		conf_fdt_str = env_get("fdt_addr_r");
+	} else {
+		/* No FDT specified, use fallback */
+		conf_fdt_str = NULL;
 	}
 
 	/* Scenarios 3 and 4: fallback options */
