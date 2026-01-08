@@ -819,10 +819,49 @@ int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label)
 }
 
 /**
+ * label_boot_prep() - Prepare a label for booting
+ *
+ * Handles localboot directive if present and loads all files needed for boot
+ * (kernel, initrd, FDT, overlays). For positive localboot_val, attempts
+ * localboot and falls back to generate_localboot() if needed. For negative
+ * localboot_val, indicates the label should be skipped.
+ *
+ * @ctx: PXE context
+ * @label: Label to process
+ * Return: 0 to continue booting, 1 to skip this label, -ve on error
+ */
+static int label_boot_prep(struct pxe_context *ctx, struct pxe_label *label)
+{
+	int ret;
+
+	if (label->localboot) {
+		if (label->localboot_val >= 0) {
+			ret = label_localboot(label);
+
+			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT) &&
+			    ret == -ENOENT)
+				ret = generate_localboot(label);
+			if (ret)
+				return ret;
+		} else {
+			return 1;  /* skip this label */
+		}
+	}
+
+	/* Load files if not already done */
+	if (!ctx->label) {
+		ret = pxe_load_label(ctx, label);
+		if (ret)
+			return 1;
+	}
+
+	return 0;
+}
+
+/**
  * label_boot() - Boot according to the contents of a pxe_label
  *
- * If we can't boot for any reason, we return.  A successful boot never
- * returns.
+ * If we can't boot for any reason, we return. A successful boot never returns.
  *
  * The kernel will be stored in the location given by the 'kernel_addr_r'
  * environment variable.
@@ -835,7 +874,7 @@ int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label)
  *
  * @ctx: PXE context
  * @label: Label to process
- * Returns does not return on success, otherwise returns 0 if a localboot
+ * Return: does not return on success, otherwise returns 0 if a localboot
  *	label was processed, or 1 on error
  */
 static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
@@ -851,25 +890,12 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 
 	label->attempted = 1;
 
-	if (label->localboot) {
-		if (label->localboot_val >= 0) {
-			ret = label_localboot(label);
+	ret = label_boot_prep(ctx, label);
+	if (ret)
+		return ret > 0 ? 0 : ret;
 
-			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT) &&
-			    ret == -ENOENT)
-				ret = generate_localboot(label);
-			if (ret)
-				return ret;
-		} else {
-			return 0;
-		}
-	}
-
-	/* Load files and set up boot params if not already done */
+	/* Set up boot params if not already done */
 	if (!ctx->label) {
-		ret = pxe_load_label(ctx, label);
-		if (ret)
-			return 1;
 		ret = pxe_setup_label(ctx, label);
 		if (ret)
 			return 1;
