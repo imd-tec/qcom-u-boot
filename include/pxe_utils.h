@@ -150,6 +150,7 @@ typedef int (*pxe_getfile_func)(struct pxe_context *ctx, const char *file_path,
  * @initrd_addr: initaddr address (0 if none)
  * @initrd_size: initrd size (only used if @initrd_addr)
  * @initrd_str: initrd string to process (only used if @initrd_addr)
+ * @fdt_addr: FDT address from loaded file (0 if none)
  * @conf_fdt_str: FDT-address string
  * @conf_fdt: FDT address
  * @fdt: Working FDT pointer, for kaslrseed and overlay operations
@@ -189,6 +190,7 @@ struct pxe_context {
 	ulong initrd_addr;
 	ulong initrd_size;
 	char *initrd_str;
+	ulong fdt_addr;
 	char *conf_fdt_str;
 	ulong conf_fdt;
 	void *fdt;		/* working FDT pointer, for kaslrseed/overlays */
