@@ -679,14 +679,45 @@ static int generate_localboot(struct pxe_label *label)
 	return 0;
 }
 
+static int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label)
+{
+	int ret;
+
+	if (!label->kernel) {
+		printf("No kernel given, skipping %s\n", label->name);
+		return -ENOENT;
+	}
+
+	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
+				(enum bootflow_img_t)IH_TYPE_KERNEL,
+				&ctx->kern_addr, &ctx->kern_size) < 0) {
+		printf("Skipping %s for failure retrieving kernel\n",
+		       label->name);
+		return -EIO;
+	}
+
+	/* For FIT, the label can be identical to kernel one */
+	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
+		ctx->initrd_addr = ctx->kern_addr;
+	} else if (label->initrd) {
+		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
+					  SZ_2M,
+					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
+					  &ctx->initrd_addr, &ctx->initrd_size);
+		if (ret < 0) {
+			printf("Skipping %s for failure retrieving initrd\n",
+			       label->name);
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+
 int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 {
 	char fit_addr[200];
 	const char *conf_fdt_str;
-	ulong kern_addr = 0;
-	ulong initrd_addr = 0;
-	ulong initrd_size = 0;
-	ulong kern_size;
 	ulong conf_fdt = 0;
 	char initrd_str[28] = "";
 	int ret;
@@ -704,41 +735,19 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 			return 0;
 	}
 
-	if (!label->kernel) {
-		printf("No kernel given, skipping %s\n", label->name);
-		return -ENOENT;
-	}
-
-	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
-				(enum bootflow_img_t)IH_TYPE_KERNEL,
-				&kern_addr, &kern_size) < 0) {
-		printf("Skipping %s for failure retrieving kernel\n",
-		       label->name);
-		return -EIO;
-	}
+	ret = pxe_load_files(ctx, label);
+	if (ret)
+		return ret;
 
 	/* for FIT, append the configuration identifier */
-	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", kern_addr,
+	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", ctx->kern_addr,
 		 label->config ? label->config : "");
 
-	/* For FIT, the label can be identical to kernel one */
-	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
-		initrd_addr = kern_addr;
-	} else if (label->initrd) {
-		ulong size;
+	if (ctx->initrd_addr && ctx->initrd_size) {
+		int size;
 
-		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
-					  SZ_2M,
-					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
-					  &initrd_addr, &size);
-		if (ret < 0) {
-			printf("Skipping %s for failure retrieving initrd\n",
-			       label->name);
-			return -EIO;
-		}
-		initrd_size = size;
 		size = snprintf(initrd_str, sizeof(initrd_str), "%lx:%lx",
-				initrd_addr, size);
+				ctx->initrd_addr, ctx->initrd_size);
 		if (size >= sizeof(initrd_str))
 			return -ENOSPC;
 	}
@@ -749,7 +758,7 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 		return ret;
 
 	if (!conf_fdt_str)
-		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
+		conf_fdt_str = pxe_get_fdt_fallback(label, ctx->kern_addr);
 	if (conf_fdt_str)
 		conf_fdt = hextoul(conf_fdt_str, NULL);
 	log_debug("conf_fdt %lx\n", conf_fdt);
@@ -760,25 +769,20 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 	/* Save the loaded info to context */
 	ctx->label = label;
 	ctx->kern_addr_str = strdup(fit_addr);
-	ctx->kern_addr = kern_addr;
-	ctx->kern_size = kern_size;
-	if (initrd_addr) {
-		ctx->initrd_addr = initrd_addr;
-		ctx->initrd_size = initrd_size;
+	if (ctx->initrd_addr)
 		ctx->initrd_str = strdup(initrd_str);
-	}
 	ctx->conf_fdt_str = strdup(conf_fdt_str);
 	ctx->conf_fdt = conf_fdt;
 
 	log_debug("Loaded label '%s':\n", label->name);
 	log_debug("- kern_addr_str '%s' conf_fdt_str '%s' conf_fdt %lx\n",
 		  ctx->kern_addr_str, ctx->conf_fdt_str, conf_fdt);
-	if (initrd_addr) {
+	if (ctx->initrd_addr) {
 		log_debug("- initrd addr %lx filesize %lx str '%s'\n",
 			  ctx->initrd_addr, ctx->initrd_size, ctx->initrd_str);
 	}
 	if (!ctx->kern_addr_str || (conf_fdt_str && !ctx->conf_fdt_str) ||
-	    (initrd_addr && !ctx->initrd_str)) {
+	    (ctx->initrd_addr && !ctx->initrd_str)) {
 		printf("malloc fail (saving label)\n");
 		return -ENOMEM;
 	}
