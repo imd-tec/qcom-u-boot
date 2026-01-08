@@ -436,3 +436,10 @@ class TestPxeParser:
         with ubman.log.section('Test PXE ipappend'):
             ubman.run_ut('pxe', 'pxe_test_ipappend',
                          fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_label_override(self, ubman, pxe_image):
+        """Test pxe_label_override environment variable"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE label override'):
+            ubman.run_ut('pxe', 'pxe_test_label_override',
+                         fs_image=fs_img, cfg_path=cfg_path)

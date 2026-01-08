@@ -709,3 +709,54 @@ static int pxe_test_fdt_fallback(struct unit_test_state *uts)
 	return 0;
 }
 PXE_TEST(pxe_test_fdt_fallback, 0);
+
+/**
+ * Test pxe_label_override environment variable
+ *
+ * This tests that pxe_label_override can override the default label,
+ * and that an invalid override prints an error message.
+ */
+static int pxe_test_label_override_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set environment variables for file loading */
+	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set("bootfile", cfg_path));
+	ut_assertok(env_set("pxe_timeout", "1"));
+
+	/* Test 1: Override to 'local' label (localboot) */
+	ut_assertok(env_set("pxe_label_override", "local"));
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/* Should boot 'local' label instead of default 'linux' */
+	ut_assert_skip_to_line("3:\tLocal Boot");
+	ut_assert_skip_to_line("missing environment variable: localcmd");
+
+	/* Test 2: Invalid override - should print error */
+	ut_assertok(env_set("pxe_label_override", "nonexistent"));
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	ut_assert_skip_to_line("Missing override pxe label: nonexistent");
+
+	/* Clean up */
+	ut_assertok(env_set("pxe_label_override", NULL));
+	ut_assertok(env_set("pxe_timeout", NULL));
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_label_override_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });
