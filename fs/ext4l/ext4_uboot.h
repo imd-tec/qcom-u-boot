@@ -2067,11 +2067,6 @@ struct fid {
 	};
 };
 
-/* __kernel_fsid_t - must be before kstatfs */
-typedef struct {
-	int val[2];
-} __kernel_fsid_t;
-
 /* uuid_to_fsid - convert UUID to fsid */
 static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
 {

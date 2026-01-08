@@ -55,4 +55,8 @@ typedef unsigned short		__kernel_old_gid_t;
 typedef long long		__kernel_loff_t;
 #endif
 
+typedef struct {
+	int val[2];
+} __kernel_fsid_t;
+
 #endif
