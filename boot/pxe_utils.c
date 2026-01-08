@@ -849,9 +849,15 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	label_run_boot(ctx, label, kern_addr_str, kern_addr, kern_size,
 		       initrd_addr, initrd_size, initrd_str, conf_fdt_str,
 		       conf_fdt);
-	/* ignore the error value since we are going to fail anyway */
 
-	return 1;	/* returning is always failure */
+	/*
+	 * Sandbox cannot boot a real kernel, so stop after the first attempt.
+	 * On real hardware, returning is always failure, so try next label.
+	 */
+	if (IS_ENABLED(CONFIG_SANDBOX))
+		return 0;
+
+	return 1;
 }
 
 /*
