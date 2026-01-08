@@ -276,6 +276,7 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
 	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
 	ut_assertok(env_set("bootfile", cfg_path));
+	ut_assertok(env_set("pxe_timeout", "1"));
 
 	/*
 	 * Run sysboot - it will try all labels and return 0 after failing

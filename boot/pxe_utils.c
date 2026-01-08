@@ -929,11 +929,14 @@ static struct menu *pxe_menu_to_menu(struct pxe_menu *cfg)
 	int i = 1;
 	char *default_num = NULL;
 	char *override_num = NULL;
+	int timeout;
+
+	timeout = env_get_ulong("pxe_timeout", 10, DIV_ROUND_UP(cfg->timeout, 10));
 
 	/*
 	 * Create a menu and add items for all the labels.
 	 */
-	m = menu_create(cfg->title, DIV_ROUND_UP(cfg->timeout, 10),
+	m = menu_create(cfg->title, timeout,
 			cfg->prompt, NULL, label_print, NULL, NULL, NULL);
 	if (!m)
 		return NULL;
