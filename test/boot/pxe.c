@@ -127,37 +127,6 @@ static int pxe_check_menu(struct unit_test_state *uts, const char *say_msg,
 }
 
 /**
- * pxe_check_fdtdir() - Check fdtdir test menu and boot output
- *
- * Helper for pxe_test_fdtdir_norun() that checks the menu output and boot
- * file retrieval messages for the fdtdir test configuration.
- *
- * @uts: Unit test state
- * @dtb_name: Expected DTB filename (e.g., "test-board.dtb")
- * Return: 0 if OK, -ve on error
- */
-static int pxe_check_fdtdir(struct unit_test_state *uts, const char *dtb_name)
-{
-	/* Menu output */
-	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
-	ut_assert_nextline("Test Boot Menu");
-	ut_assert_nextline("1:\tTest fdtfile env var");
-	ut_assert_nextline("2:\tTest soc/board construction");
-	ut_assert_nextline("Enter choice: 1:\tTest fdtfile env var");
-
-	/* Boot file retrieval - FDT/overlays loaded before append is printed */
-	ut_assert_nextline("Retrieving file: /vmlinuz");
-	ut_assert_nextline("Retrieving file: /dtb/%s", dtb_name);
-	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
-	ut_assert_nextline("append: console=ttyS0");
-
-	/* Boot fails on sandbox */
-	ut_assert_nextline("Unrecognized zImage");
-
-	return 0;
-}
-
-/**
  * Test parsing an extlinux.conf file
  *
  * This test:
@@ -413,10 +382,9 @@ PXE_TEST_ARGS(pxe_test_sysboot_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "cfg_path", UT_ARG_STR });
 
 /**
- * Test fdtdir path resolution via sysboot
+ * Test fdtdir path resolution
  *
- * This test verifies fdtdir path construction by running sysboot and
- * checking console output:
+ * This test verifies:
  * 1. fdtdir with fdtfile env var - uses fdtfile value directly
  * 2. fdtdir with soc/board env vars - constructs {soc}-{board}.dtb
  * 3. fdtdir without trailing slash - slash is inserted
@@ -425,56 +393,96 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 {
 	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
 	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_test_info info;
+	struct pxe_context ctx;
+	struct pxe_label *label;
+	struct pxe_menu *cfg;
+	ulong addr = PXE_LOAD_ADDR;
 	void *fdt;
 
 	ut_assertnonnull(fs_image);
 	ut_assertnonnull(cfg_path);
 
+	info.uts = uts;
+
 	/* Bind the filesystem image */
 	ut_assertok(run_commandf("host bind 0 %s", fs_image));
 
+	/* Set up the PXE context */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
+				  false, false, NULL));
+
+	/* Read and parse the config file */
+	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
+
+	cfg = parse_pxefile(&ctx, addr);
+	ut_assertnonnull(cfg);
+
+	/* Consume parsing output */
+	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	ut_assert_console_end();
+
 	/*
 	 * Test 1: fdtdir with fdtfile env var
-	 * The first label uses fdtdir=/dtb/ and we set fdtfile=test-board.dtb
-	 * so it should retrieve /dtb/test-board.dtb
+	 * Set fdtfile=test-board.dtb, load should find /dtb/test-board.dtb
 	 */
-	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set("fdtfile", "test-board.dtb"));
 	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
 	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
 	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
-	ut_assertok(env_set("fdtfile", "test-board.dtb"));
-	ut_assertok(env_set("bootfile", cfg_path));
 
-	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
-				 PXE_LOAD_ADDR, cfg_path));
-	ut_assertok(pxe_check_fdtdir(uts, "test-board.dtb"));
+	/* Get first label (fdtfile-test) and load its files */
+	label = list_first_entry(&cfg->labels, struct pxe_label, list);
+	ut_asserteq_str("fdtfile-test", label->name);
+	ut_asserteq_str("/dtb/", label->fdtdir);
+	ut_assertnull(label->fdt);
 
-	/* Verify FDT was loaded correctly */
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* Verify FDT was loaded */
+	ut_asserteq(PXE_FDT_ADDR, ctx.conf_fdt);
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
 	ut_assertok(fdt_check_header(fdt));
 
+	/* Check console output shows the constructed path */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /dtb/test-board.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_console_end();
+
 	/*
 	 * Test 2: fdtdir with soc/board env vars (no fdtfile)
-	 * Clear fdtfile and set soc/board - the default label (fdtfile-test)
-	 * will now construct the path from soc-board: /dtb/tegra-jetson.dtb
+	 * Set soc=tegra, board=jetson -> /dtb/tegra-jetson.dtb
 	 */
 	ut_assertok(env_set("fdtfile", NULL));  /* Clear fdtfile */
 	ut_assertok(env_set("soc", "tegra"));
 	ut_assertok(env_set("board", "jetson"));
+	ctx.conf_fdt = 0;  /* Reset for next load */
 
-	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
-				 PXE_LOAD_ADDR, cfg_path));
-	ut_assertok(pxe_check_fdtdir(uts, "tegra-jetson.dtb"));
-	ut_assert_console_end();
+	/* Get second label (socboard-test) */
+	label = list_entry(label->list.next, struct pxe_label, list);
+	ut_asserteq_str("socboard-test", label->name);
+	ut_asserteq_str("/dtb", label->fdtdir);  /* No trailing slash */
 
-	/* Verify FDT was loaded */
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* Verify FDT was loaded (slash was inserted) */
+	ut_asserteq(PXE_FDT_ADDR, ctx.conf_fdt);
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
-	ut_asserteq(FDT_MAGIC, fdt_magic(fdt));
+	ut_assertok(fdt_check_header(fdt));
+
+	/* Check console output shows soc-board construction with slash */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /dtb/tegra-jetson.dtb");
+	ut_assert_console_end();
 
 	/* Clean up env vars */
 	env_set("fdtfile", NULL);
 	env_set("soc", NULL);
 	env_set("board", NULL);
+
+	destroy_pxe_menu(cfg);
+	pxe_destroy_ctx(&ctx);
 
 	return 0;
 }
@@ -483,77 +491,117 @@ PXE_TEST_ARGS(pxe_test_fdtdir_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "cfg_path", UT_ARG_STR });
 
 /**
- * Test error handling for missing FDT files via sysboot
+ * Test error handling for missing FDT and overlay files
  *
- * This test verifies error handling by running sysboot and checking
- * console output:
- * 1. Explicit FDT not found - label fails with error, tries next label
- * 2. fdtdir FDT not found - warns but continues to boot attempt
+ * This test verifies:
+ * 1. Explicit FDT not found - label should fail with error
+ * 2. fdtdir FDT not found - should warn but continue (return success)
+ * 3. Missing overlay - should warn but continue loading other overlays
  */
 static int pxe_test_errors_norun(struct unit_test_state *uts)
 {
 	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
 	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_test_info info;
+	struct pxe_context ctx;
+	struct pxe_label *label;
+	struct pxe_menu *cfg;
+	ulong addr = PXE_LOAD_ADDR;
+	void *fdt;
 
 	ut_assertnonnull(fs_image);
 	ut_assertnonnull(cfg_path);
 
+	info.uts = uts;
+
 	/* Bind the filesystem image */
 	ut_assertok(run_commandf("host bind 0 %s", fs_image));
 
+	/* Set up the PXE context */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
+				  false, false, NULL));
+
+	/* Read and parse the config file */
+	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
+
+	cfg = parse_pxefile(&ctx, addr);
+	ut_assertnonnull(cfg);
+
+	/* Consume parsing output */
+	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	ut_assert_console_end();
+
 	/* Set up environment for loading */
-	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
 	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
 	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
 	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
 	ut_assertok(env_set("fdtfile", "missing.dtb"));  /* For fdtdir test */
-	ut_assertok(env_set("bootfile", cfg_path));
-
-	/*
-	 * Run sysboot - it will try labels in sequence:
-	 * 1. missing-fdt: fails because explicit FDT doesn't exist
-	 * 2. missing-fdtdir: warns about missing FDT but attempts boot
-	 * 3. missing-overlay: loads FDT, warns about missing overlay, boots
-	 */
-	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
-				 PXE_LOAD_ADDR, cfg_path));
-
-	/* Check menu output */
-	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
-	ut_assert_nextline("Test Boot Menu");
-	ut_assert_nextline("1:\tMissing explicit FDT");
-	ut_assert_nextline("2:\tMissing fdtdir FDT");
-	ut_assert_nextline("3:\tMissing overlay");
-	ut_assert_nextline("Enter choice: 1:\tMissing explicit FDT");
 
 	/*
 	 * Test 1: Explicit FDT file not found
-	 * First label (missing-fdt) has fdt=/dtb/nonexistent.dtb
-	 * Should fail and move to next label
+	 * Label has fdt=/dtb/nonexistent.dtb - should fail with -ENOENT
 	 */
+	label = list_first_entry(&cfg->labels, struct pxe_label, list);
+	ut_asserteq_str("missing-fdt", label->name);
+	ut_asserteq_str("/dtb/nonexistent.dtb", label->fdt);
+
+	ut_asserteq(-ENOENT, pxe_load_label(&ctx, label));
+
+	/* Check error message */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /dtb/nonexistent.dtb");
 	ut_assert_nextline("Skipping missing-fdt for failure retrieving FDT");
+	ut_assert_console_end();
 
 	/*
 	 * Test 2: fdtdir with missing FDT file
-	 * Second label (missing-fdtdir) has fdtdir=/dtb/ but fdtfile=missing.dtb
-	 * Should warn but continue to boot attempt
+	 * Label has fdtdir=/dtb/ but fdtfile=missing.dtb doesn't exist
+	 * Should warn but return success (label continues without FDT)
 	 */
-	ut_assert_nextline("2:\tMissing fdtdir FDT");
+	ctx.conf_fdt = 0;
+	label = list_entry(label->list.next, struct pxe_label, list);
+	ut_asserteq_str("missing-fdtdir", label->name);
+	ut_asserteq_str("/dtb/", label->fdtdir);
+	ut_assertnull(label->fdt);
+
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* Check warning message */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /dtb/missing.dtb");
 	ut_assert_nextline("Skipping fdtdir /dtb/ for failure retrieving dts");
-
-	/*
-	 * Boot attempt without FDT - sandbox can't boot, but this verifies
-	 * that label loading continued despite missing fdtdir FDT
-	 */
-	ut_assert_nextline("Unrecognized zImage");
 	ut_assert_console_end();
 
-	/* Clean up env vars */
+	/*
+	 * Test 3: Missing overlay file (but valid FDT)
+	 * Label has fdt=/dtb/board.dtb (exists) and two overlays:
+	 * - /dtb/nonexistent.dtbo (missing - should warn)
+	 * - /dtb/overlay1.dtbo (exists - should load)
+	 */
+	ctx.conf_fdt = 0;
+	label = list_entry(label->list.next, struct pxe_label, list);
+	ut_asserteq_str("missing-overlay", label->name);
+	ut_asserteq_str("/dtb/board.dtb", label->fdt);
+
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* FDT should be loaded */
+	ut_asserteq(PXE_FDT_ADDR, ctx.conf_fdt);
+	fdt = map_sysmem(PXE_FDT_ADDR, 0);
+	ut_assertok(fdt_check_header(fdt));
+
+	/* Check console output */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/nonexistent.dtbo");
+	ut_assert_nextline("Failed loading overlay /dtb/nonexistent.dtbo");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_console_end();
+
+	/* Clean up */
 	env_set("fdtfile", NULL);
+	destroy_pxe_menu(cfg);
+	pxe_destroy_ctx(&ctx);
 
 	return 0;
 }
@@ -694,6 +742,9 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assertok(env_set("serverip", "192.168.1.1"));
 	ut_assertok(env_set("gatewayip", "192.168.1.254"));
 	ut_assertok(env_set("netmask", "255.255.255.0"));
+
+	/* Clear fdtfile to ensure rescue label's fdtdir tries /dtb/.dtb */
+	ut_assertok(env_set("fdtfile", NULL));
 
 	/* Override to boot the rescue label which has ipappend=3 */
 	ut_assertok(env_set("pxe_label_override", "rescue"));
