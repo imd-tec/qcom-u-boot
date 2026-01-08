@@ -306,9 +306,9 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
 static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
+	struct pxe_fdtoverlay *overlay;
 	struct fdt_header *blob;
 	ulong fdtoverlay_addr;
-	char **overlayp;
 	bool use_lmb;
 	char *envaddr;
 	int err;
@@ -331,38 +331,43 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		use_lmb = true;
 	}
 
-	/* Apply each overlay file in order */
-	alist_for_each(overlayp, &label->fdtoverlays) {
-		const char *overlayfile = *overlayp;
+	/* First pass: load all overlay files */
+	alist_for_each(overlay, &label->fdtoverlays) {
 		ulong addr = fdtoverlay_addr;
 		ulong size;
 
-		/* Load overlay file */
-		err = get_relfile(ctx, overlayfile, &addr, SZ_4K,
+		err = get_relfile(ctx, overlay->path, &addr, SZ_4K,
 				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
 		if (err < 0) {
-			printf("Failed loading overlay %s\n", overlayfile);
+			printf("Failed loading overlay %s\n", overlay->path);
 			continue;
 		}
+		overlay->addr = addr;
 
-		/* Resize main fdt */
-		fdt_shrink_to_minimum(ctx->fdt, 8192);
+		/* Move to next address if using fixed addresses */
+		if (!use_lmb)
+			fdtoverlay_addr = addr + size;
+	}
 
-		blob = map_sysmem(addr, 0);
+	/* Resize main fdt to make room for overlays */
+	fdt_shrink_to_minimum(ctx->fdt, 8192);
+
+	/* Second pass: apply all loaded overlays */
+	alist_for_each(overlay, &label->fdtoverlays) {
+		if (!overlay->addr)
+			continue;
+
+		blob = map_sysmem(overlay->addr, 0);
 		err = fdt_check_header(blob);
 		if (err) {
-			printf("Invalid overlay %s, skipping\n", overlayfile);
+			printf("Invalid overlay %s, skipping\n", overlay->path);
 			continue;
 		}
 
 		err = fdt_overlay_apply_verbose(ctx->fdt, blob);
 		if (err)
 			printf("Failed to apply overlay %s, skipping\n",
-			       overlayfile);
-
-		/* Move to next address if using fixed addresses */
-		if (!use_lmb)
-			fdtoverlay_addr = addr + size;
+			       overlay->path);
 	}
 }
 

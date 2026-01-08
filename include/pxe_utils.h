@@ -25,6 +25,17 @@
  */
 
 /**
+ * struct pxe_fdtoverlay - info about an FDT overlay
+ *
+ * @path: Path to the overlay file
+ * @addr: Address where the overlay was loaded (0 if not yet loaded)
+ */
+struct pxe_fdtoverlay {
+	char *path;
+	ulong addr;
+};
+
+/**
  * struct pxe_label - describes a single label in a pxe file
  *
  * Create these with label_create()
@@ -39,7 +50,7 @@
  * @initrd: path to the initrd to use for this label.
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
- * @fdtoverlays: list of paths of FDT overlays to apply (alist of char *)
+ * @fdtoverlays: list of FDT overlays to apply (alist of struct pxe_fdtoverlay)
  * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
  * @attempted: 0 if we haven't tried to boot this label, 1 if we have

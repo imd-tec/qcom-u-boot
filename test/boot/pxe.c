@@ -192,9 +192,9 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(2, label->fdtoverlays.count);
 	ut_asserteq_str("/dtb/overlay1.dtbo",
-			*alist_get(&label->fdtoverlays, 0, char *));
+			alist_get(&label->fdtoverlays, 0, struct pxe_fdtoverlay)->path);
 	ut_asserteq_str("/dtb/overlay2.dtbo",
-			*alist_get(&label->fdtoverlays, 1, char *));
+			alist_get(&label->fdtoverlays, 1, struct pxe_fdtoverlay)->path);
 	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
