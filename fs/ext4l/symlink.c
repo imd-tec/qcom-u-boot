@@ -115,21 +115,21 @@ static const char *ext4_get_link(struct dentry *dentry, struct inode *inode,
 
 const struct inode_operations ext4_encrypted_symlink_inode_operations = {
 	.get_link	= ext4_encrypted_get_link,
-	.setattr	= ext4_setattr,
+	.setattr	= EXT4_WR_OP(ext4_setattr),
 	.getattr	= ext4_encrypted_symlink_getattr,
 	.listxattr	= ext4_listxattr,
 };
 
 const struct inode_operations ext4_symlink_inode_operations = {
 	.get_link	= ext4_get_link,
-	.setattr	= ext4_setattr,
+	.setattr	= EXT4_WR_OP(ext4_setattr),
 	.getattr	= ext4_getattr,
 	.listxattr	= ext4_listxattr,
 };
 
 const struct inode_operations ext4_fast_symlink_inode_operations = {
 	.get_link	= simple_get_link,
-	.setattr	= ext4_setattr,
+	.setattr	= EXT4_WR_OP(ext4_setattr),
 	.getattr	= ext4_getattr,
 	.listxattr	= ext4_listxattr,
 };

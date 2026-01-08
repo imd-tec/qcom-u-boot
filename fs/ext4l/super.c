@@ -61,7 +61,12 @@ static int ext4_reconfigure(struct fs_context *fc);
 static void ext4_fc_free(struct fs_context *fc);
 static int ext4_init_fs_context(struct fs_context *fc);
 static void ext4_kill_sb(struct super_block *sb);
+#ifdef CONFIG_EXT4_MOUNT_OPTS
 static const struct fs_parameter_spec ext4_param_specs[];
+#define EXT4_PARAM_SPECS ext4_param_specs
+#else
+#define EXT4_PARAM_SPECS NULL
+#endif
 
 /*
  * Lock ordering
@@ -102,7 +107,7 @@ static struct file_system_type ext2_fs_type = {
 	.owner			= THIS_MODULE,
 	.name			= "ext2",
 	.init_fs_context	= ext4_init_fs_context,
-	.parameters		= ext4_param_specs,
+	.parameters		= EXT4_PARAM_SPECS,
 	.kill_sb		= ext4_kill_sb,
 	.fs_flags		= FS_REQUIRES_DEV,
 };
@@ -118,7 +123,7 @@ static struct file_system_type ext3_fs_type = {
 	.owner			= THIS_MODULE,
 	.name			= "ext3",
 	.init_fs_context	= ext4_init_fs_context,
-	.parameters		= ext4_param_specs,
+	.parameters		= EXT4_PARAM_SPECS,
 	.kill_sb		= ext4_kill_sb,
 	.fs_flags		= FS_REQUIRES_DEV,
 };
@@ -971,8 +976,8 @@ void __ext4_msg(struct super_block *sb,
 	/* Record in message buffer */
 	ext4l_record_msg(buf, len);
 
-	/* Also print if debug is enabled */
-	if (IS_ENABLED(CONFIG_EXT4L_DEBUG))
+	/* Also print if requested */
+	if (IS_ENABLED(CONFIG_EXT4L_PRINT))
 		printf("%s", buf);
 }
 
@@ -1663,6 +1668,24 @@ enum {
 #endif
 };
 
+#define MOPT_SET	0x0001
+#define MOPT_CLEAR	0x0002
+#define MOPT_NOSUPPORT	0x0004
+#define MOPT_EXPLICIT	0x0008
+#ifdef CONFIG_QUOTA
+#define MOPT_Q		0
+#define MOPT_QFMT	0x0010
+#else
+#define MOPT_Q		MOPT_NOSUPPORT
+#define MOPT_QFMT	MOPT_NOSUPPORT
+#endif
+#define MOPT_NO_EXT2	0x0020
+#define MOPT_NO_EXT3	0x0040
+#define MOPT_EXT4_ONLY	(MOPT_NO_EXT2 | MOPT_NO_EXT3)
+#define MOPT_SKIP	0x0080
+#define	MOPT_2		0x0100
+
+#ifdef CONFIG_EXT4_MOUNT_OPTS
 static const struct constant_table ext4_param_errors[] = {
 	{"continue",	EXT4_MOUNT_ERRORS_CONT},
 	{"panic",	EXT4_MOUNT_ERRORS_PANIC},
@@ -1803,24 +1826,6 @@ static const struct fs_parameter_spec ext4_param_specs[] = {
 	{}
 };
 
-
-#define MOPT_SET	0x0001
-#define MOPT_CLEAR	0x0002
-#define MOPT_NOSUPPORT	0x0004
-#define MOPT_EXPLICIT	0x0008
-#ifdef CONFIG_QUOTA
-#define MOPT_Q		0
-#define MOPT_QFMT	0x0010
-#else
-#define MOPT_Q		MOPT_NOSUPPORT
-#define MOPT_QFMT	MOPT_NOSUPPORT
-#endif
-#define MOPT_NO_EXT2	0x0020
-#define MOPT_NO_EXT3	0x0040
-#define MOPT_EXT4_ONLY	(MOPT_NO_EXT2 | MOPT_NO_EXT3)
-#define MOPT_SKIP	0x0080
-#define	MOPT_2		0x0100
-
 static const struct mount_opts {
 	int	token;
 	int	mount_opt;
@@ -1895,6 +1900,7 @@ static const struct mount_opts {
 	{Opt_abort, EXT4_MOUNT2_ABORT, MOPT_SET | MOPT_2},
 	{Opt_err, 0, 0}
 };
+#endif /* CONFIG_EXT4_MOUNT_OPTS */
 
 #if IS_ENABLED(CONFIG_UNICODE)
 static const struct ext4_sb_encodings {
@@ -2084,6 +2090,7 @@ EXT4_SET_CTX(mount_opt2);
 EXT4_CLEAR_CTX(mount_opt2);
 EXT4_TEST_CTX(mount_opt2);
 
+#ifdef CONFIG_EXT4_MOUNT_OPTS
 static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
 {
 	struct ext4_fs_context *ctx = fc->fs_private;
@@ -2377,6 +2384,13 @@ static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
 
 	return 0;
 }
+#else
+/* Stub when mount option parsing is disabled - use defaults */
+static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
+{
+	return 0;
+}
+#endif /* CONFIG_EXT4_MOUNT_OPTS */
 
 static int parse_options(struct fs_context *fc, char *options)
 {
@@ -2862,6 +2876,7 @@ static inline void ext4_show_quota_options(struct seq_file *seq,
 #endif
 }
 
+#ifdef CONFIG_EXT4_MOUNT_OPTS
 static const char *token2str(int token)
 {
 	const struct fs_parameter_spec *spec;
@@ -2871,7 +2886,6 @@ static const char *token2str(int token)
 			break;
 	return spec->name;
 }
-
 /*
  * Show an option if
  *  - it's set to a non-default value OR
@@ -3018,6 +3032,17 @@ int ext4_seq_options_show(struct seq_file *seq, void *offset)
 	seq_putc(seq, '\n');
 	return rc;
 }
+#else
+static int ext4_show_options(struct seq_file *seq, struct dentry *root)
+{
+	return 0;
+}
+
+int ext4_seq_options_show(struct seq_file *seq, void *offset)
+{
+	return 0;
+}
+#endif /* CONFIG_EXT4_MOUNT_OPTS */
 
 static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 			    int read_only)
@@ -3553,6 +3578,22 @@ int ext4_feature_set_ok(struct super_block *sb, int readonly)
 		return 0;
 	}
 
+	if (!IS_ENABLED(CONFIG_EXT4_INLINE_DATA) &&
+	    ext4_has_feature_inline_data(sb)) {
+		ext4_msg(sb, KERN_ERR,
+			 "Filesystem with inline_data feature cannot be "
+			 "mounted without CONFIG_EXT4_INLINE_DATA");
+		return 0;
+	}
+
+	if (!IS_ENABLED(CONFIG_EXT4_INDIRECT) &&
+	    !ext4_has_feature_extents(sb)) {
+		ext4_msg(sb, KERN_ERR,
+			 "Filesystem without extents feature requires "
+			 "CONFIG_EXT4_INDIRECT for indirect block support");
+		return 0;
+	}
+
 	if (readonly)
 		return 1;
 
@@ -3647,7 +3688,8 @@ static int ext4_run_li_request(struct ext4_li_request *elr)
 	int nr = EXT4_SB(sb)->s_mb_prefetch;
 	u64 start_time;
 
-	if (elr->lr_mode == EXT4_LI_MODE_PREFETCH_BBITMAP) {
+	if (IS_ENABLED(CONFIG_EXT4_MBALLOC_PREFETCH) &&
+	    elr->lr_mode == EXT4_LI_MODE_PREFETCH_BBITMAP) {
 		elr->lr_next_group = ext4_mb_prefetch(sb, group, nr, &prefetch_ios);
 		ext4_mb_prefetch_fini(sb, elr->lr_next_group, nr);
 		trace_ext4_prefetch_bitmaps(sb, group, elr->lr_next_group, nr);
@@ -5421,7 +5463,7 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
 		needs_recovery = 0;
 	}
 
-	if (!test_opt(sb, NO_MBCACHE)) {
+	if (!test_opt(sb, NO_MBCACHE) && IS_ENABLED(CONFIG_EXT4_XATTR)) {
 		sbi->s_ea_block_cache = ext4_xattr_create_cache();
 		if (!sbi->s_ea_block_cache) {
 			ext4_msg(sb, KERN_ERR,
@@ -7380,7 +7422,7 @@ static struct file_system_type ext4_fs_type = {
 	.owner			= THIS_MODULE,
 	.name			= "ext4",
 	.init_fs_context	= ext4_init_fs_context,
-	.parameters		= ext4_param_specs,
+	.parameters		= EXT4_PARAM_SPECS,
 	.kill_sb		= ext4_kill_sb,
 	.fs_flags		= FS_REQUIRES_DEV | FS_ALLOW_IDMAP | FS_MGTIME,
 };

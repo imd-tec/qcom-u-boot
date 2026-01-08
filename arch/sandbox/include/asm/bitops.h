@@ -34,11 +34,11 @@
 /*
  * Function prototypes to keep gcc -Wall happy.
  */
-extern void set_bit(int nr, void *addr);
+extern void set_bit(int nr, volatile void *addr);
 
-extern void clear_bit(int nr, void *addr);
+extern void clear_bit(int nr, volatile void *addr);
 
-extern void change_bit(int nr, void *addr);
+extern void change_bit(int nr, volatile void *addr);
 
 static inline void __change_bit(int nr, void *addr)
 {

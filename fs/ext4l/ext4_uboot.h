@@ -19,6 +19,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+#include <div64.h>
 #include <linux/types.h>
 #include <linux/bitops.h>
 #include <vsprintf.h>		/* For panic() */
@@ -28,7 +29,9 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/list.h>
+#include <linux/log2.h>
 #include <linux/init.h>
+#include <linux/math64.h>
 #include <linux/workqueue.h>
 #include <linux/cred.h>
 #include <linux/fs.h>
@@ -36,16 +39,6 @@
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
-
-/*
- * Enable ext4_msg() and other diagnostic macros to pass full messages.
- * This is required for message recording to work. Without this, the
- * ext4_msg macro passes empty strings to __ext4_msg().
- *
- * Use EXT4L_PRINTF instead of CONFIG_PRINTK since U-Boot requires CONFIG_
- * options to be defined in Kconfig.
- */
-#define EXT4L_PRINTF		1
 
 /*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
@@ -427,9 +420,11 @@ struct super_block;
 struct buffer_head;
 struct qstr;
 
+#ifdef CONFIG_EXT4_XATTR
 int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 			     struct buffer_head *block_bh, size_t value_len,
 			     bool is_create);
+#endif
 /* ext4_init_security is provided by xattr.h */
 
 /* inode state stubs */
@@ -438,15 +433,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Block device operations - stubs */
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
 #define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
-
-/* do_div - divide u64 by u32 */
-#define do_div(n, base) ({			\
-	unsigned int __base = (base);		\
-	unsigned int __rem;			\
-	__rem = ((unsigned long long)(n)) % __base;	\
-	(n) = ((unsigned long long)(n)) / __base;	\
-	__rem;					\
-})
 
 /* Inode locking - stubs */
 #define inode_is_locked(i)	(1)
@@ -1374,7 +1360,7 @@ struct address_space_operations {
 	int (*read_folio)(struct file *, struct folio *);
 	void (*readahead)(struct readahead_control *);
 	sector_t (*bmap)(struct address_space *, sector_t);
-	void (*invalidate_folio)(struct folio *, unsigned long, unsigned long);
+	void (*invalidate_folio)(struct folio *, size_t, size_t);
 	bool (*release_folio)(struct folio *, gfp_t);
 	int (*write_begin)(const struct kiocb *, struct address_space *, loff_t, unsigned, struct folio **, void **);
 	int (*write_end)(const struct kiocb *, struct address_space *, loff_t, unsigned, unsigned, struct folio *, void *);
@@ -1465,10 +1451,6 @@ typedef unsigned int projid_t;
 		*(old) = __ret;			\
 	__ret == __old;				\
 })
-
-/* ilog2 - log base 2 */
-#include <log.h>
-#define ilog2(n) (fls(n) - 1)
 
 /* hash_64 - simple 64-bit hash */
 #define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
@@ -2078,11 +2060,6 @@ struct fid {
 	};
 };
 
-/* __kernel_fsid_t - must be before kstatfs */
-typedef struct {
-	int val[2];
-} __kernel_fsid_t;
-
 /* uuid_to_fsid - convert UUID to fsid */
 static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
 {
@@ -2378,10 +2355,6 @@ void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
 #define kvmalloc(size, flags)	kvzalloc(size, flags)
-unsigned long roundup_pow_of_two(unsigned long n);
-
-/* Power of 2 check - declaration for stub.c */
-int is_power_of_2(unsigned long n);
 
 /* Time operations */
 #define ktime_get_ns()			(0ULL)
@@ -2658,9 +2631,6 @@ struct seq_operations {
 
 /* Block layer constants */
 #define BLK_MAX_SEGMENT_SIZE		65536
-
-/* order_base_2 - log2 rounded up */
-#define order_base_2(n)			ilog2(roundup_pow_of_two(n))
 
 /* num_possible_cpus - number of possible CPUs (always 1 in U-Boot) */
 #define num_possible_cpus()		1
@@ -3117,12 +3087,6 @@ static inline struct new_utsname *init_utsname(void)
 
 /* test_and_set_bit_lock - test and set a bit atomically */
 #define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
-
-/* div64_u64 - 64-bit by 64-bit division */
-static inline u64 div64_u64(u64 dividend, u64 divisor)
-{
-	return dividend / divisor;
-}
 
 /* time_is_before_jiffies - check if time is before current jiffies */
 #define time_is_before_jiffies(a)	({ (void)(a); 0; })

@@ -48,6 +48,10 @@ __releases(&journal->j_state_lock)
 	int nblocks, space_left;
 	/* assert_spin_locked(&journal->j_state_lock); */
 
+	/* Only needed for write operations */
+	if (!IS_ENABLED(CONFIG_EXT4_WRITE))
+		return;
+
 	nblocks = journal->j_max_transaction_buffers;
 	while (jbd2_log_space_left(journal) < nblocks) {
 		write_unlock(&journal->j_state_lock);

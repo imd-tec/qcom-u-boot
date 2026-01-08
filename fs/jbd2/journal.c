@@ -232,6 +232,14 @@ static int jbd2_journal_start_thread(journal_t *journal)
 {
 	struct task_struct *t;
 
+	/*
+	 * The journal thread handles asynchronous commits. For read-only
+	 * builds, we don't need it - commits happen synchronously in
+	 * jbd2_journal_stop() when write support is enabled.
+	 */
+	if (!IS_ENABLED(CONFIG_EXT4_WRITE))
+		return 0;
+
 	t = kthread_run(kjournald2, journal, "jbd2/%s",
 			journal->j_devname);
 	if (IS_ERR(t))
@@ -2117,14 +2125,15 @@ int jbd2_journal_destroy(journal_t *journal)
 	journal_kill_thread(journal);
 
 	/* Force a final log commit */
-	if (journal->j_running_transaction)
+	if (IS_ENABLED(CONFIG_EXT4_WRITE) && journal->j_running_transaction)
 		jbd2_journal_commit_transaction(journal);
 
 	/* Force any old transactions to disk */
 
 	/* Totally anal locking here... */
 	spin_lock(&journal->j_list_lock);
-	while (journal->j_checkpoint_transactions != NULL) {
+	while (IS_ENABLED(CONFIG_EXT4_WRITE) &&
+	       journal->j_checkpoint_transactions != NULL) {
 		spin_unlock(&journal->j_list_lock);
 		mutex_lock_io(&journal->j_checkpoint_mutex);
 		err = jbd2_log_do_checkpoint(journal);
@@ -2399,6 +2408,10 @@ int jbd2_journal_flush(journal_t *journal, unsigned int flags)
 {
 	int err = 0;
 	transaction_t *transaction = NULL;
+
+	/* Nothing to flush in read-only builds */
+	if (!IS_ENABLED(CONFIG_EXT4_WRITE))
+		return 0;
 
 	write_lock(&journal->j_state_lock);
 

@@ -18,6 +18,7 @@
 #include <u-boot/uuid.h>
 #include <linux/errno.h>
 #include <linux/jbd2.h>
+#include <linux/math64.h>
 #include <linux/types.h>
 
 #include "ext4_uboot.h"
@@ -387,7 +388,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 
 	/* Read sectors containing the superblock */
 	if (blk_dread(fs_dev_desc,
-		      (part_offset + BLOCK_SIZE) / fs_dev_desc->blksz,
+		      div_u64(part_offset + BLOCK_SIZE, fs_dev_desc->blksz),
 		      2, buf) != 2) {
 		ret = -EIO;
 		goto err_free_buf;
@@ -414,7 +415,7 @@ int ext4l_probe(struct blk_desc *fs_dev_desc,
 	 * If write returns 0, the device is read-only (e.g. LUKS/blkmap_crypt)
 	 */
 	if (blk_dwrite(fs_dev_desc,
-		       (part_offset + BLOCK_SIZE) / fs_dev_desc->blksz,
+		       div_u64(part_offset + BLOCK_SIZE, fs_dev_desc->blksz),
 		       2, buf) != 2) {
 		sb->s_bdev->read_only = true;
 		sb->s_flags |= SB_RDONLY;
@@ -846,9 +847,11 @@ int ext4l_read(const char *filename, void *buf, loff_t offset, loff_t len,
 	dst = buf;
 
 	while (bytes_left > 0) {
+		u32 rem;
+
 		/* Calculate logical block number and offset within block */
-		block = offset / blksize;
-		blk_off = offset % blksize;
+		block = div_u64_rem(offset, blksize, &rem);
+		blk_off = rem;
 
 		/* Read the block */
 		bh = ext4_bread(NULL, inode, block, 0);

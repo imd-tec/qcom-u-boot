@@ -29,8 +29,163 @@ config EXT4_JOURNAL
 config EXT4L_DEBUG
 	bool "Enable ext4l debug messages"
 	depends on FS_EXT4L
+	default y if SANDBOX
 	help
 	  Enable debug and informational messages from the ext4l filesystem.
-	  This includes mount messages and other ext4_msg() output.
+	  This includes mount messages, error details, and other ext4_msg()
+	  output with full format strings.
 
+	  Disabling this option replaces detailed error messages with generic
+	  strings, saving about 20K of rodata. Mount failures will still be
+	  reported but without specific details about what went wrong.
+
+	  If unsure, say N.
+
+config EXT4L_PRINT
+	bool "Print ext4l messages to console"
+	depends on EXT4L_DEBUG
+	help
+	  Print ext4l messages to the console in addition to recording them.
+	  Messages are always recorded and can be retrieved programmatically;
+	  this option controls whether they are also printed.
+
+config EXT4_MOUNT_OPTS
+	bool "Enable mount option parsing"
+	depends on FS_EXT4L
+	help
+	  Enable parsing of ext4 mount options (e.g., "data=ordered",
+	  "barrier=1"). This requires the mount option specification
+	  tables which add about 2KB of rodata.
+
+	  When disabled, ext4 uses fixed default options suitable for
+	  read-only operation. This saves space but prevents customising
+	  mount behaviour.
+
+	  If unsure, say N.
+
+config EXT4_RESIZE
+	bool "Enable ext4 online resize support"
+	depends on FS_EXT4L
+	help
+	  Enable support for online filesystem resize. This allows
+	  growing an ext4 filesystem while it is mounted.
+
+	  This adds about 10K to the image size. Not needed for U-Boot
+	  in most cases. If unsure, say N.
+
+config EXT4_MIGRATE
+	bool "Enable ext4 extent migration support"
+	depends on FS_EXT4L
+	help
+	  Enable support for migrating inodes between indirect block
+	  mapping and extent mapping formats.
+
+	  This adds about 2.5K to the image size. Not needed for U-Boot
+	  in most cases. If unsure, say N.
+
+config EXT4_MOVE_EXTENT
+	bool "Enable ext4 move extent ioctl support"
+	depends on FS_EXT4L
+	help
+	  Enable support for the EXT4_IOC_MOVE_EXT ioctl which moves
+	  extents between files.
+
+	  This adds about 1.5K to the image size. Not needed for U-Boot.
+	  If unsure, say N.
+
+config EXT4_XATTR
+	bool "Enable ext4 extended attributes support"
+	depends on FS_EXT4L
+	help
+	  Enable support for extended attributes (xattrs) on ext4
+	  filesystems. This is required for ACLs, security labels,
+	  and user-defined attributes.
+
+	  This adds about 14K to the image size. If unsure, say N.
+
+config EXT4_INLINE_DATA
+	bool "Enable ext4 inline data support"
+	depends on FS_EXT4L && EXT4_XATTR
+	help
+	  Enable support for inline data, which stores small files
+	  directly in the inode. This is an uncommon feature that
+	  requires creating the filesystem with -O inline_data.
+
+	  Filesystems with inline_data feature will be rejected if
+	  this is disabled. Adds about 8K. If unsure, say N.
+
+config EXT4_INDIRECT
+	bool "Enable ext4 indirect block support (ext2/3 compatibility)"
+	depends on FS_EXT4L
+	default y
+	help
+	  Enable support for indirect block mapping used by ext2/ext3
+	  filesystems. Modern ext4 filesystems use extents instead.
+
+	  Filesystems without the extents feature will be rejected if
+	  this is disabled. Adds about 5K. If unsure, say N.
+
+config EXT4_MBALLOC
+	bool "Enable ext4 multiblock allocator"
+	depends on FS_EXT4L
+	help
+	  Enable the multiblock allocator (mballoc) which is required for
+	  writing to ext4 filesystems. This handles block allocation for
+	  new files and extending existing files.
+
+	  For read-only builds, this can be disabled to save about 22K.
+	  If unsure, say Y if you need write support, N for read-only.
+
+config EXT4_MBALLOC_PREFETCH
+	bool "Enable ext4 block bitmap prefetch support"
+	depends on FS_EXT4L && EXT4_MBALLOC
+	help
+	  Enable prefetching of block allocation bitmaps to improve
+	  allocation performance. When enabled, the multiblock allocator
+	  will read ahead block bitmaps during allocation and lazy
+	  initialization.
+
+	  Disabling this saves space by allowing the multiblock allocator
+	  prefetch code to be removed. Read performance may be slightly
+	  reduced during lazy initialization.
+
+	  If unsure, say Y.
+
+config EXT4_FAST_COMMIT_REPLAY
+	bool "Enable ext4 fast commit replay support"
+	depends on FS_EXT4L
+	default y
+	help
+	  Enable support for replaying fast commit records during mount.
+	  Fast commit is a journal optimization that records fine-grained
+	  changes. If a filesystem was not cleanly unmounted and has
+	  pending fast commit records, this option is needed to recover.
+
+	  Disabling this saves space (~8K) but means filesystems with
+	  pending fast commits cannot be recovered. Only disable if you're
+	  certain your filesystems won't have fast commit records (e.g.,
+	  created with -O ^fast_commit).
+
+	  If unsure, say Y.
+
+config EXT4_FS_POSIX_ACL
+	bool "Enable ext4 POSIX Access Control Lists"
+	depends on FS_EXT4L && EXT4_XATTR
+	help
+	  Enable POSIX Access Control Lists (ACLs) support for ext4
+	  filesystems. ACLs provide more fine-grained access control
+	  than the standard Unix permission model.
+
+	  ACLs require extended attributes support (EXT4_XATTR).
+	  If unsure, say N.
+
+config EXT4_FS_SECURITY
+	bool "Enable ext4 security labels"
+	depends on FS_EXT4L && EXT4_XATTR
+	help
+	  Enable security labels support for ext4 filesystems. This
+	  provides an extended attribute handler for file security
+	  labels used by security modules like SELinux.
+
+	  Security labels require extended attributes support (EXT4_XATTR).
 	  If unsure, say N.

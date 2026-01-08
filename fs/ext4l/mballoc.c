@@ -2858,6 +2858,9 @@ static void ext4_mb_might_prefetch(struct ext4_allocation_context *ac,
 {
 	struct ext4_sb_info *sbi;
 
+	if (!IS_ENABLED(CONFIG_EXT4_MBALLOC_PREFETCH))
+		return;
+
 	if (ac->ac_prefetch_grp != group)
 		return;
 
@@ -3069,7 +3072,7 @@ out:
 		 ac->ac_b_ex.fe_len, ac->ac_o_ex.fe_len, ac->ac_status,
 		 ac->ac_flags, ac->ac_criteria, err);
 
-	if (ac->ac_prefetch_nr)
+	if (IS_ENABLED(CONFIG_EXT4_MBALLOC_PREFETCH) && ac->ac_prefetch_nr)
 		ext4_mb_prefetch_fini(sb, ac->ac_prefetch_grp, ac->ac_prefetch_nr);
 
 	return err;

@@ -1360,6 +1360,7 @@ static void ext4_fc_cleanup(journal_t *journal, int full, tid_t tid)
 	trace_ext4_fc_stats(sb);
 }
 
+#ifdef CONFIG_EXT4_FAST_COMMIT_REPLAY
 /* Ext4 Replay Path Routines */
 
 /* Helper struct for dentry replay routines */
@@ -2277,6 +2278,7 @@ static int ext4_fc_replay(journal_t *journal, struct buffer_head *bh,
 	}
 	return ret;
 }
+#endif /* CONFIG_EXT4_FAST_COMMIT_REPLAY */
 
 void ext4_fc_init(struct super_block *sb, journal_t *journal)
 {
@@ -2285,7 +2287,9 @@ void ext4_fc_init(struct super_block *sb, journal_t *journal)
 	 * could still have fast commit blocks that need to be replayed even if
 	 * fast commit has now been turned off.
 	 */
+#ifdef CONFIG_EXT4_FAST_COMMIT_REPLAY
 	journal->j_fc_replay_callback = ext4_fc_replay;
+#endif
 	if (!test_opt2(sb, JOURNAL_FAST_COMMIT))
 		return;
 	journal->j_fc_cleanup_callback = ext4_fc_cleanup;

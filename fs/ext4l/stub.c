@@ -79,21 +79,21 @@ typedef struct journal_s journal_t;
  * Bit operations - sandbox declares these extern but doesn't implement them.
  * These work on bitmaps where nr is the absolute bit number.
  */
-void set_bit(int nr, void *addr)
+void set_bit(int nr, volatile void *addr)
 {
 	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
 	*p |= (1UL << (nr % BITS_PER_LONG));
 }
 
-void clear_bit(int nr, void *addr)
+void clear_bit(int nr, volatile void *addr)
 {
 	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
 	*p &= ~(1UL << (nr % BITS_PER_LONG));
 }
 
-void change_bit(int nr, void *addr)
+void change_bit(int nr, volatile void *addr)
 {
 	unsigned long *p = (unsigned long *)addr + (nr / BITS_PER_LONG);
 
@@ -360,15 +360,6 @@ void ext4_force_shutdown(void *sb, int flags)
 }
 
 /* Memory stubs */
-unsigned long roundup_pow_of_two(unsigned long n)
-{
-	unsigned long ret = 1;
-
-	while (ret < n)
-		ret <<= 1;
-	return ret;
-}
-
 void *kvzalloc(size_t size, gfp_t flags)
 {
 	return calloc(1, size);
@@ -523,12 +514,6 @@ int sb_set_blocksize(struct super_block *sb, int size)
 	sb->s_blocksize_bits = ffs(size) - 1;
 
 	return size;
-}
-
-/* Power of 2 check */
-int is_power_of_2(unsigned long n)
-{
-	return n != 0 && (n & (n - 1)) == 0;
 }
 
 /* strscpy_pad is now a macro in ext4_uboot.h */

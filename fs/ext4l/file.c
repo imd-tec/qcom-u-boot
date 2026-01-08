@@ -966,7 +966,7 @@ const struct file_operations ext4_file_operations = {
 
 /* U-Boot simplified inode operations */
 const struct inode_operations ext4_file_inode_operations = {
-	.setattr	= ext4_setattr,
+	.setattr	= EXT4_WR_OP(ext4_setattr),
 	.getattr	= ext4_file_getattr,
 	.listxattr	= ext4_listxattr,
 	.fiemap		= ext4_fiemap,
