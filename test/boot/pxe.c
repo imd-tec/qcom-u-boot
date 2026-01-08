@@ -411,3 +411,75 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 PXE_TEST_ARGS(pxe_test_fdtdir_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * Test error handling for missing FDT files via sysboot
+ *
+ * This test verifies error handling by running sysboot and checking
+ * console output:
+ * 1. Explicit FDT not found - label fails with error, tries next label
+ * 2. fdtdir FDT not found - warns but continues to boot attempt
+ */
+static int pxe_test_errors_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set up environment for loading */
+	ut_assertok(env_set_hex("pxefile_addr_r", PXE_LOAD_ADDR));
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
+	ut_assertok(env_set("fdtfile", "missing.dtb"));  /* For fdtdir test */
+	ut_assertok(env_set("bootfile", cfg_path));
+
+	/*
+	 * Run sysboot - it will try labels in sequence:
+	 * 1. missing-fdt: fails because explicit FDT doesn't exist
+	 * 2. missing-fdtdir: warns about missing FDT but attempts boot
+	 * 3. missing-overlay: loads FDT, warns about missing overlay, boots
+	 */
+	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
+				 PXE_LOAD_ADDR, cfg_path));
+
+	/*
+	 * Test 1: Explicit FDT file not found
+	 * First label (missing-fdt) has fdt=/dtb/nonexistent.dtb
+	 * Should fail and move to next label
+	 */
+	ut_assert_skip_to_line("Enter choice: 1:\tMissing explicit FDT");
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /dtb/nonexistent.dtb");
+	ut_assert_nextline("Skipping missing-fdt for failure retrieving FDT");
+
+	/*
+	 * Test 2: fdtdir with missing FDT file
+	 * Second label (missing-fdtdir) has fdtdir=/dtb/ but fdtfile=missing.dtb
+	 * Should warn but continue to boot attempt
+	 */
+	ut_assert_nextline("2:\tMissing fdtdir FDT");
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /dtb/missing.dtb");
+	ut_assert_nextline("Skipping fdtdir /dtb/ for failure retrieving dts");
+
+	/*
+	 * Boot attempt without FDT - sandbox can't boot, but this verifies
+	 * that label loading continued despite missing fdtdir FDT
+	 */
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_nextlinen("       unmap_physmem");
+
+	/* Clean up env vars */
+	env_set("fdtfile", NULL);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_errors_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });

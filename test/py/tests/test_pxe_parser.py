@@ -327,6 +327,67 @@ def pxe_fdtdir_image(u_boot_config):
     fsh.cleanup()
 
 
+@pytest.fixture
+def pxe_error_image(u_boot_config):
+    """Create a filesystem image for testing error handling
+
+    This tests various error conditions:
+    - Explicit FDT file that doesn't exist (should fail label)
+    - fdtdir with missing FDT file (should continue)
+    - Missing overlay file (should continue)
+    """
+    fsh = FsHelper(u_boot_config, 'vfat', 4, prefix='pxe_error')
+    fsh.setup()
+
+    labels = [
+        {
+            # Explicit FDT that doesn't exist - should fail this label
+            'name': 'missing-fdt',
+            'menu': 'Missing explicit FDT',
+            'kernel': '/vmlinuz',
+            'fdt': '/dtb/nonexistent.dtb',
+            'default': True,
+        },
+        {
+            # fdtdir with missing FDT - should warn but continue
+            'name': 'missing-fdtdir',
+            'menu': 'Missing fdtdir FDT',
+            'kernel': '/vmlinuz',
+            'fdtdir': '/dtb/',
+        },
+        {
+            # Valid FDT but missing overlay - should continue
+            'name': 'missing-overlay',
+            'menu': 'Missing overlay',
+            'kernel': '/vmlinuz',
+            'fdt': '/dtb/board.dtb',
+            'fdtoverlays': '/dtb/nonexistent.dtbo /dtb/overlay1.dtbo',
+        },
+    ]
+
+    cfg_path = create_extlinux_conf(fsh.srcdir, labels)
+
+    # Create DTB directory with only some files
+    dtbdir = os.path.join(fsh.srcdir, 'dtb')
+    os.makedirs(dtbdir, exist_ok=True)
+
+    # Only create board.dtb and overlay1.dtbo - others are missing
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'board.dtb'))
+    compile_dts(OVERLAY1_DTS, os.path.join(dtbdir, 'overlay1.dtbo'),
+                is_overlay=True)
+
+    # Create dummy kernel
+    with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
+        fd.write(b'kernel')
+        fd.write(b'\x00' * (1024 - 6))
+
+    fsh.mk_fs()
+
+    yield fsh.fs_img, cfg_path
+
+    fsh.cleanup()
+
+
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.requiredtool('dtc')
 class TestPxeParser:
@@ -351,4 +412,11 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_fdtdir_image
         with ubman.log.section('Test PXE fdtdir'):
             ubman.run_ut('pxe', 'pxe_test_fdtdir',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_errors(self, ubman, pxe_error_image):
+        """Test error handling for missing FDT and overlay files"""
+        fs_img, cfg_path = pxe_error_image
+        with ubman.log.section('Test PXE errors'):
+            ubman.run_ut('pxe', 'pxe_test_errors',
                          fs_image=fs_img, cfg_path=cfg_path)
