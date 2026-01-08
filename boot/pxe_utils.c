@@ -277,30 +277,23 @@ static int label_localboot(struct pxe_label *label)
 /*
  * label_boot_kaslrseed generate kaslrseed from hw rng
  */
-
-static void label_boot_kaslrseed(void)
+static void label_boot_kaslrseed(struct pxe_context *ctx)
 {
 #if CONFIG_IS_ENABLED(DM_RNG)
-	ulong fdt_addr;
-	struct fdt_header *working_fdt;
 	int err;
 
-	/* Get the main fdt and map it */
-	fdt_addr = hextoul(env_get("fdt_addr_r"), NULL);
-	working_fdt = map_sysmem(fdt_addr, 0);
-	err = fdt_check_header(working_fdt);
+	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
 	/* add extra size for holding kaslr-seed */
 	/* err is new fdt size, 0 or negtive */
-	err = fdt_shrink_to_minimum(working_fdt, 512);
+	err = fdt_shrink_to_minimum(ctx->fdt, 512);
 	if (err <= 0)
 		return;
 
-	fdt_kaslrseed(working_fdt, true);
+	fdt_kaslrseed(ctx->fdt, true);
 #endif
-	return;
 }
 
 /**
@@ -577,15 +570,17 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
 					printf("Skipping fdtdir %s for failure retrieving dts\n",
 						label->fdtdir);
 				}
-			}
+			} else {
+				ctx->fdt = map_sysmem(addr, 0);
 
-			if (label->kaslrseed)
-				label_boot_kaslrseed();
+				if (label->kaslrseed)
+					label_boot_kaslrseed(ctx);
 
 #ifdef CONFIG_OF_LIBFDT_OVERLAY
-			if (label->fdtoverlays)
-				label_boot_fdtoverlay(ctx, label);
+				if (label->fdtoverlays)
+					label_boot_fdtoverlay(ctx, label);
 #endif
+			}
 		} else {
 			*fdt_argp = NULL;
 		}
