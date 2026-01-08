@@ -106,12 +106,15 @@ static struct pxe_label *label_create(void)
 	if (!label)
 		return NULL;
 	memset(label, 0, sizeof(struct pxe_label));
+	alist_init_struct(&label->fdtoverlays, char *);
 
 	return label;
 }
 
 void label_destroy(struct pxe_label *label)
 {
+	char **overlayp;
+
 	free(label->name);
 	free(label->kernel_label);
 	free(label->kernel);
@@ -120,7 +123,9 @@ void label_destroy(struct pxe_label *label)
 	free(label->initrd);
 	free(label->fdt);
 	free(label->fdtdir);
-	free(label->fdtoverlays);
+	alist_for_each(overlayp, &label->fdtoverlays)
+		free(*overlayp);
+	alist_uninit(&label->fdtoverlays);
 	free(label->say);
 	free(label);
 }
@@ -301,6 +306,48 @@ static int parse_sliteral(char **c, char **dst)
 	}
 
 	*dst = t.val;
+
+	return 1;
+}
+
+/*
+ * Parse a space-separated list of overlay paths into an alist.
+ */
+static int parse_fdtoverlays(char **c, struct alist *overlays)
+{
+	char *val;
+	int err;
+
+	err = parse_sliteral(c, &val);
+	if (err < 0)
+		return err;
+
+	while (*val) {
+		char *path;
+		char *end;
+
+		/* Skip leading spaces */
+		while (*val == ' ')
+			val++;
+
+		if (!*val)
+			break;
+
+		/* Find end of this path */
+		end = strchr(val, ' ');
+		if (end) {
+			path = strndup(val, end - val);
+			val = end;
+		} else {
+			path = strdup(val);
+			val += strlen(val);
+		}
+
+		if (!path || !alist_add(overlays, path)) {
+			free(path);
+			return -ENOMEM;
+		}
+	}
 
 	return 1;
 }
@@ -527,8 +574,8 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 				err = parse_sliteral(c, &label->fdtdir);
 			break;
 		case T_FDTOVERLAYS:
-			if (!label->fdtoverlays)
-				err = parse_sliteral(c, &label->fdtoverlays);
+			if (!label->fdtoverlays.count)
+				err = parse_fdtoverlays(c, &label->fdtoverlays);
 			break;
 		case T_LOCALBOOT:
 			label->localboot = 1;

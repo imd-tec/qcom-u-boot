@@ -306,37 +306,18 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
 static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
-	char *fdtoverlay = label->fdtoverlays;
+	struct fdt_header *blob;
+	char **overlayp;
+	ulong addr;
 	int err;
 
 	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
-	/* Cycle over the overlay files and apply them in order */
-	do {
-		struct fdt_header *blob;
-		char *overlayfile;
-		ulong addr;
-		char *end;
-		int len;
-
-		/* Drop leading spaces */
-		while (*fdtoverlay == ' ')
-			++fdtoverlay;
-
-		/* Copy a single filename if multiple provided */
-		end = strstr(fdtoverlay, " ");
-		if (end) {
-			len = (int)(end - fdtoverlay);
-			overlayfile = malloc(len + 1);
-			strncpy(overlayfile, fdtoverlay, len);
-			overlayfile[len] = '\0';
-		} else
-			overlayfile = fdtoverlay;
-
-		if (!strlen(overlayfile))
-			goto skip_overlay;
+	/* Apply each overlay file in order */
+	alist_for_each(overlayp, &label->fdtoverlays) {
+		const char *overlayfile = *overlayp;
 
 		/* Load overlay file */
 		err = get_relfile_envaddr(ctx, overlayfile, "fdtoverlay_addr_r",
@@ -345,7 +326,7 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 					  &addr, NULL);
 		if (err < 0) {
 			printf("Failed loading overlay %s\n", overlayfile);
-			goto skip_overlay;
+			continue;
 		}
 
 		/* Resize main fdt */
@@ -354,22 +335,15 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		blob = map_sysmem(addr, 0);
 		err = fdt_check_header(blob);
 		if (err) {
-			printf("Invalid overlay %s, skipping\n",
-			       overlayfile);
-			goto skip_overlay;
+			printf("Invalid overlay %s, skipping\n", overlayfile);
+			continue;
 		}
 
 		err = fdt_overlay_apply_verbose(ctx->fdt, blob);
-		if (err) {
+		if (err)
 			printf("Failed to apply overlay %s, skipping\n",
 			       overlayfile);
-			goto skip_overlay;
-		}
-
-skip_overlay:
-		if (end)
-			free(overlayfile);
-	} while ((fdtoverlay = strstr(fdtoverlay, " ")));
+	}
 }
 
 const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
@@ -501,7 +475,7 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
 	if (label->kaslrseed)
 		label_boot_kaslrseed(ctx);
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays)
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
 		label_boot_fdtoverlay(ctx, label);
 
 	return 0;

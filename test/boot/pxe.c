@@ -190,8 +190,11 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/initrd.img", label->initrd);
 	ut_asserteq_str("/dtb/board.dtb", label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq_str("/dtb/overlay1.dtbo /dtb/overlay2.dtbo",
-			label->fdtoverlays);
+	ut_asserteq(2, label->fdtoverlays.count);
+	ut_asserteq_str("/dtb/overlay1.dtbo",
+			*alist_get(&label->fdtoverlays, 0, char *));
+	ut_asserteq_str("/dtb/overlay2.dtbo",
+			*alist_get(&label->fdtoverlays, 1, char *));
 	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -211,7 +214,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_asserteq_str("/dtb/", label->fdtdir);
-	ut_assertnull(label->fdtoverlays);
+	ut_asserteq(0, label->fdtoverlays.count);
 	ut_assertnull(label->say);
 	ut_asserteq(3, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -231,7 +234,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_assertnull(label->fdtoverlays);
+	ut_asserteq(0, label->fdtoverlays.count);
 	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -251,7 +254,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_assertnull(label->fdtoverlays);
+	ut_asserteq(0, label->fdtoverlays.count);
 	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -271,7 +274,8 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_assertnull(label->fdtoverlays);
+	ut_asserteq(0, label->fdtoverlays.count);
+	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
 	ut_asserteq(0, label->localboot);
@@ -662,7 +666,7 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	/* Get the first label (linux) which has fdtoverlays */
 	label = list_first_entry(&cfg->labels, struct pxe_label, list);
 	ut_asserteq_str("linux", label->name);
-	ut_assertnonnull(label->fdtoverlays);
+	ut_assert(label->fdtoverlays.count > 0);
 
 	/* Enable output for loading phase */
 	ctx.quiet = false;
