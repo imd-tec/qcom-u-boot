@@ -515,10 +515,8 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
 	if (label->kaslrseed)
 		label_boot_kaslrseed(ctx);
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count) {
-		label_load_fdtoverlays(ctx, label);
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
 		label_apply_fdtoverlays(ctx, label);
-	}
 
 	return 0;
 }
@@ -680,6 +678,9 @@ static int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 			}
 		}
 	}
+
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+		label_load_fdtoverlays(ctx, label);
 
 	return 0;
 }
