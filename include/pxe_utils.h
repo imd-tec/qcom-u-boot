@@ -179,11 +179,18 @@ struct pxe_context {
 };
 
 /**
- * pxe_menu_uninit() - Destroy an allocated pxe structure
+ * pxe_menu_init() - Allocate and initialise a pxe_menu structure
+ *
+ * Return: Allocated structure, or NULL on failure
+ */
+struct pxe_menu *pxe_menu_init(void);
+
+/**
+ * pxe_menu_uninit() - Free a pxe_menu structure
  *
  * Free the memory used by a pxe_menu and its labels
  *
- * @cfg: Config to destroy, previous returned from parse_pxefile()
+ * @cfg: Config to free, previously returned from pxe_menu_init()
  */
 void pxe_menu_uninit(struct pxe_menu *cfg);
 

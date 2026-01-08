@@ -900,6 +900,20 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	return 1;
 }
 
+struct pxe_menu *pxe_menu_init(void)
+{
+	struct pxe_menu *cfg;
+
+	cfg = malloc(sizeof(struct pxe_menu));
+	if (!cfg)
+		return NULL;
+
+	memset(cfg, '\0', sizeof(struct pxe_menu));
+	INIT_LIST_HEAD(&cfg->labels);
+
+	return cfg;
+}
+
 void pxe_menu_uninit(struct pxe_menu *cfg)
 {
 	struct list_head *pos, *n;
@@ -924,13 +938,9 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 	char *buf;
 	int r;
 
-	cfg = malloc(sizeof(struct pxe_menu));
+	cfg = pxe_menu_init();
 	if (!cfg)
 		return NULL;
-
-	memset(cfg, 0, sizeof(struct pxe_menu));
-
-	INIT_LIST_HEAD(&cfg->labels);
 
 	buf = map_sysmem(menucfg, 0);
 	r = parse_pxefile_top(ctx, buf, menucfg, cfg, 1);
