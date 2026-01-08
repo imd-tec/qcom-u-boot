@@ -307,23 +307,39 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
 	struct fdt_header *blob;
+	ulong fdtoverlay_addr;
 	char **overlayp;
-	ulong addr;
+	bool use_lmb;
+	char *envaddr;
 	int err;
 
 	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
+	/*
+	 * Get the overlay load address. If fdtoverlay_addr_r is defined,
+	 * overlays are loaded sequentially at increasing addresses. Otherwise,
+	 * LMB allocates a fresh address for each overlay.
+	 */
+	envaddr = env_get("fdtoverlay_addr_r");
+	if (envaddr) {
+		fdtoverlay_addr = hextoul(envaddr, NULL);
+		use_lmb = false;
+	} else {
+		fdtoverlay_addr = 0;
+		use_lmb = true;
+	}
+
 	/* Apply each overlay file in order */
 	alist_for_each(overlayp, &label->fdtoverlays) {
 		const char *overlayfile = *overlayp;
+		ulong addr = fdtoverlay_addr;
+		ulong size;
 
 		/* Load overlay file */
-		err = get_relfile_envaddr(ctx, overlayfile, "fdtoverlay_addr_r",
-					  SZ_4K,
-					  (enum bootflow_img_t)IH_TYPE_FLATDT,
-					  &addr, NULL);
+		err = get_relfile(ctx, overlayfile, &addr, SZ_4K,
+				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
 		if (err < 0) {
 			printf("Failed loading overlay %s\n", overlayfile);
 			continue;
@@ -343,6 +359,10 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		if (err)
 			printf("Failed to apply overlay %s, skipping\n",
 			       overlayfile);
+
+		/* Move to next address if using fixed addresses */
+		if (!use_lmb)
+			fdtoverlay_addr = addr + size;
 	}
 }
 
