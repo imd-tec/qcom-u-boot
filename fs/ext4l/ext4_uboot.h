@@ -31,6 +31,7 @@
 #include <linux/list.h>
 #include <linux/log2.h>
 #include <linux/init.h>
+#include <linux/math64.h>
 #include <linux/workqueue.h>
 #include <linux/cred.h>
 #include <linux/fs.h>
@@ -3094,12 +3095,6 @@ static inline struct new_utsname *init_utsname(void)
 
 /* test_and_set_bit_lock - test and set a bit atomically */
 #define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
-
-/* div64_u64 - 64-bit by 64-bit division */
-static inline u64 div64_u64(u64 dividend, u64 divisor)
-{
-	return dividend / divisor;
-}
 
 /* time_is_before_jiffies - check if time is before current jiffies */
 #define time_is_before_jiffies(a)	({ (void)(a); 0; })
