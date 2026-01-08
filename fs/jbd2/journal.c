@@ -2409,6 +2409,10 @@ int jbd2_journal_flush(journal_t *journal, unsigned int flags)
 	int err = 0;
 	transaction_t *transaction = NULL;
 
+	/* Nothing to flush in read-only builds */
+	if (!IS_ENABLED(CONFIG_EXT4_WRITE))
+		return 0;
+
 	write_lock(&journal->j_state_lock);
 
 	/* Force everything buffered to the log... */
