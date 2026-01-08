@@ -49,6 +49,20 @@ config EXT4L_PRINT
 	  Messages are always recorded and can be retrieved programmatically;
 	  this option controls whether they are also printed.
 
+config EXT4_MOUNT_OPTS
+	bool "Enable mount option parsing"
+	depends on FS_EXT4L
+	help
+	  Enable parsing of ext4 mount options (e.g., "data=ordered",
+	  "barrier=1"). This requires the mount option specification
+	  tables which add about 2KB of rodata.
+
+	  When disabled, ext4 uses fixed default options suitable for
+	  read-only operation. This saves space but prevents customising
+	  mount behaviour.
+
+	  If unsure, say N.
+
 config EXT4_RESIZE
 	bool "Enable ext4 online resize support"
 	depends on FS_EXT4L
