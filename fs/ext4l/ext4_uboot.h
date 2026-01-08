@@ -36,6 +36,7 @@
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
+#include <div64.h>
 
 /*
  * Enable ext4_msg() and other diagnostic macros to pass full messages.
@@ -438,15 +439,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Block device operations - stubs */
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
 #define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
-
-/* do_div - divide u64 by u32 */
-#define do_div(n, base) ({			\
-	unsigned int __base = (base);		\
-	unsigned int __rem;			\
-	__rem = ((unsigned long long)(n)) % __base;	\
-	(n) = ((unsigned long long)(n)) / __base;	\
-	__rem;					\
-})
 
 /* Inode locking - stubs */
 #define inode_is_locked(i)	(1)
