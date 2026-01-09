@@ -320,7 +320,6 @@ def pxe_fdtdir_image(u_boot_config):
     # Create dummy kernel
     with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
         fd.write(b'kernel')
-        fd.write(b'\x00' * (1024 - 6))
 
     fsh.mk_fs()
 
@@ -381,7 +380,6 @@ def pxe_error_image(u_boot_config):
     # Create dummy kernel
     with open(os.path.join(fsh.srcdir, 'vmlinuz'), 'wb') as fd:
         fd.write(b'kernel')
-        fd.write(b'\x00' * (1024 - 6))
 
     fsh.mk_fs()
 
@@ -442,4 +440,11 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_image
         with ubman.log.section('Test PXE label override'):
             ubman.run_ut('pxe', 'pxe_test_label_override',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_alloc(self, ubman, pxe_image):
+        """Test file loading with no address env vars (LMB allocation path)"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE alloc'):
+            ubman.run_ut('pxe', 'pxe_test_alloc',
                          fs_image=fs_img, cfg_path=cfg_path)

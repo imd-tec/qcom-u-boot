@@ -16,6 +16,7 @@
 #include <env.h>
 #include <fdt_support.h>
 #include <fs_legacy.h>
+#include <image.h>
 #include <linux/libfdt.h>
 #include <mapmem.h>
 #include <net-common.h>
@@ -758,5 +759,166 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 	return 0;
 }
 PXE_TEST_ARGS(pxe_test_label_override_norun, UTF_CONSOLE | UTF_MANUAL,
+	{ "fs_image", UT_ARG_STR },
+	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * struct pxe_alloc_info - context for the alloc test getfile callback
+ *
+ * @uts: Unit test state for assertions
+ * @next_addr: Next address to allocate (increments by 0x100 each call)
+ */
+struct pxe_alloc_info {
+	struct unit_test_state *uts;
+	ulong next_addr;
+};
+
+/**
+ * pxe_alloc_getfile() - Read a file, allocating address if not provided
+ *
+ * For files loaded via env vars (kernel, initrd, fdt), this verifies that
+ * *addrp is 0 (no environment variable set), then assigns an incrementing
+ * address to simulate LMB allocation. For the config file (which is loaded
+ * with a direct address), it just uses the provided address.
+ */
+static int pxe_alloc_getfile(struct pxe_context *ctx, const char *file_path,
+			     ulong *addrp, ulong align,
+			     enum bootflow_img_t type, ulong *sizep)
+{
+	struct pxe_alloc_info *info = ctx->userdata;
+	loff_t len_read;
+	int ret;
+
+	/*
+	 * Config file is loaded with direct address (non-zero).
+	 * Kernel/initrd/fdt/overlays come through env vars - if not set,
+	 * addrp will be 0 and we need to allocate.
+	 */
+	if (!*addrp) {
+		*addrp = info->next_addr;
+		info->next_addr += 0x100;
+	}
+
+	ret = fs_set_blk_dev("host", "0:0", FS_TYPE_ANY);
+	if (ret)
+		return ret;
+	ret = fs_legacy_read(file_path, *addrp, 0, 0, &len_read);
+	if (ret)
+		return ret;
+	*sizep = len_read;
+
+	return 0;
+}
+
+/**
+ * Test file loading with no address environment variables
+ *
+ * This tests the LMB allocation path where if no address env var is set,
+ * the getfile callback receives *addrp == 0 and must allocate memory.
+ * Our test callback assigns incrementing addresses (0x100, 0x200, etc.)
+ * and verifies the addresses are then stored in ctx.
+ */
+static int pxe_test_alloc_norun(struct unit_test_state *uts)
+{
+	const char *orig_fdt_addr, *orig_fdtcontroladdr;
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_alloc_info info;
+	struct pxe_context ctx;
+	ulong addr;
+	int ret;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	info.uts = uts;
+	info.next_addr = 0x100;
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Save and clear FDT fallback env vars (fdtcontroladdr is set at boot) */
+	orig_fdt_addr = env_get("fdt_addr");
+	orig_fdtcontroladdr = env_get("fdtcontroladdr");
+	ut_assertok(env_set("fdt_addr", NULL));
+	ut_assertok(env_set("fdtcontroladdr", NULL));
+
+	/* Ensure address env vars are NOT set */
+	ut_assertok(env_set("kernel_addr_r", NULL));
+	ut_assertok(env_set("ramdisk_addr_r", NULL));
+	ut_assertok(env_set("fdt_addr_r", NULL));
+	ut_assertok(env_set("fdtoverlay_addr_r", NULL));
+	ut_assertok(env_set("pxe_timeout", "1"));
+
+	/* Set up the PXE context with our allocating getfile */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_alloc_getfile, &info, true,
+				  cfg_path, false, false, NULL));
+
+	/* Read the config file - use a fixed address for parsing */
+	addr = PXE_LOAD_ADDR;
+	ret = get_pxe_file(&ctx, cfg_path, addr);
+	ut_asserteq(1, ret);
+
+	/* Parse and probe - this triggers file loading */
+	ut_assertok(pxe_probe(&ctx, addr, false));
+
+	/*
+	 * Verify all pxe_context fields are set correctly.
+	 *
+	 * The background BMP is loaded first (0x100), then the default
+	 * label 'linux' loads: kernel (0x200), initrd (0x300).
+	 *
+	 * Note: FDT loading requires fdt_addr_r to be set (checked in
+	 * label_process_fdt before attempting to load), so conf_fdt_str
+	 * and conf_fdt are NULL/0.
+	 */
+
+	/* Context setup fields */
+	ut_asserteq_ptr(pxe_alloc_getfile, ctx.getfile);
+	ut_asserteq_ptr(&info, ctx.userdata);
+	ut_asserteq(true, ctx.allow_abs_path);
+	ut_assertnonnull(ctx.bootdir);
+	ut_asserteq(0, ctx.pxe_file_size);  /* only set by cmd/pxe.c */
+	ut_asserteq(false, ctx.use_ipv6);
+	ut_asserteq(false, ctx.use_fallback);
+	ut_asserteq(true, ctx.no_boot);
+	ut_assertnull(ctx.bflow);
+	ut_assertnonnull(ctx.cfg);
+
+	/* BMP loaded first */
+	ut_asserteq(0x100, image_load_addr);
+
+	/* Label selection */
+	ut_assertnonnull(ctx.label);
+	ut_asserteq_str("linux", ctx.label->name);
+
+	/* Kernel */
+	ut_asserteq_str("200", ctx.kern_addr_str);
+	ut_asserteq(0x200, ctx.kern_addr);
+	ut_asserteq(6, ctx.kern_size);
+
+	/* Initrd */
+	ut_asserteq(0x300, ctx.initrd_addr);
+	ut_asserteq(7, ctx.initrd_size);
+	ut_asserteq_str("300:7", ctx.initrd_str);
+
+	/* FDT (not loaded - no fdt_addr_r env var) */
+	ut_assertnull(ctx.conf_fdt_str);
+	ut_asserteq(0, ctx.conf_fdt);
+
+	/* Boot flags */
+	ut_asserteq(false, ctx.restart);
+	ut_asserteq(false, ctx.fake_go);
+
+	/* Clean up */
+	destroy_pxe_menu(ctx.cfg);
+	pxe_destroy_ctx(&ctx);
+	ut_assertok(env_set("pxe_timeout", NULL));
+	ut_assertok(env_set("fdt_addr", orig_fdt_addr));
+	ut_assertok(env_set("fdtcontroladdr", orig_fdtcontroladdr));
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_alloc_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
