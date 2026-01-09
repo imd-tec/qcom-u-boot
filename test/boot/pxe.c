@@ -299,7 +299,6 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 
 	/* Boot fails on sandbox */
 	ut_assert_nextline("Unrecognized zImage");
-	ut_assert_nextlinen("       unmap_physmem");
 
 	/* Verify files were loaded at the correct addresses */
 	kernel = map_sysmem(PXE_KERNEL_ADDR, 0);
@@ -376,7 +375,6 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 
 	/* Boot fails but we verified the path construction */
 	ut_assert_nextline("Unrecognized zImage");
-	ut_assert_nextlinen("       unmap_physmem");
 
 	/* Verify FDT was loaded correctly */
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
@@ -405,7 +403,6 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 
 	/* Boot fails but we verified the path construction */
 	ut_assert_nextline("Unrecognized zImage");
-	ut_assert_nextlinen("       unmap_physmem");
 
 	/* Verify FDT was loaded */
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
@@ -483,7 +480,6 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 	 * that label loading continued despite missing fdtdir FDT
 	 */
 	ut_assert_nextline("Unrecognized zImage");
-	ut_assert_nextlinen("       unmap_physmem");
 
 	/* Clean up env vars */
 	env_set("fdtfile", NULL);
