@@ -1035,7 +1035,6 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			 ulong base)
 {
 	struct pxe_include *inc;
-	char *buf;
 	uint i;
 	int r;
 
@@ -1053,9 +1052,7 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			return r;
 		}
 
-		buf = map_sysmem(base, 0);
-		r = pxe_parse_include(ctx, inc, buf, base);
-		unmap_sysmem(buf);
+		r = pxe_parse_include(ctx, inc, base);
 
 		if (r < 0)
 			return r;
@@ -1064,10 +1061,17 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 	return 0;
 }
 
-int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
-		      char *buf, ulong base)
+int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
+		      ulong addr)
 {
-	return parse_pxefile_top(ctx, buf, base, inc->cfg, inc->nest_level);
+	char *buf;
+	int ret;
+
+	buf = map_sysmem(addr, 0);
+	ret = parse_pxefile_top(ctx, buf, addr, inc->cfg, inc->nest_level);
+	unmap_sysmem(buf);
+
+	return ret;
 }
 
 /*

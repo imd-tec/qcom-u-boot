@@ -300,22 +300,6 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			 ulong base);
 
 /**
- * pxe_parse_include() - Parse an included file into its target menu
- *
- * After loading an include file referenced in cfg->includes, call this
- * to parse it and merge any labels into the target menu. This may add
- * more entries to cfg->includes if the included file has its own includes.
- *
- * @ctx: PXE context
- * @inc: Include info with path and target menu
- * @buf: Buffer containing the included file content
- * @base: Memory address where buf is located
- * Return: 1 on success, -ve on error
- */
-int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
-		      char *buf, ulong base);
-
-/**
  * format_mac_pxe() - Convert a MAC address to PXE format
  *
  * Convert an ethaddr from the environment to the format used by pxelinux
@@ -511,5 +495,20 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
  * @label: Label to free
  */
 void label_destroy(struct pxe_label *label);
+
+/**
+ * pxe_parse_include() - Parse an included file into its target menu
+ *
+ * After loading an include file referenced in cfg->includes, call this
+ * to parse it and merge any labels into the target menu. This may add
+ * more entries to cfg->includes if the included file has its own includes.
+ *
+ * @ctx: PXE context
+ * @inc: Include info with path and target menu
+ * @addr: Memory address where file is located
+ * Return: 1 on success, -ve on error
+ */
+int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
+		      ulong addr);
 
 #endif /* __PXE_UTILS_H */
