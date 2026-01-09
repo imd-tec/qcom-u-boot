@@ -1282,8 +1282,18 @@ void pxe_destroy_ctx(struct pxe_context *ctx)
 	free(ctx->bootdir);
 }
 
-struct pxe_menu *pxe_prepare(struct pxe_context *ctx, ulong pxefile_addr_r,
-			     bool prompt)
+/**
+ * pxe_prepare() - Prepare a PXE menu by parsing and processing includes
+ *
+ * Parses the PXE config file and processes any include directives.
+ *
+ * @ctx: PXE context
+ * @pxefile_addr_r: Address where config file is loaded
+ * @prompt: true to force the menu prompt
+ * Return: Parsed menu on success, NULL on error
+ */
+static struct pxe_menu *pxe_prepare(struct pxe_context *ctx,
+				    ulong pxefile_addr_r, bool prompt)
 {
 	struct pxe_menu *cfg;
 	int ret;
