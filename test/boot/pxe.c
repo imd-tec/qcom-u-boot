@@ -77,6 +77,87 @@ static int pxe_test_getfile(struct pxe_context *ctx, const char *file_path,
 }
 
 /**
+ * pxe_check_menu() - Check the standard menu output lines
+ *
+ * This helper checks all the console output lines from loading and displaying
+ * the PXE menu, including config file retrieval, include files, background
+ * image attempt, and the menu itself.
+ *
+ * @uts: Unit test state
+ * @say_msg: Expected 'say' message (shown before menu), or NULL if none
+ * @error_msg: Expected error message after background image, or NULL if none
+ * Return: 0 if OK, -ve on error
+ */
+static int pxe_check_menu(struct unit_test_state *uts, const char *say_msg,
+			  const char *error_msg)
+{
+	int i;
+
+	/* Config file retrieval */
+	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
+
+	/* Say message appears before includes are processed */
+	if (say_msg)
+		ut_assert_nextline(say_msg);
+
+	/* Include file retrievals */
+	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
+	for (i = 3; i <= 16; i++)
+		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
+
+	/* Background image attempt */
+	ut_assert_nextline("Retrieving file: /boot/background.bmp");
+	ut_assert_nextline("There is no valid bmp file at the given address");
+
+	/* Optional error message before menu */
+	if (error_msg)
+		ut_assert_nextline(error_msg);
+
+	/* Menu title and items */
+	ut_assert_nextline("Test Boot Menu");
+	ut_assert_nextline("1:\tBoot Linux");
+	ut_assert_nextline("2:\tRescue Mode");
+	ut_assert_nextline("3:\tLocal Boot");
+	ut_assert_nextline("4:\tFIT Boot");
+	ut_assert_nextline("5:\tIncluded Label");
+	for (i = 6; i <= 19; i++)
+		ut_assert_nextline("%d:\tLevel %d Label", i, i - 3);
+
+	return 0;
+}
+
+/**
+ * pxe_check_fdtdir() - Check fdtdir test menu and boot output
+ *
+ * Helper for pxe_test_fdtdir_norun() that checks the menu output and boot
+ * file retrieval messages for the fdtdir test configuration.
+ *
+ * @uts: Unit test state
+ * @dtb_name: Expected DTB filename (e.g., "test-board.dtb")
+ * Return: 0 if OK, -ve on error
+ */
+static int pxe_check_fdtdir(struct unit_test_state *uts, const char *dtb_name)
+{
+	/* Menu output */
+	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
+	ut_assert_nextline("Test Boot Menu");
+	ut_assert_nextline("1:\tTest fdtfile env var");
+	ut_assert_nextline("2:\tTest soc/board construction");
+	ut_assert_nextline("Enter choice: 1:\tTest fdtfile env var");
+
+	/* Boot file retrieval */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("append: console=ttyS0");
+	ut_assert_nextline("Retrieving file: /dtb/%s", dtb_name);
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+
+	/* Boot fails on sandbox */
+	ut_assert_nextline("Unrecognized zImage");
+
+	return 0;
+}
+
+/**
  * Test parsing an extlinux.conf file
  *
  * This test:
@@ -124,6 +205,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
 	for (i = 3; i <= 16; i++)
 		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
+	ut_assert_console_end();
 
 	/* Verify menu properties */
 	ut_asserteq_str("Test Boot Menu", cfg->title);
@@ -286,8 +368,9 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
-	/* Skip menu output and find the first label boot attempt */
-	ut_assert_skip_to_line("Enter choice: 1:\tBoot Linux");
+	/* Check menu output */
+	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
+	ut_assert_nextline("Enter choice: 1:\tBoot Linux");
 
 	/* Verify files were loaded in order */
 	ut_assert_nextline("Retrieving file: /vmlinuz");
@@ -299,6 +382,7 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 
 	/* Boot fails on sandbox */
 	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_console_end();
 
 	/* Verify files were loaded at the correct addresses */
 	kernel = map_sysmem(PXE_KERNEL_ADDR, 0);
@@ -363,18 +447,7 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
-
-	/* Skip to the boot attempt - first label is fdtfile-test */
-	ut_assert_skip_to_line("Enter choice: 1:\tTest fdtfile env var");
-
-	/* Verify fdtdir used fdtfile env var to construct path */
-	ut_assert_nextline("Retrieving file: /vmlinuz");
-	ut_assert_nextline("append: console=ttyS0");
-	ut_assert_nextline("Retrieving file: /dtb/test-board.dtb");
-	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
-
-	/* Boot fails but we verified the path construction */
-	ut_assert_nextline("Unrecognized zImage");
+	ut_assertok(pxe_check_fdtdir(uts, "test-board.dtb"));
 
 	/* Verify FDT was loaded correctly */
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
@@ -391,18 +464,8 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
-
-	/* Still boots default label, but now uses soc-board path construction */
-	ut_assert_skip_to_line("Enter choice: 1:\tTest fdtfile env var");
-
-	/* Verify fdtdir constructed path from soc-board */
-	ut_assert_nextline("Retrieving file: /vmlinuz");
-	ut_assert_nextline("append: console=ttyS0");
-	ut_assert_nextline("Retrieving file: /dtb/tegra-jetson.dtb");
-	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
-
-	/* Boot fails but we verified the path construction */
-	ut_assert_nextline("Unrecognized zImage");
+	ut_assertok(pxe_check_fdtdir(uts, "tegra-jetson.dtb"));
+	ut_assert_console_end();
 
 	/* Verify FDT was loaded */
 	fdt = map_sysmem(PXE_FDT_ADDR, 0);
@@ -455,12 +518,19 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
+	/* Check menu output */
+	ut_assert_nextline("Retrieving file: /extlinux/extlinux.conf");
+	ut_assert_nextline("Test Boot Menu");
+	ut_assert_nextline("1:\tMissing explicit FDT");
+	ut_assert_nextline("2:\tMissing fdtdir FDT");
+	ut_assert_nextline("3:\tMissing overlay");
+	ut_assert_nextline("Enter choice: 1:\tMissing explicit FDT");
+
 	/*
 	 * Test 1: Explicit FDT file not found
 	 * First label (missing-fdt) has fdt=/dtb/nonexistent.dtb
 	 * Should fail and move to next label
 	 */
-	ut_assert_skip_to_line("Enter choice: 1:\tMissing explicit FDT");
 	ut_assert_nextline("Retrieving file: /vmlinuz");
 	ut_assert_nextline("Retrieving file: /dtb/nonexistent.dtb");
 	ut_assert_nextline("Skipping missing-fdt for failure retrieving FDT");
@@ -480,6 +550,7 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 	 * that label loading continued despite missing fdtdir FDT
 	 */
 	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_console_end();
 
 	/* Clean up env vars */
 	env_set("fdtfile", NULL);
@@ -632,8 +703,12 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
-	/* Skip to the rescue label boot */
-	ut_assert_skip_to_line("Retrieving file: /vmlinuz-rescue");
+	/* Check menu output */
+	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
+	ut_assert_nextline("Enter choice: 2:\tRescue Mode");
+
+	/* Rescue label boot attempt */
+	ut_assert_nextline("Retrieving file: /vmlinuz-rescue");
 
 	/*
 	 * Verify ipappend output - should have:
@@ -643,6 +718,15 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	 */
 	ut_assert_nextlinen("append: single ip=192.168.1.10:192.168.1.1:"
 			    "192.168.1.254:255.255.255.0 BOOTIF=01-");
+
+	/*
+	 * Rescue label has fdtdir=/dtb/ but no fdtfile is set, so it tries
+	 * to load /dtb/.dtb which fails. Boot still proceeds without FDT.
+	 */
+	ut_assert_nextline("Retrieving file: /dtb/.dtb");
+	ut_assert_nextline("Skipping fdtdir /dtb/ for failure retrieving dts");
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_console_end();
 
 	/* Clean up */
 	env_set("ipaddr", NULL);
@@ -729,6 +813,7 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
 	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
 	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set_hex("fdtoverlay_addr_r", PXE_OVERLAY_ADDR));
 	ut_assertok(env_set("bootfile", cfg_path));
 	ut_assertok(env_set("pxe_timeout", "1"));
 
@@ -737,16 +822,40 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
-	/* Should boot 'local' label instead of default 'linux' */
-	ut_assert_skip_to_line("3:\tLocal Boot");
-	ut_assert_skip_to_line("missing environment variable: localcmd");
+	/* Check menu output - say message is from default label */
+	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel", NULL));
 
-	/* Test 2: Invalid override - should print error */
+	/* Should boot 'local' label instead of default 'linux' */
+	ut_assert_nextline("Enter choice: 3:\tLocal Boot");
+	ut_assert_nextline("missing environment variable: localcmd");
+
+	/*
+	 * Localboot fails, so try default 'linux' label instead.
+	 * Boot is minimal - just kernel/initrd, no FDT.
+	 */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /initrd.img");
+	ut_assert_nextline("Unrecognized zImage");
+
+	/* Test 2: Invalid override - should print error before menu */
 	ut_assertok(env_set("pxe_label_override", "nonexistent"));
 	ut_assertok(run_commandf("sysboot host 0:0 any %x %s",
 				 PXE_LOAD_ADDR, cfg_path));
 
-	ut_assert_skip_to_line("Missing override pxe label: nonexistent");
+	/* Check menu with error message before it */
+	ut_assertok(pxe_check_menu(uts, "Booting default Linux kernel",
+				   "Missing override pxe label: nonexistent"));
+	ut_assert_nextline("Enter choice: 1:\tBoot Linux");
+
+	/* Default label boot attempt */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /initrd.img");
+	ut_assert_nextline("append: root=/dev/sda1 quiet");
+	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
+	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
+	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_console_end();
 
 	/* Clean up */
 	ut_assertok(env_set("pxe_label_override", NULL));
