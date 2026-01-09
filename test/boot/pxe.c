@@ -610,6 +610,93 @@ PXE_TEST_ARGS(pxe_test_errors_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "cfg_path", UT_ARG_STR });
 
 /**
+ * Test overlay loading when fdtoverlay_addr_r is not set
+ *
+ * This tests that when a label has fdtoverlays but fdtoverlay_addr_r is not
+ * set, the overlay loading is skipped with an appropriate warning message,
+ * but the FDT is still loaded successfully.
+ */
+static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_test_info info;
+	struct pxe_context ctx;
+	struct pxe_label *label;
+	struct pxe_menu *cfg;
+	ulong addr = PXE_LOAD_ADDR;
+	void *fdt;
+	uint i;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	info.uts = uts;
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set up the PXE context */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
+				  false, false, NULL));
+
+	/* Read and parse the config file */
+	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
+
+	cfg = parse_pxefile(&ctx, addr);
+	ut_assertnonnull(cfg);
+
+	/* Consume parsing output */
+	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	ut_assert_nextline("Booting default Linux kernel");
+	ut_assert_nextline("Retrieving file: /extlinux/extra.conf");
+	for (i = 3; i <= 16; i++)
+		ut_assert_nextline("Retrieving file: /extlinux/nest%d.conf", i);
+	ut_assert_console_end();
+
+	/*
+	 * Set up environment for loading, but do NOT set fdtoverlay_addr_r.
+	 * This should cause overlay loading to be skipped with a warning.
+	 */
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("ramdisk_addr_r", PXE_INITRD_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+	ut_assertok(env_set("fdtoverlay_addr_r", NULL));  /* Clear it */
+
+	/* Get the first label (linux) which has fdtoverlays */
+	label = list_first_entry(&cfg->labels, struct pxe_label, list);
+	ut_asserteq_str("linux", label->name);
+	ut_assertnonnull(label->fdtoverlays);
+
+	/* Load the label - should succeed but skip overlays */
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* FDT should be loaded */
+	ut_asserteq(PXE_FDT_ADDR, ctx.conf_fdt);
+	fdt = map_sysmem(PXE_FDT_ADDR, 0);
+	ut_assertok(fdt_check_header(fdt));
+
+	/*
+	 * Check console output - FDT loaded, but overlays skipped with
+	 * warning about missing fdtoverlay_addr_r
+	 */
+	ut_assert_nextline("Retrieving file: /vmlinuz");
+	ut_assert_nextline("Retrieving file: /initrd.img");
+	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
+	ut_assert_nextline("Invalid fdtoverlay_addr_r for loading overlays");
+	ut_assert_console_end();
+
+	/* Clean up */
+	destroy_pxe_menu(cfg);
+	pxe_destroy_ctx(&ctx);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_overlay_no_addr_norun, UTF_CONSOLE | UTF_MANUAL,
+	      { "fs_image", UT_ARG_STR },
+	      { "cfg_path", UT_ARG_STR });
+
+/**
  * Test pxe_get_file_size() function
  *
  * This tests reading the filesize from the environment variable.

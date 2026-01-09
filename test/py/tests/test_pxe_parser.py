@@ -460,3 +460,10 @@ class TestPxeParser:
         with ubman.log.section('Test PXE alloc'):
             ubman.run_ut('pxe', 'pxe_test_alloc',
                          fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_overlay_no_addr(self, ubman, pxe_image):
+        """Test overlay loading when fdtoverlay_addr_r is not set"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE overlay no addr'):
+            ubman.run_ut('pxe', 'pxe_test_overlay_no_addr',
+                         fs_image=fs_img, cfg_path=cfg_path)
