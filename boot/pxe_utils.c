@@ -308,16 +308,11 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 				  struct pxe_label *label)
 {
 	char *fdtoverlay = label->fdtoverlays;
-	struct fdt_header *working_fdt;
 	char *fdtoverlay_addr_env;
 	ulong fdtoverlay_addr;
-	ulong fdt_addr;
 	int err;
 
-	/* Get the main fdt and map it */
-	fdt_addr = hextoul(env_get("fdt_addr_r"), NULL);
-	working_fdt = map_sysmem(fdt_addr, 0);
-	err = fdt_check_header(working_fdt);
+	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
@@ -366,7 +361,7 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 		}
 
 		/* Resize main fdt */
-		fdt_shrink_to_minimum(working_fdt, 8192);
+		fdt_shrink_to_minimum(ctx->fdt, 8192);
 
 		blob = map_sysmem(fdtoverlay_addr, 0);
 		err = fdt_check_header(blob);
@@ -376,7 +371,7 @@ static void label_boot_fdtoverlay(struct pxe_context *ctx,
 			goto skip_overlay;
 		}
 
-		err = fdt_overlay_apply_verbose(working_fdt, blob);
+		err = fdt_overlay_apply_verbose(ctx->fdt, blob);
 		if (err) {
 			printf("Failed to apply overlay %s, skipping\n",
 			       overlayfile);
