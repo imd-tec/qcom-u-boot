@@ -3,6 +3,7 @@
 #ifndef __PXE_UTILS_H
 #define __PXE_UTILS_H
 
+#include <alist.h>
 #include <bootflow.h>
 #include <linux/list.h>
 
@@ -24,6 +25,17 @@
  */
 
 /**
+ * struct pxe_fdtoverlay - info about an FDT overlay
+ *
+ * @path: Path to the overlay file
+ * @addr: Address where the overlay was loaded (0 if not yet loaded)
+ */
+struct pxe_fdtoverlay {
+	char *path;
+	ulong addr;
+};
+
+/**
  * struct pxe_label - describes a single label in a pxe file
  *
  * Create these with label_create()
@@ -38,7 +50,8 @@
  * @initrd: path to the initrd to use for this label.
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
- * @fdtoverlays: space-separated list of paths of FDT overlays to apply
+ * @fdtoverlays: list of FDT overlays to apply (alist of struct pxe_fdtoverlay)
+ * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
  * @attempted: 0 if we haven't tried to boot this label, 1 if we have
  * @localboot: 1 if this label specified 'localboot', 0 otherwise
@@ -57,13 +70,27 @@ struct pxe_label {
 	char *initrd;
 	char *fdt;
 	char *fdtdir;
-	char *fdtoverlays;
+	struct alist fdtoverlays;
+	char *say;
 	int ipappend;
 	int attempted;
 	int localboot;
 	int localboot_val;
 	int kaslrseed;
 	struct list_head list;
+};
+
+/**
+ * struct pxe_include - an include file that needs to be loaded
+ *
+ * @path: Path to the include file
+ * @cfg: Menu to parse the include into
+ * @nest_level: Nesting level to use when parsing this include
+ */
+struct pxe_include {
+	char *path;
+	struct pxe_menu *cfg;
+	int nest_level;
 };
 
 /*
@@ -79,6 +106,7 @@ struct pxe_label {
  *          interrupted.  If 1, always prompt for a choice regardless of
  *          timeout.
  * labels - a list of labels defined for the menu.
+ * includes - list of struct pxe_include for files that need loading/parsing
  */
 struct pxe_menu {
 	char *title;
@@ -88,6 +116,7 @@ struct pxe_menu {
 	int timeout;
 	int prompt;
 	struct list_head labels;
+	struct alist includes;
 };
 
 struct pxe_context;
@@ -120,6 +149,7 @@ typedef int (*pxe_getfile_func)(struct pxe_context *ctx, const char *file_path,
  * @use_fallback: TRUE : use "fallback" option as default, FALSE : use
  *	"default" option as default
  * @no_boot: Stop show of actually booting and just return
+ * @quiet: Suppress "Retrieving file" messages when loading files
  * @bflow: Bootflow being booted, or NULL if none (must be valid if @no_boot)
  * @cfg: PXE menu (NULL if not yet probed)
  *
@@ -131,8 +161,10 @@ typedef int (*pxe_getfile_func)(struct pxe_context *ctx, const char *file_path,
  * @initrd_addr: initaddr address (0 if none)
  * @initrd_size: initrd size (only used if @initrd_addr)
  * @initrd_str: initrd string to process (only used if @initrd_addr)
+ * @fdt_addr: FDT address from loaded file (0 if none)
  * @conf_fdt_str: FDT-address string
  * @conf_fdt: FDT address
+ * @fdt: Working FDT pointer, for kaslrseed and overlay operations
  * @restart: true to use BOOTM_STATE_RESTART instead of BOOTM_STATE_START (only
  *	supported with FIT / bootm)
  * @fake_go: Do a 'fake' boot, up to the last possible point, then return
@@ -157,6 +189,7 @@ struct pxe_context {
 	bool use_ipv6;
 	bool use_fallback;
 	bool no_boot;
+	bool quiet;
 	struct bootflow *bflow;
 	struct pxe_menu *cfg;
 
@@ -168,20 +201,29 @@ struct pxe_context {
 	ulong initrd_addr;
 	ulong initrd_size;
 	char *initrd_str;
+	ulong fdt_addr;
 	char *conf_fdt_str;
 	ulong conf_fdt;
+	void *fdt;		/* working FDT pointer, for kaslrseed/overlays */
 	bool restart;
 	bool fake_go;
 };
 
 /**
- * destroy_pxe_menu() - Destroy an allocated pxe structure
+ * pxe_menu_init() - Allocate and initialise a pxe_menu structure
+ *
+ * Return: Allocated structure, or NULL on failure
+ */
+struct pxe_menu *pxe_menu_init(void);
+
+/**
+ * pxe_menu_uninit() - Free a pxe_menu structure
  *
  * Free the memory used by a pxe_menu and its labels
  *
- * @cfg: Config to destroy, previous returned from parse_pxefile()
+ * @cfg: Config to free, previously returned from pxe_menu_init()
  */
-void destroy_pxe_menu(struct pxe_menu *cfg);
+void pxe_menu_uninit(struct pxe_menu *cfg);
 
 /**
  * get_pxe_file() - Read a file
@@ -231,17 +273,47 @@ int get_pxelinux_path(struct pxe_context *ctx, const char *file,
 void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
 
 /**
- * parse_pxefile() - Parsing a pxe file
+ * parse_pxefile() - Parse a pxe file
  *
- * This is only used for the top-level file.
+ * Parse the top-level file. Any includes are stored in cfg->includes and
+ * should be processed by calling pxe_process_includes().
  *
  * @ctx: PXE context (provided by the caller)
- * Returns NULL if there is an error, otherwise, returns a pointer to a
- * pxe_menu struct populated with the results of parsing the pxe file (and any
- * files it includes). The resulting pxe_menu struct can be free()'d by using
- * the destroy_pxe_menu() function.
+ * @menucfg: Address of the PXE file in memory
+ * Return: NULL on error, otherwise a pointer to a pxe_menu struct. Use
+ * pxe_menu_uninit() to free it.
  */
 struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
+
+/**
+ * pxe_process_includes() - Process include files in a parsed menu
+ *
+ * Load and parse all include files referenced in cfg->includes. This may
+ * add more includes if nested includes are found.
+ *
+ * @ctx: PXE context with getfile callback
+ * @cfg: Parsed PXE menu with includes to process
+ * @base: Memory address for loading include files
+ * Return: 0 on success, -ve on error
+ */
+int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
+			 ulong base);
+
+/**
+ * pxe_parse_include() - Parse an included file into its target menu
+ *
+ * After loading an include file referenced in cfg->includes, call this
+ * to parse it and merge any labels into the target menu. This may add
+ * more entries to cfg->includes if the included file has its own includes.
+ *
+ * @ctx: PXE context
+ * @inc: Include info with path and target menu
+ * @buf: Buffer containing the included file content
+ * @base: Memory address where buf is located
+ * Return: 1 on success, -ve on error
+ */
+int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
+		      char *buf, ulong base);
 
 /**
  * format_mac_pxe() - Convert a MAC address to PXE format
@@ -357,6 +429,64 @@ int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
  * Return: Does not return, on success, otherwise returns a -ve error code
  */
 int pxe_do_boot(struct pxe_context *ctx);
+
+/**
+ * pxe_select_label() - Select a label from a parsed menu
+ *
+ * Uses the menu system to get the user's choice or the default.
+ * Does NOT load any files or attempt to boot.
+ *
+ * @cfg: Parsed PXE menu
+ * @prompt: Force user prompt regardless of timeout
+ * @labelp: Returns selected label (not a copy, points into cfg)
+ * Return: 0 on success, -ENOMEM if out of memory, -ENOENT if no default set,
+ *	-ECANCELED if user cancelled
+ */
+int pxe_select_label(struct pxe_menu *cfg, bool prompt,
+		     struct pxe_label **labelp);
+
+/**
+ * pxe_load_files() - Load kernel/initrd/FDT/overlays for a label
+ *
+ * Loads the files specified in the label into memory and saves the
+ * addresses in @ctx. This does not process the FDT or set up boot
+ * parameters - use pxe_load_label() for that.
+ *
+ * @ctx: PXE context with getfile callback
+ * @label: Label whose files to load
+ * @fdtfile: Path to FDT file (may be NULL)
+ * Return: 0 on success, -ENOENT if no kernel specified, -EIO if file
+ *	retrieval failed
+ */
+int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
+		   char *fdtfile);
+
+/**
+ * pxe_load_label() - Load kernel/initrd/FDT for a label
+ *
+ * Loads the files specified in the label into memory. Call
+ * pxe_setup_label() after this to process the FDT and set up
+ * boot parameters.
+ *
+ * @ctx: PXE context with getfile callback
+ * @label: Label whose files to load
+ * Return: 0 on success, -ENOENT if no kernel specified, -EIO if file
+ *	retrieval failed, -ENOMEM if out of memory
+ */
+int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label);
+
+/**
+ * pxe_setup_label() - Set up boot parameters for a loaded label
+ *
+ * Processes the FDT (applying overlays if needed) and saves the boot
+ * parameters in @ctx. Call this after pxe_load_label().
+ *
+ * @ctx: PXE context with loaded files
+ * @label: Label to set up
+ * Return: 0 on success, -ENOSPC if initrd string too long, -ENOMEM if
+ *	out of memory
+ */
+int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label);
 
 /*
  * Entry point for parsing a menu file. nest_level indicates how many times

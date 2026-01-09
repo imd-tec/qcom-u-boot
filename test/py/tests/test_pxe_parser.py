@@ -11,11 +11,14 @@ Tests are implemented in C (test/boot/pxe.c) and called from here.
 Python handles filesystem image setup and configuration.
 """
 
+import gzip
 import os
 import pytest
 import subprocess
+import tempfile
 
 from fs_helper import FsHelper
+import utils
 
 
 # Simple base DTS with symbols enabled (for overlay support)
@@ -84,8 +87,11 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
             - initrd: Initrd path (optional)
             - append: Kernel arguments (optional)
             - fdt: Device tree path (optional)
+            - devicetree: Device tree path (alias for fdt)
             - fdtdir: Device tree directory (optional)
+            - devicetreedir: Device tree directory (alias for fdtdir)
             - fdtoverlays: Device tree overlays (optional)
+            - devicetree-overlay: Device tree overlays (alias)
             - localboot: Local boot flag (optional)
             - ipappend: IP append flags (optional)
             - fit: FIT config path (optional)
@@ -145,10 +151,16 @@ def create_extlinux_conf(srcdir, labels, menu_opts=None):
                 fd.write(f"    append {label['append']}\n")
             if 'fdt' in label:
                 fd.write(f"    fdt {label['fdt']}\n")
+            if 'devicetree' in label:
+                fd.write(f"    devicetree {label['devicetree']}\n")
             if 'fdtdir' in label:
                 fd.write(f"    fdtdir {label['fdtdir']}\n")
+            if 'devicetreedir' in label:
+                fd.write(f"    devicetreedir {label['devicetreedir']}\n")
             if 'fdtoverlays' in label:
                 fd.write(f"    fdtoverlays {label['fdtoverlays']}\n")
+            if 'devicetree-overlay' in label:
+                fd.write(f"    devicetree-overlay {label['devicetree-overlay']}\n")
             if 'localboot' in label:
                 fd.write(f"    localboot {label['localboot']}\n")
             if 'ipappend' in label:
@@ -181,8 +193,9 @@ def pxe_image(u_boot_config):
             'kernel': '/vmlinuz',
             'initrd': '/initrd.img',
             'append': 'root=/dev/sda1 quiet',
-            'fdt': '/dtb/board.dtb',
-            'fdtoverlays': '/dtb/overlay1.dtbo /dtb/overlay2.dtbo',
+            # Use aliases to test devicetree/devicetree-overlay keywords
+            'devicetree': '/dtb/board.dtb',
+            'devicetree-overlay': '/dtb/overlay1.dtbo /dtb/overlay2.dtbo',
             'kaslrseed': True,
             'say': 'Booting default Linux kernel',
             'default': True,
@@ -192,7 +205,7 @@ def pxe_image(u_boot_config):
             'menu': 'Rescue Mode',
             'linux': '/vmlinuz-rescue',  # test 'linux' keyword
             'append': 'single',
-            'fdtdir': '/dtb/',
+            'devicetreedir': '/dtb/',  # test alias for fdtdir
             'ipappend': '3',
         },
         {
@@ -219,6 +232,15 @@ def pxe_image(u_boot_config):
     }
 
     cfg_path = create_extlinux_conf(fsh.srcdir, labels, menu_opts)
+
+    # Create DTB and overlay files for testing
+    dtbdir = os.path.join(fsh.srcdir, 'dtb')
+    os.makedirs(dtbdir, exist_ok=True)
+    compile_dts(BASE_DTS, os.path.join(dtbdir, 'board.dtb'))
+    compile_dts(OVERLAY1_DTS, os.path.join(dtbdir, 'overlay1.dtbo'),
+                is_overlay=True)
+    compile_dts(OVERLAY2_DTS, os.path.join(dtbdir, 'overlay2.dtbo'),
+                is_overlay=True)
 
     # Create a chain of 16 nested include files to test MAX_NEST_LEVEL
     # Level 1 is extlinux.conf, levels 2-16 are extra.conf, nest3.conf, etc.
@@ -325,7 +347,8 @@ def pxe_fdtdir_image(u_boot_config):
 
     yield fsh.fs_img, cfg_path
 
-    fsh.cleanup()
+    if not u_boot_config.persist:
+        fsh.cleanup()
 
 
 @pytest.fixture
@@ -385,7 +408,62 @@ def pxe_error_image(u_boot_config):
 
     yield fsh.fs_img, cfg_path
 
-    fsh.cleanup()
+    if not u_boot_config.persist:
+        fsh.cleanup()
+
+
+@pytest.fixture
+def pxe_fit_image(u_boot_config, u_boot_log):
+    """Create a filesystem image with a FIT image containing embedded FDT
+
+    This tests that when using the 'fit' keyword without an explicit 'fdt'
+    line, the FDT is extracted from the FIT image. This is the scenario where
+    label->fdt is NULL but the kernel is a FIT containing an embedded FDT.
+    """
+    fsh = FsHelper(u_boot_config, 'vfat', 4, prefix='pxe_fit')
+    fsh.setup()
+
+    # Create a FIT image with embedded FDT using mkimage
+    mkimage = u_boot_config.build_dir + '/tools/mkimage'
+    boot_dir = os.path.join(fsh.srcdir, 'boot')
+    os.makedirs(boot_dir, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(suffix='pxe_fit') as tmp:
+        # Create a fake gzipped kernel
+        kern = os.path.join(tmp, 'kern')
+        with open(kern, 'wb') as fd:
+            fd.write(gzip.compress(b'vmlinux-test'))
+
+        # Create a DTB for the FIT
+        dtb = os.path.join(tmp, 'board.dtb')
+        compile_dts(BASE_DTS, dtb)
+
+        # Create FIT image with embedded DTB
+        fit = os.path.join(boot_dir, 'image.fit')
+        subprocess.run(
+            f'{mkimage} -f auto -T kernel -A sandbox -O linux '
+            f'-d {kern} -b {dtb} {fit}',
+            shell=True, check=True, capture_output=True)
+
+    # Create extlinux.conf using 'fit' keyword without 'fdt' line
+    # This is the key test case: label->fdt is NULL, but FIT has embedded FDT
+    labels = [
+        {
+            'name': 'fitonly',
+            'menu': 'FIT Boot (no explicit fdt)',
+            'fit': '/boot/image.fit',
+            'append': 'console=ttyS0',
+            'default': True,
+        },
+    ]
+
+    cfg_path = create_extlinux_conf(fsh.srcdir, labels)
+    fsh.mk_fs()
+
+    yield fsh.fs_img, cfg_path
+
+    if not u_boot_config.persist:
+        fsh.cleanup()
 
 
 @pytest.mark.boardspec('sandbox')
@@ -447,4 +525,23 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_image
         with ubman.log.section('Test PXE alloc'):
             ubman.run_ut('pxe', 'pxe_test_alloc',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_overlay_no_addr(self, ubman, pxe_image):
+        """Test overlay loading when fdtoverlay_addr_r is not set"""
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE overlay no addr'):
+            ubman.run_ut('pxe', 'pxe_test_overlay_no_addr',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_fit_embedded_fdt(self, ubman, pxe_fit_image):
+        """Test FIT image with embedded FDT (no explicit fdt line)
+
+        This tests that when using 'fit /path.fit' without an explicit 'fdt'
+        line, the FDT address is set to the FIT address so bootm can extract
+        the FDT from the FIT image.
+        """
+        fs_img, cfg_path = pxe_fit_image
+        with ubman.log.section('Test PXE FIT embedded FDT'):
+            ubman.run_ut('pxe', 'pxe_test_fit_embedded_fdt',
                          fs_image=fs_img, cfg_path=cfg_path)

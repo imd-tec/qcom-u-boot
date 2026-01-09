@@ -45,7 +45,7 @@ int bootz_setup(ulong image, ulong *start, ulong *end)
 		ret = 1;
 	}
 
-	unmap_sysmem((void *)image);
+	unmap_sysmem(zimage);
 
 	return ret;
 }

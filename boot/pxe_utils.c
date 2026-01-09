@@ -124,7 +124,8 @@ static int get_relfile(struct pxe_context *ctx, const char *file_path,
 
 	strcat(relfile, file_path);
 
-	printf("Retrieving file: %s\n", relfile);
+	if (!ctx->quiet)
+		printf("Retrieving file: %s\n", relfile);
 
 	ret = ctx->getfile(ctx, relfile, addrp, align, type, &size);
 	if (ret < 0)
@@ -276,125 +277,114 @@ static int label_localboot(struct pxe_label *label)
 /*
  * label_boot_kaslrseed generate kaslrseed from hw rng
  */
-
-static void label_boot_kaslrseed(void)
+static void label_boot_kaslrseed(struct pxe_context *ctx)
 {
 #if CONFIG_IS_ENABLED(DM_RNG)
-	ulong fdt_addr;
-	struct fdt_header *working_fdt;
 	int err;
 
-	/* Get the main fdt and map it */
-	fdt_addr = hextoul(env_get("fdt_addr_r"), NULL);
-	working_fdt = map_sysmem(fdt_addr, 0);
-	err = fdt_check_header(working_fdt);
+	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
 	/* add extra size for holding kaslr-seed */
 	/* err is new fdt size, 0 or negtive */
-	err = fdt_shrink_to_minimum(working_fdt, 512);
+	err = fdt_shrink_to_minimum(ctx->fdt, 512);
 	if (err <= 0)
 		return;
 
-	fdt_kaslrseed(working_fdt, true);
+	fdt_kaslrseed(ctx->fdt, true);
 #endif
-	return;
 }
 
 /**
- * label_boot_fdtoverlay() - Loads fdt overlays specified in 'fdtoverlays'
- * or 'devicetree-overlay'
+ * label_load_fdtoverlays() - Load FDT overlay files
+ *
+ * Load all overlay files specified in the label. The loaded addresses are
+ * stored in each overlay's addr field.
  *
  * @ctx: PXE context
  * @label: Label to process
  */
-#ifdef CONFIG_OF_LIBFDT_OVERLAY
-static void label_boot_fdtoverlay(struct pxe_context *ctx,
-				  struct pxe_label *label)
+static void label_load_fdtoverlays(struct pxe_context *ctx,
+				   struct pxe_label *label)
 {
-	char *fdtoverlay = label->fdtoverlays;
-	struct fdt_header *working_fdt;
-	char *fdtoverlay_addr_env;
+	struct pxe_fdtoverlay *overlay;
 	ulong fdtoverlay_addr;
-	ulong fdt_addr;
+	bool use_lmb;
+	char *envaddr;
+
+	/*
+	 * Get the overlay load address. If fdtoverlay_addr_r is defined,
+	 * overlays are loaded sequentially at increasing addresses. Otherwise,
+	 * LMB allocates a fresh address for each overlay.
+	 */
+	envaddr = env_get("fdtoverlay_addr_r");
+	if (envaddr) {
+		fdtoverlay_addr = hextoul(envaddr, NULL);
+		use_lmb = false;
+	} else {
+		fdtoverlay_addr = 0;
+		use_lmb = true;
+	}
+
+	alist_for_each(overlay, &label->fdtoverlays) {
+		ulong addr = fdtoverlay_addr;
+		ulong size;
+		int err;
+
+		err = get_relfile(ctx, overlay->path, &addr, SZ_4K,
+				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
+		if (err < 0) {
+			printf("Failed loading overlay %s\n", overlay->path);
+			continue;
+		}
+		overlay->addr = addr;
+
+		/* Move to next address if using fixed addresses */
+		if (!use_lmb)
+			fdtoverlay_addr = addr + size;
+	}
+}
+
+/**
+ * label_apply_fdtoverlays() - Apply loaded FDT overlays to working FDT
+ *
+ * Apply all previously loaded overlays to the working FDT.
+ *
+ * @ctx: PXE context
+ * @label: Label containing overlays to apply
+ */
+static void label_apply_fdtoverlays(struct pxe_context *ctx,
+				    struct pxe_label *label)
+{
+	struct pxe_fdtoverlay *overlay;
+	struct fdt_header *blob;
 	int err;
 
-	/* Get the main fdt and map it */
-	fdt_addr = hextoul(env_get("fdt_addr_r"), NULL);
-	working_fdt = map_sysmem(fdt_addr, 0);
-	err = fdt_check_header(working_fdt);
+	err = fdt_check_header(ctx->fdt);
 	if (err)
 		return;
 
-	/* Get the specific overlay loading address */
-	fdtoverlay_addr_env = env_get("fdtoverlay_addr_r");
-	if (!fdtoverlay_addr_env) {
-		printf("Invalid fdtoverlay_addr_r for loading overlays\n");
-		return;
-	}
+	/* Resize main fdt to make room for overlays */
+	fdt_shrink_to_minimum(ctx->fdt, 8192);
 
-	fdtoverlay_addr = hextoul(fdtoverlay_addr_env, NULL);
+	alist_for_each(overlay, &label->fdtoverlays) {
+		if (!overlay->addr)
+			continue;
 
-	/* Cycle over the overlay files and apply them in order */
-	do {
-		struct fdt_header *blob;
-		char *overlayfile;
-		ulong addr;
-		char *end;
-		int len;
-
-		/* Drop leading spaces */
-		while (*fdtoverlay == ' ')
-			++fdtoverlay;
-
-		/* Copy a single filename if multiple provided */
-		end = strstr(fdtoverlay, " ");
-		if (end) {
-			len = (int)(end - fdtoverlay);
-			overlayfile = malloc(len + 1);
-			strncpy(overlayfile, fdtoverlay, len);
-			overlayfile[len] = '\0';
-		} else
-			overlayfile = fdtoverlay;
-
-		if (!strlen(overlayfile))
-			goto skip_overlay;
-
-		/* Load overlay file */
-		err = get_relfile_envaddr(ctx, overlayfile, "fdtoverlay_addr_r",
-					  SZ_4K,
-					  (enum bootflow_img_t)IH_TYPE_FLATDT,
-					  &addr, NULL);
-		if (err < 0) {
-			printf("Failed loading overlay %s\n", overlayfile);
-			goto skip_overlay;
-		}
-
-		/* Resize main fdt */
-		fdt_shrink_to_minimum(working_fdt, 8192);
-
-		blob = map_sysmem(fdtoverlay_addr, 0);
+		blob = map_sysmem(overlay->addr, 0);
 		err = fdt_check_header(blob);
 		if (err) {
-			printf("Invalid overlay %s, skipping\n",
-			       overlayfile);
-			goto skip_overlay;
+			printf("Invalid overlay %s, skipping\n", overlay->path);
+			continue;
 		}
 
-		err = fdt_overlay_apply_verbose(working_fdt, blob);
-		if (err) {
+		err = fdt_overlay_apply_verbose(ctx->fdt, blob);
+		if (err)
 			printf("Failed to apply overlay %s, skipping\n",
-			       overlayfile);
-			goto skip_overlay;
-		}
-
-skip_overlay:
-		if (end)
-			free(overlayfile);
-	} while ((fdtoverlay = strstr(fdtoverlay, " ")));
+			       overlay->path);
+	}
 }
-#endif
 
 const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
 {
@@ -427,150 +417,109 @@ const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
 	return conf_fdt_str;
 }
 
-/*
- * label_process_fdt() - Process FDT for the label
+/**
+ * label_get_fdt_path() - Get the FDT path for a label
  *
- * @ctx: PXE context
- * @label: Label to process
- * @kernel_addr: String containing kernel address
- * @fdt_argp: bootm argument to fill in, for FDT
- * Return: 0 if OK, -ENOMEM if out of memory, -ENOENT if FDT file could not be
- *	loaded
+ * Determine the FDT filename from label->fdt or by constructing it from
+ * label->fdtdir and environment variables.
  *
- * fdt usage is optional:
- * It handles the following scenarios.
- *
- * Scenario 1: If fdt_addr_r specified and "fdt" or "fdtdir" label is
- * defined in pxe file, retrieve fdt blob from server. Pass fdt_addr_r to
- * bootm, and adjust argc appropriately.
- *
- * If retrieve fails and no exact fdt blob is specified in pxe file with
- * "fdt" label, try Scenario 2.
- *
- * Scenario 2: If there is an fdt_addr specified, pass it along to
- * bootm, and adjust argc appropriately.
- *
- * Scenario 3: If there is an fdtcontroladdr specified, pass it along to
- * bootm, and adjust argc appropriately, unless the image type is fitImage.
- *
- * Scenario 4: fdt blob is not available.
+ * @label: Label to get FDT path for
+ * @fdtfilep: Returns allocated FDT path, or NULL if none. Caller must free.
+ * Return: 0 on success, -ENOMEM on allocation failure
  */
-static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
-			     char *kernel_addr, const char **fdt_argp)
+static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
 {
-	log_debug("label '%s' kernel_addr '%s' label->fdt '%s' fdtdir '%s' "
-		  "kernel_label '%s' fdt_argp '%s'\n",
-		  label->name, kernel_addr, label->fdt, label->fdtdir,
-		  label->kernel_label, *fdt_argp);
+	char *fdtfile = NULL;
 
-	/* For FIT, the label can be identical to kernel one */
-	if (label->fdt && !strcmp(label->kernel_label, label->fdt)) {
-		*fdt_argp = kernel_addr;
-	/* if fdt label is defined then get fdt from server */
-	} else if (*fdt_argp) {
-		char *fdtfile = NULL;
-		char *fdtfilefree = NULL;
+	if (label->fdt) {
+		if (IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS)) {
+			if (strcmp("-", label->fdt))
+				fdtfile = strdup(label->fdt);
+		} else {
+			fdtfile = strdup(label->fdt);
+		}
+	} else if (label->fdtdir) {
+		char *f1, *f2, *f3, *f4, *slash;
+		int len;
 
-		if (label->fdt) {
-			if (IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS)) {
-				if (strcmp("-", label->fdt))
-					fdtfile = label->fdt;
-			} else {
-				fdtfile = label->fdt;
+		f1 = env_get("fdtfile");
+		if (f1) {
+			f2 = "";
+			f3 = "";
+			f4 = "";
+		} else {
+			/*
+			 * For complex cases where this code doesn't
+			 * generate the correct filename, the board
+			 * code should set $fdtfile during early boot,
+			 * or the boot scripts should set $fdtfile
+			 * before invoking "pxe" or "sysboot".
+			 */
+			f1 = env_get("soc");
+			f2 = "-";
+			f3 = env_get("board");
+			f4 = ".dtb";
+			if (!f1) {
+				f1 = "";
+				f2 = "";
 			}
-		} else if (label->fdtdir) {
-			char *f1, *f2, *f3, *f4, *slash;
-			int len;
-
-			f1 = env_get("fdtfile");
-			if (f1) {
+			if (!f3) {
 				f2 = "";
 				f3 = "";
-				f4 = "";
-			} else {
-				/*
-				 * For complex cases where this code doesn't
-				 * generate the correct filename, the board
-				 * code should set $fdtfile during early boot,
-				 * or the boot scripts should set $fdtfile
-				 * before invoking "pxe" or "sysboot".
-				 */
-				f1 = env_get("soc");
-				f2 = "-";
-				f3 = env_get("board");
-				f4 = ".dtb";
-				if (!f1) {
-					f1 = "";
-					f2 = "";
-				}
-				if (!f3) {
-					f2 = "";
-					f3 = "";
-				}
 			}
-
-			len = strlen(label->fdtdir);
-			if (!len)
-				slash = "./";
-			else if (label->fdtdir[len - 1] != '/')
-				slash = "/";
-			else
-				slash = "";
-
-			len = strlen(label->fdtdir) + strlen(slash) +
-				strlen(f1) + strlen(f2) + strlen(f3) +
-				strlen(f4) + 1;
-			fdtfilefree = malloc(len);
-			if (!fdtfilefree) {
-				printf("malloc fail (FDT filename)\n");
-				return -ENOMEM;
-			}
-
-			snprintf(fdtfilefree, len, "%s%s%s%s%s%s",
-				 label->fdtdir, slash, f1, f2, f3, f4);
-			fdtfile = fdtfilefree;
 		}
 
-		if (fdtfile) {
-			ulong addr;
-			int err;
+		len = strlen(label->fdtdir);
+		if (!len)
+			slash = "./";
+		else if (label->fdtdir[len - 1] != '/')
+			slash = "/";
+		else
+			slash = "";
 
-			err = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r",
-					SZ_4K,
-					(enum bootflow_img_t)IH_TYPE_FLATDT,
-					&addr, NULL);
-
-			free(fdtfilefree);
-			if (err < 0) {
-				*fdt_argp = NULL;
-
-				if (label->fdt) {
-					printf("Skipping %s for failure retrieving FDT\n",
-					       label->name);
-					return -ENOENT;
-				}
-
-				if (label->fdtdir) {
-					printf("Skipping fdtdir %s for failure retrieving dts\n",
-						label->fdtdir);
-				}
-			}
-
-			if (label->kaslrseed)
-				label_boot_kaslrseed();
-
-#ifdef CONFIG_OF_LIBFDT_OVERLAY
-			if (label->fdtoverlays)
-				label_boot_fdtoverlay(ctx, label);
-#endif
-		} else {
-			*fdt_argp = NULL;
+		len = strlen(label->fdtdir) + strlen(slash) +
+			strlen(f1) + strlen(f2) + strlen(f3) +
+			strlen(f4) + 1;
+		fdtfile = malloc(len);
+		if (!fdtfile) {
+			printf("malloc fail (FDT filename)\n");
+			return -ENOMEM;
 		}
+
+		snprintf(fdtfile, len, "%s%s%s%s%s%s",
+			 label->fdtdir, slash, f1, f2, f3, f4);
 	}
+
+	*fdtfilep = fdtfile;
 
 	return 0;
 }
 
+/**
+ * label_process_fdt() - Process FDT after loading
+ *
+ * Set the working FDT address, handle kaslrseed, and apply overlays.
+ * The FDT must already be loaded (ctx->fdt_addr set by pxe_load_files()).
+ *
+ * @ctx: PXE context
+ * @label: Label to process
+ * Return: 0 if OK
+ */
+static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
+{
+	if (!ctx->fdt_addr)
+		return 0;
+
+	ctx->fdt = map_sysmem(ctx->fdt_addr, 0);
+
+	if (label->kaslrseed)
+		label_boot_kaslrseed(ctx);
+
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+		label_apply_fdtoverlays(ctx, label);
+
+	return 0;
+}
 /**
  * label_run_boot() - Set up the FDT and call the appropriate bootm/z/i command
  *
@@ -678,11 +627,241 @@ static int generate_localboot(struct pxe_label *label)
 	return 0;
 }
 
+int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
+		   char *fdtfile)
+{
+	int ret;
+
+	if (!label->kernel) {
+		printf("No kernel given, skipping %s\n", label->name);
+		return -ENOENT;
+	}
+
+	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
+				(enum bootflow_img_t)IH_TYPE_KERNEL,
+				&ctx->kern_addr, &ctx->kern_size) < 0) {
+		printf("Skipping %s for failure retrieving kernel\n",
+		       label->name);
+		return -EIO;
+	}
+
+	/* For FIT, the label can be identical to kernel one */
+	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
+		ctx->initrd_addr = ctx->kern_addr;
+	} else if (label->initrd) {
+		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
+					  SZ_2M,
+					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
+					  &ctx->initrd_addr, &ctx->initrd_size);
+		if (ret < 0) {
+			printf("Skipping %s for failure retrieving initrd\n",
+			       label->name);
+			return -EIO;
+		}
+	}
+
+	if (fdtfile) {
+		ret = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r", SZ_4K,
+					  (enum bootflow_img_t)IH_TYPE_FLATDT,
+					  &ctx->fdt_addr, NULL);
+		free(fdtfile);
+		if (ret < 0) {
+			if (label->fdt) {
+				printf("Skipping %s for failure retrieving FDT\n",
+				       label->name);
+				return -ENOENT;
+			}
+
+			if (label->fdtdir) {
+				printf("Skipping fdtdir %s for failure retrieving dts\n",
+				       label->fdtdir);
+			}
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+		label_load_fdtoverlays(ctx, label);
+
+	return 0;
+}
+
+int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
+{
+	char *fdtfile = NULL;
+	bool is_fit;
+	int ret;
+
+	if (label->localboot) {
+		if (label->localboot_val >= 0) {
+			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT)) {
+				ret = generate_localboot(label);
+				if (ret)
+					return ret;
+			}
+		}
+		/* negative localboot_val means skip loading */
+		if (!label->kernel)
+			return 0;
+	}
+
+	/* Check for FIT case: FDT comes from FIT image, not a separate file */
+	is_fit = label->fdt && label->kernel_label &&
+		 !strcmp(label->kernel_label, label->fdt);
+
+	if (!is_fit) {
+		ret = label_get_fdt_path(label, &fdtfile);
+		if (ret)
+			return ret;
+	}
+
+	ret = pxe_load_files(ctx, label, fdtfile);
+	if (ret)
+		return ret;
+
+	/* Copy fdt_addr to conf_fdt for callers that don't use pxe_setup_label */
+	ctx->conf_fdt = ctx->fdt_addr;
+
+	return 0;
+}
+
+int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label)
+{
+	char fit_addr[200];
+	const char *conf_fdt_str;
+	ulong conf_fdt = 0;
+	char initrd_str[28] = "";
+	bool is_fit;
+	int ret;
+
+	/* Check for FIT case: FDT comes from FIT image, not a separate file */
+	is_fit = label->fdt && label->kernel_label &&
+		 !strcmp(label->kernel_label, label->fdt);
+
+	/* for FIT, append the configuration identifier */
+	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", ctx->kern_addr,
+		 label->config ? label->config : "");
+
+	if (ctx->initrd_addr && ctx->initrd_size) {
+		int size;
+
+		size = snprintf(initrd_str, sizeof(initrd_str), "%lx:%lx",
+				ctx->initrd_addr, ctx->initrd_size);
+		if (size >= sizeof(initrd_str))
+			return -ENOSPC;
+	}
+
+	/*
+	 * FDT handling has several scenarios:
+	 *
+	 * 1. FIT image with embedded FDT: label->fdt matches kernel_label,
+	 *    use the FIT address so bootm extracts the FDT from the FIT
+	 *
+	 * 2. Separate FDT file: if fdt_addr_r is set and "fdt" or "fdtdir"
+	 *    is specified, load the FDT from the server
+	 *
+	 * 3. Fallback to fdt_addr env var if set
+	 *
+	 * 4. Fallback to fdtcontroladdr for non-FIT images
+	 *
+	 * 5. No FDT available
+	 */
+	conf_fdt_str = env_get("fdt_addr_r");
+	log_debug("label '%s' kernel_addr '%s' label->fdt '%s' fdtdir '%s' kernel_label '%s' fdt_argp '%s'\n",
+		  label->name, fit_addr, label->fdt, label->fdtdir,
+		  label->kernel_label, conf_fdt_str);
+
+	/* Scenario 1: FIT with embedded FDT */
+	if (is_fit) {
+		conf_fdt_str = fit_addr;
+	} else if (ctx->fdt_addr) {
+		/* Scenario 2: FDT loaded by pxe_load_files(), do post-processing */
+		ret = label_process_fdt(ctx, label);
+		if (ret)
+			return ret;
+		conf_fdt_str = env_get("fdt_addr_r");
+	} else {
+		/* No FDT specified, use fallback */
+		conf_fdt_str = NULL;
+	}
+
+	/* Scenarios 3 and 4: fallback options */
+	if (!conf_fdt_str)
+		conf_fdt_str = pxe_get_fdt_fallback(label, ctx->kern_addr);
+	if (conf_fdt_str)
+		conf_fdt = hextoul(conf_fdt_str, NULL);
+	log_debug("conf_fdt %lx\n", conf_fdt);
+
+	if (ctx->bflow && conf_fdt_str)
+		ctx->bflow->fdt_addr = conf_fdt;
+
+	/* Save the loaded info to context */
+	ctx->label = label;
+	ctx->kern_addr_str = strdup(fit_addr);
+	if (ctx->initrd_addr)
+		ctx->initrd_str = strdup(initrd_str);
+	ctx->conf_fdt_str = strdup(conf_fdt_str);
+	ctx->conf_fdt = conf_fdt;
+
+	log_debug("Loaded label '%s':\n", label->name);
+	log_debug("- kern_addr_str '%s' conf_fdt_str '%s' conf_fdt %lx\n",
+		  ctx->kern_addr_str, ctx->conf_fdt_str, conf_fdt);
+	if (ctx->initrd_addr) {
+		log_debug("- initrd addr %lx filesize %lx str '%s'\n",
+			  ctx->initrd_addr, ctx->initrd_size, ctx->initrd_str);
+	}
+	if (!ctx->kern_addr_str || (conf_fdt_str && !ctx->conf_fdt_str) ||
+	    (ctx->initrd_addr && !ctx->initrd_str)) {
+		printf("malloc fail (saving label)\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+/**
+ * label_boot_prep() - Prepare a label for booting
+ *
+ * Handles localboot directive if present and loads all files needed for boot
+ * (kernel, initrd, FDT, overlays). For positive localboot_val, attempts
+ * localboot and falls back to generate_localboot() if needed. For negative
+ * localboot_val, indicates the label should be skipped.
+ *
+ * @ctx: PXE context
+ * @label: Label to process
+ * Return: 0 to continue booting, 1 to skip this label, -ve on error
+ */
+static int label_boot_prep(struct pxe_context *ctx, struct pxe_label *label)
+{
+	int ret;
+
+	if (label->localboot) {
+		if (label->localboot_val >= 0) {
+			ret = label_localboot(label);
+
+			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT) &&
+			    ret == -ENOENT)
+				ret = generate_localboot(label);
+			if (ret)
+				return ret;
+		} else {
+			return 1;  /* skip this label */
+		}
+	}
+
+	/* Load files if not already done */
+	if (!ctx->label) {
+		ret = pxe_load_label(ctx, label);
+		if (ret)
+			return 1;
+	}
+
+	return 0;
+}
+
 /**
  * label_boot() - Boot according to the contents of a pxe_label
  *
- * If we can't boot for any reason, we return.  A successful boot never
- * returns.
+ * If we can't boot for any reason, we return. A successful boot never returns.
  *
  * The kernel will be stored in the location given by the 'kernel_addr_r'
  * environment variable.
@@ -695,81 +874,30 @@ static int generate_localboot(struct pxe_label *label)
  *
  * @ctx: PXE context
  * @label: Label to process
- * Returns does not return on success, otherwise returns 0 if a localboot
+ * Return: does not return on success, otherwise returns 0 if a localboot
  *	label was processed, or 1 on error
  */
 static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 {
-	char *kern_addr_str;
-	ulong kern_addr = 0;
-	ulong initrd_addr = 0;
-	ulong initrd_size = 0;
-	char initrd_str[28] = "";
 	char mac_str[29] = "";
 	char ip_str[68] = "";
-	char fit_addr[200];
-	const char *conf_fdt_str;
-	ulong conf_fdt = 0;
-	ulong kern_size;
 	int ret;
+
+	if (label->say)
+		printf("%s\n", label->say);
 
 	label_print(label);
 
 	label->attempted = 1;
 
-	if (label->localboot) {
-		if (label->localboot_val >= 0) {
-			ret = label_localboot(label);
+	ret = label_boot_prep(ctx, label);
+	if (ret)
+		return ret > 0 ? 0 : ret;
 
-			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT) &&
-			    ret == -ENOENT)
-				ret = generate_localboot(label);
-			if (ret)
-				return ret;
-		} else {
-			return 0;
-		}
-	}
-
-	if (!label->kernel) {
-		printf("No kernel given, skipping %s\n",
-		       label->name);
-		return 1;
-	}
-
-	if (get_relfile_envaddr(ctx, label->kernel, "kernel_addr_r", SZ_2M,
-				(enum bootflow_img_t)IH_TYPE_KERNEL,
-				&kern_addr, &kern_size) < 0) {
-		printf("Skipping %s for failure retrieving kernel\n",
-		       label->name);
-		return 1;
-	}
-
-	/* for FIT, append the configuration identifier */
-	snprintf(fit_addr, sizeof(fit_addr), "%lx%s", kern_addr,
-		 label->config ? label->config : "");
-	kern_addr_str = fit_addr;
-
-	/* For FIT, the label can be identical to kernel one */
-	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
-		initrd_addr = kern_addr;
-	} else if (label->initrd) {
-		ulong size;
-		int ret;
-
-		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
-					  SZ_2M,
-					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
-					  &initrd_addr, &size);
-		if (ret < 0) {
-			printf("Skipping %s for failure retrieving initrd\n",
-			       label->name);
-			return 1;
-		}
-		initrd_size = size;
-		size = snprintf(initrd_str, sizeof(initrd_str), "%lx:%lx",
-				initrd_addr, size);
-		if (size >= sizeof(initrd_str))
+	/* Set up boot params if not already done */
+	if (!ctx->label) {
+		ret = pxe_setup_label(ctx, label);
+		if (ret)
 			return 1;
 	}
 
@@ -815,51 +943,13 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 		printf("append: %s\n", finalbootargs);
 	}
 
-	conf_fdt_str = env_get("fdt_addr_r");
-	ret = label_process_fdt(ctx, label, kern_addr_str, &conf_fdt_str);
-	if (ret)
-		return ret;
-
-	if (!conf_fdt_str)
-		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
-	if (conf_fdt_str)
-		conf_fdt = hextoul(conf_fdt_str, NULL);
-	log_debug("conf_fdt %lx\n", conf_fdt);
-
-	if (ctx->bflow && conf_fdt_str)
-		ctx->bflow->fdt_addr = conf_fdt;
-
-	if (IS_ENABLED(CONFIG_BOOTSTD_FULL) && ctx->no_boot) {
-		ctx->label = label;
-		ctx->kern_addr_str = strdup(kern_addr_str);
-		ctx->kern_addr = kern_addr;
-		ctx->kern_size = kern_size;
-		if (initrd_addr) {
-			ctx->initrd_addr = initrd_addr;
-			ctx->initrd_size = initrd_size;
-			ctx->initrd_str = strdup(initrd_str);
-		}
-		ctx->conf_fdt_str = strdup(conf_fdt_str);
-		ctx->conf_fdt = conf_fdt;
-		log_debug("Saving label '%s':\n", label->name);
-		log_debug("- kern_addr_str '%s' conf_fdt_str '%s' conf_fdt %lx\n",
-			  ctx->kern_addr_str, ctx->conf_fdt_str, conf_fdt);
-		if (initrd_addr) {
-			log_debug("- initrd addr %lx filesize %lx str '%s'\n",
-				  ctx->initrd_addr, ctx->initrd_size,
-				  ctx->initrd_str);
-		}
-		if (!ctx->kern_addr_str || (conf_fdt_str && !ctx->conf_fdt_str) ||
-		    (initrd_addr && !ctx->initrd_str)) {
-			printf("malloc fail (saving label)\n");
-			return 1;
-		}
+	if (IS_ENABLED(CONFIG_BOOTSTD_FULL) && ctx->no_boot)
 		return 0;
-	}
 
-	label_run_boot(ctx, label, kern_addr_str, kern_addr, kern_size,
-		       initrd_addr, initrd_size, initrd_str, conf_fdt_str,
-		       conf_fdt);
+	label_run_boot(ctx, label, ctx->kern_addr_str, ctx->kern_addr,
+		       ctx->kern_size, ctx->initrd_addr, ctx->initrd_size,
+		       ctx->initrd_str, ctx->conf_fdt_str, ctx->conf_fdt);
+	/* ignore the error value since we are going to fail anyway */
 
 	/*
 	 * Sandbox cannot boot a real kernel, so stop after the first attempt.
@@ -871,10 +961,24 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	return 1;
 }
 
-/*
- */
-void destroy_pxe_menu(struct pxe_menu *cfg)
+struct pxe_menu *pxe_menu_init(void)
 {
+	struct pxe_menu *cfg;
+
+	cfg = malloc(sizeof(struct pxe_menu));
+	if (!cfg)
+		return NULL;
+
+	memset(cfg, '\0', sizeof(struct pxe_menu));
+	INIT_LIST_HEAD(&cfg->labels);
+	alist_init(&cfg->includes, sizeof(struct pxe_include), 0);
+
+	return cfg;
+}
+
+void pxe_menu_uninit(struct pxe_menu *cfg)
+{
+	struct pxe_include *inc;
 	struct list_head *pos, *n;
 	struct pxe_label *label;
 
@@ -888,6 +992,10 @@ void destroy_pxe_menu(struct pxe_menu *cfg)
 		label_destroy(label);
 	}
 
+	alist_for_each(inc, &cfg->includes)
+		free(inc->path);
+	alist_uninit(&cfg->includes);
+
 	free(cfg);
 }
 
@@ -897,16 +1005,18 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 	char *buf;
 	int r;
 
-	cfg = malloc(sizeof(struct pxe_menu));
+	cfg = pxe_menu_init();
 	if (!cfg)
 		return NULL;
 
-	memset(cfg, 0, sizeof(struct pxe_menu));
-
-	INIT_LIST_HEAD(&cfg->labels);
-
 	buf = map_sysmem(menucfg, 0);
 	r = parse_pxefile_top(ctx, buf, menucfg, cfg, 1);
+	unmap_sysmem(buf);
+
+	if (r < 0) {
+		pxe_menu_uninit(cfg);
+		return NULL;
+	}
 
 	if (ctx->use_fallback) {
 		if (cfg->fallback_label) {
@@ -917,13 +1027,46 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
 		}
 	}
 
-	unmap_sysmem(buf);
-	if (r < 0) {
-		destroy_pxe_menu(cfg);
-		return NULL;
+	return cfg;
+}
+
+int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
+			 ulong base)
+{
+	struct pxe_include *inc;
+	char *buf;
+	uint i;
+	int r;
+
+	/*
+	 * Process includes - load each file and parse it. Get the include
+	 * fresh each iteration since parsing may add more includes and cause
+	 * alist reallocation.
+	 */
+	for (i = 0; i < cfg->includes.count; i++) {
+		inc = alist_getw(&cfg->includes, i, struct pxe_include);
+
+		r = get_pxe_file(ctx, inc->path, base);
+		if (r < 0) {
+			printf("Couldn't retrieve %s\n", inc->path);
+			return r;
+		}
+
+		buf = map_sysmem(base, 0);
+		r = pxe_parse_include(ctx, inc, buf, base);
+		unmap_sysmem(buf);
+
+		if (r < 0)
+			return r;
 	}
 
-	return cfg;
+	return 0;
+}
+
+int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
+		      char *buf, ulong base)
+{
+	return parse_pxefile_top(ctx, buf, base, inc->cfg, inc->nest_level);
 }
 
 /*
@@ -1017,10 +1160,42 @@ static void boot_unattempted_labels(struct pxe_context *ctx,
 	}
 }
 
-void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
+int pxe_select_label(struct pxe_menu *cfg, bool prompt,
+		     struct pxe_label **labelp)
 {
 	void *choice;
 	struct menu *m;
+	int err;
+
+	if (prompt)
+		cfg->prompt = 1;
+
+	m = pxe_menu_to_menu(cfg);
+	if (!m)
+		return -ENOMEM;
+
+	err = menu_get_choice(m, &choice);
+	menu_destroy(m);
+
+	/*
+	 * err == 1 means we got a choice back from menu_get_choice.
+	 *
+	 * err == -ENOENT if the menu was setup to select the default but no
+	 * default was set.
+	 *
+	 * otherwise, the user interrupted or there was some other error.
+	 */
+	if (err == 1) {
+		*labelp = choice;
+		return 0;
+	}
+
+	return err == -ENOENT ? -ENOENT : -ECANCELED;
+}
+
+void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
+{
+	struct pxe_label *label;
 	int err;
 
 	if (IS_ENABLED(CONFIG_CMD_BMP)) {
@@ -1044,15 +1219,10 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
 		}
 	}
 
-	m = pxe_menu_to_menu(cfg);
-	if (!m)
-		return;
-
-	err = menu_get_choice(m, &choice);
-	menu_destroy(m);
+	err = pxe_select_label(cfg, false, &label);
 
 	/*
-	 * err == 1 means we got a choice back from menu_get_choice.
+	 * err == 0 means we got a choice back.
 	 *
 	 * err == -ENOENT if the menu was setup to select the default but no
 	 * default was set. in that case, we should continue trying to boot
@@ -1062,8 +1232,8 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg)
 	 * we give up.
 	 */
 
-	if (err == 1) {
-		err = label_boot(ctx, choice);
+	if (!err) {
+		err = label_boot(ctx, label);
 		log_debug("label_boot() returns %d\n", err);
 		if (!err)
 			return;
@@ -1115,10 +1285,17 @@ struct pxe_menu *pxe_prepare(struct pxe_context *ctx, ulong pxefile_addr_r,
 			     bool prompt)
 {
 	struct pxe_menu *cfg;
+	int ret;
 
 	cfg = parse_pxefile(ctx, pxefile_addr_r);
 	if (!cfg) {
 		printf("Error parsing config file\n");
+		return NULL;
+	}
+
+	ret = pxe_process_includes(ctx, cfg, pxefile_addr_r);
+	if (ret) {
+		pxe_menu_uninit(cfg);
 		return NULL;
 	}
 
@@ -1138,7 +1315,7 @@ int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 
 	handle_pxe_menu(ctx, cfg);
 
-	destroy_pxe_menu(cfg);
+	pxe_menu_uninit(cfg);
 
 	return 0;
 }

@@ -106,12 +106,15 @@ static struct pxe_label *label_create(void)
 	if (!label)
 		return NULL;
 	memset(label, 0, sizeof(struct pxe_label));
+	alist_init_struct(&label->fdtoverlays, struct pxe_fdtoverlay);
 
 	return label;
 }
 
 void label_destroy(struct pxe_label *label)
 {
+	struct pxe_fdtoverlay *overlay;
+
 	free(label->name);
 	free(label->kernel_label);
 	free(label->kernel);
@@ -120,7 +123,10 @@ void label_destroy(struct pxe_label *label)
 	free(label->initrd);
 	free(label->fdt);
 	free(label->fdtdir);
-	free(label->fdtoverlays);
+	alist_for_each(overlay, &label->fdtoverlays)
+		free(overlay->path);
+	alist_uninit(&label->fdtoverlays);
+	free(label->say);
 	free(label);
 }
 
@@ -305,6 +311,49 @@ static int parse_sliteral(char **c, char **dst)
 }
 
 /*
+ * Parse a space-separated list of overlay paths into an alist.
+ */
+static int parse_fdtoverlays(char **c, struct alist *overlays)
+{
+	char *val;
+	int err;
+
+	err = parse_sliteral(c, &val);
+	if (err < 0)
+		return err;
+
+	while (*val) {
+		struct pxe_fdtoverlay item;
+		char *end;
+
+		/* Skip leading spaces */
+		while (*val == ' ')
+			val++;
+
+		if (!*val)
+			break;
+
+		/* Find end of this path */
+		end = strchr(val, ' ');
+		if (end) {
+			item.path = strndup(val, end - val);
+			val = end;
+		} else {
+			item.path = strdup(val);
+			val += strlen(val);
+		}
+		item.addr = 0;
+
+		if (!item.path || !alist_add(overlays, item)) {
+			free(item.path);
+			return -ENOMEM;
+		}
+	}
+
+	return 1;
+}
+
+/*
  * Parse a base 10 (unsigned) integer and store it at *dst.
  */
 static int parse_integer(char **c, int *dst)
@@ -325,39 +374,31 @@ static int parse_integer(char **c, int *dst)
 }
 
 /*
- * Parse an include statement, and retrieve and parse the file it mentions.
+ * Parse an include statement and store the path for later loading.
  *
- * base should point to a location where it's safe to store the file, and
- * nest_level should indicate how many nested includes have occurred. For this
- * include, nest_level has already been incremented and doesn't need to be
- * incremented here.
+ * The include is added to cfg->includes. The caller is responsible for
+ * loading these files and calling pxe_parse_include() to parse them.
  */
-static int handle_include(struct pxe_context *ctx, char **c, unsigned long base,
-			  struct pxe_menu *cfg, int nest_level)
+static int handle_include(char **c, struct pxe_menu *cfg, int nest_level)
 {
-	char *include_path;
+	struct pxe_include inc;
 	char *s = *c;
 	int err;
-	char *buf;
-	int ret;
 
-	err = parse_sliteral(c, &include_path);
+	err = parse_sliteral(c, &inc.path);
 	if (err < 0) {
 		printf("Expected include path: %.*s\n", (int)(*c - s), s);
 		return err;
 	}
+	inc.cfg = cfg;
+	inc.nest_level = nest_level + 1;
 
-	err = get_pxe_file(ctx, include_path, base);
-	if (err < 0) {
-		printf("Couldn't retrieve %s\n", include_path);
-		return err;
+	if (!alist_add(&cfg->includes, inc)) {
+		free(inc.path);
+		return -ENOMEM;
 	}
 
-	buf = map_sysmem(base, 0);
-	ret = parse_pxefile_top(ctx, buf, base, cfg, nest_level);
-	unmap_sysmem(buf);
-
-	return ret;
+	return 1;
 }
 
 /*
@@ -384,7 +425,7 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
 		err = parse_sliteral(c, &cfg->title);
 		break;
 	case T_INCLUDE:
-		err = handle_include(ctx, c, base, cfg, nest_level + 1);
+		err = handle_include(c, cfg, nest_level);
 		break;
 	case T_BACKGROUND:
 		err = parse_sliteral(c, &cfg->bmp);
@@ -534,8 +575,8 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 				err = parse_sliteral(c, &label->fdtdir);
 			break;
 		case T_FDTOVERLAYS:
-			if (!label->fdtoverlays)
-				err = parse_sliteral(c, &label->fdtoverlays);
+			if (!label->fdtoverlays.count)
+				err = parse_fdtoverlays(c, &label->fdtoverlays);
 			break;
 		case T_LOCALBOOT:
 			label->localboot = 1;
@@ -553,8 +594,9 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			char *p = strchr(s, '\n');
 
 			if (p) {
-				printf("%.*s\n", (int)(p - *c) - 1, *c + 1);
-
+				label->say = strndup(*c + 1, p - *c - 1);
+				if (!label->say)
+					return -ENOMEM;
 				*c = p;
 			}
 			break;
@@ -633,9 +675,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
 			}
 			break;
 		case T_INCLUDE:
-			err = handle_include(ctx, &p,
-					     base + ALIGN(strlen(b), 4), cfg,
-					     nest_level + 1);
+			err = handle_include(&p, cfg, nest_level);
 			break;
 		case T_PROMPT:
 			err = parse_integer(&p, &cfg->prompt);
