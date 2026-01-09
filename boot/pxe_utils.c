@@ -526,38 +526,38 @@ static int label_load_fdt(struct pxe_context *ctx, struct pxe_label *label,
 	if (ret)
 		return ret;
 
-	if (fdtfile) {
-		ret = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r", SZ_4K,
-					  (enum bootflow_img_t)IH_TYPE_FLATDT,
-					  &addr, NULL);
-
-		free(fdtfile);
-		if (ret < 0) {
-			*fdt_argp = NULL;
-
-			if (label->fdt) {
-				printf("Skipping %s for failure retrieving FDT\n",
-				       label->name);
-				return -ENOENT;
-			}
-
-			if (label->fdtdir) {
-				printf("Skipping fdtdir %s for failure retrieving dts\n",
-				       label->fdtdir);
-			}
-		} else {
-			ctx->fdt = map_sysmem(addr, 0);
-
-			if (label->kaslrseed)
-				label_boot_kaslrseed(ctx);
-
-			if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) &&
-			    label->fdtoverlays)
-				label_boot_fdtoverlay(ctx, label);
-		}
-	} else {
+	if (!fdtfile) {
 		*fdt_argp = NULL;
+		return 0;
 	}
+
+	ret = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r", SZ_4K,
+				  (enum bootflow_img_t)IH_TYPE_FLATDT,
+				  &addr, NULL);
+	free(fdtfile);
+	if (ret < 0) {
+		*fdt_argp = NULL;
+
+		if (label->fdt) {
+			printf("Skipping %s for failure retrieving FDT\n",
+			       label->name);
+			return -ENOENT;
+		}
+
+		if (label->fdtdir) {
+			printf("Skipping fdtdir %s for failure retrieving dts\n",
+			       label->fdtdir);
+		}
+		return 0;
+	}
+
+	ctx->fdt = map_sysmem(addr, 0);
+
+	if (label->kaslrseed)
+		label_boot_kaslrseed(ctx);
+
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays)
+		label_boot_fdtoverlay(ctx, label);
 
 	return 0;
 }
