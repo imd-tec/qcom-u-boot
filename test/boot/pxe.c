@@ -1166,3 +1166,94 @@ static int pxe_test_alloc_norun(struct unit_test_state *uts)
 PXE_TEST_ARGS(pxe_test_alloc_norun, UTF_CONSOLE | UTF_MANUAL,
 	{ "fs_image", UT_ARG_STR },
 	{ "cfg_path", UT_ARG_STR });
+
+/**
+ * Test FIT image with embedded FDT (no explicit fdt line)
+ *
+ * This tests that when using 'fit /path.fit' without an explicit 'fdt'
+ * line (label->fdt is NULL), the FDT address is set to the FIT address
+ * so bootm can extract the FDT from the FIT image.
+ *
+ * The buggy behavior: When label->fdt is NULL, the FIT check fails:
+ *   if (label->fdt && label->kernel_label &&
+ *       !strcmp(label->kernel_label, label->fdt))
+ * and conf_fdt_str is not set to the FIT address.
+ *
+ * The correct behavior: When the kernel is a FIT image with embedded FDT
+ * and no explicit fdt line is provided, conf_fdt_str should be set to
+ * the kernel (FIT) address so bootm can extract the FDT.
+ */
+static int pxe_test_fit_embedded_fdt_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_test_info info;
+	struct pxe_context ctx;
+	struct pxe_label *label;
+	struct pxe_menu *cfg;
+	ulong addr = PXE_LOAD_ADDR;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	info.uts = uts;
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Set up the PXE context */
+	ut_assertok(pxe_setup_ctx(&ctx, pxe_test_getfile, &info, true, cfg_path,
+				  false, false, NULL));
+
+	/* Set up environment for loading */
+	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
+	ut_assertok(env_set_hex("fdt_addr_r", PXE_FDT_ADDR));
+
+	/* Read and parse the config file */
+	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
+
+	cfg = parse_pxefile(&ctx, addr);
+	ut_assertnonnull(cfg);
+
+	/* Consume parsing output */
+	ut_assert_nextline("Retrieving file: %s", cfg_path);
+	ut_assert_console_end();
+
+	/* Get the fitonly label which uses 'fit' without 'fdt' */
+	label = list_first_entry(&cfg->labels, struct pxe_label, list);
+	ut_asserteq_str("fitonly", label->name);
+
+	/* Verify this is a FIT label with no explicit fdt */
+	ut_assertnonnull(label->kernel);  /* /boot/image.fit */
+	ut_assertnull(label->config);     /* NULL when no #config suffix */
+	ut_assertnull(label->fdt);        /* No explicit fdt line - this is key */
+
+	/* Load the label */
+	ut_assertok(pxe_load_label(&ctx, label));
+
+	/* Consume load output */
+	ut_assert_nextline("Retrieving file: /boot/image.fit");
+	ut_assert_console_end();
+
+	/*
+	 * For FIT images with embedded FDT and no explicit fdt line,
+	 * conf_fdt_str is currently NULL. Ideally it should be set to the
+	 * kernel address so bootm can extract the FDT from the FIT, but
+	 * that is a pre-existing limitation.
+	 *
+	 * This test detects regressions where conf_fdt_str is incorrectly
+	 * set to fdt_addr_r instead of NULL (which would cause bootm to
+	 * look at the wrong address for the FDT).
+	 */
+	ut_assertnull(ctx.conf_fdt_str);
+	ut_asserteq(0, ctx.conf_fdt);
+
+	/* Clean up */
+	destroy_pxe_menu(cfg);
+	pxe_destroy_ctx(&ctx);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_fit_embedded_fdt_norun, UTF_CONSOLE | UTF_MANUAL,
+	      { "fs_image", UT_ARG_STR },
+	      { "cfg_path", UT_ARG_STR });

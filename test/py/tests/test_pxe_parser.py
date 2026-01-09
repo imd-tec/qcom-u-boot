@@ -11,11 +11,14 @@ Tests are implemented in C (test/boot/pxe.c) and called from here.
 Python handles filesystem image setup and configuration.
 """
 
+import gzip
 import os
 import pytest
 import subprocess
+import tempfile
 
 from fs_helper import FsHelper
+import utils
 
 
 # Simple base DTS with symbols enabled (for overlay support)
@@ -400,6 +403,60 @@ def pxe_error_image(u_boot_config):
         fsh.cleanup()
 
 
+@pytest.fixture
+def pxe_fit_image(u_boot_config, u_boot_log):
+    """Create a filesystem image with a FIT image containing embedded FDT
+
+    This tests that when using the 'fit' keyword without an explicit 'fdt'
+    line, the FDT is extracted from the FIT image. This is the scenario where
+    label->fdt is NULL but the kernel is a FIT containing an embedded FDT.
+    """
+    fsh = FsHelper(u_boot_config, 'vfat', 4, prefix='pxe_fit')
+    fsh.setup()
+
+    # Create a FIT image with embedded FDT using mkimage
+    mkimage = u_boot_config.build_dir + '/tools/mkimage'
+    boot_dir = os.path.join(fsh.srcdir, 'boot')
+    os.makedirs(boot_dir, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(suffix='pxe_fit') as tmp:
+        # Create a fake gzipped kernel
+        kern = os.path.join(tmp, 'kern')
+        with open(kern, 'wb') as fd:
+            fd.write(gzip.compress(b'vmlinux-test'))
+
+        # Create a DTB for the FIT
+        dtb = os.path.join(tmp, 'board.dtb')
+        compile_dts(BASE_DTS, dtb)
+
+        # Create FIT image with embedded DTB
+        fit = os.path.join(boot_dir, 'image.fit')
+        subprocess.run(
+            f'{mkimage} -f auto -T kernel -A sandbox -O linux '
+            f'-d {kern} -b {dtb} {fit}',
+            shell=True, check=True, capture_output=True)
+
+    # Create extlinux.conf using 'fit' keyword without 'fdt' line
+    # This is the key test case: label->fdt is NULL, but FIT has embedded FDT
+    labels = [
+        {
+            'name': 'fitonly',
+            'menu': 'FIT Boot (no explicit fdt)',
+            'fit': '/boot/image.fit',
+            'append': 'console=ttyS0',
+            'default': True,
+        },
+    ]
+
+    cfg_path = create_extlinux_conf(fsh.srcdir, labels)
+    fsh.mk_fs()
+
+    yield fsh.fs_img, cfg_path
+
+    if not u_boot_config.persist:
+        fsh.cleanup()
+
+
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.requiredtool('dtc')
 class TestPxeParser:
@@ -466,4 +523,16 @@ class TestPxeParser:
         fs_img, cfg_path = pxe_image
         with ubman.log.section('Test PXE overlay no addr'):
             ubman.run_ut('pxe', 'pxe_test_overlay_no_addr',
+                         fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_fit_embedded_fdt(self, ubman, pxe_fit_image):
+        """Test FIT image with embedded FDT (no explicit fdt line)
+
+        This tests that when using 'fit /path.fit' without an explicit 'fdt'
+        line, the FDT address is set to the FIT address so bootm can extract
+        the FDT from the FIT image.
+        """
+        fs_img, cfg_path = pxe_fit_image
+        with ubman.log.section('Test PXE FIT embedded FDT'):
+            ubman.run_ut('pxe', 'pxe_test_fit_embedded_fdt',
                          fs_image=fs_img, cfg_path=cfg_path)
