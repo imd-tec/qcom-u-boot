@@ -307,6 +307,20 @@ int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
 int pxe_get_file_size(ulong *sizep);
 
 /**
+ * pxe_get_fdt_fallback() - Get the FDT address using fallback logic
+ *
+ * When a label doesn't specify an FDT file (via 'fdt' or 'fdtdir'), this
+ * function determines the FDT address using fallback environment variables:
+ *   1. fdt_addr - if set, use this address
+ *   2. fdtcontroladdr - if set and kernel is not FIT format
+ *
+ * @label: Label being processed
+ * @kern_addr: Address where kernel is loaded
+ * Return: FDT address string from environment, or NULL if no fallback available
+ */
+const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr);
+
+/**
  * pxe_get() - Get the PXE file from the server
  *
  * This tries various filenames to obtain a PXE file

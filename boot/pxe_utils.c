@@ -396,6 +396,37 @@ skip_overlay:
 }
 #endif
 
+const char *pxe_get_fdt_fallback(struct pxe_label *label, ulong kern_addr)
+{
+	const char *conf_fdt_str = NULL;
+	void *buf;
+
+	/*
+	 * Fallback to fdt_addr env var if label doesn't specify FDT
+	 * and it's not ATAG mode (fdt="-")
+	 */
+	if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
+	    !label->fdt || strcmp("-", label->fdt)) {
+		conf_fdt_str = env_get("fdt_addr");
+		if (conf_fdt_str)
+			return conf_fdt_str;
+	}
+
+	/*
+	 * Fallback to fdtcontroladdr if not a FIT image and not ATAG mode
+	 */
+	buf = map_sysmem(kern_addr, 0);
+	if (genimg_get_format(buf) != IMAGE_FORMAT_FIT) {
+		if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
+		    !label->fdt || strcmp("-", label->fdt)) {
+			conf_fdt_str = env_get("fdtcontroladdr");
+		}
+	}
+	unmap_sysmem(buf);
+
+	return conf_fdt_str;
+}
+
 /*
  * label_process_fdt() - Process FDT for the label
  *
@@ -789,28 +820,8 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	if (ret)
 		return ret;
 
-	if (!conf_fdt_str) {
-		if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
-		    strcmp("-", label->fdt)) {
-			conf_fdt_str = env_get("fdt_addr");
-			log_debug("using fdt_addr '%s'\n", conf_fdt_str);
-		}
-	}
-
-	if (!conf_fdt_str) {
-		void *buf;
-
-		buf = map_sysmem(kern_addr, 0);
-		if (genimg_get_format(buf) != IMAGE_FORMAT_FIT) {
-			if (!IS_ENABLED(CONFIG_SUPPORT_PASSING_ATAGS) ||
-			    strcmp("-", label->fdt)) {
-				conf_fdt_str = env_get("fdtcontroladdr");
-				log_debug("using fdtcontroladdr '%s'\n",
-					  conf_fdt_str);
-			}
-		}
-		unmap_sysmem(buf);
-	}
+	if (!conf_fdt_str)
+		conf_fdt_str = pxe_get_fdt_fallback(label, kern_addr);
 	if (conf_fdt_str)
 		conf_fdt = hextoul(conf_fdt_str, NULL);
 	log_debug("conf_fdt %lx\n", conf_fdt);
@@ -849,9 +860,15 @@ static int label_boot(struct pxe_context *ctx, struct pxe_label *label)
 	label_run_boot(ctx, label, kern_addr_str, kern_addr, kern_size,
 		       initrd_addr, initrd_size, initrd_str, conf_fdt_str,
 		       conf_fdt);
-	/* ignore the error value since we are going to fail anyway */
 
-	return 1;	/* returning is always failure */
+	/*
+	 * Sandbox cannot boot a real kernel, so stop after the first attempt.
+	 * On real hardware, returning is always failure, so try next label.
+	 */
+	if (IS_ENABLED(CONFIG_SANDBOX))
+		return 0;
+
+	return 1;
 }
 
 /*
@@ -923,11 +940,14 @@ static struct menu *pxe_menu_to_menu(struct pxe_menu *cfg)
 	int i = 1;
 	char *default_num = NULL;
 	char *override_num = NULL;
+	int timeout;
+
+	timeout = env_get_ulong("pxe_timeout", 10, DIV_ROUND_UP(cfg->timeout, 10));
 
 	/*
 	 * Create a menu and add items for all the labels.
 	 */
-	m = menu_create(cfg->title, DIV_ROUND_UP(cfg->timeout, 10),
+	m = menu_create(cfg->title, timeout,
 			cfg->prompt, NULL, label_print, NULL, NULL, NULL);
 	if (!m)
 		return NULL;
