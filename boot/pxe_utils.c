@@ -503,8 +503,7 @@ static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
  * label_load_fdt() - Load FDT file for the label
  *
  * If "fdt" or "fdtdir" is defined in the pxe file, retrieve the FDT blob
- * from the server. This is only called when fdt_addr_r is set in the
- * environment.
+ * from the server.
  *
  * If retrieval fails and an exact FDT file is specified with "fdt", an
  * error is returned. If "fdtdir" is used and retrieval fails, this returns
@@ -512,7 +511,7 @@ static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
  *
  * @ctx: PXE context
  * @label: Label to process
- * @fdt_argp: Updated to NULL if FDT retrieval fails
+ * @fdt_argp: Updated to NULL if FDT retrieval fails or no FDT is specified
  * Return: 0 if OK, -ENOMEM if out of memory, -ENOENT if FDT file specified
  *	by "fdt" label could not be loaded
  */
@@ -520,56 +519,48 @@ static int label_load_fdt(struct pxe_context *ctx, struct pxe_label *label,
 			  const char **fdt_argp)
 {
 	char *fdtfile;
+	ulong addr;
 	int ret;
 
-	/* if fdt label is defined then get fdt from server */
-	if (*fdt_argp) {
-		ret = label_get_fdt_path(label, &fdtfile);
-		if (ret)
-			return ret;
+	ret = label_get_fdt_path(label, &fdtfile);
+	if (ret)
+		return ret;
 
-		if (fdtfile) {
-			ulong addr;
-			int err;
+	if (fdtfile) {
+		ret = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r", SZ_4K,
+					  (enum bootflow_img_t)IH_TYPE_FLATDT,
+					  &addr, NULL);
 
-			err = get_relfile_envaddr(ctx, fdtfile, "fdt_addr_r",
-					SZ_4K,
-					(enum bootflow_img_t)IH_TYPE_FLATDT,
-					&addr, NULL);
+		free(fdtfile);
+		if (ret < 0) {
+			*fdt_argp = NULL;
 
-			free(fdtfile);
-			if (err < 0) {
-				*fdt_argp = NULL;
+			if (label->fdt) {
+				printf("Skipping %s for failure retrieving FDT\n",
+				       label->name);
+				return -ENOENT;
+			}
 
-				if (label->fdt) {
-					printf("Skipping %s for failure retrieving FDT\n",
-					       label->name);
-					return -ENOENT;
-				}
-
-				if (label->fdtdir) {
-					printf("Skipping fdtdir %s for failure retrieving dts\n",
-						label->fdtdir);
-				}
-			} else {
-				ctx->fdt = map_sysmem(addr, 0);
-
-				if (label->kaslrseed)
-					label_boot_kaslrseed(ctx);
-
-#ifdef CONFIG_OF_LIBFDT_OVERLAY
-				if (label->fdtoverlays)
-					label_boot_fdtoverlay(ctx, label);
-#endif
+			if (label->fdtdir) {
+				printf("Skipping fdtdir %s for failure retrieving dts\n",
+				       label->fdtdir);
 			}
 		} else {
-			*fdt_argp = NULL;
+			ctx->fdt = map_sysmem(addr, 0);
+
+			if (label->kaslrseed)
+				label_boot_kaslrseed(ctx);
+
+			if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) &&
+			    label->fdtoverlays)
+				label_boot_fdtoverlay(ctx, label);
 		}
+	} else {
+		*fdt_argp = NULL;
 	}
 
 	return 0;
 }
-
 /**
  * label_run_boot() - Set up the FDT and call the appropriate bootm/z/i command
  *
@@ -773,7 +764,7 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 	/* Scenario 1: FIT with embedded FDT */
 	if (label->fdt && !strcmp(label->kernel_label, label->fdt)) {
 		conf_fdt_str = fit_addr;
-	} else {
+	} else if (conf_fdt_str) {
 		/* Scenario 2: load FDT file if fdt_addr_r is set */
 		ret = label_load_fdt(ctx, label, &conf_fdt_str);
 		if (ret)
