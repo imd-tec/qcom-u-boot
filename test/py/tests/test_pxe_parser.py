@@ -325,7 +325,8 @@ def pxe_fdtdir_image(u_boot_config):
 
     yield fsh.fs_img, cfg_path
 
-    fsh.cleanup()
+    if not u_boot_config.persist:
+        fsh.cleanup()
 
 
 @pytest.fixture
@@ -385,7 +386,8 @@ def pxe_error_image(u_boot_config):
 
     yield fsh.fs_img, cfg_path
 
-    fsh.cleanup()
+    if not u_boot_config.persist:
+        fsh.cleanup()
 
 
 @pytest.mark.boardspec('sandbox')
