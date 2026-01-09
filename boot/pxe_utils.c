@@ -499,50 +499,31 @@ static int label_get_fdt_path(struct pxe_label *label, char **fdtfilep)
 	return 0;
 }
 
-/*
- * label_process_fdt() - Process FDT for the label
+/**
+ * label_load_fdt() - Load FDT file for the label
+ *
+ * If "fdt" or "fdtdir" is defined in the pxe file, retrieve the FDT blob
+ * from the server. This is only called when fdt_addr_r is set in the
+ * environment.
+ *
+ * If retrieval fails and an exact FDT file is specified with "fdt", an
+ * error is returned. If "fdtdir" is used and retrieval fails, this returns
+ * success and allows the caller to use fallback options.
  *
  * @ctx: PXE context
  * @label: Label to process
- * @kernel_addr: String containing kernel address
- * @fdt_argp: bootm argument to fill in, for FDT
- * Return: 0 if OK, -ENOMEM if out of memory, -ENOENT if FDT file could not be
- *	loaded
- *
- * fdt usage is optional:
- * It handles the following scenarios.
- *
- * Scenario 1: If fdt_addr_r specified and "fdt" or "fdtdir" label is
- * defined in pxe file, retrieve fdt blob from server. Pass fdt_addr_r to
- * bootm, and adjust argc appropriately.
- *
- * If retrieve fails and no exact fdt blob is specified in pxe file with
- * "fdt" label, try Scenario 2.
- *
- * Scenario 2: If there is an fdt_addr specified, pass it along to
- * bootm, and adjust argc appropriately.
- *
- * Scenario 3: If there is an fdtcontroladdr specified, pass it along to
- * bootm, and adjust argc appropriately, unless the image type is fitImage.
- *
- * Scenario 4: fdt blob is not available.
+ * @fdt_argp: Updated to NULL if FDT retrieval fails
+ * Return: 0 if OK, -ENOMEM if out of memory, -ENOENT if FDT file specified
+ *	by "fdt" label could not be loaded
  */
-static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label,
-			     char *kernel_addr, const char **fdt_argp)
+static int label_load_fdt(struct pxe_context *ctx, struct pxe_label *label,
+			  const char **fdt_argp)
 {
 	char *fdtfile;
 	int ret;
 
-	log_debug("label '%s' kernel_addr '%s' label->fdt '%s' fdtdir '%s' "
-		  "kernel_label '%s' fdt_argp '%s'\n",
-		  label->name, kernel_addr, label->fdt, label->fdtdir,
-		  label->kernel_label, *fdt_argp);
-
-	/* For FIT, the label can be identical to kernel one */
-	if (label->fdt && !strcmp(label->kernel_label, label->fdt)) {
-		*fdt_argp = kernel_addr;
 	/* if fdt label is defined then get fdt from server */
-	} else if (*fdt_argp) {
+	if (*fdt_argp) {
 		ret = label_get_fdt_path(label, &fdtfile);
 		if (ret)
 			return ret;
@@ -769,11 +750,37 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 			return -ENOSPC;
 	}
 
+	/*
+	 * FDT handling has several scenarios:
+	 *
+	 * 1. FIT image with embedded FDT: label->fdt matches kernel_label,
+	 *    use the FIT address so bootm extracts the FDT from the FIT
+	 *
+	 * 2. Separate FDT file: if fdt_addr_r is set and "fdt" or "fdtdir"
+	 *    is specified, load the FDT from the server
+	 *
+	 * 3. Fallback to fdt_addr env var if set
+	 *
+	 * 4. Fallback to fdtcontroladdr for non-FIT images
+	 *
+	 * 5. No FDT available
+	 */
 	conf_fdt_str = env_get("fdt_addr_r");
-	ret = label_process_fdt(ctx, label, fit_addr, &conf_fdt_str);
-	if (ret)
-		return ret;
+	log_debug("label '%s' kernel_addr '%s' label->fdt '%s' fdtdir '%s' kernel_label '%s' fdt_argp '%s'\n",
+		  label->name, fit_addr, label->fdt, label->fdtdir,
+		  label->kernel_label, conf_fdt_str);
 
+	/* Scenario 1: FIT with embedded FDT */
+	if (label->fdt && !strcmp(label->kernel_label, label->fdt)) {
+		conf_fdt_str = fit_addr;
+	} else {
+		/* Scenario 2: load FDT file if fdt_addr_r is set */
+		ret = label_load_fdt(ctx, label, &conf_fdt_str);
+		if (ret)
+			return ret;
+	}
+
+	/* Scenarios 3 and 4: fallback options */
 	if (!conf_fdt_str)
 		conf_fdt_str = pxe_get_fdt_fallback(label, ctx->kern_addr);
 	if (conf_fdt_str)
