@@ -547,16 +547,15 @@ static int parse_label_kernel(char **c, struct pxe_label *label)
 		return -ENOMEM;
 
 	s = strstr(label->kernel, "#");
-	if (!s)
-		return 1;
+	if (s) {
+		label->config = strdup(s);
+		if (!label->config)
+			return -ENOMEM;
 
-	label->config = strdup(s);
-	if (!label->config)
-		return -ENOMEM;
+		*s = 0;
+	}
 
-	*s = 0;
-
-	return 1;
+	return label_add_file(label, label->kernel, PFT_KERNEL) ? : 1;
 }
 
 /*
