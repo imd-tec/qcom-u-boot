@@ -460,7 +460,7 @@ static int handle_include(char **c, struct pxe_menu *cfg, int nest_level)
  * a file it includes, 3 when parsing a file included by that file, and so on.
  */
 static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
-		      unsigned long base, int nest_level)
+		      int nest_level)
 {
 	struct token t;
 	char *s = *c;
@@ -714,9 +714,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
 		switch (t.type) {
 		case T_MENU:
 			cfg->prompt = 1;
-			err = parse_menu(ctx, &p, cfg,
-					 base + ALIGN(strlen(b) + 1, 4),
-					 nest_level);
+			err = parse_menu(ctx, &p, cfg, nest_level);
 			break;
 		case T_TIMEOUT:
 			err = parse_integer(&p, &cfg->timeout);
