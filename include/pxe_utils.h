@@ -51,6 +51,7 @@ struct pxe_fdtoverlay {
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
  * @fdtoverlays: list of FDT overlays to apply (alist of struct pxe_fdtoverlay)
+ * @files: list of files to load (alist of struct pxe_file)
  * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
  * @attempted: 0 if we haven't tried to boot this label, 1 if we have
@@ -71,6 +72,7 @@ struct pxe_label {
 	char *fdt;
 	char *fdtdir;
 	struct alist fdtoverlays;
+	struct alist files;
 	char *say;
 	int ipappend;
 	int attempted;
@@ -91,6 +93,36 @@ struct pxe_include {
 	char *path;
 	struct pxe_menu *cfg;
 	int nest_level;
+};
+
+/**
+ * enum pxe_file_type_t - type of file to load for PXE boot
+ *
+ * @PFT_KERNEL: Kernel image
+ * @PFT_INITRD: Initial ramdisk
+ * @PFT_FDT: Flattened device tree
+ * @PFT_FDTOVERLAY: Device tree overlay
+ */
+enum pxe_file_type_t {
+	PFT_KERNEL,
+	PFT_INITRD,
+	PFT_FDT,
+	PFT_FDTOVERLAY,
+};
+
+/**
+ * struct pxe_file - a file that needs to be loaded
+ *
+ * @path: Path to the file
+ * @type: Type of file (kernel, initrd, etc.)
+ * @addr: Address where file was loaded (filled by caller)
+ * @size: Size of loaded file (filled by caller)
+ */
+struct pxe_file {
+	char *path;
+	enum pxe_file_type_t type;
+	ulong addr;
+	ulong size;
 };
 
 /*
