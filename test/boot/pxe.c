@@ -12,6 +12,7 @@
  *
  */
 
+#include <blk.h>
 #include <dm.h>
 #include <env.h>
 #include <fdt_support.h>
@@ -1358,6 +1359,7 @@ static int pxe_test_files_api_norun(struct unit_test_state *uts)
 	struct pxe_file *filep;
 	ulong addr = PXE_LOAD_ADDR;
 	ulong file_addr;
+	ulong start_mem;
 	ulong size;
 	char *buf;
 	uint i;
@@ -1367,6 +1369,9 @@ static int pxe_test_files_api_norun(struct unit_test_state *uts)
 
 	/* Bind the filesystem image */
 	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	blkcache_free();
+	start_mem = ut_check_delta(0);
 
 	/* Load the config file first */
 	ut_assertok(load_file(cfg_path, addr, &size));
@@ -1479,8 +1484,10 @@ static int pxe_test_files_api_norun(struct unit_test_state *uts)
 	ut_asserteq_mem("ramdisk", buf, 7);
 	unmap_sysmem(buf);
 
-	/* Clean up */
+	/* Clean up and check for memory leaks */
 	pxe_cleanup(ctx);
+	blkcache_free();
+	ut_assertok(ut_check_delta(start_mem));
 
 	return 0;
 }
