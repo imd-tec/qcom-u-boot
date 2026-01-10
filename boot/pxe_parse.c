@@ -317,12 +317,13 @@ static int parse_sliteral(char **c, char **dst)
  */
 static int parse_fdtoverlays(char **c, struct alist *overlays)
 {
-	char *val;
+	char *val, *start;
 	int err;
 
 	err = parse_sliteral(c, &val);
 	if (err < 0)
 		return err;
+	start = val;
 
 	while (*val) {
 		struct pxe_fdtoverlay item;
@@ -348,9 +349,12 @@ static int parse_fdtoverlays(char **c, struct alist *overlays)
 
 		if (!item.path || !alist_add(overlays, item)) {
 			free(item.path);
+			free(start);
 			return -ENOMEM;
 		}
 	}
+
+	free(start);
 
 	return 1;
 }
