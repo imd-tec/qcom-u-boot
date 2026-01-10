@@ -299,10 +299,12 @@ void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
  *
  * @ctx: PXE context (provided by the caller)
  * @menucfg: Address of the PXE file in memory
+ * @size: Size of file in bytes
  * Return: NULL on error, otherwise a pointer to a pxe_menu struct. Use
  * pxe_menu_uninit() to free it.
  */
-struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
+struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg,
+			       ulong size);
 
 /**
  * pxe_process_includes() - Process include files in a parsed menu

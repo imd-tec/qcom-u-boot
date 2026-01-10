@@ -161,7 +161,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq(1, ret);  /* get_pxe_file returns 1 on success */
 
 	/* Parse the config file */
-	cfg = parse_pxefile(&ctx, addr);
+	cfg = parse_pxefile(&ctx, addr, ctx.pxe_file_size);
 	ut_assertnonnull(cfg);
 
 	/* Process any include files */
@@ -465,7 +465,7 @@ static int pxe_test_fdtdir_norun(struct unit_test_state *uts)
 	/* Read and parse the config file */
 	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
 
-	cfg = parse_pxefile(&ctx, addr);
+	cfg = parse_pxefile(&ctx, addr, ctx.pxe_file_size);
 	ut_assertnonnull(cfg);
 
 	/* Consume parsing output */
@@ -574,7 +574,7 @@ static int pxe_test_errors_norun(struct unit_test_state *uts)
 	/* Read and parse the config file */
 	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
 
-	cfg = parse_pxefile(&ctx, addr);
+	cfg = parse_pxefile(&ctx, addr, ctx.pxe_file_size);
 	ut_assertnonnull(cfg);
 
 	/* Consume parsing output */
@@ -693,7 +693,7 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	ctx.quiet = true;
 	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
 
-	cfg = parse_pxefile(&ctx, addr);
+	cfg = parse_pxefile(&ctx, addr, ctx.pxe_file_size);
 	ut_assertnonnull(cfg);
 
 	/* Process any include files */
@@ -1268,7 +1268,7 @@ static int pxe_test_fit_embedded_fdt_norun(struct unit_test_state *uts)
 	/* Read and parse the config file */
 	ut_asserteq(1, get_pxe_file(&ctx, cfg_path, addr));
 
-	cfg = parse_pxefile(&ctx, addr);
+	cfg = parse_pxefile(&ctx, addr, ctx.pxe_file_size);
 	ut_assertnonnull(cfg);
 
 	/* Consume parsing output */
