@@ -367,13 +367,25 @@ int pxe_setup_ctx(struct pxe_context *ctx, pxe_getfile_func getfile,
 void pxe_destroy_ctx(struct pxe_context *ctx);
 
 /**
+ * pxe_process_str() - Process a PXE file through to boot
+ *
+ * Note: The file at @pxefile_addr_r must be a nul-terminated string.
+ *
+ * @ctx: PXE context created with pxe_setup_ctx()
+ * @pxefile_addr_r: Address of config to process
+ * @prompt: Force a prompt for the user
+ */
+int pxe_process_str(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
+
+/**
  * pxe_process() - Process a PXE file through to boot
  *
  * @ctx: PXE context created with pxe_setup_ctx()
- * @pxefile_addr_r: Address to load file
+ * @addr: Address of config to process
+ * @size: Size of continue to process
  * @prompt: Force a prompt for the user
  */
-int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
+int pxe_process(struct pxe_context *ctx, ulong addr, ulong size, bool prompt);
 
 /**
  * pxe_get_file_size() - Read the value of the 'filesize' environment variable

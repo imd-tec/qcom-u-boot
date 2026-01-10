@@ -286,7 +286,7 @@ do_pxe_boot(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 		printf("Out of memory\n");
 		return CMD_RET_FAILURE;
 	}
-	ret = pxe_process(&ctx, pxefile_addr_r, false);
+	ret = pxe_process(&ctx, pxefile_addr_r, ctx.pxe_file_size, false);
 	pxe_destroy_ctx(&ctx);
 	if (ret)
 		return CMD_RET_FAILURE;

@@ -1325,11 +1325,12 @@ static struct pxe_menu *pxe_prepare(struct pxe_context *ctx,
 	return cfg;
 }
 
-int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
+int pxe_process(struct pxe_context *ctx, ulong addr, ulong size, bool prompt)
 {
 	struct pxe_menu *cfg;
 
-	cfg = pxe_prepare(ctx, pxefile_addr_r, prompt);
+	ctx->pxe_file_size = size;
+	cfg = pxe_prepare(ctx, addr, prompt);
 	if (!cfg)
 		return 1;
 
@@ -1338,6 +1339,18 @@ int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 	pxe_menu_uninit(cfg);
 
 	return 0;
+}
+
+int pxe_process_str(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
+{
+	void *ptr;
+	int len;
+
+	ptr = map_sysmem(pxefile_addr_r, 0);
+	len = strnlen(ptr, SZ_64K);
+	unmap_sysmem(ptr);
+
+	return pxe_process(ctx, pxefile_addr_r, len, prompt);
 }
 
 int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
