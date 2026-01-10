@@ -107,7 +107,7 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 	/* if we have already selected a label, just boot it */
 	if (plat->ctx.label) {
 		plat->ctx.fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
-		ret = pxe_do_boot(&plat->ctx);
+		ret = pxe_boot(&plat->ctx);
 	} else {
 		ret = extlinux_setup(dev, bflow, getfile, allow_abs_path,
 				     bootfile, &plat->ctx);

@@ -1326,6 +1326,49 @@ static struct pxe_menu *pxe_prepare(struct pxe_context *ctx,
 	return cfg;
 }
 
+struct pxe_context *pxe_parse(ulong addr, ulong size, const char *bootfile)
+{
+	struct pxe_context *ctx;
+	struct abuf buf;
+	int ret;
+
+	ctx = calloc(1, sizeof(*ctx));
+	if (!ctx)
+		return NULL;
+
+	ret = pxe_setup_ctx(ctx, NULL, NULL, true, bootfile, false, false,
+			    NULL);
+	if (ret) {
+		free(ctx);
+		return NULL;
+	}
+	ctx->pxe_file_size = size;
+
+	abuf_init_addr(&buf, addr, size);
+	ctx->cfg = parse_pxefile(ctx, &buf);
+	if (!ctx->cfg) {
+		pxe_destroy_ctx(ctx);
+		free(ctx);
+		return NULL;
+	}
+
+	return ctx;
+}
+
+void pxe_load(struct pxe_file *file, ulong addr, ulong size)
+{
+	file->addr = addr;
+	file->size = size;
+}
+
+void pxe_cleanup(struct pxe_context *ctx)
+{
+	if (ctx->cfg)
+		pxe_menu_uninit(ctx->cfg);
+	pxe_destroy_ctx(ctx);
+	free(ctx);
+}
+
 int pxe_process(struct pxe_context *ctx, ulong addr, ulong size, bool prompt)
 {
 	struct pxe_menu *cfg;
@@ -1366,7 +1409,7 @@ int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 	return 0;
 }
 
-int pxe_do_boot(struct pxe_context *ctx)
+int pxe_boot(struct pxe_context *ctx)
 {
 	int ret;
 

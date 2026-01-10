@@ -428,7 +428,7 @@ int pxe_get(ulong pxefile_addr_r, char **bootdirp, ulong *sizep, bool use_ipv6);
  * pxe_probe() - Process a PXE file to find the label to boot
  *
  * This fills in the label, etc. fields in @ctx, assuming it funds something to
- * boot. Then pxe_do_boot() can be called to boot it.
+ * boot. Then pxe_boot() can be called to boot it.
  *
  * @ctx: PXE context created with pxe_setup_ctx()
  * @pxefile_addr_r: Address to load file
@@ -438,13 +438,13 @@ int pxe_get(ulong pxefile_addr_r, char **bootdirp, ulong *sizep, bool use_ipv6);
 int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
 
 /**
- * pxe_do_boot() - Boot the selected label
+ * pxe_boot() - Boot the selected label
  *
  * This boots the label discovered by pxe_probe()
  *
  * Return: Does not return, on success, otherwise returns a -ve error code
  */
-int pxe_do_boot(struct pxe_context *ctx);
+int pxe_boot(struct pxe_context *ctx);
 
 /**
  * pxe_select_label() - Select a label from a parsed menu
@@ -539,6 +539,16 @@ void label_destroy(struct pxe_label *label);
  * to parse it and merge any labels into the target menu. This may add
  * more entries to cfg->includes if the included file has its own includes.
  *
+ * Example usage::
+ *
+ *    ctx = pxe_parse(addr, size, bootfile);
+ *
+ *    // Load and process any includes
+ *    alist_for_each(inc, &ctx->cfg->includes) {
+ *        // read file inc->path to address 'addr', getting 'size'
+ *        pxe_parse_include(ctx, inc, addr, size);
+ *    }
+ *
  * @ctx: PXE context
  * @inc: Include info with path and target menu
  * @addr: Memory address where file is located
@@ -547,5 +557,53 @@ void label_destroy(struct pxe_label *label);
  */
 int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
 		      ulong addr, ulong size);
+
+/**
+ * pxe_parse() - Parse a PXE config file and return an allocated context
+ *
+ * This allocates a PXE context, sets it up, and parses the config file at the
+ * given address. The menu is stored in ctx->cfg and can be used to inspect
+ * labels or select one for loading.
+ *
+ * Use pxe_cleanup() to clean up when done.
+ *
+ * Note: This does not process include files. Call pxe_process_includes()
+ * after this if needed.
+ *
+ * @addr: Address where config file is loaded
+ * @size: Size of config file in bytes
+ * @bootfile: Path to config file (for relative path resolution)
+ * Return: Allocated context on success, NULL on error
+ */
+struct pxe_context *pxe_parse(ulong addr, ulong size, const char *bootfile);
+
+/**
+ * pxe_load() - Report that a file has been loaded
+ *
+ * After loading a file from a label's files list, call this to record
+ * the load address and size. This information is used later during boot.
+ *
+ * Example::
+ *
+ *    alist_for_each(file, &label->files) {
+ *        // choose 'addr', load file->path there, getting 'size'
+ *        pxe_load(file, addr, size);
+ *    }
+ *
+ * @file: File that was loaded
+ * @addr: Address where file was loaded
+ * @size: Size of loaded file
+ */
+void pxe_load(struct pxe_file *file, ulong addr, ulong size);
+
+/**
+ * pxe_cleanup() - Free PXE menu and destroy context
+ *
+ * This combines pxe_menu_uninit() and pxe_destroy_ctx() for convenience
+ * when cleaning up after using the callback-free API.
+ *
+ * @ctx: Context to destroy (ctx->cfg is freed if set)
+ */
+void pxe_cleanup(struct pxe_context *ctx);
 
 #endif /* __PXE_UTILS_H */
