@@ -625,8 +625,12 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			}
 			break;
 		case T_FDT:
-			if (!label->fdt)
+			if (!label->fdt) {
 				err = parse_sliteral(c, &label->fdt);
+				if (err < 0)
+					break;
+				err = label_add_file(label, label->fdt, PFT_FDT);
+			}
 			break;
 		case T_FDTDIR:
 			if (!label->fdtdir)
