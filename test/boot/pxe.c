@@ -1178,7 +1178,7 @@ static int pxe_test_alloc_norun(struct unit_test_state *uts)
 	ut_asserteq_ptr(&info, ctx.userdata);
 	ut_asserteq(true, ctx.allow_abs_path);
 	ut_assertnonnull(ctx.bootdir);
-	ut_asserteq(0, ctx.pxe_file_size);  /* only set by cmd/pxe.c */
+	ut_assert(ctx.pxe_file_size);  /* set by get_pxe_file() */
 	ut_asserteq(false, ctx.use_ipv6);
 	ut_asserteq(false, ctx.use_fallback);
 	ut_asserteq(true, ctx.no_boot);

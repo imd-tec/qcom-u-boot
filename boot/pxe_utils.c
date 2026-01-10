@@ -151,6 +151,7 @@ int get_pxe_file(struct pxe_context *ctx, const char *file_path,
 	buf = map_sysmem(file_addr + size, 1);
 	*buf = '\0';
 	unmap_sysmem(buf);
+	ctx->pxe_file_size = size;
 
 	return 1;
 }
