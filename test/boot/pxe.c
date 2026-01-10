@@ -190,13 +190,15 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/initrd.img", label->initrd);
 	ut_asserteq_str("/dtb/board.dtb", label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq(3, label->files.count);
+	ut_asserteq(4, label->files.count);
 	ut_asserteq_str("/vmlinuz",
 			alist_get(&label->files, 0, struct pxe_file)->path);
-	ut_asserteq_str("/dtb/overlay1.dtbo",
+	ut_asserteq_str("/initrd.img",
 			alist_get(&label->files, 1, struct pxe_file)->path);
-	ut_asserteq_str("/dtb/overlay2.dtbo",
+	ut_asserteq_str("/dtb/overlay1.dtbo",
 			alist_get(&label->files, 2, struct pxe_file)->path);
+	ut_asserteq_str("/dtb/overlay2.dtbo",
+			alist_get(&label->files, 3, struct pxe_file)->path);
 	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -304,7 +306,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	 * environment, and verify overlay files can be loaded.
 	 */
 	label = list_first_entry(&cfg->labels, struct pxe_label, list);
-	ut_asserteq(3, label->files.count);
+	ut_asserteq(4, label->files.count);
 
 	/* Set environment variables for file loading */
 	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
@@ -323,15 +325,15 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq(PXE_KERNEL_ADDR, ctx.kern_addr);
 	ut_asserteq(PXE_FDT_ADDR, ctx.fdt_addr);
 
-	/* Verify overlays were loaded to valid addresses (indices 1 and 2) */
-	ut_assert(alist_get(&label->files, 1,
-			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
+	/* Verify overlays were loaded to valid addresses (indices 2 and 3) */
 	ut_assert(alist_get(&label->files, 2,
+			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
+	ut_assert(alist_get(&label->files, 3,
 			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
 
 	/* Second overlay should be at a higher address than the first */
-	ut_assert(alist_get(&label->files, 2, struct pxe_file)->addr >
-		  alist_get(&label->files, 1, struct pxe_file)->addr);
+	ut_assert(alist_get(&label->files, 3, struct pxe_file)->addr >
+		  alist_get(&label->files, 2, struct pxe_file)->addr);
 
 	/* Verify no more console output */
 	ut_assert_console_end();
