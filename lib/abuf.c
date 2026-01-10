@@ -188,6 +188,12 @@ void abuf_init_const_addr(struct abuf *abuf, ulong addr, size_t size)
 {
 	return abuf_init_const(abuf, map_sysmem(addr, size), size);
 }
+
+void abuf_init_addr(struct abuf *abuf, ulong addr, size_t size)
+{
+	abuf_init(abuf);
+	abuf_map_sysmem(abuf, addr, size);
+}
 #endif
 
 void abuf_init_move(struct abuf *abuf, void *data, size_t size)
