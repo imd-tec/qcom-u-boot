@@ -3,6 +3,7 @@
 #ifndef __PXE_UTILS_H
 #define __PXE_UTILS_H
 
+#include <abuf.h>
 #include <alist.h>
 #include <bootflow.h>
 #include <linux/list.h>
@@ -292,19 +293,17 @@ int get_pxelinux_path(struct pxe_context *ctx, const char *file,
 void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
 
 /**
- * parse_pxefile() - Parse a pxe file
+ * parse_pxefile() - Parse a PXE file
  *
  * Parse the top-level file. Any includes are stored in cfg->includes and
  * should be processed by calling pxe_process_includes().
  *
  * @ctx: PXE context (provided by the caller)
- * @menucfg: Address of the PXE file in memory
- * @size: Size of file in bytes
+ * @buf: Buffer containing the PXE file
  * Return: NULL on error, otherwise a pointer to a pxe_menu struct. Use
  * pxe_menu_uninit() to free it.
  */
-struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg,
-			       ulong size);
+struct pxe_menu *parse_pxefile(struct pxe_context *ctx, struct abuf *buf);
 
 /**
  * pxe_process_includes() - Process include files in a parsed menu

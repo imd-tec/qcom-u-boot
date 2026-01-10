@@ -1004,20 +1004,16 @@ void pxe_menu_uninit(struct pxe_menu *cfg)
 	free(cfg);
 }
 
-struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg,
-			       ulong size)
+struct pxe_menu *parse_pxefile(struct pxe_context *ctx, struct abuf *buf)
 {
 	struct pxe_menu *cfg;
-	char *buf;
 	int r;
 
 	cfg = pxe_menu_init();
 	if (!cfg)
 		return NULL;
 
-	buf = map_sysmem(menucfg, size);
-	r = parse_pxefile_top(ctx, buf, menucfg, cfg, 1);
-	unmap_sysmem(buf);
+	r = parse_pxefile_top(ctx, abuf_data(buf), abuf_addr(buf), cfg, 1);
 
 	if (r < 0) {
 		pxe_menu_uninit(cfg);
@@ -1305,9 +1301,11 @@ static struct pxe_menu *pxe_prepare(struct pxe_context *ctx,
 				    ulong pxefile_addr_r, bool prompt)
 {
 	struct pxe_menu *cfg;
+	struct abuf buf;
 	int ret;
 
-	cfg = parse_pxefile(ctx, pxefile_addr_r, ctx->pxe_file_size);
+	abuf_init_addr(&buf, pxefile_addr_r, ctx->pxe_file_size);
+	cfg = parse_pxefile(ctx, &buf);
 	if (!cfg) {
 		printf("Error parsing config file\n");
 		return NULL;
