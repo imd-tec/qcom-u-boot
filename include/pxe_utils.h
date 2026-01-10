@@ -510,7 +510,7 @@ int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label);
  *
  * Returns 1 on success, < 0 on error.
  */
-int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
+int parse_pxefile_top(struct pxe_context *ctx, char *p,
 		      struct pxe_menu *cfg, int nest_level);
 
 /**

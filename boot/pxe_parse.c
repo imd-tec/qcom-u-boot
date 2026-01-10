@@ -691,7 +691,7 @@ static int parse_label(char **c, struct pxe_menu *cfg)
  */
 #define MAX_NEST_LEVEL 16
 
-int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
+int parse_pxefile_top(struct pxe_context *ctx, char *p,
 		      struct pxe_menu *cfg, int nest_level)
 {
 	struct token t;

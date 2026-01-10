@@ -1013,7 +1013,7 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, struct abuf *buf)
 	if (!cfg)
 		return NULL;
 
-	r = parse_pxefile_top(ctx, abuf_data(buf), abuf_addr(buf), cfg, 1);
+	r = parse_pxefile_top(ctx, abuf_data(buf), cfg, 1);
 
 	if (r < 0) {
 		pxe_menu_uninit(cfg);
@@ -1069,7 +1069,7 @@ int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
 	int ret;
 
 	buf = map_sysmem(addr, 0);
-	ret = parse_pxefile_top(ctx, buf, addr, inc->cfg, inc->nest_level);
+	ret = parse_pxefile_top(ctx, buf, inc->cfg, inc->nest_level);
 	unmap_sysmem(buf);
 
 	return ret;
