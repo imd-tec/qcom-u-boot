@@ -985,6 +985,7 @@ void pxe_menu_uninit(struct pxe_menu *cfg)
 	free(cfg->title);
 	free(cfg->default_label);
 	free(cfg->fallback_label);
+	free(cfg->bmp);
 
 	list_for_each_safe(pos, n, &cfg->labels) {
 		label = list_entry(pos, struct pxe_label, list);
