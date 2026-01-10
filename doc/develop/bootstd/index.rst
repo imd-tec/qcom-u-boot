@@ -9,6 +9,7 @@ Standard Boot
    overview
    extlinux
    pxelinux
+   pxe_api
    qfw
    android
    cros

@@ -23,6 +23,8 @@
  * pxe, and does a tftp download of a file listed as an include file in the
  * middle of the parsing operation. That could be handled by refactoring it to
  * take a 'include file getter' function.
+ *
+ * See doc/develop/bootstd/pxe_api.rst for API documentation.
  */
 
 /**
