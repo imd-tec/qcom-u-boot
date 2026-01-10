@@ -327,10 +327,37 @@ static bool has_fdtoverlays(struct alist *files)
 	return false;
 }
 
-/*
- * Parse a space-separated list of overlay paths into an alist.
+/**
+ * label_add_file() - Add a file to a label's file list
+ *
+ * @label: Label to add file to
+ * @path: Path to file (will be duplicated)
+ * @type: Type of file (PFT_KERNEL, PFT_INITRD, etc.)
+ * Return: 0 on success, -ENOMEM on allocation failure
  */
-static int parse_fdtoverlays(char **c, struct alist *files)
+static int label_add_file(struct pxe_label *label, const char *path,
+			  enum pxe_file_type_t type)
+{
+	struct pxe_file item;
+
+	item.path = strdup(path);
+	if (!item.path)
+		return -ENOMEM;
+	item.type = type;
+	item.addr = 0;
+	item.size = 0;
+	if (!alist_add(&label->files, item)) {
+		free(item.path);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+/*
+ * Parse a space-separated list of overlay paths into a label's file list.
+ */
+static int parse_fdtoverlays(char **c, struct pxe_label *label)
 {
 	char *val, *start;
 	int err;
@@ -341,7 +368,6 @@ static int parse_fdtoverlays(char **c, struct alist *files)
 	start = val;
 
 	while (*val) {
-		struct pxe_file item;
 		char *end;
 
 		/* Skip leading spaces */
@@ -351,23 +377,22 @@ static int parse_fdtoverlays(char **c, struct alist *files)
 		if (!*val)
 			break;
 
-		/* Find end of this path */
+		/* Find end of this path and temporarily null-terminate */
 		end = strchr(val, ' ');
-		if (end) {
-			item.path = strndup(val, end - val);
-			val = end;
-		} else {
-			item.path = strdup(val);
-			val += strlen(val);
-		}
-		item.type = PFT_FDTOVERLAY;
-		item.addr = 0;
-		item.size = 0;
+		if (end)
+			*end = '\0';
 
-		if (!item.path || !alist_add(files, item)) {
-			free(item.path);
+		err = label_add_file(label, val, PFT_FDTOVERLAY);
+		if (err) {
 			free(start);
-			return -ENOMEM;
+			return err;
+		}
+
+		if (end) {
+			*end = ' ';
+			val = end + 1;
+		} else {
+			break;
 		}
 	}
 
@@ -605,7 +630,7 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			break;
 		case T_FDTOVERLAYS:
 			if (!has_fdtoverlays(&label->files))
-				err = parse_fdtoverlays(c, &label->files);
+				err = parse_fdtoverlays(c, label);
 			break;
 		case T_LOCALBOOT:
 			label->localboot = 1;
