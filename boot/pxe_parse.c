@@ -106,14 +106,14 @@ static struct pxe_label *label_create(void)
 	if (!label)
 		return NULL;
 	memset(label, 0, sizeof(struct pxe_label));
-	alist_init_struct(&label->fdtoverlays, struct pxe_fdtoverlay);
+	alist_init_struct(&label->fdtoverlays, struct pxe_file);
 
 	return label;
 }
 
 void label_destroy(struct pxe_label *label)
 {
-	struct pxe_fdtoverlay *overlay;
+	struct pxe_file *overlay;
 
 	free(label->name);
 	free(label->menu);
@@ -326,7 +326,7 @@ static int parse_fdtoverlays(char **c, struct alist *overlays)
 	start = val;
 
 	while (*val) {
-		struct pxe_fdtoverlay item;
+		struct pxe_file item;
 		char *end;
 
 		/* Skip leading spaces */
@@ -345,7 +345,9 @@ static int parse_fdtoverlays(char **c, struct alist *overlays)
 			item.path = strdup(val);
 			val += strlen(val);
 		}
+		item.type = PFT_FDTOVERLAY;
 		item.addr = 0;
+		item.size = 0;
 
 		if (!item.path || !alist_add(overlays, item)) {
 			free(item.path);

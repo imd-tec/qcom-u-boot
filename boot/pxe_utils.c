@@ -308,7 +308,7 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
 static void label_load_fdtoverlays(struct pxe_context *ctx,
 				   struct pxe_label *label)
 {
-	struct pxe_fdtoverlay *overlay;
+	struct pxe_file *overlay;
 	ulong fdtoverlay_addr;
 	bool use_lmb;
 	char *envaddr;
@@ -357,7 +357,7 @@ static void label_load_fdtoverlays(struct pxe_context *ctx,
 static void label_apply_fdtoverlays(struct pxe_context *ctx,
 				    struct pxe_label *label)
 {
-	struct pxe_fdtoverlay *overlay;
+	struct pxe_file *overlay;
 	struct fdt_header *blob;
 	int err;
 

@@ -192,9 +192,9 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(2, label->fdtoverlays.count);
 	ut_asserteq_str("/dtb/overlay1.dtbo",
-			alist_get(&label->fdtoverlays, 0, struct pxe_fdtoverlay)->path);
+			alist_get(&label->fdtoverlays, 0, struct pxe_file)->path);
 	ut_asserteq_str("/dtb/overlay2.dtbo",
-			alist_get(&label->fdtoverlays, 1, struct pxe_fdtoverlay)->path);
+			alist_get(&label->fdtoverlays, 1, struct pxe_file)->path);
 	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -317,13 +317,13 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 
 	/* Verify overlays were loaded to valid addresses */
 	ut_assert(alist_get(&label->fdtoverlays, 0,
-			    struct pxe_fdtoverlay)->addr >= PXE_OVERLAY_ADDR);
+			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
 	ut_assert(alist_get(&label->fdtoverlays, 1,
-			    struct pxe_fdtoverlay)->addr >= PXE_OVERLAY_ADDR);
+			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
 
 	/* Second overlay should be at a higher address than the first */
-	ut_assert(alist_get(&label->fdtoverlays, 1, struct pxe_fdtoverlay)->addr >
-		  alist_get(&label->fdtoverlays, 0, struct pxe_fdtoverlay)->addr);
+	ut_assert(alist_get(&label->fdtoverlays, 1, struct pxe_file)->addr >
+		  alist_get(&label->fdtoverlays, 0, struct pxe_file)->addr);
 
 	/* Verify no more console output */
 	ut_assert_console_end();
