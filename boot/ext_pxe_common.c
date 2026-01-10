@@ -136,6 +136,7 @@ int extlinux_read_all(struct udevice *dev, struct bootflow *bflow,
 	if (ret)
 		return log_msg_ret("era", ret);
 	addr = map_to_sysmem(bflow->buf);
+	plat->ctx.pxe_file_size = bflow->size;
 	ret = pxe_probe(&plat->ctx, addr, false);
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);
