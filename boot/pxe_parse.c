@@ -155,9 +155,11 @@ void label_destroy(struct pxe_label *label)
  * @t: Pointers to a token to fill in
  * @delim: Delimiter character to look for, either newline or space
  * @lower: true to convert the string to lower case when storing
+ * @limit: End of buffer (position of nul terminator)
  * Returns the new value of t->val, on success, NULL if out of memory
  */
-static char *get_string(char **p, struct token *t, char delim, int lower)
+static char *get_string(char **p, struct token *t, char delim, int lower,
+			const char *limit)
 {
 	char *b, *e;
 	size_t len, i;
@@ -170,7 +172,7 @@ static char *get_string(char **p, struct token *t, char delim, int lower)
 	 */
 	b = *p;
 	e = *p;
-	while (*e) {
+	while (*e && e < limit) {
 		if ((delim == ' ' && isspace(*e)) || delim == *e)
 			break;
 		e++;
@@ -227,8 +229,12 @@ static void get_keyword(struct token *t)
  *
  * @p: Points to a pointer to the current position in the input being processed.
  *	Updated to point at the first character after the current token
+ * @t: Token to fill in
+ * @state: Lexer state (keyword or string literal)
+ * @limit: End of buffer (position of nul terminator)
  */
-static void get_token(char **p, struct token *t, enum lex_state state)
+static void get_token(char **p, struct token *t, enum lex_state state,
+		      const char *limit)
 {
 	char *c = *p;
 
@@ -251,11 +257,11 @@ static void get_token(char **p, struct token *t, enum lex_state state)
 	if (*c == '\n') {
 		t->type = T_EOL;
 		c++;
-	} else if (*c == '\0') {
+	} else if (*c == '\0' || c >= limit) {
 		t->type = T_EOF;
 		c++;
 	} else if (state == L_SLITERAL) {
-		get_string(&c, t, '\n', 0);
+		get_string(&c, t, '\n', 0, limit);
 	} else if (state == L_KEYWORD) {
 		/*
 		 * when we expect a keyword, we first get the next string
@@ -264,7 +270,7 @@ static void get_token(char **p, struct token *t, enum lex_state state)
 		 * converted to a keyword token of the appropriate type, and
 		 * if not, it remains a string token.
 		 */
-		get_string(&c, t, ' ', 1);
+		get_string(&c, t, ' ', 1, limit);
 		get_keyword(t);
 	}
 
@@ -296,12 +302,12 @@ static void eol_or_eof(char **c)
  * Parse a string literal and store a pointer it at *dst. String literals
  * terminate at the end of the line.
  */
-static int parse_sliteral(char **c, char **dst)
+static int parse_sliteral(char **c, char **dst, const char *limit)
 {
 	struct token t;
 	char *s = *c;
 
-	get_token(c, &t, L_SLITERAL);
+	get_token(c, &t, L_SLITERAL, limit);
 	if (t.type != T_STRING) {
 		printf("Expected string literal: %.*s\n", (int)(*c - s), s);
 		return -EINVAL;
@@ -357,12 +363,13 @@ static int label_add_file(struct pxe_label *label, const char *path,
 /*
  * Parse a space-separated list of overlay paths into a label's file list.
  */
-static int parse_fdtoverlays(char **c, struct pxe_label *label)
+static int parse_fdtoverlays(char **c, struct pxe_label *label,
+			     const char *limit)
 {
 	char *val, *start;
 	int err;
 
-	err = parse_sliteral(c, &val);
+	err = parse_sliteral(c, &val, limit);
 	if (err < 0)
 		return err;
 	start = val;
@@ -404,12 +411,12 @@ static int parse_fdtoverlays(char **c, struct pxe_label *label)
 /*
  * Parse a base 10 (unsigned) integer and store it at *dst.
  */
-static int parse_integer(char **c, int *dst)
+static int parse_integer(char **c, int *dst, const char *limit)
 {
 	struct token t;
 	char *s = *c;
 
-	get_token(c, &t, L_SLITERAL);
+	get_token(c, &t, L_SLITERAL, limit);
 	if (t.type != T_STRING) {
 		printf("Expected string: %.*s\n", (int)(*c - s), s);
 		return -EINVAL;
@@ -427,13 +434,14 @@ static int parse_integer(char **c, int *dst)
  * The include is added to cfg->includes. The caller is responsible for
  * loading these files and calling pxe_parse_include() to parse them.
  */
-static int handle_include(char **c, struct pxe_menu *cfg, int nest_level)
+static int handle_include(char **c, struct pxe_menu *cfg, int nest_level,
+			  const char *limit)
 {
 	struct pxe_include inc;
 	char *s = *c;
 	int err;
 
-	err = parse_sliteral(c, &inc.path);
+	err = parse_sliteral(c, &inc.path, limit);
 	if (err < 0) {
 		printf("Expected include path: %.*s\n", (int)(*c - s), s);
 		return err;
@@ -460,24 +468,24 @@ static int handle_include(char **c, struct pxe_menu *cfg, int nest_level)
  * a file it includes, 3 when parsing a file included by that file, and so on.
  */
 static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
-		      int nest_level)
+		      int nest_level, const char *limit)
 {
 	struct token t;
 	char *s = *c;
 	int err = 0;
 
 	t.val = NULL;
-	get_token(c, &t, L_KEYWORD);
+	get_token(c, &t, L_KEYWORD, limit);
 
 	switch (t.type) {
 	case T_TITLE:
-		err = parse_sliteral(c, &cfg->title);
+		err = parse_sliteral(c, &cfg->title, limit);
 		break;
 	case T_INCLUDE:
-		err = handle_include(c, cfg, nest_level);
+		err = handle_include(c, cfg, nest_level, limit);
 		break;
 	case T_BACKGROUND:
-		err = parse_sliteral(c, &cfg->bmp);
+		err = parse_sliteral(c, &cfg->bmp, limit);
 		break;
 	default:
 		printf("Ignoring malformed menu command: %.*s\n",
@@ -496,14 +504,14 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
  * Handles parsing a 'menu line' when we're parsing a label.
  */
 static int parse_label_menu(char **c, struct pxe_menu *cfg,
-			    struct pxe_label *label)
+			    struct pxe_label *label, const char *limit)
 {
 	struct token t;
 	char *s;
 
 	s = *c;
 	t.val = NULL;
-	get_token(c, &t, L_KEYWORD);
+	get_token(c, &t, L_KEYWORD, limit);
 
 	switch (t.type) {
 	case T_DEFAULT:
@@ -515,7 +523,7 @@ static int parse_label_menu(char **c, struct pxe_menu *cfg,
 
 		break;
 	case T_LABEL:
-		parse_sliteral(c, &label->menu);
+		parse_sliteral(c, &label->menu, limit);
 		break;
 	default:
 		printf("Ignoring malformed menu command: %.*s\n",
@@ -532,12 +540,13 @@ static int parse_label_menu(char **c, struct pxe_menu *cfg,
  * Handles parsing a 'kernel' label.
  * expecting "filename" or "<fit_filename>#cfg"
  */
-static int parse_label_kernel(char **c, struct pxe_label *label)
+static int parse_label_kernel(char **c, struct pxe_label *label,
+			      const char *limit)
 {
 	char *s;
 	int err;
 
-	err = parse_sliteral(c, &label->kernel);
+	err = parse_sliteral(c, &label->kernel, limit);
 	if (err < 0)
 		return err;
 
@@ -565,7 +574,7 @@ static int parse_label_kernel(char **c, struct pxe_label *label)
  * get some input we otherwise don't have a handler defined
  * for.
  */
-static int parse_label(char **c, struct pxe_menu *cfg)
+static int parse_label(char **c, struct pxe_menu *cfg, const char *limit)
 {
 	struct token t;
 	int len;
@@ -577,7 +586,7 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 	if (!label)
 		return -ENOMEM;
 
-	err = parse_sliteral(c, &label->name);
+	err = parse_sliteral(c, &label->name, limit);
 	if (err < 0) {
 		printf("Expected label name: %.*s\n", (int)(*c - s), s);
 		label_destroy(label);
@@ -589,20 +598,20 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 	while (1) {
 		s = *c;
 		free(t.val);
-		get_token(c, &t, L_KEYWORD);
+		get_token(c, &t, L_KEYWORD, limit);
 
 		err = 0;
 		switch (t.type) {
 		case T_MENU:
-			err = parse_label_menu(c, cfg, label);
+			err = parse_label_menu(c, cfg, label, limit);
 			break;
 		case T_KERNEL:
 		case T_LINUX:
 		case T_FIT:
-			err = parse_label_kernel(c, label);
+			err = parse_label_kernel(c, label, limit);
 			break;
 		case T_APPEND:
-			err = parse_sliteral(c, &label->append);
+			err = parse_sliteral(c, &label->append, limit);
 			if (label->initrd)
 				break;
 			s = strstr(label->append, "initrd=");
@@ -617,7 +626,7 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			break;
 		case T_INITRD:
 			if (!label->initrd) {
-				err = parse_sliteral(c, &label->initrd);
+				err = parse_sliteral(c, &label->initrd, limit);
 				if (err < 0)
 					break;
 				err = label_add_file(label, label->initrd,
@@ -626,7 +635,7 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			break;
 		case T_FDT:
 			if (!label->fdt) {
-				err = parse_sliteral(c, &label->fdt);
+				err = parse_sliteral(c, &label->fdt, limit);
 				if (err < 0)
 					break;
 				err = label_add_file(label, label->fdt, PFT_FDT);
@@ -634,18 +643,18 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			break;
 		case T_FDTDIR:
 			if (!label->fdtdir)
-				err = parse_sliteral(c, &label->fdtdir);
+				err = parse_sliteral(c, &label->fdtdir, limit);
 			break;
 		case T_FDTOVERLAYS:
 			if (!has_fdtoverlays(&label->files))
-				err = parse_fdtoverlays(c, label);
+				err = parse_fdtoverlays(c, label, limit);
 			break;
 		case T_LOCALBOOT:
 			label->localboot = 1;
-			err = parse_integer(c, &label->localboot_val);
+			err = parse_integer(c, &label->localboot_val, limit);
 			break;
 		case T_IPAPPEND:
-			err = parse_integer(c, &label->ipappend);
+			err = parse_integer(c, &label->ipappend, limit);
 			break;
 		case T_KASLRSEED:
 			label->kaslrseed = 1;
@@ -691,14 +700,13 @@ static int parse_label(char **c, struct pxe_menu *cfg)
  */
 #define MAX_NEST_LEVEL 16
 
-int parse_pxefile_top(struct pxe_context *ctx, char *p,
+int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 		      struct pxe_menu *cfg, int nest_level)
 {
 	struct token t;
-	char *s, *b, *label_name;
+	char *s, *label_name;
 	int err;
 
-	b = p;
 	if (nest_level > MAX_NEST_LEVEL) {
 		printf("Maximum nesting (%d) exceeded\n", MAX_NEST_LEVEL);
 		return -EMLINK;
@@ -708,23 +716,23 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p,
 	while (1) {
 		s = p;
 		free(t.val);
-		get_token(&p, &t, L_KEYWORD);
+		get_token(&p, &t, L_KEYWORD, limit);
 
 		err = 0;
 		switch (t.type) {
 		case T_MENU:
 			cfg->prompt = 1;
-			err = parse_menu(ctx, &p, cfg, nest_level);
+			err = parse_menu(ctx, &p, cfg, nest_level, limit);
 			break;
 		case T_TIMEOUT:
-			err = parse_integer(&p, &cfg->timeout);
+			err = parse_integer(&p, &cfg->timeout, limit);
 			break;
 		case T_LABEL:
-			err = parse_label(&p, cfg);
+			err = parse_label(&p, cfg, limit);
 			break;
 		case T_DEFAULT:
 		case T_ONTIMEOUT:
-			err = parse_sliteral(&p, &label_name);
+			err = parse_sliteral(&p, &label_name, limit);
 			if (label_name) {
 				if (cfg->default_label)
 					free(cfg->default_label);
@@ -733,7 +741,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p,
 			}
 			break;
 		case T_FALLBACK:
-			err = parse_sliteral(&p, &label_name);
+			err = parse_sliteral(&p, &label_name, limit);
 			if (label_name) {
 				if (cfg->fallback_label)
 					free(cfg->fallback_label);
@@ -742,10 +750,10 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p,
 			}
 			break;
 		case T_INCLUDE:
-			err = handle_include(&p, cfg, nest_level);
+			err = handle_include(&p, cfg, nest_level, limit);
 			break;
 		case T_PROMPT:
-			err = parse_integer(&p, &cfg->prompt);
+			err = parse_integer(&p, &cfg->prompt, limit);
 			// Do not fail if prompt configuration is undefined
 			if (err <  0)
 				eol_or_eof(&p);

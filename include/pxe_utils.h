@@ -504,13 +504,17 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label);
  */
 int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label);
 
-/*
- * Entry point for parsing a menu file. nest_level indicates how many times
- * we've nested in includes.  It will be 1 for the top level menu file.
+/**
+ * parse_pxefile_top() - Entry point for parsing a menu file
  *
+ * @ctx: PXE context
+ * @p: Start of buffer containing the PXE file
+ * @limit: End of buffer (position of nul terminator)
+ * @cfg: Menu to parse into
+ * @nest_level: Nesting level (1 for top level, higher for includes)
  * Returns 1 on success, < 0 on error.
  */
-int parse_pxefile_top(struct pxe_context *ctx, char *p,
+int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 		      struct pxe_menu *cfg, int nest_level);
 
 /**
@@ -538,9 +542,10 @@ void label_destroy(struct pxe_label *label);
  * @ctx: PXE context
  * @inc: Include info with path and target menu
  * @addr: Memory address where file is located
+ * @size: Size of the file in bytes
  * Return: 1 on success, -ve on error
  */
 int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
-		      ulong addr);
+		      ulong addr, ulong size);
 
 #endif /* __PXE_UTILS_H */
