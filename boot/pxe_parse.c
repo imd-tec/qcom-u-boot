@@ -116,6 +116,7 @@ void label_destroy(struct pxe_label *label)
 	struct pxe_fdtoverlay *overlay;
 
 	free(label->name);
+	free(label->menu);
 	free(label->kernel_label);
 	free(label->kernel);
 	free(label->config);
