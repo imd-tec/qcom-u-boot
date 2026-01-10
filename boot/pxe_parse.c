@@ -232,6 +232,7 @@ static void get_token(char **p, struct token *t, enum lex_state state)
 	char *c = *p;
 
 	t->type = T_INVALID;
+	t->val = NULL;
 
 	/* eat non EOL whitespace */
 	while (isblank(*c))
@@ -418,6 +419,7 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
 	char *s = *c;
 	int err = 0;
 
+	t.val = NULL;
 	get_token(c, &t, L_KEYWORD);
 
 	switch (t.type) {
@@ -434,6 +436,7 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
 		printf("Ignoring malformed menu command: %.*s\n",
 		       (int)(*c - s), s);
 	}
+	free(t.val);
 	if (err < 0)
 		return err;
 
@@ -452,6 +455,7 @@ static int parse_label_menu(char **c, struct pxe_menu *cfg,
 	char *s;
 
 	s = *c;
+	t.val = NULL;
 	get_token(c, &t, L_KEYWORD);
 
 	switch (t.type) {
@@ -471,6 +475,7 @@ static int parse_label_menu(char **c, struct pxe_menu *cfg,
 		       (int)(*c - s), s);
 	}
 
+	free(t.val);
 	eol_or_eof(c);
 
 	return 0;
@@ -534,8 +539,10 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 	}
 	list_add_tail(&label->list, &cfg->labels);
 
+	t.val = NULL;
 	while (1) {
 		s = *c;
+		free(t.val);
 		get_token(c, &t, L_KEYWORD);
 
 		err = 0;
@@ -595,8 +602,10 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 
 			if (p) {
 				label->say = strndup(*c + 1, p - *c - 1);
-				if (!label->say)
+				if (!label->say) {
+					free(t.val);
 					return -ENOMEM;
+				}
 				*c = p;
 			}
 			break;
@@ -608,11 +617,14 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 			 * something for the menu level context to handle.
 			 */
 			*c = s;
+			free(t.val);
 			return 1;
 		}
 
-		if (err < 0)
+		if (err < 0) {
+			free(t.val);
 			return err;
+		}
 	}
 }
 
@@ -637,8 +649,10 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
 		return -EMLINK;
 	}
 
+	t.val = NULL;
 	while (1) {
 		s = p;
+		free(t.val);
 		get_token(&p, &t, L_KEYWORD);
 
 		err = 0;
@@ -686,6 +700,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
 		case T_EOL:
 			break;
 		case T_EOF:
+			free(t.val);
 			return 1;
 		default:
 			printf("Ignoring unknown command: %.*s\n",
@@ -693,7 +708,9 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
 			eol_or_eof(&p);
 		}
 
-		if (err < 0)
+		if (err < 0) {
+			free(t.val);
 			return err;
+		}
 	}
 }
