@@ -51,6 +51,30 @@ struct pxe_test_info {
 };
 
 /**
+ * load_file() - Load a file from the host filesystem
+ *
+ * @path: Path to file within the mounted filesystem
+ * @addr: Address to load file to
+ * @sizep: Returns file size
+ * Return: 0 on success, -ve on error
+ */
+static int load_file(const char *path, ulong addr, ulong *sizep)
+{
+	loff_t len_read;
+	int ret;
+
+	ret = fs_set_blk_dev("host", "0:0", FS_TYPE_ANY);
+	if (ret)
+		return ret;
+	ret = fs_legacy_read(path, addr, 0, 0, &len_read);
+	if (ret)
+		return ret;
+	*sizep = len_read;
+
+	return 0;
+}
+
+/**
  * pxe_test_getfile() - Read a file from the host filesystem
  *
  * This callback is used by the PXE parser to read included files.
@@ -59,21 +83,10 @@ static int pxe_test_getfile(struct pxe_context *ctx, const char *file_path,
 			    ulong *addrp, ulong align,
 			    enum bootflow_img_t type, ulong *sizep)
 {
-	loff_t len_read;
-	int ret;
-
 	if (!*addrp)
 		return -ENOTSUPP;
 
-	ret = fs_set_blk_dev("host", "0:0", FS_TYPE_ANY);
-	if (ret)
-		return ret;
-	ret = fs_legacy_read(file_path, *addrp, 0, 0, &len_read);
-	if (ret)
-		return ret;
-	*sizep = len_read;
-
-	return 0;
+	return load_file(file_path, *addrp, sizep);
 }
 
 /**
@@ -1321,5 +1334,156 @@ static int pxe_test_fit_embedded_fdt_norun(struct unit_test_state *uts)
 	return 0;
 }
 PXE_TEST_ARGS(pxe_test_fit_embedded_fdt_norun, UTF_CONSOLE | UTF_MANUAL,
+	      { "fs_image", UT_ARG_STR },
+	      { "cfg_path", UT_ARG_STR });
+
+/**
+ * Test callback-free file loading API with pxe_load()
+ *
+ * This tests the new callback-free API where the caller:
+ * 1. Calls pxe_parse() to get a menu with labels containing files lists
+ * 2. Iterates over label->files and loads each file manually
+ * 3. Calls pxe_load() to record where each file was loaded
+ *
+ * This approach eliminates the need for getfile callbacks during loading.
+ */
+static int pxe_test_files_api_norun(struct unit_test_state *uts)
+{
+	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
+	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
+	struct pxe_context *ctx;
+	struct pxe_label *label;
+	struct pxe_menu *menu;
+	const struct pxe_file *file;
+	struct pxe_file *filep;
+	ulong addr = PXE_LOAD_ADDR;
+	ulong file_addr;
+	ulong size;
+	char *buf;
+	uint i;
+
+	ut_assertnonnull(fs_image);
+	ut_assertnonnull(cfg_path);
+
+	/* Bind the filesystem image */
+	ut_assertok(run_commandf("host bind 0 %s", fs_image));
+
+	/* Load the config file first */
+	ut_assertok(load_file(cfg_path, addr, &size));
+
+	/* Add null terminator - parser expects null-terminated string */
+	buf = map_sysmem(addr, 0);
+	buf[size] = '\0';
+	unmap_sysmem(buf);
+
+	ctx = pxe_parse(addr, size, cfg_path);
+	ut_assertnonnull(ctx);
+	menu = ctx->cfg;
+
+	/* Parsing with no getfile callback should produce no output */
+	ut_assert_console_end();
+
+	/*
+	 * Process includes manually - load each include file and parse it.
+	 * Use an index-based loop since parsing may add more includes.
+	 */
+	for (i = 0; i < menu->includes.count; i++) {
+		const struct pxe_include *inc;
+
+		inc = alist_get(&menu->includes, i, struct pxe_include);
+		ut_assertok(load_file(inc->path, addr, &size));
+
+		ut_asserteq(1, pxe_parse_include(ctx, inc, addr, size));
+	}
+
+	/* Include parsing should also produce no output */
+	ut_assert_console_end();
+
+	/* Get the first label */
+	label = list_first_entry(&menu->labels, struct pxe_label, list);
+	ut_asserteq_str("linux", label->name);
+
+	/*
+	 * Verify the files list contains expected files:
+	 * - kernel (/vmlinuz)
+	 * - initrd (/initrd.img)
+	 * - fdt (/dtb/board.dtb)
+	 * - 2 overlays (/dtb/overlay1.dtbo, /dtb/overlay2.dtbo)
+	 */
+	ut_asserteq(5, label->files.count);
+
+	/* Check each file has correct type and path */
+	file = alist_get(&label->files, 0, struct pxe_file);
+	ut_asserteq(PFT_KERNEL, file->type);
+	ut_asserteq_str("/vmlinuz", file->path);
+	ut_asserteq(0, file->addr);  /* Not loaded yet */
+
+	file = alist_get(&label->files, 1, struct pxe_file);
+	ut_asserteq(PFT_INITRD, file->type);
+	ut_asserteq_str("/initrd.img", file->path);
+
+	file = alist_get(&label->files, 2, struct pxe_file);
+	ut_asserteq(PFT_FDT, file->type);
+	ut_asserteq_str("/dtb/board.dtb", file->path);
+
+	file = alist_get(&label->files, 3, struct pxe_file);
+	ut_asserteq(PFT_FDTOVERLAY, file->type);
+	ut_asserteq_str("/dtb/overlay1.dtbo", file->path);
+
+	file = alist_get(&label->files, 4, struct pxe_file);
+	ut_asserteq(PFT_FDTOVERLAY, file->type);
+	ut_asserteq_str("/dtb/overlay2.dtbo", file->path);
+
+	/*
+	 * Load each file and call pxe_load() to record address/size.
+	 * This demonstrates the callback-free file loading API.
+	 */
+	file_addr = PXE_KERNEL_ADDR;
+	alist_for_each(filep, &label->files) {
+		ulong size;
+
+		ut_assertok(load_file(filep->path, file_addr, &size));
+		pxe_load(filep, file_addr, size);
+		file_addr += ALIGN(size, SZ_64K);
+	}
+
+	/* Verify files were loaded with valid addresses and sizes */
+	file = alist_get(&label->files, 0, struct pxe_file);
+	ut_asserteq(PXE_KERNEL_ADDR, file->addr);
+	ut_assert(file->size > 0);
+
+	/*
+	 * Set up context for boot from the files list.
+	 * In the callback-free API, the caller populates ctx fields.
+	 */
+	ctx->kern_addr = alist_get(&label->files, 0, struct pxe_file)->addr;
+	ctx->initrd_addr = alist_get(&label->files, 1, struct pxe_file)->addr;
+	ctx->fdt_addr = alist_get(&label->files, 2, struct pxe_file)->addr;
+	ctx->label = label;
+
+	/* Boot - sandbox simulates this */
+	pxe_boot(ctx);
+
+	/* Sandbox cannot boot the kernel, so we get this error */
+	ut_assert_nextline("Unrecognized zImage");
+	ut_assert_console_end();
+
+	/* Verify the files are in memory at the correct addresses */
+	file = alist_get(&label->files, 0, struct pxe_file);
+	buf = map_sysmem(file->addr, file->size);
+	ut_asserteq_mem("kernel", buf, 6);
+	unmap_sysmem(buf);
+
+	file = alist_get(&label->files, 1, struct pxe_file);
+	buf = map_sysmem(file->addr, file->size);
+	ut_asserteq_mem("ramdisk", buf, 7);
+	unmap_sysmem(buf);
+
+	/* Clean up */
+	pxe_cleanup(ctx);
+
+	return 0;
+}
+PXE_TEST_ARGS(pxe_test_files_api_norun, UTF_CONSOLE | UTF_MANUAL,
 	      { "fs_image", UT_ARG_STR },
 	      { "cfg_path", UT_ARG_STR });

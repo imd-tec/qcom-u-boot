@@ -545,3 +545,14 @@ class TestPxeParser:
         with ubman.log.section('Test PXE FIT embedded FDT'):
             ubman.run_ut('pxe', 'pxe_test_fit_embedded_fdt',
                          fs_image=fs_img, cfg_path=cfg_path)
+
+    def test_pxe_files_api(self, ubman, pxe_image):
+        """Test three-phase files API (pxe_parse, pxe_load, pxe_boot)
+
+        This tests the callback-free API where files are collected during
+        parsing and the caller loads them directly, then calls pxe_boot().
+        """
+        fs_img, cfg_path = pxe_image
+        with ubman.log.section('Test PXE files API'):
+            ubman.run_ut('pxe', 'pxe_test_files_api',
+                         fs_image=fs_img, cfg_path=cfg_path)
