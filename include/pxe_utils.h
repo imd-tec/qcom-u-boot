@@ -39,7 +39,6 @@
  * @initrd: path to the initrd to use for this label.
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
- * @fdtoverlays: list of FDT overlays to apply (alist of struct pxe_file)
  * @files: list of files to load (alist of struct pxe_file)
  * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
@@ -60,7 +59,6 @@ struct pxe_label {
 	char *initrd;
 	char *fdt;
 	char *fdtdir;
-	struct alist fdtoverlays;
 	struct alist files;
 	char *say;
 	int ipappend;

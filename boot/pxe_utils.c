@@ -327,10 +327,13 @@ static void label_load_fdtoverlays(struct pxe_context *ctx,
 		use_lmb = true;
 	}
 
-	alist_for_each(overlay, &label->fdtoverlays) {
+	alist_for_each(overlay, &label->files) {
 		ulong addr = fdtoverlay_addr;
 		ulong size;
 		int err;
+
+		if (overlay->type != PFT_FDTOVERLAY)
+			continue;
 
 		err = get_relfile(ctx, overlay->path, &addr, SZ_4K,
 				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
@@ -368,8 +371,8 @@ static void label_apply_fdtoverlays(struct pxe_context *ctx,
 	/* Resize main fdt to make room for overlays */
 	fdt_shrink_to_minimum(ctx->fdt, 8192);
 
-	alist_for_each(overlay, &label->fdtoverlays) {
-		if (!overlay->addr)
+	alist_for_each(overlay, &label->files) {
+		if (overlay->type != PFT_FDTOVERLAY || !overlay->addr)
 			continue;
 
 		blob = map_sysmem(overlay->addr, 0);
@@ -515,7 +518,7 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
 	if (label->kaslrseed)
 		label_boot_kaslrseed(ctx);
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->files.count)
 		label_apply_fdtoverlays(ctx, label);
 
 	return 0;
@@ -679,7 +682,7 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->files.count)
 		label_load_fdtoverlays(ctx, label);
 
 	return 0;

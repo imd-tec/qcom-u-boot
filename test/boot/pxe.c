@@ -190,11 +190,11 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/initrd.img", label->initrd);
 	ut_asserteq_str("/dtb/board.dtb", label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq(2, label->fdtoverlays.count);
+	ut_asserteq(2, label->files.count);
 	ut_asserteq_str("/dtb/overlay1.dtbo",
-			alist_get(&label->fdtoverlays, 0, struct pxe_file)->path);
+			alist_get(&label->files, 0, struct pxe_file)->path);
 	ut_asserteq_str("/dtb/overlay2.dtbo",
-			alist_get(&label->fdtoverlays, 1, struct pxe_file)->path);
+			alist_get(&label->files, 1, struct pxe_file)->path);
 	ut_asserteq_str("Booting default Linux kernel", label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -214,7 +214,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_asserteq_str("/dtb/", label->fdtdir);
-	ut_asserteq(0, label->fdtoverlays.count);
+	ut_asserteq(0, label->files.count);
 	ut_assertnull(label->say);
 	ut_asserteq(3, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -234,7 +234,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq(0, label->fdtoverlays.count);
+	ut_asserteq(0, label->files.count);
 	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -254,7 +254,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq(0, label->fdtoverlays.count);
+	ut_asserteq(0, label->files.count);
 	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -274,7 +274,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->initrd);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
-	ut_asserteq(0, label->fdtoverlays.count);
+	ut_asserteq(0, label->files.count);
 	ut_assertnull(label->say);
 	ut_asserteq(0, label->ipappend);
 	ut_asserteq(0, label->attempted);
@@ -296,7 +296,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	 * environment, and verify overlay files can be loaded.
 	 */
 	label = list_first_entry(&cfg->labels, struct pxe_label, list);
-	ut_asserteq(2, label->fdtoverlays.count);
+	ut_asserteq(2, label->files.count);
 
 	/* Set environment variables for file loading */
 	ut_assertok(env_set_hex("kernel_addr_r", PXE_KERNEL_ADDR));
@@ -316,14 +316,14 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq(PXE_FDT_ADDR, ctx.fdt_addr);
 
 	/* Verify overlays were loaded to valid addresses */
-	ut_assert(alist_get(&label->fdtoverlays, 0,
+	ut_assert(alist_get(&label->files, 0,
 			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
-	ut_assert(alist_get(&label->fdtoverlays, 1,
+	ut_assert(alist_get(&label->files, 1,
 			    struct pxe_file)->addr >= PXE_OVERLAY_ADDR);
 
 	/* Second overlay should be at a higher address than the first */
-	ut_assert(alist_get(&label->fdtoverlays, 1, struct pxe_file)->addr >
-		  alist_get(&label->fdtoverlays, 0, struct pxe_file)->addr);
+	ut_assert(alist_get(&label->files, 1, struct pxe_file)->addr >
+		  alist_get(&label->files, 0, struct pxe_file)->addr);
 
 	/* Verify no more console output */
 	ut_assert_console_end();
@@ -702,7 +702,7 @@ static int pxe_test_overlay_no_addr_norun(struct unit_test_state *uts)
 	/* Get the first label (linux) which has fdtoverlays */
 	label = list_first_entry(&cfg->labels, struct pxe_label, list);
 	ut_asserteq_str("linux", label->name);
-	ut_assert(label->fdtoverlays.count > 0);
+	ut_assert(label->files.count > 0);
 
 	/* Enable output for loading phase */
 	ctx.quiet = false;

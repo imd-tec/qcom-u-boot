@@ -106,14 +106,14 @@ static struct pxe_label *label_create(void)
 	if (!label)
 		return NULL;
 	memset(label, 0, sizeof(struct pxe_label));
-	alist_init_struct(&label->fdtoverlays, struct pxe_file);
+	alist_init_struct(&label->files, struct pxe_file);
 
 	return label;
 }
 
 void label_destroy(struct pxe_label *label)
 {
-	struct pxe_file *overlay;
+	struct pxe_file *file;
 
 	free(label->name);
 	free(label->menu);
@@ -124,9 +124,9 @@ void label_destroy(struct pxe_label *label)
 	free(label->initrd);
 	free(label->fdt);
 	free(label->fdtdir);
-	alist_for_each(overlay, &label->fdtoverlays)
-		free(overlay->path);
-	alist_uninit(&label->fdtoverlays);
+	alist_for_each(file, &label->files)
+		free(file->path);
+	alist_uninit(&label->files);
 	free(label->say);
 	free(label);
 }
@@ -313,9 +313,24 @@ static int parse_sliteral(char **c, char **dst)
 }
 
 /*
+ * Check if a files list contains any FDT overlays.
+ */
+static bool has_fdtoverlays(struct alist *files)
+{
+	struct pxe_file *file;
+
+	alist_for_each(file, files) {
+		if (file->type == PFT_FDTOVERLAY)
+			return true;
+	}
+
+	return false;
+}
+
+/*
  * Parse a space-separated list of overlay paths into an alist.
  */
-static int parse_fdtoverlays(char **c, struct alist *overlays)
+static int parse_fdtoverlays(char **c, struct alist *files)
 {
 	char *val, *start;
 	int err;
@@ -349,7 +364,7 @@ static int parse_fdtoverlays(char **c, struct alist *overlays)
 		item.addr = 0;
 		item.size = 0;
 
-		if (!item.path || !alist_add(overlays, item)) {
+		if (!item.path || !alist_add(files, item)) {
 			free(item.path);
 			free(start);
 			return -ENOMEM;
@@ -589,8 +604,8 @@ static int parse_label(char **c, struct pxe_menu *cfg)
 				err = parse_sliteral(c, &label->fdtdir);
 			break;
 		case T_FDTOVERLAYS:
-			if (!label->fdtoverlays.count)
-				err = parse_fdtoverlays(c, &label->fdtoverlays);
+			if (!has_fdtoverlays(&label->files))
+				err = parse_fdtoverlays(c, &label->files);
 			break;
 		case T_LOCALBOOT:
 			label->localboot = 1;
