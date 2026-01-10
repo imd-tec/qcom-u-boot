@@ -19,7 +19,7 @@ bootflow if found. See
 a full description of the search procedure.
 
 When the bootflow is booted, the bootmeth calls ``pxe_setup_ctx()`` to set up
-the context, then ``pxe_process()`` to process the file. Depending on the
+the context, then ``pxe_process_str()`` to process the file. Depending on the
 contents, this may boot an Operating System or provide a list of options to the
 user, perhaps with a timeout.
 

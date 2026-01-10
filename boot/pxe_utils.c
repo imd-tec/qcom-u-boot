@@ -151,6 +151,7 @@ int get_pxe_file(struct pxe_context *ctx, const char *file_path,
 	buf = map_sysmem(file_addr + size, 1);
 	*buf = '\0';
 	unmap_sysmem(buf);
+	ctx->pxe_file_size = size;
 
 	return 1;
 }
@@ -308,7 +309,7 @@ static void label_boot_kaslrseed(struct pxe_context *ctx)
 static void label_load_fdtoverlays(struct pxe_context *ctx,
 				   struct pxe_label *label)
 {
-	struct pxe_fdtoverlay *overlay;
+	struct pxe_file *overlay;
 	ulong fdtoverlay_addr;
 	bool use_lmb;
 	char *envaddr;
@@ -327,10 +328,13 @@ static void label_load_fdtoverlays(struct pxe_context *ctx,
 		use_lmb = true;
 	}
 
-	alist_for_each(overlay, &label->fdtoverlays) {
+	alist_for_each(overlay, &label->files) {
 		ulong addr = fdtoverlay_addr;
 		ulong size;
 		int err;
+
+		if (overlay->type != PFT_FDTOVERLAY)
+			continue;
 
 		err = get_relfile(ctx, overlay->path, &addr, SZ_4K,
 				  (enum bootflow_img_t)IH_TYPE_FLATDT, &size);
@@ -357,7 +361,7 @@ static void label_load_fdtoverlays(struct pxe_context *ctx,
 static void label_apply_fdtoverlays(struct pxe_context *ctx,
 				    struct pxe_label *label)
 {
-	struct pxe_fdtoverlay *overlay;
+	struct pxe_file *overlay;
 	struct fdt_header *blob;
 	int err;
 
@@ -368,8 +372,8 @@ static void label_apply_fdtoverlays(struct pxe_context *ctx,
 	/* Resize main fdt to make room for overlays */
 	fdt_shrink_to_minimum(ctx->fdt, 8192);
 
-	alist_for_each(overlay, &label->fdtoverlays) {
-		if (!overlay->addr)
+	alist_for_each(overlay, &label->files) {
+		if (overlay->type != PFT_FDTOVERLAY || !overlay->addr)
 			continue;
 
 		blob = map_sysmem(overlay->addr, 0);
@@ -515,7 +519,7 @@ static int label_process_fdt(struct pxe_context *ctx, struct pxe_label *label)
 	if (label->kaslrseed)
 		label_boot_kaslrseed(ctx);
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->files.count)
 		label_apply_fdtoverlays(ctx, label);
 
 	return 0;
@@ -679,7 +683,7 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->fdtoverlays.count)
+	if (IS_ENABLED(CONFIG_OF_LIBFDT_OVERLAY) && label->files.count)
 		label_load_fdtoverlays(ctx, label);
 
 	return 0;
@@ -985,6 +989,7 @@ void pxe_menu_uninit(struct pxe_menu *cfg)
 	free(cfg->title);
 	free(cfg->default_label);
 	free(cfg->fallback_label);
+	free(cfg->bmp);
 
 	list_for_each_safe(pos, n, &cfg->labels) {
 		label = list_entry(pos, struct pxe_label, list);
@@ -999,19 +1004,18 @@ void pxe_menu_uninit(struct pxe_menu *cfg)
 	free(cfg);
 }
 
-struct pxe_menu *parse_pxefile(struct pxe_context *ctx, unsigned long menucfg)
+struct pxe_menu *parse_pxefile(struct pxe_context *ctx, struct abuf *buf)
 {
 	struct pxe_menu *cfg;
-	char *buf;
+	char *base;
 	int r;
 
 	cfg = pxe_menu_init();
 	if (!cfg)
 		return NULL;
 
-	buf = map_sysmem(menucfg, 0);
-	r = parse_pxefile_top(ctx, buf, menucfg, cfg, 1);
-	unmap_sysmem(buf);
+	base = abuf_data(buf);
+	r = parse_pxefile_top(ctx, base, base + buf->size, cfg, 1);
 
 	if (r < 0) {
 		pxe_menu_uninit(cfg);
@@ -1034,7 +1038,6 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			 ulong base)
 {
 	struct pxe_include *inc;
-	char *buf;
 	uint i;
 	int r;
 
@@ -1052,9 +1055,7 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			return r;
 		}
 
-		buf = map_sysmem(base, 0);
-		r = pxe_parse_include(ctx, inc, buf, base);
-		unmap_sysmem(buf);
+		r = pxe_parse_include(ctx, inc, base, ctx->pxe_file_size);
 
 		if (r < 0)
 			return r;
@@ -1063,10 +1064,18 @@ int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 	return 0;
 }
 
-int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
-		      char *buf, ulong base)
+int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
+		      ulong addr, ulong size)
 {
-	return parse_pxefile_top(ctx, buf, base, inc->cfg, inc->nest_level);
+	char *buf;
+	int ret;
+
+	buf = map_sysmem(addr, size);
+	ret = parse_pxefile_top(ctx, buf, buf + size, inc->cfg,
+				inc->nest_level);
+	unmap_sysmem(buf);
+
+	return ret;
 }
 
 /*
@@ -1281,13 +1290,25 @@ void pxe_destroy_ctx(struct pxe_context *ctx)
 	free(ctx->bootdir);
 }
 
-struct pxe_menu *pxe_prepare(struct pxe_context *ctx, ulong pxefile_addr_r,
-			     bool prompt)
+/**
+ * pxe_prepare() - Prepare a PXE menu by parsing and processing includes
+ *
+ * Parses the PXE config file and processes any include directives.
+ *
+ * @ctx: PXE context
+ * @pxefile_addr_r: Address where config file is loaded
+ * @prompt: true to force the menu prompt
+ * Return: Parsed menu on success, NULL on error
+ */
+static struct pxe_menu *pxe_prepare(struct pxe_context *ctx,
+				    ulong pxefile_addr_r, bool prompt)
 {
 	struct pxe_menu *cfg;
+	struct abuf buf;
 	int ret;
 
-	cfg = parse_pxefile(ctx, pxefile_addr_r);
+	abuf_init_addr(&buf, pxefile_addr_r, ctx->pxe_file_size);
+	cfg = parse_pxefile(ctx, &buf);
 	if (!cfg) {
 		printf("Error parsing config file\n");
 		return NULL;
@@ -1305,11 +1326,55 @@ struct pxe_menu *pxe_prepare(struct pxe_context *ctx, ulong pxefile_addr_r,
 	return cfg;
 }
 
-int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
+struct pxe_context *pxe_parse(ulong addr, ulong size, const char *bootfile)
+{
+	struct pxe_context *ctx;
+	struct abuf buf;
+	int ret;
+
+	ctx = calloc(1, sizeof(*ctx));
+	if (!ctx)
+		return NULL;
+
+	ret = pxe_setup_ctx(ctx, NULL, NULL, true, bootfile, false, false,
+			    NULL);
+	if (ret) {
+		free(ctx);
+		return NULL;
+	}
+	ctx->pxe_file_size = size;
+
+	abuf_init_addr(&buf, addr, size);
+	ctx->cfg = parse_pxefile(ctx, &buf);
+	if (!ctx->cfg) {
+		pxe_destroy_ctx(ctx);
+		free(ctx);
+		return NULL;
+	}
+
+	return ctx;
+}
+
+void pxe_load(struct pxe_file *file, ulong addr, ulong size)
+{
+	file->addr = addr;
+	file->size = size;
+}
+
+void pxe_cleanup(struct pxe_context *ctx)
+{
+	if (ctx->cfg)
+		pxe_menu_uninit(ctx->cfg);
+	pxe_destroy_ctx(ctx);
+	free(ctx);
+}
+
+int pxe_process(struct pxe_context *ctx, ulong addr, ulong size, bool prompt)
 {
 	struct pxe_menu *cfg;
 
-	cfg = pxe_prepare(ctx, pxefile_addr_r, prompt);
+	ctx->pxe_file_size = size;
+	cfg = pxe_prepare(ctx, addr, prompt);
 	if (!cfg)
 		return 1;
 
@@ -1318,6 +1383,18 @@ int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 	pxe_menu_uninit(cfg);
 
 	return 0;
+}
+
+int pxe_process_str(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
+{
+	void *ptr;
+	int len;
+
+	ptr = map_sysmem(pxefile_addr_r, 0);
+	len = strnlen(ptr, SZ_64K);
+	unmap_sysmem(ptr);
+
+	return pxe_process(ctx, pxefile_addr_r, len, prompt);
 }
 
 int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
@@ -1332,7 +1409,7 @@ int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt)
 	return 0;
 }
 
-int pxe_do_boot(struct pxe_context *ctx)
+int pxe_boot(struct pxe_context *ctx)
 {
 	int ret;
 

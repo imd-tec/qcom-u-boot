@@ -107,7 +107,7 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 	/* if we have already selected a label, just boot it */
 	if (plat->ctx.label) {
 		plat->ctx.fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
-		ret = pxe_do_boot(&plat->ctx);
+		ret = pxe_boot(&plat->ctx);
 	} else {
 		ret = extlinux_setup(dev, bflow, getfile, allow_abs_path,
 				     bootfile, &plat->ctx);
@@ -115,7 +115,7 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 			return log_msg_ret("elb", ret);
 		plat->ctx.restart = restart;
 		addr = map_to_sysmem(bflow->buf);
-		ret = pxe_process(&plat->ctx, addr, false);
+		ret = pxe_process_str(&plat->ctx, addr, false);
 	}
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);
@@ -136,6 +136,7 @@ int extlinux_read_all(struct udevice *dev, struct bootflow *bflow,
 	if (ret)
 		return log_msg_ret("era", ret);
 	addr = map_to_sysmem(bflow->buf);
+	plat->ctx.pxe_file_size = bflow->size;
 	ret = pxe_probe(&plat->ctx, addr, false);
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);

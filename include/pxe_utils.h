@@ -3,6 +3,7 @@
 #ifndef __PXE_UTILS_H
 #define __PXE_UTILS_H
 
+#include <abuf.h>
 #include <alist.h>
 #include <bootflow.h>
 #include <linux/list.h>
@@ -22,18 +23,9 @@
  * pxe, and does a tftp download of a file listed as an include file in the
  * middle of the parsing operation. That could be handled by refactoring it to
  * take a 'include file getter' function.
- */
-
-/**
- * struct pxe_fdtoverlay - info about an FDT overlay
  *
- * @path: Path to the overlay file
- * @addr: Address where the overlay was loaded (0 if not yet loaded)
+ * See doc/develop/bootstd/pxe_api.rst for API documentation.
  */
-struct pxe_fdtoverlay {
-	char *path;
-	ulong addr;
-};
 
 /**
  * struct pxe_label - describes a single label in a pxe file
@@ -50,7 +42,7 @@ struct pxe_fdtoverlay {
  * @initrd: path to the initrd to use for this label.
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
- * @fdtoverlays: list of FDT overlays to apply (alist of struct pxe_fdtoverlay)
+ * @files: list of files to load (alist of struct pxe_file)
  * @say: message to print when this label is selected for booting
  * @ipappend: flags for appending IP address (0x1) and MAC address (0x3)
  * @attempted: 0 if we haven't tried to boot this label, 1 if we have
@@ -70,7 +62,7 @@ struct pxe_label {
 	char *initrd;
 	char *fdt;
 	char *fdtdir;
-	struct alist fdtoverlays;
+	struct alist files;
 	char *say;
 	int ipappend;
 	int attempted;
@@ -91,6 +83,36 @@ struct pxe_include {
 	char *path;
 	struct pxe_menu *cfg;
 	int nest_level;
+};
+
+/**
+ * enum pxe_file_type_t - type of file to load for PXE boot
+ *
+ * @PFT_KERNEL: Kernel image
+ * @PFT_INITRD: Initial ramdisk
+ * @PFT_FDT: Flattened device tree
+ * @PFT_FDTOVERLAY: Device tree overlay
+ */
+enum pxe_file_type_t {
+	PFT_KERNEL,
+	PFT_INITRD,
+	PFT_FDT,
+	PFT_FDTOVERLAY,
+};
+
+/**
+ * struct pxe_file - a file that needs to be loaded
+ *
+ * @path: Path to the file
+ * @type: Type of file (kernel, initrd, etc.)
+ * @addr: Address where file was loaded (filled by caller)
+ * @size: Size of loaded file (filled by caller)
+ */
+struct pxe_file {
+	char *path;
+	enum pxe_file_type_t type;
+	ulong addr;
+	ulong size;
 };
 
 /*
@@ -273,17 +295,17 @@ int get_pxelinux_path(struct pxe_context *ctx, const char *file,
 void handle_pxe_menu(struct pxe_context *ctx, struct pxe_menu *cfg);
 
 /**
- * parse_pxefile() - Parse a pxe file
+ * parse_pxefile() - Parse a PXE file
  *
  * Parse the top-level file. Any includes are stored in cfg->includes and
  * should be processed by calling pxe_process_includes().
  *
  * @ctx: PXE context (provided by the caller)
- * @menucfg: Address of the PXE file in memory
+ * @buf: Buffer containing the PXE file
  * Return: NULL on error, otherwise a pointer to a pxe_menu struct. Use
  * pxe_menu_uninit() to free it.
  */
-struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
+struct pxe_menu *parse_pxefile(struct pxe_context *ctx, struct abuf *buf);
 
 /**
  * pxe_process_includes() - Process include files in a parsed menu
@@ -298,22 +320,6 @@ struct pxe_menu *parse_pxefile(struct pxe_context *ctx, ulong menucfg);
  */
 int pxe_process_includes(struct pxe_context *ctx, struct pxe_menu *cfg,
 			 ulong base);
-
-/**
- * pxe_parse_include() - Parse an included file into its target menu
- *
- * After loading an include file referenced in cfg->includes, call this
- * to parse it and merge any labels into the target menu. This may add
- * more entries to cfg->includes if the included file has its own includes.
- *
- * @ctx: PXE context
- * @inc: Include info with path and target menu
- * @buf: Buffer containing the included file content
- * @base: Memory address where buf is located
- * Return: 1 on success, -ve on error
- */
-int pxe_parse_include(struct pxe_context *ctx, struct pxe_include *inc,
-		      char *buf, ulong base);
 
 /**
  * format_mac_pxe() - Convert a MAC address to PXE format
@@ -362,13 +368,25 @@ int pxe_setup_ctx(struct pxe_context *ctx, pxe_getfile_func getfile,
 void pxe_destroy_ctx(struct pxe_context *ctx);
 
 /**
+ * pxe_process_str() - Process a PXE file through to boot
+ *
+ * Note: The file at @pxefile_addr_r must be a nul-terminated string.
+ *
+ * @ctx: PXE context created with pxe_setup_ctx()
+ * @pxefile_addr_r: Address of config to process
+ * @prompt: Force a prompt for the user
+ */
+int pxe_process_str(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
+
+/**
  * pxe_process() - Process a PXE file through to boot
  *
  * @ctx: PXE context created with pxe_setup_ctx()
- * @pxefile_addr_r: Address to load file
+ * @addr: Address of config to process
+ * @size: Size of continue to process
  * @prompt: Force a prompt for the user
  */
-int pxe_process(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
+int pxe_process(struct pxe_context *ctx, ulong addr, ulong size, bool prompt);
 
 /**
  * pxe_get_file_size() - Read the value of the 'filesize' environment variable
@@ -412,7 +430,7 @@ int pxe_get(ulong pxefile_addr_r, char **bootdirp, ulong *sizep, bool use_ipv6);
  * pxe_probe() - Process a PXE file to find the label to boot
  *
  * This fills in the label, etc. fields in @ctx, assuming it funds something to
- * boot. Then pxe_do_boot() can be called to boot it.
+ * boot. Then pxe_boot() can be called to boot it.
  *
  * @ctx: PXE context created with pxe_setup_ctx()
  * @pxefile_addr_r: Address to load file
@@ -422,13 +440,13 @@ int pxe_get(ulong pxefile_addr_r, char **bootdirp, ulong *sizep, bool use_ipv6);
 int pxe_probe(struct pxe_context *ctx, ulong pxefile_addr_r, bool prompt);
 
 /**
- * pxe_do_boot() - Boot the selected label
+ * pxe_boot() - Boot the selected label
  *
  * This boots the label discovered by pxe_probe()
  *
  * Return: Does not return, on success, otherwise returns a -ve error code
  */
-int pxe_do_boot(struct pxe_context *ctx);
+int pxe_boot(struct pxe_context *ctx);
 
 /**
  * pxe_select_label() - Select a label from a parsed menu
@@ -488,13 +506,17 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label);
  */
 int pxe_setup_label(struct pxe_context *ctx, struct pxe_label *label);
 
-/*
- * Entry point for parsing a menu file. nest_level indicates how many times
- * we've nested in includes.  It will be 1 for the top level menu file.
+/**
+ * parse_pxefile_top() - Entry point for parsing a menu file
  *
+ * @ctx: PXE context
+ * @p: Start of buffer containing the PXE file
+ * @limit: End of buffer (position of nul terminator)
+ * @cfg: Menu to parse into
+ * @nest_level: Nesting level (1 for top level, higher for includes)
  * Returns 1 on success, < 0 on error.
  */
-int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
+int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 		      struct pxe_menu *cfg, int nest_level);
 
 /**
@@ -511,5 +533,79 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, ulong base,
  * @label: Label to free
  */
 void label_destroy(struct pxe_label *label);
+
+/**
+ * pxe_parse_include() - Parse an included file into its target menu
+ *
+ * After loading an include file referenced in cfg->includes, call this
+ * to parse it and merge any labels into the target menu. This may add
+ * more entries to cfg->includes if the included file has its own includes.
+ *
+ * Example usage::
+ *
+ *    ctx = pxe_parse(addr, size, bootfile);
+ *
+ *    // Load and process any includes
+ *    alist_for_each(inc, &ctx->cfg->includes) {
+ *        // read file inc->path to address 'addr', getting 'size'
+ *        pxe_parse_include(ctx, inc, addr, size);
+ *    }
+ *
+ * @ctx: PXE context
+ * @inc: Include info with path and target menu
+ * @addr: Memory address where file is located
+ * @size: Size of the file in bytes
+ * Return: 1 on success, -ve on error
+ */
+int pxe_parse_include(struct pxe_context *ctx, const struct pxe_include *inc,
+		      ulong addr, ulong size);
+
+/**
+ * pxe_parse() - Parse a PXE config file and return an allocated context
+ *
+ * This allocates a PXE context, sets it up, and parses the config file at the
+ * given address. The menu is stored in ctx->cfg and can be used to inspect
+ * labels or select one for loading.
+ *
+ * Use pxe_cleanup() to clean up when done.
+ *
+ * Note: This does not process include files. Call pxe_process_includes()
+ * after this if needed.
+ *
+ * @addr: Address where config file is loaded
+ * @size: Size of config file in bytes
+ * @bootfile: Path to config file (for relative path resolution)
+ * Return: Allocated context on success, NULL on error
+ */
+struct pxe_context *pxe_parse(ulong addr, ulong size, const char *bootfile);
+
+/**
+ * pxe_load() - Report that a file has been loaded
+ *
+ * After loading a file from a label's files list, call this to record
+ * the load address and size. This information is used later during boot.
+ *
+ * Example::
+ *
+ *    alist_for_each(file, &label->files) {
+ *        // choose 'addr', load file->path there, getting 'size'
+ *        pxe_load(file, addr, size);
+ *    }
+ *
+ * @file: File that was loaded
+ * @addr: Address where file was loaded
+ * @size: Size of loaded file
+ */
+void pxe_load(struct pxe_file *file, ulong addr, ulong size);
+
+/**
+ * pxe_cleanup() - Free PXE menu and destroy context
+ *
+ * This combines pxe_menu_uninit() and pxe_destroy_ctx() for convenience
+ * when cleaning up after using the callback-free API.
+ *
+ * @ctx: Context to destroy (ctx->cfg is freed if set)
+ */
+void pxe_cleanup(struct pxe_context *ctx);
 
 #endif /* __PXE_UTILS_H */

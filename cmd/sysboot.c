@@ -119,7 +119,7 @@ static int do_sysboot(struct cmd_tbl *cmdtp, int flag, int argc,
 		return 1;
 	}
 
-	ret = pxe_process(&ctx, pxefile_addr_r, prompt);
+	ret = pxe_process(&ctx, pxefile_addr_r, ctx.pxe_file_size, prompt);
 	pxe_destroy_ctx(&ctx);
 	if (ret)
 		return CMD_RET_FAILURE;

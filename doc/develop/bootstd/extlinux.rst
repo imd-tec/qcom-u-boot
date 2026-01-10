@@ -21,7 +21,7 @@ When invoked on a bootdev, this bootmeth searches for the file and creates a
 bootflow if found.
 
 When the bootflow is booted, the bootmeth calls ``pxe_setup_ctx()`` to set up
-the context, then ``pxe_process()`` to process the file. Depending on the
+the context, then ``pxe_process_str()`` to process the file. Depending on the
 contents, this may boot an operating system or provide a list of options to
 the user, perhaps with a timeout.
 
