@@ -122,6 +122,20 @@ source "test/lib/Kconfig"
 source "test/optee/Kconfig"
 source "test/fdt_overlay/Kconfig"
 
+config BUILDMAN_TEST_A
+	bool "Buildman test option A"
+	imply BUILDMAN_TEST_B
+	help
+	  Test option used by buildman to verify that --adjust-cfg correctly
+	  resolves Kconfig 'imply' dependencies via merge_config.sh.
+
+config BUILDMAN_TEST_B
+	bool "Buildman test option B"
+	help
+	  Test option implied by BUILDMAN_TEST_A. Used by buildman tests to
+	  verify that 'imply' dependencies are resolved when using
+	  merge_config.sh.
+
 endif  # UNIT_TEST
 
 config POST
