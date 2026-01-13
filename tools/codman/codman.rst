@@ -138,6 +138,10 @@ The ``dirs command`` has a few extra options:
 * ``-e, --show-empty`` - Show directories/files with 0 lines used
 * ``-k, --kloc`` - Show line counts in kilolines (kLOC) instead of raw lines
 * ``--html <file>`` - Generate an HTML report with collapsible drill-down
+* ``--csv <file>`` - Generate a CSV report for spreadsheet analysis
+* ``-F, --files-only`` - Only output file rows in CSV (exclude directories)
+* ``-u, --show-unmatched`` - List files without a category match
+* ``-E, --show-empty-features`` - List features with no files defined
 
 Other:
 
@@ -311,6 +315,91 @@ The HTML report includes:
 
 This is useful for sharing reports or exploring large codebases interactively
 in a web browser.
+
+CSV Reports (``dirs --csv``)
+----------------------------
+
+Generate a CSV report for spreadsheet analysis or further processing::
+
+    codman -b qemu-x86 dirs -sf --csv report.csv
+
+The CSV includes columns for Type, Path, Category, Feature, file counts, and
+line statistics::
+
+    Type,Path,Category,Feature,Files,Used,%Used,%Code,Lines,Used
+    dir,arch/x86/cpu,,,20,15,75,85,3816,3227
+    file,arch/x86/cpu/call32.S,load-boot,boot-x86-bare,,,,100,61,61
+    file,arch/x86/cpu/cpu.c,load-boot,boot-x86-bare,,,,88,399,353
+    ...
+
+Use ``-F`` (``--files-only``) for a simplified output with just file rows
+(no directory summaries)::
+
+    codman -b qemu-x86 dirs -sf --csv report.csv -F
+
+This produces cleaner output with columns: Path, Category, Feature, %Code,
+Lines, Used::
+
+    Path,Category,Feature,%Code,Lines,Used
+    arch/x86/cpu/call32.S,load-boot,boot-x86-bare,100,61,61
+    arch/x86/cpu/cpu.c,load-boot,boot-x86-bare,88,399,353
+    arch/x86/cpu/cpu_x86.c,load-boot,boot-x86-bare,100,99,99
+    ...
+
+CSV reports include category information from ``category.cfg``. Other output
+formats (terminal, HTML) do not yet use categories.
+
+Categories and Features
+-----------------------
+
+Codman can categorise source files into functional areas using the
+``tools/codman/category.cfg`` configuration file. This TOML file defines:
+
+**Categories**: High-level groupings like "load-boot", "storage", "drivers"
+
+**Features**: Specific functional areas within categories, with file patterns
+that define which source files belong to each feature.
+
+The configuration uses three types of file patterns:
+
+* Exact paths: ``"boot/bootm.c"``
+* Glob patterns: ``"drivers/video/*.c"``
+* Directory prefixes: ``"lib/acpi/"`` (matches all files under the directory)
+
+Example category.cfg structure::
+
+    [categories.load-boot]
+    description = "Loading & Boot"
+
+    [features.boot-linux-direct]
+    category = "load-boot"
+    description = "Direct Linux boot"
+    files = [
+        "boot/bootm.c",
+        "boot/bootm_os.c",
+        "boot/image-board.c",
+    ]
+
+When generating HTML reports, codman matches each source file to its feature
+and category, making it easy to analyse code by functional area.
+
+Use ``-u`` (``--show-unmatched``) to list files that don't match any feature::
+
+    codman -b qemu-x86 dirs -sf -u
+
+Use ``-E`` (``--show-empty-features``) to list features with no files defined::
+
+    codman -b qemu-x86 dirs -sf -E
+
+**Ignoring External Code**
+
+The ``[ignore]`` section in category.cfg can exclude external/vendored code
+from reports::
+
+    [ignore]
+    files = [
+        "lib/lwip/lwip/",    # External lwIP library
+    ]
 
 Unused Files (``unused``)
 -------------------------

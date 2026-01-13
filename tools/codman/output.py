@@ -14,6 +14,7 @@ formats:
 - File copying operations
 """
 
+import csv
 import os
 import shutil
 import sys
@@ -22,6 +23,8 @@ from collections import defaultdict
 # Import from tools directory
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from u_boot_pylib import terminal, tout  # pylint: disable=wrong-import-position
+
+import category
 
 
 class DirStats:  # pylint: disable=too-few-public-methods
@@ -507,7 +510,7 @@ def generate_html_breakdown(all_sources, used_sources, file_results, srcdir,
         use_kloc (bool): If True, show line counts in kLOC
         html_file (str): Path to output HTML file
         board (str): Board name (optional)
-        analysis_method (str): Analysis method used ('unifdef', 'lsp', or 'dwarf')
+        analysis_method (str): Analysis method ('unifdef'/'lsp'/'dwarf')
 
     Returns:
         bool: True on success
@@ -904,6 +907,210 @@ def generate_html_breakdown(all_sources, used_sources, file_results, srcdir,
         return True
     except IOError as e:
         tout.error(f'Failed to write HTML file: {e}')
+        return False
+
+
+def _write_file_row(writer, info, features, ignore_patterns, file_results,
+                    use_kloc, files_only):
+    """Write a single file row to CSV.
+
+    Args:
+        writer: CSV writer object
+        info (dict): File info with 'path', 'total', 'active' keys
+        features (dict): Features dict from category config
+        ignore_patterns (list): List of patterns to ignore
+        file_results (dict): File analysis results (or None)
+        use_kloc (bool): If True, show line counts in kLOC
+        files_only (bool): If True, use simplified row format
+
+    Returns:
+        tuple: (wrote_row, is_matched) - whether row was written, whether file
+            matched a category
+    """
+    # Skip ignored files (external code)
+    if category.should_ignore_file(info['path'], ignore_patterns):
+        return False, True  # Not written, but considered matched
+
+    # Match file to feature/category
+    feat_id, cat_id = None, None
+    if features:
+        feat_id, cat_id = category.get_file_feature(info['path'], features)
+
+    is_matched = feat_id is not None
+
+    if file_results:
+        pct_active = percent(info['active'], info['total'])
+
+        if use_kloc:
+            total_str = klocs(info['total'])
+            active_str = klocs(info['active'])
+        else:
+            total_str = info['total']
+            active_str = info['active']
+
+        if files_only:
+            writer.writerow([info['path'], cat_id or '', feat_id or '',
+                            f'{pct_active:.0f}', total_str, active_str])
+        else:
+            writer.writerow(['file', info['path'], cat_id or '', feat_id or '',
+                            '', '', '', f'{pct_active:.0f}',
+                            total_str, active_str])
+
+    return True, is_matched
+
+
+def _report_matching_stats(features, total_files, unmatched_files,
+                           show_unmatched, show_empty_features):
+    """Report category matching statistics.
+
+    Args:
+        features (dict): Features dict from category config
+        total_files (int): Total number of files processed
+        unmatched_files (list): List of file paths without category match
+        show_unmatched (bool): If True, list all unmatched files
+        show_empty_features (bool): If True, list features with no files
+    """
+    if features and total_files > 0:
+        matched = total_files - len(unmatched_files)
+        print(f'Category matching: {matched}/{total_files} files matched, '
+              f'{len(unmatched_files)} unmatched')
+        if show_unmatched and unmatched_files:
+            print('Unmatched files:')
+            for filepath in sorted(unmatched_files):
+                print(f'  {filepath}')
+
+    if features and show_empty_features:
+        empty_features = [
+            feat_id for feat_id, feat_data in features.items()
+            if not feat_data.get('files', [])
+        ]
+        if empty_features:
+            print(f'Features with no files ({len(empty_features)}):')
+            for feat_id in sorted(empty_features):
+                print(f'  {feat_id}')
+
+
+def generate_csv(all_sources, used_sources, file_results, srcdir,
+                 by_subdirs, show_files, show_empty, use_kloc, csv_file,
+                 show_unmatched=False, files_only=False,
+                 show_empty_features=False):
+    """Generate CSV output with directory breakdown.
+
+    Args:
+        all_sources (set): Set of all source file paths
+        used_sources (set): Set of used source file paths
+        file_results (dict): Optional dict mapping file paths to line analysis
+            results (or None)
+        srcdir (str): Root directory of the source tree
+        by_subdirs (bool): If True, show full subdirectory breakdown
+        show_files (bool): If True, show individual files within directories
+        show_empty (bool): If True, show directories with 0 lines used
+        use_kloc (bool): If True, show line counts in kLOC
+        csv_file (str): Path to output CSV file
+        show_unmatched (bool): If True, list all unmatched files to stdout
+        files_only (bool): If True, only output file rows (exclude directories)
+        show_empty_features (bool): If True, list features with no files defined
+
+    Returns:
+        bool: True on success
+    """
+
+    # Load category configuration for file-to-feature matching
+    cfg = category.load_category_config(srcdir)
+    features = cfg.features if cfg else None
+    ignore_patterns = cfg.ignore if cfg else None
+
+    # Collect directory statistics
+    dir_stats = collect_dir_stats(all_sources, used_sources, file_results,
+                                  srcdir, by_subdirs, show_files)
+
+    # Calculate totals
+    total_lines_all = sum(count_lines(f) for f in all_sources)
+    if file_results:
+        total_lines_used = sum(r.active_lines for r in file_results.values())
+    else:
+        total_lines_used = sum(count_lines(f) for f in used_sources)
+
+    # Track unmatched files
+    unmatched_files = []
+    total_files = 0
+
+    try:
+        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+
+            # Write header
+            lines_header = 'kLOC' if use_kloc else 'Lines'
+            if files_only:
+                writer.writerow(['Path', 'Category', 'Feature', '%Code',
+                                lines_header, 'Used'])
+            else:
+                writer.writerow(['Type', 'Path', 'Category', 'Feature', 'Files',
+                                'Used', '%Used', '%Code', lines_header, 'Used'])
+
+            # Sort and output directories
+            for dir_path in sorted(dir_stats.keys()):
+                stats = dir_stats[dir_path]
+
+                # Skip directories with 0 lines used unless show_empty is set
+                if not show_empty and stats.lines_used == 0:
+                    continue
+
+                pct_used = percent(stats.used, stats.total)
+                pct_code = percent(stats.lines_used, stats.lines_total)
+
+                if use_kloc:
+                    lines_total_str = klocs(stats.lines_total)
+                    lines_used_str = klocs(stats.lines_used)
+                else:
+                    lines_total_str = stats.lines_total
+                    lines_used_str = stats.lines_used
+
+                if not files_only:
+                    writer.writerow([
+                        'dir', dir_path, '', '', stats.total, stats.used,
+                        f'{pct_used:.0f}', f'{pct_code:.0f}',
+                        lines_total_str, lines_used_str])
+
+                # Output files if requested
+                if show_files and stats.files:
+                    sorted_files = sorted(
+                        stats.files, key=lambda x: os.path.basename(x['path']))
+
+                    for info in sorted_files:
+                        if not show_empty and info['active'] == 0:
+                            continue
+
+                        wrote, matched = _write_file_row(
+                            writer, info, features, ignore_patterns,
+                            file_results, use_kloc, files_only)
+                        if wrote:
+                            total_files += 1
+                            if not matched:
+                                unmatched_files.append(info['path'])
+
+            # Write totals row
+            pct_files = percent(len(used_sources), len(all_sources))
+            pct_code = percent(total_lines_used, total_lines_all)
+
+            if use_kloc:
+                total_str = klocs(total_lines_all)
+                used_str = klocs(total_lines_used)
+            else:
+                total_str = total_lines_all
+                used_str = total_lines_used
+
+            if not files_only:
+                writer.writerow(['total', 'TOTAL', '', '', len(all_sources),
+                                len(used_sources), f'{pct_files:.0f}',
+                                f'{pct_code:.0f}', total_str, used_str])
+
+        tout.info(f'CSV report written to: {csv_file}')
+        _report_matching_stats(features, total_files, unmatched_files,
+                               show_unmatched, show_empty_features)
+        return True
+    except IOError as e:
+        tout.error(f'Failed to write CSV file: {e}')
         return False
 
 
