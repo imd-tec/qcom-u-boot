@@ -312,6 +312,47 @@ The HTML report includes:
 This is useful for sharing reports or exploring large codebases interactively
 in a web browser.
 
+Categories and Features
+-----------------------
+
+Codman can categorise source files into functional areas using the
+``tools/codman/category.cfg`` configuration file. This TOML file defines:
+
+**Categories**: High-level groupings like "load-boot", "storage", "drivers"
+
+**Features**: Specific functional areas within categories, with file patterns
+that define which source files belong to each feature.
+
+The configuration uses three types of file patterns:
+
+* Exact paths: ``"boot/bootm.c"``
+* Glob patterns: ``"drivers/video/*.c"``
+* Directory prefixes: ``"lib/acpi/"`` (matches all files under the directory)
+
+Example category.cfg structure::
+
+    [categories.load-boot]
+    description = "Loading & Boot"
+
+    [features.boot-linux-direct]
+    category = "load-boot"
+    description = "Direct Linux boot"
+    files = [
+        "boot/bootm.c",
+        "boot/bootm_os.c",
+        "boot/image-board.c",
+    ]
+
+**Ignoring External Code**
+
+The ``[ignore]`` section in category.cfg can exclude external/vendored code
+from reports::
+
+    [ignore]
+    files = [
+        "lib/lwip/lwip/",    # External lwIP library
+    ]
+
 Unused Files (``unused``)
 -------------------------
 
