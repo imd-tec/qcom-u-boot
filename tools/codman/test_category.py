@@ -194,6 +194,51 @@ files = []
         self.assertIn('test', result.categories)
 
 
+class TestShouldIgnoreFile(unittest.TestCase):
+    """Test cases for should_ignore_file function"""
+
+    def test_ignore_directory_prefix(self):
+        """Test ignoring files by directory prefix"""
+        ignore = ['lib/external/']
+        self.assertTrue(category.should_ignore_file(
+            'lib/external/foo.c', ignore))
+        self.assertTrue(category.should_ignore_file(
+            'lib/external/sub/bar.c', ignore))
+        self.assertFalse(category.should_ignore_file(
+            'lib/internal/foo.c', ignore))
+
+    def test_ignore_exact_path(self):
+        """Test ignoring files by exact path"""
+        ignore = ['lib/external/specific.c']
+        self.assertTrue(category.should_ignore_file(
+            'lib/external/specific.c', ignore))
+        self.assertFalse(category.should_ignore_file(
+            'lib/external/other.c', ignore))
+
+    def test_ignore_glob_pattern(self):
+        """Test ignoring files by glob pattern"""
+        ignore = ['lib/external/*.c']
+        self.assertTrue(category.should_ignore_file(
+            'lib/external/foo.c', ignore))
+        self.assertFalse(category.should_ignore_file(
+            'lib/external/foo.h', ignore))
+
+    def test_empty_ignore_list(self):
+        """Test with empty ignore list"""
+        self.assertFalse(category.should_ignore_file('any/file.c', []))
+        self.assertFalse(category.should_ignore_file('any/file.c', None))
+
+    def test_multiple_ignore_patterns(self):
+        """Test with multiple ignore patterns"""
+        ignore = ['lib/external/', 'vendor/*.c']
+        self.assertTrue(category.should_ignore_file(
+            'lib/external/foo.c', ignore))
+        self.assertTrue(category.should_ignore_file(
+            'vendor/bar.c', ignore))
+        self.assertFalse(category.should_ignore_file(
+            'src/main.c', ignore))
+
+
 class TestHelperFunctions(unittest.TestCase):
     """Test cases for helper functions"""
 

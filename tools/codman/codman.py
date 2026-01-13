@@ -488,6 +488,14 @@ def parse_args(argv=None):
                       help='Show line counts in kilolines (kLOC) instead of lines')
     dirs.add_argument('--html', type=str, metavar='FILE',
                       help='Output results as HTML to the specified file')
+    dirs.add_argument('--csv', type=str, metavar='FILE',
+                      help='Output results as CSV to the specified file')
+    dirs.add_argument('-u', '--show-unmatched', action='store_true',
+                      help='List all files without a category match')
+    dirs.add_argument('-F', '--files-only', action='store_true',
+                      help='Only output file rows in CSV (exclude directories)')
+    dirs.add_argument('-E', '--show-empty-features', action='store_true',
+                      help='List features with no files defined')
 
     # detail command
     detail = subparsers.add_parser('detail',
@@ -611,8 +619,9 @@ def do_output(args, all_srcs, used, skipped, results, srcdir, analysis_method):
     elif args.cmd == 'copy-used':
         ok = output.copy_used_files(used, srcdir, args.copy_used)
     elif args.cmd == 'dirs':
-        # Check if HTML output is requested
+        # Check if HTML or CSV output is requested
         html_file = getattr(args, 'html', None)
+        csv_file = getattr(args, 'csv', None)
         if html_file:
             ok = output.generate_html_breakdown(all_srcs, used, results, srcdir,
                                                 args.subdirs, args.show_files,
@@ -620,6 +629,14 @@ def do_output(args, all_srcs, used, skipped, results, srcdir, analysis_method):
                                                 getattr(args, 'kloc', False),
                                                 html_file, args.board,
                                                 analysis_method)
+        elif csv_file:
+            ok = output.generate_csv(
+                all_srcs, used, results, srcdir, args.subdirs,
+                args.show_files, args.show_empty,
+                getattr(args, 'kloc', False), csv_file,
+                getattr(args, 'show_unmatched', False),
+                getattr(args, 'files_only', False),
+                getattr(args, 'show_empty_features', False))
         else:
             ok = output.show_dir_breakdown(all_srcs, used, results, srcdir,
                                             args.subdirs, args.show_files,
