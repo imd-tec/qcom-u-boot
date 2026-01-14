@@ -39,6 +39,7 @@
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <linux/time.h>		/* For timespec64, time64_t */
+#include <linux/pagevec.h>	/* For struct folio_batch */
 #include <linux/build_bug.h>	/* For BUILD_BUG_ON */
 #include <linux/bug.h>		/* For WARN_ON, WARN_ONCE */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
@@ -1158,11 +1159,7 @@ struct folio {
 	int _refcount;
 };
 
-/* folio_batch - batch of folios */
-struct folio_batch {
-	unsigned int nr;
-	struct folio *folios[16];
-};
+/* struct folio_batch is in linux/pagevec.h */
 
 /* folio operations - stubs */
 #define folio_mark_dirty(f)			do { (void)(f); } while (0)
@@ -1182,7 +1179,7 @@ struct folio_batch {
 #define folio_unlock(f)				do { (void)(f); } while (0)
 /* folio_put and folio_get are implemented in support.c */
 #define folio_lock(f)				do { (void)(f); } while (0)
-#define folio_batch_init(fb)			do { (fb)->nr = 0; } while (0)
+/* folio_batch_init is in linux/pagevec.h */
 #define filemap_get_folios(m, i, e, fb)		({ (void)(m); (void)(i); (void)(e); (void)(fb); 0U; })
 
 /* xa_mark_t - xarray mark type */
