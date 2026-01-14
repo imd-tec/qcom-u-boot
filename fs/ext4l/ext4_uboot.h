@@ -396,11 +396,7 @@ void iput(struct inode *inode);
 /* _RET_IP_ - return instruction pointer */
 #define _RET_IP_	((unsigned long)__builtin_return_address(0))
 
-/* SB_FREEZE constants */
-#define SB_FREEZE_WRITE		1
-#define SB_FREEZE_PAGEFAULT	2
-#define SB_FREEZE_FS		3
-#define SB_FREEZE_COMPLETE	4
+/* SB_FREEZE_* constants are in linux/fs.h */
 
 /* sb_writers stub */
 struct sb_writers {
@@ -525,9 +521,7 @@ struct fstrim_range {
 
 /* block_device is defined in linux/fs.h */
 
-/* Superblock flags */
-#define SB_RDONLY		(1 << 0)
-#define SB_I_VERSION		(1 << 26)	/* Update inode version */
+/* SB_RDONLY, SB_I_VERSION, etc. superblock flags are in linux/fs.h */
 
 /* UUID type */
 typedef struct {
@@ -593,9 +587,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 /* Inode dirty state flags */
 #define I_DIRTY_TIME		(1 << 3)
 
-/* Superblock flags */
-#define SB_LAZYTIME		(1 << 25)
-
+/* SB_LAZYTIME is in linux/fs.h */
 /* ATTR_* iattr valid flags are in linux/fs.h */
 
 /* STATX flags and attributes */
@@ -1683,8 +1675,7 @@ static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
 }
 #define REQ_OP_READ		0
 
-/* Superblock flags */
-#define SB_ACTIVE		(1 << 30)
+/* SB_ACTIVE is in linux/fs.h */
 
 /* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
 #define STAT_WRITE		0
@@ -1893,12 +1884,9 @@ struct fs_parse_result {
 /* I/O priority classes */
 #define IOPRIO_CLASS_BE			2
 
-/* Superblock flags */
-#define SB_INLINECRYPT			(1 << 27)
-#define SB_SILENT			(1 << 15)
-#define SB_POSIXACL			(1 << 16)
-#define SB_I_CGROUPWB			0
-#define SB_I_ALLOW_HSM			0
+/* SB_INLINECRYPT, SB_SILENT, SB_POSIXACL are in linux/fs.h */
+#define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
+#define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
 
 /* Block open flags */
 #define BLK_OPEN_READ			(1 << 0)

@@ -208,6 +208,21 @@ static inline void inode_init_once(struct inode *inode)
 #define RENAME_EXCHANGE		(1 << 1)
 #define RENAME_WHITEOUT		(1 << 2)
 
+/* Superblock flags */
+#define SB_RDONLY	(1 << 0)	/* Read-only mount */
+#define SB_POSIXACL	(1 << 16)	/* POSIX ACL support */
+#define SB_LAZYTIME	(1 << 25)	/* Lazy time updates */
+#define SB_I_VERSION	(1 << 26)	/* Update inode version */
+#define SB_INLINECRYPT	(1 << 27)	/* Inline encryption */
+#define SB_ACTIVE	(1 << 30)	/* Superblock is active */
+#define SB_SILENT	(1 << 15)	/* Silent mount errors */
+
+/* Superblock freeze levels */
+#define SB_FREEZE_WRITE		1
+#define SB_FREEZE_PAGEFAULT	2
+#define SB_FREEZE_FS		3
+#define SB_FREEZE_COMPLETE	4
+
 /* fallocate() flags */
 #define FALLOC_FL_KEEP_SIZE		0x01
 #define FALLOC_FL_PUNCH_HOLE		0x02
