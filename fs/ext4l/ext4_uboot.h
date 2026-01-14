@@ -589,19 +589,8 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define I_FREEING		(1 << 1)
 #define I_DIRTY_DATASYNC	(1 << 2)
 
-/* Inode flags for i_flags */
-#define S_SYNC		1
-#define S_NOATIME	2
-#define S_APPEND	4
-#define S_IMMUTABLE	8
-#define S_DAX		16
-#define S_DIRSYNC	32
-#define S_ENCRYPTED	64
-#define S_CASEFOLD	128
-#define S_VERITY	256
-
-/* Permission mode constants */
-#define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
+/* S_SYNC, S_NOATIME, etc. inode flags are in linux/fs.h */
+/* S_IRWXUGO is in linux/fs.h */
 
 /* Whiteout mode for overlayfs */
 #define WHITEOUT_DEV	0

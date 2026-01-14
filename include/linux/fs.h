@@ -173,6 +173,20 @@ static inline void inode_init_once(struct inode *inode)
 /* S_ISDIR, etc. - already in linux/stat.h */
 #include <linux/stat.h>
 
+/* Inode flags for i_flags field */
+#define S_SYNC		1	/* Synchronous writes */
+#define S_NOATIME	2	/* No access time updates */
+#define S_APPEND	4	/* Append only */
+#define S_IMMUTABLE	8	/* Immutable file */
+#define S_DAX		16	/* Direct access */
+#define S_DIRSYNC	32	/* Directory sync */
+#define S_ENCRYPTED	64	/* Encrypted */
+#define S_CASEFOLD	128	/* Case-folded */
+#define S_VERITY	256	/* Verity enabled */
+
+/* Permission mode constants */
+#define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
+
 /* Directory entry types */
 #define DT_UNKNOWN	0
 #define DT_FIFO		1
