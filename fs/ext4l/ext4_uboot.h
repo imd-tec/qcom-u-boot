@@ -513,16 +513,7 @@ typedef long long qsize_t;
 
 /* bh_end_io_t and struct buffer_head are in linux/buffer_head.h */
 
-/* Directory entry types */
-#define DT_UNKNOWN	0
-#define DT_FIFO		1
-#define DT_CHR		2
-#define DT_DIR		4
-#define DT_BLK		6
-#define DT_REG		8
-#define DT_LNK		10
-#define DT_SOCK		12
-#define DT_WHT		14
+/* DT_* directory entry types are in linux/fs.h */
 
 /* mnt_idmap - stub */
 struct mnt_idmap {
