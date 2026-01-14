@@ -336,13 +336,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* KUNIT stub */
 #define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
 
-/* percpu_counter operations - stubs */
-#define percpu_counter_read_positive(fbc)	((fbc)->count)
-#define percpu_counter_sum_positive(fbc)	((fbc)->count)
-#define percpu_counter_add(fbc, amount)		((fbc)->count += (amount))
-#define percpu_counter_inc(fbc)			((fbc)->count++)
-#define percpu_counter_dec(fbc)			((fbc)->count--)
-#define percpu_counter_initialized(fbc)		((fbc)->initialized)
+/* percpu_counter operations are in linux/percpu_counter.h */
 
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
@@ -1188,10 +1182,7 @@ static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
 /* write lock variants */
 #define write_trylock(lock)		({ (void)(lock); 1; })
 
-/* percpu counter init/destroy */
-#define percpu_counter_init(fbc, val, gfp)	\
-	({ (fbc)->count = (val); (fbc)->initialized = true; 0; })
-#define percpu_counter_destroy(fbc)		do { } while (0)
+/* percpu_counter_init/destroy are in linux/percpu_counter.h */
 
 /* ratelimit macros */
 #define DEFAULT_RATELIMIT_INTERVAL	(5 * 1000)
@@ -1480,8 +1471,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define dquot_transfer(m, i, a)			({ (void)(m); (void)(i); (void)(a); 0; })
 #define is_quota_modification(m, i, a)		({ (void)(m); (void)(i); (void)(a); 0; })
 
-/* Percpu counter sub */
-#define percpu_counter_sub(fbc, amount)		((fbc)->count -= (amount))
+/* percpu_counter_sub is in linux/percpu_counter.h */
 
 /* Filemap operations - additional */
 #define filemap_get_folio(m, i)			((struct folio *)NULL)
