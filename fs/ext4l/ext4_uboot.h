@@ -198,14 +198,7 @@ struct kiocb {
 /* __counted_by attribute - not available in U-Boot */
 #define __counted_by(x)
 
-/* dir_context for directory iteration */
-struct dir_context;
-typedef int (*filldir_t)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
-
-struct dir_context {
-	filldir_t actor;
-	loff_t pos;
-};
+/* dir_context, filldir_t are in linux/fs.h */
 
 /* iomap types and structs are in linux/iomap.h */
 
@@ -1545,13 +1538,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
 #define inode_query_iversion(i)			({ (void)(i); 0ULL; })
 
-/* Directory context operations - call the actor callback */
-static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
-			    u64 ino, unsigned int type)
-{
-	return ctx->actor(ctx, name, len, ctx->pos, ino, type) == 0;
-}
-#define dir_relax_shared(i)			({ (void)(i); 1; })
+/* dir_emit, dir_relax_shared are in linux/fs.h */
 
 /* File llseek */
 #define generic_file_llseek_size(f, o, w, m, e)	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })

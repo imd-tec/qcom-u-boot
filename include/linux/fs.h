@@ -173,4 +173,23 @@ static inline void inode_init_once(struct inode *inode)
 /* S_ISDIR, etc. - already in linux/stat.h */
 #include <linux/stat.h>
 
+/* Directory context for readdir iteration */
+struct dir_context;
+typedef int (*filldir_t)(struct dir_context *, const char *, int, loff_t,
+			 u64, unsigned);
+
+struct dir_context {
+	filldir_t actor;
+	loff_t pos;
+};
+
+/* dir_emit - emit a directory entry to the context callback */
+static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
+			    u64 ino, unsigned int type)
+{
+	return ctx->actor(ctx, name, len, ctx->pos, ino, type) == 0;
+}
+
+#define dir_relax_shared(i)	({ (void)(i); 1; })
+
 #endif /* _LINUX_FS_H */
