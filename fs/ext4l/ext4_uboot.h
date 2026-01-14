@@ -2524,10 +2524,7 @@ struct proc_ops {
 ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
 loff_t seq_lseek(struct file *f, loff_t o, int w);
 
-/* S_IRUGO file mode if not defined */
-#ifndef S_IRUGO
-#define S_IRUGO		(S_IRUSR | S_IRGRP | S_IROTH)
-#endif
+/* S_IRUGO is in linux/fs.h */
 
 /* procfs stubs */
 #define proc_mkdir(name, parent)	({ (void)(name); (void)(parent); (struct proc_dir_entry *)NULL; })

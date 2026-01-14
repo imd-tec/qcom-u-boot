@@ -186,6 +186,7 @@ static inline void inode_init_once(struct inode *inode)
 
 /* Permission mode constants */
 #define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
+#define S_IRUGO		(S_IRUSR | S_IRGRP | S_IROTH)
 
 /* Directory entry types */
 #define DT_UNKNOWN	0
