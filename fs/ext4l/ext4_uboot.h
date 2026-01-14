@@ -1224,26 +1224,7 @@ struct readahead_control {
 #define readahead_pos(rac)		({ (void)(rac); 0LL; })
 #define readahead_length(rac)		({ (void)(rac); 0UL; })
 
-/* Forward declarations for address_space_operations */
-struct writeback_control;
-struct swap_info_struct;
-
-/* address_space_operations stub */
-struct address_space_operations {
-	int (*read_folio)(struct file *, struct folio *);
-	void (*readahead)(struct readahead_control *);
-	sector_t (*bmap)(struct address_space *, sector_t);
-	void (*invalidate_folio)(struct folio *, size_t, size_t);
-	bool (*release_folio)(struct folio *, gfp_t);
-	int (*write_begin)(const struct kiocb *, struct address_space *, loff_t, unsigned, struct folio **, void **);
-	int (*write_end)(const struct kiocb *, struct address_space *, loff_t, unsigned, unsigned, struct folio *, void *);
-	int (*writepages)(struct address_space *, struct writeback_control *);
-	bool (*dirty_folio)(struct address_space *, struct folio *);
-	bool (*is_partially_uptodate)(struct folio *, size_t, size_t);
-	int (*error_remove_folio)(struct address_space *, struct folio *);
-	int (*migrate_folio)(struct address_space *, struct folio *, struct folio *, int);
-	int (*swap_activate)(struct swap_info_struct *, struct file *, sector_t *);
-};
+/* address_space_operations is in linux/fs.h */
 
 /* Stub for buffer_migrate_folio */
 static inline int buffer_migrate_folio(struct address_space *mapping,
