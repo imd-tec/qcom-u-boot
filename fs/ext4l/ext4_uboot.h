@@ -154,15 +154,7 @@ struct kobject {
 #define FIEMAP_EXTENT_UNWRITTEN		0x00000800
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
 
-/* FALLOC flags */
-#define FALLOC_FL_KEEP_SIZE		0x01
-#define FALLOC_FL_PUNCH_HOLE		0x02
-#define FALLOC_FL_COLLAPSE_RANGE	0x08
-#define FALLOC_FL_ZERO_RANGE		0x10
-#define FALLOC_FL_INSERT_RANGE		0x20
-#define FALLOC_FL_WRITE_ZEROES		0x40
-#define FALLOC_FL_ALLOCATE_RANGE	0x80
-#define FALLOC_FL_MODE_MASK		0xff
+/* FALLOC_FL_* flags are in linux/fs.h */
 
 /* File flags */
 #define O_SYNC		0
@@ -596,10 +588,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define WHITEOUT_DEV	0
 #define WHITEOUT_MODE	0
 
-/* Rename flags */
-#define RENAME_NOREPLACE	(1 << 0)
-#define RENAME_EXCHANGE		(1 << 1)
-#define RENAME_WHITEOUT		(1 << 2)
+/* RENAME_* flags are in linux/fs.h */
 
 /* Inode dirty state flags */
 #define I_DIRTY_TIME		(1 << 3)

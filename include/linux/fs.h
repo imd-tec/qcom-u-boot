@@ -188,6 +188,21 @@ static inline void inode_init_once(struct inode *inode)
 #define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
 #define S_IRUGO		(S_IRUSR | S_IRGRP | S_IROTH)
 
+/* Rename flags */
+#define RENAME_NOREPLACE	(1 << 0)
+#define RENAME_EXCHANGE		(1 << 1)
+#define RENAME_WHITEOUT		(1 << 2)
+
+/* fallocate() flags */
+#define FALLOC_FL_KEEP_SIZE		0x01
+#define FALLOC_FL_PUNCH_HOLE		0x02
+#define FALLOC_FL_COLLAPSE_RANGE	0x08
+#define FALLOC_FL_ZERO_RANGE		0x10
+#define FALLOC_FL_INSERT_RANGE		0x20
+#define FALLOC_FL_WRITE_ZEROES		0x40
+#define FALLOC_FL_ALLOCATE_RANGE	0x80
+#define FALLOC_FL_MODE_MASK		0xff
+
 /* Directory entry types */
 #define DT_UNKNOWN	0
 #define DT_FIFO		1
