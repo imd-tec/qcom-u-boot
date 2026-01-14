@@ -211,35 +211,7 @@ struct dir_context {
 	loff_t pos;
 };
 
-/* iomap types - only define if linux/iomap.h not included */
-#ifndef LINUX_IOMAP_H
-#define IOMAP_MAPPED	0
-#define IOMAP_INLINE	1
-#define IOMAP_UNWRITTEN	2
-#define IOMAP_DELALLOC	3
-#define IOMAP_HOLE	4
-
-struct iomap {
-	u64 addr;
-	loff_t offset;
-	loff_t length;
-	u16 type;
-	u16 flags;
-	struct block_device *bdev;
-	void *inline_data;
-};
-
-struct iomap_ops {
-	int (*iomap_begin)(struct inode *inode, loff_t pos, loff_t length,
-			   unsigned flags, struct iomap *iomap, struct iomap *srcmap);
-	int (*iomap_end)(struct inode *inode, loff_t pos, loff_t length,
-			 ssize_t written, unsigned flags, struct iomap *iomap);
-};
-
-/* iomap DIO flags */
-#define IOMAP_DIO_UNWRITTEN	(1 << 0)
-#define IOMAP_DIO_FORCE_WAIT	(1 << 1)
-#endif /* LINUX_IOMAP_H */
+/* iomap types and structs are in linux/iomap.h */
 
 /* fiemap types */
 #define FIEMAP_FLAG_SYNC	0x00000001
