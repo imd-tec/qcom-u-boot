@@ -36,6 +36,10 @@ typedef unsigned int fmode_t;
 #define FMODE_CAN_ODIRECT	((__force fmode_t)(1 << 21))
 #define FMODE_CAN_ATOMIC_WRITE	((__force fmode_t)(1 << 22))
 
+/* Directory file mode flags - use low bits for hash mode */
+#define FMODE_32BITHASH		((__force fmode_t)0x00000001)
+#define FMODE_64BITHASH		((__force fmode_t)0x00000002)
+
 /* Seek constants */
 #ifndef SEEK_HOLE
 #define SEEK_HOLE	4

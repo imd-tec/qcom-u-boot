@@ -173,9 +173,7 @@ typedef unsigned long pgoff_t;
 #define PAGE_SHIFT	12
 #endif
 
-/* File mode flags */
-#define FMODE_32BITHASH		0x00000001
-#define FMODE_64BITHASH		0x00000002
+/* FMODE_32BITHASH, FMODE_64BITHASH are in linux/fs.h */
 
 /* struct file is defined in linux/fs.h */
 
