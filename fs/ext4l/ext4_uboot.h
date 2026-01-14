@@ -78,8 +78,7 @@
 #include <linux/jiffies.h>
 #include <linux/blkdev.h>
 
-/* Extra atomic operation not in asm-generic/atomic.h */
-#define atomic_dec_if_positive(v)	(--(v)->counter)
+/* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 
 /* SMP stubs - U-Boot is single-threaded */
 #define raw_smp_processor_id()	0
@@ -433,8 +432,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 /* spin_trylock is defined in linux/spinlock.h */
 
-/* Atomic extras */
-#define atomic_add_unless(v, a, u)	({ (void)(v); (void)(a); (void)(u); 1; })
+/* atomic_add_unless is now in asm-generic/atomic.h */
 
 /* Block group lock - stub */
 #define bgl_lock_ptr(lock, group)	NULL
@@ -2548,9 +2546,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 	return size;
 }
 
-/* Atomic64 operations */
-#define atomic64_inc(v)			do { (void)(v); } while (0)
-#define atomic64_add(i, v)		do { (void)(i); (void)(v); } while (0)
+/* atomic64 operations are now in asm-generic/atomic.h */
 
 /* CPU cycle counter stub */
 #define get_cycles()			(0ULL)
@@ -2592,17 +2588,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
 #define array_index_nospec(index, size) (index)
 
-/* atomic_inc_return - increment and return new value */
-static inline int atomic_inc_return(atomic_t *v)
-{
-	return ++(v->counter);
-}
-
-/* atomic_add_return - add and return new value */
-static inline int atomic_add_return(int i, atomic_t *v)
-{
-	return (v->counter += i);
-}
+/* atomic_inc_return and atomic_add_return are now in asm-generic/atomic.h */
 
 /* pde_data - proc dir entry data (not supported in U-Boot) */
 #define pde_data(inode)			((void *)NULL)
@@ -2640,10 +2626,7 @@ struct seq_operations {
 #define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
 	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
 
-/* Atomic operations */
-#define atomic_sub(i, v)		((v)->counter -= (i))
-#define atomic64_sub(i, v)		((v)->counter -= (i))
-#define atomic_dec_and_test(v)		(--((v)->counter) == 0)
+/* atomic_sub, atomic64_sub, atomic_dec_and_test are in asm-generic/atomic.h */
 
 /* RCU list operations - use regular list operations in U-Boot */
 #define list_for_each_entry_rcu(pos, head, member, ...) \
@@ -2755,8 +2738,7 @@ struct folio_iter {
 /* blk_status_to_errno - convert block status to errno */
 #define blk_status_to_errno(status)	(-(status))
 
-/* atomic_inc - increment atomic */
-#define atomic_inc(v)			((v)->counter++)
+/* atomic_inc is in asm-generic/atomic.h */
 
 /* GFP_NOIO - allocation without I/O */
 #define GFP_NOIO			0
