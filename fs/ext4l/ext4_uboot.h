@@ -936,7 +936,7 @@ struct dx_hash_info {
 
 /* BUILD_BUG_ON is in linux/build_bug.h */
 /* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */
-#define pr_warn_once(fmt, ...) do { } while (0)
+/* pr_warn_once is in linux/printk.h */
 
 /* lockdep stubs */
 #define lockdep_assert_held_read(l)	do { (void)(l); } while (0)
@@ -2435,8 +2435,7 @@ struct folio_iter {
 /* xchg - exchange value atomically */
 #define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
 
-/* printk_ratelimited - just use regular printk */
-#define printk_ratelimited(fmt, ...)	do { } while (0)
+/* printk_ratelimited is in linux/printk.h */
 
 /* mapping_set_error - record error in address_space */
 #define mapping_set_error(m, e)		do { (void)(m); (void)(e); } while (0)
@@ -2635,8 +2634,7 @@ int bh_read(struct buffer_head *bh, int flags);
 #define free_pages(addr, order)		free((void *)(addr))
 #define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
 
-/* Ratelimited printk for journal.c */
-#define pr_notice_ratelimited(fmt, ...)	pr_notice(fmt, ##__VA_ARGS__)
+/* pr_notice_ratelimited is in linux/printk.h */
 
 /*
  * Stubs for mmp.c
