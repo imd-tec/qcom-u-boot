@@ -126,10 +126,8 @@ struct lock_class_key { int dummy; };
 #define rwsem_release(l, i)		do { } while (0)
 #define _THIS_IP_			((unsigned long)0)
 
-/* completion - stub */
-struct completion {
-	unsigned int done;
-};
+/* completion - use Linux header */
+#include <linux/completion.h>
 
 /* Cache alignment - stub */
 #define ____cacheline_aligned_in_smp
@@ -2135,7 +2133,7 @@ void invalidate_bdev(struct block_device *bdev);
 
 /* Kobject - declarations for stub.c */
 void kobject_put(struct kobject *kobj);
-void wait_for_completion(struct completion *comp);
+/* wait_for_completion is now a macro in linux/completion.h */
 
 /* DAX - declaration for stub.c */
 void fs_put_dax(void *dax, void *holder);

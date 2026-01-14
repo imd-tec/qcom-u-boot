@@ -486,10 +486,7 @@ void kobject_put(struct kobject *kobj)
 {
 }
 
-/* completion */
-void wait_for_completion(struct completion *comp)
-{
-}
+/* completion - now uses linux/completion.h macro */
 
 /* DAX */
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
