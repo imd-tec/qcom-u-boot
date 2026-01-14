@@ -78,10 +78,12 @@
  * atomic_t, atomic64_t are now in asm-generic/atomic.h
  * MAX_JIFFY_OFFSET is now in linux/jiffies.h
  * BDEVNAME_SIZE is now in linux/blkdev.h
+ * blk_opf_t is now in linux/blk_types.h
  */
 #include <asm-generic/atomic.h>
 #include <linux/jiffies.h>
 #include <linux/blkdev.h>
+#include <linux/blk_types.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 
@@ -507,8 +509,7 @@ struct folio;
 /* qsize_t - quota size type */
 typedef long long qsize_t;
 
-/* blk_opf_t - block operation flags */
-typedef unsigned int blk_opf_t;
+/* blk_opf_t is in linux/blk_types.h */
 
 /* bh_end_io_t and struct buffer_head are in linux/buffer_head.h */
 
