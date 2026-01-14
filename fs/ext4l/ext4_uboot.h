@@ -1142,27 +1142,7 @@ struct readahead_control {
 #define readahead_length(rac)		({ (void)(rac); 0UL; })
 
 /* address_space_operations is in linux/fs.h */
-
-/* Stub for buffer_migrate_folio */
-static inline int buffer_migrate_folio(struct address_space *mapping,
-				       struct folio *dst, struct folio *src, int mode)
-{
-	return -EOPNOTSUPP;
-}
-
-/* Stub for buffer_migrate_folio_norefs */
-static inline int buffer_migrate_folio_norefs(struct address_space *mapping,
-					      struct folio *dst, struct folio *src, int mode)
-{
-	return -EOPNOTSUPP;
-}
-
-/* Stub for noop_dirty_folio */
-static inline bool noop_dirty_folio(struct address_space *mapping,
-				    struct folio *folio)
-{
-	return false;
-}
+/* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
 
 /* Stub implementations for address_space_operations callbacks */
 static inline bool block_is_partially_uptodate(struct folio *folio,
