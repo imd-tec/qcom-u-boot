@@ -1402,3 +1402,199 @@ The build completed successfully. Let me provide the final summary:
 
 ---
 
+## 2026-01-14: us/next
+
+Branch: cherry-eec32a35d74
+
+Commits:
+- eec32a35d74 tools: kwbimage.h: use linux/compiler_attributes.h
+- f88ccd32b5e tools: renesas_spkgimage.h: use linux/compiler_attributes.h
+- 70a42bf2170 mbedtls: enable support of hkdf
+- ccc5e166836 lib: sha256: move common function to sha256_common.c
+- e364a9148f0 lib: sha256: add feature sha256_hmac
+- 44ce63016d8 test: lib: add test for sha256_hmac
+- 12e841114db lib: mbedtls: sha256: add support of key derivation
+- 71503620e83 test: lib: add test for key derivation
+- 3f9d18254bf configs: sandbox: enable mbedtls
+- 639cd409987 Merge patch series "add the support of sha256_hmac and sha256_hkdf"
+
+### Conversation log
+The repository state is clean (untracked files are fine). Let me create and checkout the new branch based on ci/master:
+
+Good, now let me start cherry-picking the commits in order. The first commit is eec32a35d74, which may already be applied as 43cae46b4af. Let me first check if they are the same:
+
+The patches are identical except for the commit hash! This means eec32a35d74 is already applied as 43cae46b4af. Let me check the second commit (f88ccd32b5e vs d39034fe347):
+
+The second commit is also identical except for the hash. Let me check the third one (70a42bf2170 vs 2f5a522f1ff):
+
+The third commit is also the same, just with different context line numbers. Let me check the fourth one (ccc5e166836 vs c13ac547d23):
+
+The fourth commit has similar changes but with a notable difference - the original uses `XPL_` while the found one uses `PHASE_`. This is a minor naming change that happened elsewhere in the codebase. The actual changes are the same (adding sha256_common.o). Let me verify that the remaining commits are also present. Let me check the next few that weren't marked as "maybe already applied":
+
+Let me check the original commit subject:
+
+Let me search for more specific patterns:
+
+It looks like the later commits are not present in ci/master. The first 4 are already applied with different hashes, but the remaining 6 aren't. Let me start the cherry-pick process from the 5th commit (e364a9148f0):
+
+There's a conflict. Let me check the conflict:
+
+I see what's happening. The conflict shows that the sha256_hkdf function is already in HEAD (ci/master), but the commit e364a9148f0 is from before that was added. This means the subsequent commits (12e841114db which adds sha256_hkdf) might also already be applied.
+
+Let me check if sha256_hkdf and the test commits are already in ci/master:
+
+Let me check the merge commit in ci/master to see what commits it brought in:
+
+Let me look at the range of commits in ci/master that might cover this series:
+
+Let me check what's around the sha256 related commits in ci/master:
+
+Let me abort this cherry-pick and verify each original commit by searching for its subject in ci/master:
+
+OK so 6 commits are not in ci/master. But wait, I need to check more carefully. The sha256_hkdf function IS already present in ci/master's sha256.h file (I saw it in the conflict). Let me check how it got there:
+
+Interesting! Let me check 8fb478b7c42:
+
+Let me look at 8fb478b7c42 more closely:
+
+This is a different commit from the ones we're trying to cherry-pick. Let me see what 8fb478b7c42 does to sha256.h:
+
+Now I understand! The commit 8fb478b7c42 is a squashed or combined commit that includes:
+1. The mbedtls_options.h changes 
+2. AND also includes the sha256_hmac and sha256_hkdf function declarations that were in e364a9148f0 and 12e841114db!
+
+Let me check if sha256_hmac implementation is also included:
+
+Let me check if the sha256_hmac function implementation exists in ci/master:
+
+The sha256_hmac function is NOT implemented in ci/master. The header just declares it. Let me verify by checking if there's a sha256_hmac implementation anywhere:
+
+OK, so the sha256_hmac declaration is in the header but the implementation is NOT there. Let me check what e364a9148f0 adds:
+
+So e364a9148f0:
+1. Adds sha256_hmac declaration to sha256.h (this seems partially present in 8fb478b7c42)
+2. Adds sha256_hmac implementation to lib/mbedtls/sha256.c
+3. Adds sha256_hmac implementation to lib/sha256.c
+
+So 8fb478b7c42 in ci/master added the declaration but NOT the implementation. That means we do need to cherry-pick e364a9148f0, but it will conflict because the header already has the declaration.
+
+Let me understand the full picture. The header in ci/master has:
+- sha256_hmac declaration (from 8fb478b7c42)
+- sha256_hkdf declaration (from 8fb478b7c42)
+
+But the implementations of sha256_hmac and sha256_hkdf need to come from:
+- e364a9148f0 (sha256_hmac impl)
+- 12e841114db (sha256_hkdf impl)
+
+Let me try cherry-picking with conflict resolution:
+
+The conflict is simple - the sha256_hkdf declaration is already in ci/master (from 8fb478b7c42), and e364a9148f0 doesn't have it. We just need to keep what's in HEAD. Let me resolve:
+
+The conflict is resolved. Now let me add the file and continue:
+
+Let me verify the delta and check the build:
+
+The cherry-picked commit has 66 lines added (just the implementations) while the original had 70 lines (including the header change which is already in ci/master). This is expected - the header declaration was already present.
+
+Let me run the build test:
+
+Build successful. Now let me cherry-pick the second commit (44ce63016d8 - test for sha256_hmac):
+
+Perfect match. Let me build test:
+
+Now the third commit (12e841114db - key derivation support):
+
+The original added 43 lines (20 to header, 23 to implementation) but the cherry-pick only added 23 lines (implementation only). This is because the header declaration is already present in ci/master (from 8fb478b7c42). This is expected.
+
+Now the fourth commit (71503620e83 - test for key derivation):
+
+Now the fifth commit (3f9d18254bf - configs: sandbox: enable mbedtls):
+
+Now the final commit - the merge commit (639cd409987). This requires -m 1 --allow-empty:
+
+Multiple conflicts. Let me check them:
+
+The conflict in lib/Makefile is about XPL_ vs PHASE_ naming. The HEAD version uses PHASE_ (newer convention) and also has the BLAKE2 changes. Let me keep HEAD's version:
+
+The conflict in lib/mbedtls/Kconfig is complex. The conflict includes things that are already in ci/master. Let me look more carefully at the conflict and resolve it:
+
+This is a messy conflict. The merge commit from the original tree has SPL config that the ci/master tree has in a different structure (it's a reorganized structure). Let me check if the SPL_HKDF_MBEDTLS etc. are already present in ci/master:
+
+The SPL_HKDF_MBEDTLS is duplicated in the conflict file. This is because ci/master already has the reorganized structure. The merge commit from us/next was before that reorganization. The HEAD (ci/master) version is correct. Let me just use HEAD's version:
+
+Now check lib/mbedtls/Makefile:
+
+The HEAD version has PHASE_ and also includes PKCS5 and LUKS support. The merged version just adds HKDF which is already in HEAD. I'll use HEAD:
+
+Now check mbedtls_def_config.h:
+
+Again HEAD has more features (PKCS5, LUKS). The merge commit just changes CONFIG_MBEDTLS_LIB_X509 to a different form which is older. I'll use HEAD:
+
+Now check the status:
+
+All conflicts resolved! Let me continue the cherry-pick:
+
+The merge commit is empty because all the changes from the original merge are already in ci/master through different commits. As instructed, I need to preserve the merge commit with --allow-empty:
+
+Now let me verify the commit with git log and run the final build:
+
+I see that I have 6 commits cherry-picked, but the request originally had 10 commits with 4 that were "maybe already applied". Let me verify:
+
+1. eec32a35d74 - tools: kwbimage.h: use linux/compiler_attributes.h → already applied as 43cae46b4af ✓ (SKIPPED - same patch)
+2. f88ccd32b5e - tools: renesas_spkgimage.h: use linux/compiler_attributes.h → already applied as d39034fe347 ✓ (SKIPPED - same patch)
+3. 70a42bf2170 - mbedtls: enable support of hkdf → already applied as 2f5a522f1ff ✓ (SKIPPED - same patch)
+4. ccc5e166836 - lib: sha256: move common function → already applied as c13ac547d23 ✓ (SKIPPED - same patch with XPL_→PHASE_ rename)
+5. e364a9148f0 - lib: sha256: add feature sha256_hmac → ✓ cherry-picked (aee323379f5)
+6. 44ce63016d8 - test: lib: add test for sha256_hmac → ✓ cherry-picked (afe83764d74)
+7. 12e841114db - lib: mbedtls: sha256: add support of key derivation → ✓ cherry-picked (b8fe9d09468)
+8. 71503620e83 - test: lib: add test for key derivation → ✓ cherry-picked (eecc5443367)
+9. 3f9d18254bf - configs: sandbox: enable mbedtls → ✓ cherry-picked (6865fb472d6)
+10. 639cd409987 - Merge patch series → ✓ cherry-picked as empty (33d7148a28d)
+
+6 commits cherry-picked (5 regular + 1 empty merge), 4 skipped as already applied. That's the full 10.
+
+Let me run the final build test:
+
+Build passes. Let me summarize the final status:
+
+## Final Status
+
+### Cherry-Pick Results
+
+**Branch created:** `cherry-eec32a35d74` based on `ci/master`
+
+**Commits Skipped (Already Applied):**
+| Original Hash | Already Applied As | Subject |
+|---|---|---|
+| eec32a35d74 | 43cae46b4af | tools: kwbimage.h: use linux/compiler_attributes.h |
+| f88ccd32b5e | d39034fe347 | tools: renesas_spkgimage.h: use linux/compiler_attributes.h |
+| 70a42bf2170 | 2f5a522f1ff | mbedtls: enable support of hkdf |
+| ccc5e166836 | c13ac547d23 | lib: sha256: move common function to sha256_common.c |
+
+All 4 commits were verified to have identical patches (only minor differences in line numbers and XPL_→PHASE_ naming convention changes).
+
+**Commits Cherry-Picked (6):**
+| Original Hash | New Hash | Subject | Notes |
+|---|---|---|---|
+| e364a9148f0 | aee323379f5 | lib: sha256: add feature sha256_hmac | Conflict in sha256.h resolved (declaration already present from 8fb478b7c42) |
+| 44ce63016d8 | afe83764d74 | test: lib: add test for sha256_hmac | Clean |
+| 12e841114db | b8fe9d09468 | lib: mbedtls: sha256: add support of key derivation | Header changes already present |
+| 71503620e83 | eecc5443367 | test: lib: add test for key derivation | Clean |
+| 3f9d18254bf | 6865fb472d6 | configs: sandbox: enable mbedtls | Clean |
+| 639cd409987 | 33d7148a28d | Merge patch series "add the support of sha256_hmac and sha256_hkdf" | Empty commit - conflicts resolved with ours (ci/master already has changes) |
+
+**Build Result:** ✅ OK - sandbox builds successfully
+
+**Fix-ups Made:**
+1. `include/u-boot/sha256.h` - Conflict resolved. The sha256_hmac and sha256_hkdf declarations were already added to ci/master via commit 8fb478b7c42. Only the implementations from e364a9148f0 and 12e841114db were needed.
+2. Merge commit 639cd409987 - Resolved as empty commit. The Kconfig, Makefile, and mbedtls_def_config.h conflicts were resolved by keeping ci/master's version which has more recent refactoring (PHASE_ naming) and additional features (PKCS5, LUKS support).
+
+**Deltas:**
+- e364a9148f0: Original had 70 lines (+4 header, +66 impl), cherry-picked has 66 lines (impl only) - expected difference due to header already present
+- 12e841114db: Original had 43 lines (+20 header, +23 impl), cherry-picked has 23 lines (impl only) - expected difference due to header already present
+- Other commits matched exactly
+
+**The cherry-pick branch is ready for pushing.**
+
+---
+
