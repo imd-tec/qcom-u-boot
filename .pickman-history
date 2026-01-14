@@ -2085,3 +2085,67 @@ Rebased onto latest ci/master. Build test passes (sandbox).
 
 ---
 
+### Review: 2026-01-14
+
+Branch: cherry-3e4eb3e2591
+
+Comments addressed:
+
+
+### Conversation log
+The branch is 406 commits behind ci/master. Let me record the current commit stats before rebasing:
+
+Now I have the pre-rebase stats. Let me do the rebase:
+
+Rebase completed successfully with no conflicts. Now let me verify the commit stats match:
+
+Stats match! Let me verify the rest:
+
+All commit stats match exactly. Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the next one:
+
+## Summary
+
+**Rebase completed successfully.**
+
+### What was done:
+1. Fetched latest `ci/master` (now at a5a45ea2b2f - 406 commits ahead of the original base)
+2. Rebased branch `cherry-3e4eb3e2591` onto latest `ci/master`
+3. Rebase completed cleanly with no conflicts (all 16 commits rebased successfully)
+4. Verified all commit deltas remain unchanged after rebase
+5. Build test passed (sandbox builds successfully)
+6. Created local backup branch `cherry-3e4eb3e2591-v3`
+7. Force pushed to update the MR
+
+### Commits rebased (16 total):
+| # | New SHA | Subject | Delta Match |
+|---|---------|---------|-------------|
+| 1 | d54f99b3d4e | doc: coolpi: Fix the defconfig name | ✅ 1+/1- |
+| 2 | 96f2416b541 | efi_loader: Fix section alignment on EFI binaries | ✅ 1+/0- |
+| 3 | 14b82a887f1 | scripts/Makefile.lib: add -L option to LD command | ✅ 2+/2- |
+| 4 | ba5efccfabe | efi_loader: use INCLUDE in EFI linker scripts | ✅ 77+/225- |
+| 5 | db28d37549f | efi_loader: correct SizeOfCode, SizeOfInitializedData | ✅ 138+/28- |
+| 6 | 63551f38886 | efi_loader: use include in ARM EFI linker script | ✅ 6+/74- |
+| 7 | 0fcdffe91e1 | Makefile: let clean remove capsule*.efi-capsule | ✅ Empty |
+| 8 | 34e84fdb72b | efi_loader: Refactor device and image paths | ✅ Empty |
+| 9 | c1b8bc7ee49 | efi_loader: Make efi_run_image() static | ✅ Empty |
+| 10 | 10ce127cac7 | Makefile: Make sure all linker input objects exist | ✅ 12+/3- |
+| 11 | 16cf0301544 | qconfig.py: Update resync message | ✅ Empty |
+| 12 | c3489134bb8 | squashfs: Fix sqfs_inode_size() | ✅ 4+/2- |
+| 13 | 96746245a44 | Gitlab: Add DEFAULT_FAST_ARM64_TAG | ✅ Empty |
+| 14 | 6f203218eab | Merge tag 'efi-2025-04-rc1' | ✅ Empty |
+| 15 | 359e7829b2a | pickman: Record cherry-pick of 14 commits | ✅ 350+/0- |
+| 16 | 8d25b8a3abd | pickman: Record review handling | ✅ 72+/0- |
+
+### Branch status:
+- Branch is now **0 commits behind** ci/master (was 406 commits behind)
+- Branch is **16 commits ahead** of ci/master
+
+### Suggested MR comment:
+```
+Rebased onto latest ci/master. Build test passes (sandbox).
+```
+
+---
+
