@@ -455,10 +455,7 @@ void ext4_unregister_sysfs(void *sb)
 
 /* jbd2_journal_destroy is now in journal.c */
 
-/* percpu rwsem */
-void percpu_free_rwsem(struct percpu_rw_semaphore *sem)
-{
-}
+/* percpu_free_rwsem is now in linux/percpu.h */
 
 /* Block device ops */
 int sync_blockdev(struct block_device *bdev)
@@ -589,11 +586,7 @@ void iput(struct inode *inode)
 	}
 }
 
-/* percpu init rwsem */
-int percpu_init_rwsem(struct percpu_rw_semaphore *sem)
-{
-	return 0;
-}
+/* percpu_init_rwsem is now in linux/percpu.h */
 
 /* atomic_add and atomic64_add are now in asm-generic/atomic.h */
 

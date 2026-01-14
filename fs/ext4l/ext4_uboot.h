@@ -103,8 +103,9 @@ typedef struct { atomic_t refs; } refcount_t;
 
 /* RB tree types - from <linux/rbtree.h> included above */
 
-/* percpu_counter - use Linux header */
+/* percpu - use Linux headers */
 #include <linux/percpu_counter.h>
+#include <linux/percpu.h>
 
 /* Project ID type */
 typedef struct { unsigned int val; } kprojid_t;
@@ -232,15 +233,7 @@ struct fiemap_extent_info {
 
 /* fscrypt_str, qstr are now in ext4_fscrypt.h */
 
-/* percpu rw semaphore - stubs */
-struct percpu_rw_semaphore {
-	int dummy;
-};
-
-#define percpu_down_read(sem)	do { } while (0)
-#define percpu_up_read(sem)	do { } while (0)
-#define percpu_down_write(sem)	do { } while (0)
-#define percpu_up_write(sem)	do { } while (0)
+/* percpu rw semaphore is in linux/percpu.h */
 
 /* Memory allocation context - stubs */
 static inline unsigned int memalloc_nofs_save(void) { return 0; }
@@ -2095,9 +2088,7 @@ void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
 char *file_path(struct file *file, char *buf, int buflen);
 struct block_device *file_bdev(struct file *file);
 
-/* Percpu rwsem - declarations for stub.c */
-int percpu_init_rwsem(struct percpu_rw_semaphore *sem);
-void percpu_free_rwsem(struct percpu_rw_semaphore *sem);
+/* percpu_init_rwsem/percpu_free_rwsem are in linux/percpu.h */
 
 /* Block device sync - declarations for stub.c */
 int sync_blockdev(struct block_device *bdev);
@@ -2302,14 +2293,7 @@ struct xarray {
 	int dummy;
 };
 
-/* Per-CPU stubs - U-Boot is single-threaded */
-#define DEFINE_PER_CPU(type, name)	type name
-#define per_cpu(var, cpu)		(var)
-#define per_cpu_ptr(ptr, cpu)		(ptr)
-#define this_cpu_inc(var)		((var)++)
-#define this_cpu_read(var)		(var)
-#define for_each_possible_cpu(cpu)	for ((cpu) = 0; (cpu) < 1; (cpu)++)
-#define smp_processor_id()		0
+/* Per-CPU stubs are in linux/percpu.h */
 
 /* XArray function stubs */
 #define xa_init(xa)			do { } while (0)
@@ -2392,12 +2376,7 @@ struct seq_operations {
 /* Block layer constants */
 #define BLK_MAX_SEGMENT_SIZE		65536
 
-/* num_possible_cpus - number of possible CPUs (always 1 in U-Boot) */
-#define num_possible_cpus()		1
-
-/* Per-CPU allocation stubs */
-#define alloc_percpu(type)		((type *)kzalloc(sizeof(type), GFP_KERNEL))
-#define free_percpu(ptr)		kfree(ptr)
+/* num_possible_cpus, alloc_percpu, free_percpu are in linux/percpu.h */
 
 /* Block device properties */
 #define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
