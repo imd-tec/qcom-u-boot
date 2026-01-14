@@ -373,32 +373,8 @@ int ext4_update_overhead(struct super_block *sb, bool force)
 	return 0;
 }
 
-/* String stubs */
-/* strtomem_pad is now a macro in ext4_uboot.h */
-
-char *strreplace(const char *str, char old, char new)
-{
-	char *s = (char *)str;
-
-	while (*s) {
-		if (*s == old)
-			*s = new;
-		s++;
-	}
-	return (char *)str;
-}
-
-char *kmemdup_nul(const char *s, size_t len, gfp_t gfp)
-{
-	char *buf;
-
-	buf = kmalloc(len + 1, gfp);
-	if (buf) {
-		memcpy(buf, s, len);
-		buf[len] = '\0';
-	}
-	return buf;
-}
+/* strtomem_pad, strscpy_pad, strreplace are now in linux/string.h */
+/* kmemdup_nul is now in linux/slab.h, with implementation in lib/string.c */
 
 /* Page allocation */
 unsigned long get_zeroed_page(gfp_t gfp)
@@ -506,8 +482,8 @@ int sb_set_blocksize(struct super_block *sb, int size)
 	return size;
 }
 
-/* strscpy_pad is now a macro in ext4_uboot.h */
-/* kmemdup_nul is defined earlier in this file */
+/* strscpy_pad is now a macro in linux/string.h */
+/* kmemdup_nul is now in lib/string.c */
 
 /* Address check */
 int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks)

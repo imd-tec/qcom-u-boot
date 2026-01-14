@@ -20,6 +20,7 @@
 #include <limits.h>
 #include <linux/compiler.h>
 #include <linux/ctype.h>
+#include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/types.h>
 #include <malloc.h>
@@ -802,3 +803,27 @@ void *memchr_inv(const void *start, int c, size_t bytes)
 	return check_bytes8(start, value, bytes % 8);
 }
 #endif
+
+char *strreplace(char *str, char old, char new)
+{
+	char *s = str;
+
+	while (*s) {
+		if (*s == old)
+			*s = new;
+		s++;
+	}
+	return str;
+}
+
+char *kmemdup_nul(const char *s, size_t len, gfp_t gfp)
+{
+	char *buf;
+
+	buf = kmalloc(len + 1, gfp);
+	if (buf) {
+		memcpy(buf, s, len);
+		buf[len] = '\0';
+	}
+	return buf;
+}

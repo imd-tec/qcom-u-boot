@@ -147,6 +147,47 @@ char *memdup(const void *src, size_t len);
 unsigned long ustrtoul(const char *cp, char **endp, unsigned int base);
 unsigned long long ustrtoull(const char *cp, char **endp, unsigned int base);
 
+/**
+ * strreplace() - Replace all occurrences of a character in a string
+ * @str: The string to operate on
+ * @old: The character being replaced
+ * @new: The character @old is replaced with
+ *
+ * Replaces all occurrences of character @old with character @new in
+ * the string @str in place.
+ *
+ * Return: pointer to the string @str itself
+ */
+char *strreplace(char *str, char old, char new);
+
+/**
+ * strtomem_pad - Copy string to fixed-size buffer with padding
+ * @dest: Destination buffer (must be an array, not a pointer)
+ * @src: Source string
+ * @pad: Padding character to fill remaining space
+ *
+ * Copy @src to @dest, truncating if necessary. If @src is shorter
+ * than @dest, fill the remaining bytes with @pad.
+ */
+#define strtomem_pad(dest, src, pad) do {		\
+	size_t _len = strlen(src);			\
+	if (_len >= sizeof(dest))			\
+		_len = sizeof(dest);			\
+	memcpy(dest, src, _len);			\
+	if (_len < sizeof(dest))			\
+		memset((char *)(dest) + _len, (pad),	\
+		       sizeof(dest) - _len);		\
+} while (0)
+
+/**
+ * strscpy_pad - Copy string to fixed-size buffer with padding
+ * @dest: Destination buffer (must be an array)
+ * @src: Source string
+ *
+ * Copy @src to @dest ensuring null termination and zero-padding.
+ */
+#define strscpy_pad(dest, src)	strncpy(dest, src, sizeof(dest))
+
 #ifdef __cplusplus
 }
 #endif

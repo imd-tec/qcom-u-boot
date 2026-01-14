@@ -934,16 +934,8 @@ struct dx_hash_info {
 /* pr_warn_once is in linux/printk.h */
 
 /* lockdep_assert_held_read is in linux/lockdep.h */
-
-/* strtomem_pad - copy string to fixed-size buffer with padding */
-#define strtomem_pad(dest, src, pad) do { \
-	size_t _len = strlen(src); \
-	if (_len >= sizeof(dest)) \
-		_len = sizeof(dest); \
-	memcpy(dest, src, _len); \
-	if (_len < sizeof(dest)) \
-		memset((char *)(dest) + _len, (pad), sizeof(dest) - _len); \
-} while (0)
+/* strtomem_pad is in linux/string.h */
+/* strscpy_pad is in linux/string.h */
 
 /* Memory weight - count set bits */
 static inline unsigned long memweight(const void *ptr, size_t bytes)
@@ -2075,10 +2067,7 @@ struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
 /* I/O priority - declaration for stub.c */
 int IOPRIO_PRIO_VALUE(int class, int data);
 
-/* String operations */
-char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
-#define strscpy_pad(dst, src)		strncpy(dst, src, sizeof(dst))
-
+/* kmemdup_nul is in linux/slab.h */
 /* fscrypt declarations are in ext4_fscrypt.h */
 
 /* Memory allocation - declarations for stub.c */
@@ -2191,8 +2180,7 @@ struct mb_cache_entry {
 void generic_set_sb_d_ops(struct super_block *sb);
 struct dentry *d_make_root(struct inode *inode);
 
-/* String operations - declarations for stub.c */
-char *strreplace(const char *str, char old, char new);
+/* strreplace is in linux/string.h */
 
 /* Ratelimit - declaration for stub.c */
 void ratelimit_state_init(void *rs, int interval, int burst);
