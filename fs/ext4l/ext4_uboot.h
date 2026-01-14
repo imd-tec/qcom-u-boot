@@ -40,6 +40,7 @@
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <linux/time.h>		/* For timespec64, time64_t */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
+#include "ext4_trace.h"		/* Trace event stubs */
 
 /*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
@@ -302,12 +303,7 @@ extern struct user_namespace init_user_ns;
 /* sb_rdonly - check if filesystem is mounted read-only */
 #define sb_rdonly(sb)	((sb)->s_flags & SB_RDONLY)
 
-/* Trace stubs */
-#define trace_ext4_journal_start_inode(...)	do { } while (0)
-#define trace_ext4_journal_start_sb(...)	do { } while (0)
-#define trace_ext4_journal_start_reserved(...)	do { } while (0)
-#define trace_ext4_forget(...)			do { } while (0)
-#define trace_ext4_read_block_bitmap_load(...)	do { } while (0)
+/* Trace stubs are now in ext4_trace.h */
 
 /* Buffer operations - stubs */
 #define wait_on_buffer(bh)		do { } while (0)
@@ -366,12 +362,6 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
 #define dquot_drop(inode)			do { (void)(inode); } while (0)
 #endif /* _LINUX_QUOTAOPS_H */
-
-/* Trace stubs for ialloc.c */
-#define trace_ext4_load_inode_bitmap(...)	do { } while (0)
-#define trace_ext4_free_inode(...)		do { } while (0)
-#define trace_ext4_allocate_inode(...)		do { } while (0)
-#define trace_ext4_request_inode(...)		do { } while (0)
 
 /* icount - inode reference count */
 #define icount_read(inode)			(1)
@@ -1059,26 +1049,6 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 
 /* extents.c stubs */
 
-/* Trace functions for extents.c */
-#define trace_ext4_ext_load_extent(...)		do { } while (0)
-#define trace_ext4_ext_rm_idx(...)		do { } while (0)
-#define trace_ext4_remove_blocks(...)		do { } while (0)
-#define trace_ext4_ext_rm_leaf(...)		do { } while (0)
-#define trace_ext4_ext_remove_space(...)	do { } while (0)
-#define trace_ext4_ext_remove_space_done(...)	do { } while (0)
-#define trace_ext4_ext_convert_to_initialized_enter(...)	do { } while (0)
-#define trace_ext4_ext_convert_to_initialized_fastpath(...)	do { } while (0)
-#define trace_ext4_ext_handle_unwritten_extents(...)	do { } while (0)
-#define trace_ext4_get_implied_cluster_alloc_exit(...)	do { } while (0)
-#define trace_ext4_ext_map_blocks_enter(...)	do { } while (0)
-#define trace_ext4_ext_map_blocks_exit(...)	do { } while (0)
-#define trace_ext4_ext_show_extent(...)		do { } while (0)
-#define trace_ext4_collapse_range(...)		do { } while (0)
-#define trace_ext4_insert_range(...)		do { } while (0)
-#define trace_ext4_zero_range(...)		do { } while (0)
-#define trace_ext4_fallocate_enter(...)		do { } while (0)
-#define trace_ext4_fallocate_exit(...)		do { } while (0)
-
 /* rwsem is_locked stub */
 #define rwsem_is_locked(sem)		(1)
 
@@ -1176,10 +1146,6 @@ static inline int in_range(unsigned long val, unsigned long start,
 #define bdev_write_zeroes_unmap_sectors(b) ({ (void)(b); 0; })
 
 /* indirect.c stubs */
-
-/* Trace functions for indirect.c */
-#define trace_ext4_ind_map_blocks_enter(...)	do { } while (0)
-#define trace_ext4_ind_map_blocks_exit(...)	do { } while (0)
 
 /* umin - unsigned min (Linux 6.x) */
 #define umin(x, y)	((x) < (y) ? (x) : (y))
@@ -1442,38 +1408,6 @@ typedef unsigned int projid_t;
 
 /* hash_64 - simple 64-bit hash */
 #define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
-
-/* Trace stubs for inode.c */
-#define trace_ext4_begin_ordered_truncate(...)	do { } while (0)
-#define trace_ext4_evict_inode(...)		do { } while (0)
-#define trace_ext4_da_update_reserve_space(...)	do { } while (0)
-#define trace_ext4_da_reserve_space(...)	do { } while (0)
-#define trace_ext4_da_release_space(...)	do { } while (0)
-#define trace_ext4_da_write_pages_extent(...)	do { } while (0)
-#define trace_ext4_writepages(...)		do { } while (0)
-#define trace_ext4_da_write_folios_start(...)	do { } while (0)
-#define trace_ext4_da_write_folios_end(...)	do { } while (0)
-#define trace_ext4_writepages_result(...)	do { } while (0)
-#define trace_ext4_da_write_begin(...)		do { } while (0)
-#define trace_ext4_da_write_end(...)		do { } while (0)
-#define trace_ext4_alloc_da_blocks(...)		do { } while (0)
-#define trace_ext4_read_folio(...)		do { } while (0)
-#define trace_ext4_invalidate_folio(...)	do { } while (0)
-#define trace_ext4_journalled_invalidate_folio(...)	do { } while (0)
-#define trace_ext4_release_folio(...)		do { } while (0)
-#define trace_ext4_punch_hole(...)		do { } while (0)
-#define trace_ext4_truncate_enter(...)		do { } while (0)
-#define trace_ext4_truncate_exit(...)		do { } while (0)
-#define trace_ext4_load_inode(...)		do { } while (0)
-#define trace_ext4_other_inode_update_time(...)	do { } while (0)
-#define trace_ext4_mark_inode_dirty(...)	do { } while (0)
-#define trace_ext4_write_begin(...)		do { } while (0)
-#define trace_ext4_write_end(...)		do { } while (0)
-#define trace_ext4_journalled_write_end(...)	do { } while (0)
-#define trace_ext4_sync_file_enter(...)		do { } while (0)
-#define trace_ext4_sync_file_exit(...)		do { } while (0)
-#define trace_ext4_unlink_enter(...)		do { } while (0)
-#define trace_ext4_unlink_exit(...)		do { } while (0)
 
 /* Dentry operations - stubs */
 #define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
@@ -2296,12 +2230,6 @@ int inode_generic_drop(struct inode *inode);
 
 /* rwlock_init is a macro in linux/spinlock.h */
 
-/* Trace stubs */
-#define trace_ext4_drop_inode(i, d)		do { } while (0)
-#define trace_ext4_nfs_commit_metadata(i)	do { } while (0)
-#define trace_ext4_prefetch_bitmaps(...)	do { } while (0)
-#define trace_ext4_lazy_itable_init(...)	do { } while (0)
-
 /* slab usercopy - use regular kmem_cache_create */
 #define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
 	kmem_cache_create(n, sz, al, fl, c)
@@ -2475,9 +2403,6 @@ void dquot_free_block(struct inode *inode, loff_t nr);
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
 struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
 
-/* Trace stubs for super.c */
-#define trace_ext4_sync_fs(sb, wait)	do { (void)(sb); (void)(wait); } while (0)
-
 /* Workqueue operations - stubs */
 #define flush_workqueue(wq)		do { (void)(wq); } while (0)
 
@@ -2555,28 +2480,6 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 #undef folio_address
 #define folio_address(folio)		((folio)->data)
 
-/* Trace stubs for mballoc.c */
-#define trace_ext4_mb_bitmap_load(sb, group) \
-	do { (void)(sb); (void)(group); } while (0)
-#define trace_ext4_mb_buddy_bitmap_load(sb, group) \
-	do { (void)(sb); (void)(group); } while (0)
-#define trace_ext4_mballoc_alloc(ac) \
-	do { (void)(ac); } while (0)
-#define trace_ext4_mballoc_prealloc(ac) \
-	do { (void)(ac); } while (0)
-#define trace_ext4_mballoc_discard(sb, inode, group, start, len) \
-	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
-#define trace_ext4_mballoc_free(sb, inode, group, start, len) \
-	do { (void)(sb); (void)(inode); (void)(group); (void)(start); (void)(len); } while (0)
-#define trace_ext4_mb_release_inode_pa(pa, block, count) \
-	do { (void)(pa); (void)(block); (void)(count); } while (0)
-#define trace_ext4_mb_release_group_pa(sb, pa) \
-	do { (void)(sb); (void)(pa); } while (0)
-#define trace_ext4_mb_new_inode_pa(ac, pa) \
-	do { (void)(ac); (void)(pa); } while (0)
-#define trace_ext4_mb_new_group_pa(ac, pa) \
-	do { (void)(ac); (void)(pa); } while (0)
-
 /* sb_end_intwrite stub */
 #define sb_end_intwrite(sb)		do { (void)(sb); } while (0)
 
@@ -2618,10 +2521,6 @@ struct seq_operations {
 /* Block device properties */
 #define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
 
-/* Trace stub for discard */
-#define trace_ext4_discard_blocks(sb, blk, count) \
-	do { (void)(sb); (void)(blk); (void)(count); } while (0)
-
 /* sb_issue_discard - issue discard request (no-op in U-Boot) */
 #define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
 	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
@@ -2646,22 +2545,6 @@ struct seq_operations {
 /* Scheduler stubs */
 #define schedule_timeout_uninterruptible(t) do { } while (0)
 #define need_resched()			(0)
-
-/* Trace stubs for mballoc.c */
-#define trace_ext4_discard_preallocations(inode, cnt) \
-	do { (void)(inode); (void)(cnt); } while (0)
-#define trace_ext4_mb_discard_preallocations(sb, needed) \
-	do { (void)(sb); (void)(needed); } while (0)
-#define trace_ext4_request_blocks(ar) \
-	do { (void)(ar); } while (0)
-#define trace_ext4_allocate_blocks(ar, block) \
-	do { (void)(ar); (void)(block); } while (0)
-#define trace_ext4_free_blocks(inode, block, count, flags) \
-	do { (void)(inode); (void)(block); (void)(count); (void)(flags); } while (0)
-#define trace_ext4_trim_extent(sb, group, start, count) \
-	do { (void)(sb); (void)(group); (void)(start); (void)(count); } while (0)
-#define trace_ext4_trim_all_free(sb, group, start, max) \
-	do { (void)(sb); (void)(group); (void)(start); (void)(max); } while (0)
 
 /* Block device operations */
 #define sb_find_get_block_nonatomic(sb, block) \
@@ -2832,34 +2715,12 @@ struct wait_bit_entry {
 #define release_dentry_name_snapshot(snap) \
 	do { (void)(snap); } while (0)
 
-/* Fast commit trace stubs */
-#define trace_ext4_fc_track_unlink(handle, inode, dentry, ret) \
-	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
-#define trace_ext4_fc_track_link(handle, inode, dentry, ret) \
-	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
-#define trace_ext4_fc_track_create(handle, inode, dentry, ret) \
-	do { (void)(handle); (void)(inode); (void)(dentry); (void)(ret); } while (0)
-#define trace_ext4_fc_track_inode(handle, inode, ret) \
-	do { (void)(handle); (void)(inode); (void)(ret); } while (0)
-#define trace_ext4_fc_track_range(handle, inode, start, end, ret) \
-	do { (void)(handle); (void)(inode); (void)(start); (void)(end); (void)(ret); } while (0)
-
 /* lockdep stubs */
 #define lockdep_assert_not_held(lock)	do { (void)(lock); } while (0)
 
 /* Request flags for block I/O */
 #define REQ_IDLE		0
 #define REQ_PREFLUSH		0
-
-/* Fast commit trace stubs */
-#define trace_ext4_fc_cleanup(sb, full, reason) \
-	do { (void)(sb); (void)(full); (void)(reason); } while (0)
-#define trace_ext4_fc_stats(sb) \
-	do { (void)(sb); } while (0)
-#define trace_ext4_fc_commit_start(sb, tid) \
-	do { (void)(sb); (void)(tid); } while (0)
-#define trace_ext4_fc_commit_stop(sb, nblks, status, tid) \
-	do { (void)(sb); (void)(nblks); (void)(status); (void)(tid); } while (0)
 
 /* wake_up_bit - wake up threads waiting on a bit */
 #define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
@@ -2868,12 +2729,6 @@ struct wait_bit_entry {
 #define d_alloc(parent, name)		({ (void)(parent); (void)(name); (struct dentry *)NULL; })
 #define d_drop(dentry)			do { (void)(dentry); } while (0)
 
-/* More fast commit trace stubs */
-#define trace_ext4_fc_replay_scan(sb, err, off) \
-	do { (void)(sb); (void)(err); (void)(off); } while (0)
-#define trace_ext4_fc_replay(sb, tag, ino, priv1, priv2) \
-	do { (void)(sb); (void)(tag); (void)(ino); (void)(priv1); (void)(priv2); } while (0)
-
 /* get_current_ioprio - I/O priority (not used in U-Boot) */
 #define get_current_ioprio()		(0)
 
@@ -2881,15 +2736,6 @@ struct wait_bit_entry {
 #define mutex_lock_io(m)		mutex_lock(m)
 #define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
 #define spin_needbreak(l)		({ (void)(l); 0; })
-
-/* JBD2 trace stubs */
-#define trace_jbd2_checkpoint(j, r)	do { (void)(j); (void)(r); } while (0)
-#define trace_jbd2_shrink_checkpoint_list(j, f, t, l, n, d) \
-	do { (void)(j); (void)(f); (void)(t); (void)(l); (void)(n); (void)(d); } while (0)
-#define trace_jbd2_checkpoint_stats(d, tid, stats) \
-	do { (void)(d); (void)(tid); (void)(stats); } while (0)
-#define trace_jbd2_drop_transaction(j, t) \
-	do { (void)(j); (void)(t); } while (0)
 
 /* JBD2 commit.c stubs */
 #define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
@@ -2925,30 +2771,11 @@ struct disk_partition *ext4l_get_partition(void);
 /* cond_resched_lock - conditionally reschedule while holding a lock */
 #define cond_resched_lock(lock)		do { (void)(lock); } while (0)
 
-/* More JBD2 trace stubs for commit.c */
-#define trace_jbd2_submit_inode_data(i)	do { (void)(i); } while (0)
-#define trace_jbd2_start_commit(j, t)	do { (void)(j); (void)(t); } while (0)
-#define trace_jbd2_commit_locking(j, t)	do { (void)(j); (void)(t); } while (0)
-#define trace_jbd2_commit_flushing(j, t) do { (void)(j); (void)(t); } while (0)
-#define trace_jbd2_commit_logging(j, t)	do { (void)(j); (void)(t); } while (0)
-#define trace_jbd2_run_stats(d, tid, stats) \
-	do { (void)(d); (void)(tid); (void)(stats); } while (0)
-#define trace_jbd2_end_commit(j, t)	do { (void)(j); (void)(t); } while (0)
-
-/* JBD2 transaction.c trace stubs */
-#define trace_jbd2_handle_start(...)		do { } while (0)
-#define trace_jbd2_handle_extend(...)		do { } while (0)
-#define trace_jbd2_handle_restart(...)		do { } while (0)
-#define trace_jbd2_handle_stats(...)		do { } while (0)
-#define trace_jbd2_lock_buffer_stall(...)	do { } while (0)
-
 /* JBD2 journal.c stubs */
 struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
 struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
 			     unsigned int size);
 int bmap(struct inode *inode, sector_t *block);
-#define trace_jbd2_update_log_tail(j, t, b, f) \
-	do { (void)(j); (void)(t); (void)(b); (void)(f); } while (0)
 
 /* seq_file operations for /proc - stubs */
 #define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
@@ -2979,16 +2806,6 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* lockdep stubs (struct lock_class_key defined earlier) */
 #define lockdep_init_map(...)	do { } while (0)
-
-/* More JBD2 trace stubs for journal.c */
-#define trace_jbd2_shrink_scan_enter(j, n, c) \
-	do { (void)(j); (void)(n); (void)(c); } while (0)
-#define trace_jbd2_shrink_scan_exit(j, n, s, c) \
-	do { (void)(j); (void)(n); (void)(s); (void)(c); } while (0)
-#define trace_jbd2_shrink_count(j, n, c) \
-	do { (void)(j); (void)(n); (void)(c); } while (0)
-#define trace_jbd2_write_superblock(j, f) \
-	do { (void)(j); (void)(f); } while (0)
 
 /* Block device operations for journal.c */
 int bh_read(struct buffer_head *bh, int flags);
@@ -3087,10 +2904,6 @@ struct fsmap {
 #define FMR_OF_SPECIAL_OWNER	(1 << 0)
 #define FMH_IF_VALID		0
 #define FMH_OF_DEV_T		(1 << 0)
-
-#define trace_ext4_fsmap_mapping(sb, d, a, p, l, o)	do { } while (0)
-#define trace_ext4_fsmap_low_key(sb, d, a, p, l, o)	do { } while (0)
-#define trace_ext4_fsmap_high_key(sb, d, a, p, l, o)	do { } while (0)
 
 /* list_sort and sort stubs for fsmap.c */
 #define list_sort(priv, head, cmp) \
