@@ -596,20 +596,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 /* Superblock flags */
 #define SB_LAZYTIME		(1 << 25)
 
-/* iattr valid flags */
-#define ATTR_MODE		(1 << 0)
-#define ATTR_UID		(1 << 1)
-#define ATTR_GID		(1 << 2)
-#define ATTR_SIZE		(1 << 3)
-#define ATTR_ATIME		(1 << 4)
-#define ATTR_MTIME		(1 << 5)
-#define ATTR_CTIME		(1 << 6)
-#define ATTR_ATIME_SET		(1 << 7)
-#define ATTR_MTIME_SET		(1 << 8)
-#define ATTR_FORCE		(1 << 9)
-#define ATTR_KILL_SUID		(1 << 11)
-#define ATTR_KILL_SGID		(1 << 12)
-#define ATTR_TIMES_SET		((1 << 7) | (1 << 8))
+/* ATTR_* iattr valid flags are in linux/fs.h */
 
 /* STATX flags and attributes */
 #define STATX_BTIME		0x00000800U

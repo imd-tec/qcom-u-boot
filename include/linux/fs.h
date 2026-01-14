@@ -160,6 +160,21 @@ struct iattr {
 	loff_t ia_size;
 };
 
+/* iattr valid flags - specify which fields of iattr are valid */
+#define ATTR_MODE	(1 << 0)
+#define ATTR_UID	(1 << 1)
+#define ATTR_GID	(1 << 2)
+#define ATTR_SIZE	(1 << 3)
+#define ATTR_ATIME	(1 << 4)
+#define ATTR_MTIME	(1 << 5)
+#define ATTR_CTIME	(1 << 6)
+#define ATTR_ATIME_SET	(1 << 7)
+#define ATTR_MTIME_SET	(1 << 8)
+#define ATTR_FORCE	(1 << 9)
+#define ATTR_KILL_SUID	(1 << 11)
+#define ATTR_KILL_SGID	(1 << 12)
+#define ATTR_TIMES_SET	(ATTR_ATIME_SET | ATTR_MTIME_SET)
+
 /* writeback_control - defined in linux/compat.h */
 
 /* fsnotify - stub */
