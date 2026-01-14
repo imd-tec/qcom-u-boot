@@ -524,11 +524,7 @@ typedef long long qsize_t;
 /* blk_opf_t - block operation flags */
 typedef unsigned int blk_opf_t;
 
-/* Forward declare buffer_head for bh_end_io_t */
-struct buffer_head;
-
-/* bh_end_io_t - buffer head end io callback */
-typedef void bh_end_io_t(struct buffer_head *bh, int uptodate);
+/* bh_end_io_t and struct buffer_head are in linux/buffer_head.h */
 
 /* Directory entry types */
 #define DT_UNKNOWN	0
@@ -919,9 +915,7 @@ struct dx_hash_info {
 #define EXT4_HTREE_EOF_64BIT   ((1ULL << (64 - 1)) - 1)
 
 /* jbd2_buffer_trigger_type is defined in jbd2.h */
-
-/* seq_file - forward declaration */
-struct seq_file;
+/* struct seq_file is in linux/seq_file.h */
 
 /* fscrypt_has_encryption_key, fscrypt_fname_siphash are in ext4_fscrypt.h */
 
@@ -1151,8 +1145,7 @@ static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
 	int name __attribute__((unused)) = 0
 #define __ratelimit(state)		({ (void)(state); 1; })
 
-/* seq_file tokens */
-#define SEQ_START_TOKEN			((void *)1)
+/* SEQ_START_TOKEN is in linux/seq_file.h */
 
 /* folio - memory page container stub */
 struct folio {
@@ -1874,8 +1867,7 @@ struct kstatfs {
 	long f_spare[4];
 };
 
-/* seq_file stubs */
-struct seq_file;
+/* struct seq_file is in linux/seq_file.h */
 
 /* Module stubs */
 struct module;
@@ -2339,13 +2331,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* pde_data - proc dir entry data (not supported in U-Boot) */
 #define pde_data(inode)			((void *)NULL)
 
-/* seq_operations for procfs iteration */
-struct seq_operations {
-	void *(*start)(struct seq_file *m, loff_t *pos);
-	void (*stop)(struct seq_file *m, void *v);
-	void *(*next)(struct seq_file *m, void *v, loff_t *pos);
-	int (*show)(struct seq_file *m, void *v);
-};
+/* struct seq_operations is in linux/seq_file.h */
 
 /* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
 #define DEFINE_RAW_FLEX(type, name, member, count) \
@@ -2462,9 +2448,7 @@ struct folio_iter {
 #define blk_status_to_errno(status)	(-(status))
 
 /* atomic_inc is in asm-generic/atomic.h */
-
-/* GFP_NOIO - allocation without I/O */
-#define GFP_NOIO			0
+/* GFP_NOIO is in linux/slab.h */
 
 /* fscrypt page-io stubs are in ext4_fscrypt.h */
 

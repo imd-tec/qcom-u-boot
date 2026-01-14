@@ -42,6 +42,9 @@
 #ifndef __GFP_NOFAIL
 #define __GFP_NOFAIL	((gfp_t)0)
 #endif
+#ifndef GFP_NOIO
+#define GFP_NOIO	((gfp_t)0)
+#endif
 
 void *kmalloc(size_t size, gfp_t flags);
 
