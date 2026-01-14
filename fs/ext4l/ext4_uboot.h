@@ -353,15 +353,13 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
 
-/* Quota operations - stubs (only define if quotaops.h not included) */
-#ifndef _LINUX_QUOTAOPS_H
+/* Quota operations - stubs */
 #define dquot_alloc_block_nofail(inode, nr)	\
 	({ (inode)->i_blocks += (nr) << ((inode)->i_blkbits - 9); 0; })
 #define dquot_initialize(inode)			({ (void)(inode); 0; })
 #define dquot_free_inode(inode)			do { (void)(inode); } while (0)
 #define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
 #define dquot_drop(inode)			do { (void)(inode); } while (0)
-#endif /* _LINUX_QUOTAOPS_H */
 
 /* icount - inode reference count */
 #define icount_read(inode)			(1)
@@ -2403,8 +2401,7 @@ void dquot_free_block(struct inode *inode, loff_t nr);
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
 struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
 
-/* Workqueue operations - stubs */
-#define flush_workqueue(wq)		do { (void)(wq); } while (0)
+/* flush_workqueue is now in linux/workqueue.h */
 
 /* Quota stubs for super.c */
 #define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)

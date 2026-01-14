@@ -79,6 +79,10 @@ static inline void destroy_workqueue(struct workqueue_struct *wq)
 {
 }
 
+static inline void flush_workqueue(struct workqueue_struct *wq)
+{
+}
+
 /* System workqueues - all stubs in U-Boot */
 #define system_dfl_wq		((struct workqueue_struct *)1)
 #define system_wq		((struct workqueue_struct *)1)
