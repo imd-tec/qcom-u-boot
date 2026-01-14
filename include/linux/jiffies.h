@@ -15,4 +15,18 @@
 
 #define MAX_JIFFY_OFFSET	((LONG_MAX >> 1) - 1)
 
+/* HZ - timer frequency (simplified for U-Boot) */
+#define HZ			1000
+
+/* jiffies - always 0 in U-Boot (no timer tick counter) */
+#define jiffies			0UL
+
+/* Time comparison macros are in include/time.h */
+
+/* Jiffies conversion */
+#define msecs_to_jiffies(m)	((m) * HZ / 1000)
+#define jiffies_to_msecs(j)	((j) * 1000 / HZ)
+#define nsecs_to_jiffies(ns)	((ns) / (1000000000L / HZ))
+#define round_jiffies_up(j)	(j)
+
 #endif /* _LINUX_JIFFIES_H */

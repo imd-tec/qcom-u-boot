@@ -1968,18 +1968,7 @@ struct fs_parse_result {
 /* crc16 - use U-Boot's implementation */
 #include <linux/crc16.h>
 
-/* Timer and timing stubs */
-#define HZ				1000
-#define jiffies				0UL
-#ifndef time_before
-#define time_before(a, b)		((long)((a) - (b)) < 0)
-#endif
-#ifndef time_after
-#define time_after(a, b)		time_before(b, a)
-#endif
-#define msecs_to_jiffies(m)		((m) * HZ / 1000)
-#define jiffies_to_msecs(j)		((j) * 1000 / HZ)
-#define round_jiffies_up(j)		(j)
+/* Timer and timing stubs are in linux/jiffies.h */
 
 /* Path lookup flags */
 #define LOOKUP_FOLLOW			0x0001
@@ -2022,8 +2011,7 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* Block size */
 #define BLOCK_SIZE			1024
 
-/* Time constants */
-#define NSEC_PER_SEC			1000000000L
+/* NSEC_PER_SEC is in linux/time.h */
 
 /* EXT4 magic number */
 #define EXT4_SUPER_MAGIC		0xEF53
@@ -2115,7 +2103,7 @@ void *kvzalloc(size_t size, gfp_t flags);
 
 /* Time operations */
 #define ktime_get_ns()			(0ULL)
-#define nsecs_to_jiffies(ns)		((ns) / (NSEC_PER_SEC / HZ))
+/* nsecs_to_jiffies is in linux/jiffies.h */
 
 /* Superblock write operations */
 #define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
