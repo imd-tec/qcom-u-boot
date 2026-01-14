@@ -38,6 +38,7 @@
 #include <linux/iomap.h>
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
+#include <linux/time.h>		/* For timespec64, time64_t */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 
 /*
@@ -70,11 +71,7 @@ static inline u32 rol32(u32 word, unsigned int shift)
 	return (word << (shift & 31)) | (word >> ((-shift) & 31));
 }
 
-/* Time types */
-struct timespec64 {
-	time_t tv_sec;
-	long tv_nsec;
-};
+/* Time types - timespec64 and time64_t are now in linux/time.h */
 
 /*
  * ktime_t, sector_t are now in linux/types.h
@@ -544,9 +541,7 @@ struct fscrypt_dummy_policy {
 };
 
 /* errseq_t is defined in linux/fs.h */
-
-/* time64_t */
-typedef s64 time64_t;
+/* time64_t is now in linux/time.h */
 
 /* IS_NOQUOTA - stub */
 #define IS_NOQUOTA(inode)	(0)
