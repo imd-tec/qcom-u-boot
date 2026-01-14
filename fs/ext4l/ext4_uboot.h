@@ -39,6 +39,8 @@
 #include <linux/seq_file.h>
 #include <linux/rbtree.h>	/* Real rbtree implementation */
 #include <linux/time.h>		/* For timespec64, time64_t */
+#include <linux/build_bug.h>	/* For BUILD_BUG_ON */
+#include <linux/bug.h>		/* For WARN_ON, WARN_ONCE */
 #include <u-boot/crc.h>		/* For crc32() used by crc32_be */
 #include "ext4_trace.h"		/* Trace event stubs */
 #include "ext4_fscrypt.h"	/* fscrypt stubs */
@@ -248,8 +250,15 @@ struct user_namespace {
 };
 extern struct user_namespace init_user_ns;
 
-/* BUG_ON / BUG - stubs (panic is in vsprintf.h) */
-#define BUG_ON(cond)	do { } while (0)
+/*
+ * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
+ * In Linux, these indicate kernel bugs. In ext4l, some BUG_ON conditions
+ * that check for race conditions can trigger in single-threaded U-Boot,
+ * so we stub them out as no-ops.
+ */
+#undef BUG_ON
+#undef BUG
+#define BUG_ON(cond)	do { (void)(cond); } while (0)
 #define BUG()		do { } while (0)
 
 /* might_sleep - stub */
@@ -930,13 +939,8 @@ struct seq_file;
 #define fallthrough __attribute__((__fallthrough__))
 #endif
 
-/* BUILD_BUG_ON - compile-time assertion */
-#define BUILD_BUG_ON(cond) ((void)sizeof(char[1 - 2 * !!(cond)]))
-
-/* Warning macros - stubs */
-#define WARN_ON_ONCE(cond) ({ (void)(cond); 0; })
-#define WARN_ON(cond) ({ (void)(cond); 0; })
-#define WARN_ONCE(cond, fmt, ...) ({ (void)(cond); 0; })
+/* BUILD_BUG_ON is in linux/build_bug.h */
+/* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */
 #define pr_warn_once(fmt, ...) do { } while (0)
 
 /* lockdep stubs */
@@ -2417,6 +2421,12 @@ struct bio {
 	void *bi_private;
 	void (*bi_end_io)(struct bio *);
 };
+
+/* bio_sectors - return number of sectors in bio */
+static inline unsigned int bio_sectors(struct bio *bio)
+{
+	return bio->bi_iter.bi_size >> 9;
+}
 
 /* folio_iter for bio iteration */
 struct folio_iter {
