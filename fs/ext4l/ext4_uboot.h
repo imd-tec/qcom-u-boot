@@ -1866,16 +1866,8 @@ struct kstatfs {
 
 /* struct seq_file is in linux/seq_file.h */
 
-/* Module stubs */
-struct module;
-#ifndef THIS_MODULE
-#define THIS_MODULE			NULL
-#endif
-#define MODULE_ALIAS_FS(name)
-
-/* register/unregister filesystem */
-#define register_filesystem(fs)		({ (void)(fs); 0; })
-#define unregister_filesystem(fs)	({ (void)(fs); 0; })
+/* Module stubs and register_filesystem are in linux/module.h */
+#include <linux/module.h>
 
 /* EXT4_GOING flags */
 #define EXT4_GOING_FLAGS_DEFAULT	0
