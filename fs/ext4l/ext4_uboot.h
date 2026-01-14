@@ -2303,8 +2303,8 @@ void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);
 
-/* Quota - declaration for stub.c */
-int dquot_suspend(void *sb, int flags);
+/* Quota - declarations for stub.c */
+#define dquot_suspend(sb, type)		({ (void)(sb); (void)(type); 0; })
 int dquot_alloc_space_nodirty(struct inode *inode, loff_t size);
 void dquot_free_space_nodirty(struct inode *inode, loff_t size);
 int dquot_alloc_block(struct inode *inode, loff_t nr);

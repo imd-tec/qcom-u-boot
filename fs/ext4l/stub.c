@@ -444,11 +444,7 @@ int sync_filesystem(void *sb)
 	return 0;
 }
 
-/* Quota */
-int dquot_suspend(void *sb, int flags)
-{
-	return 0;
-}
+/* dquot_suspend is now a macro in ext4_uboot.h */
 
 /* MMP daemon - now in mmp.c */
 
