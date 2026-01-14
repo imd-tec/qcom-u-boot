@@ -123,11 +123,7 @@ struct kobject {
 };
 
 /* lockdep stubs - needed before jbd2.h is included */
-struct lockdep_map { int dummy; };
-struct lock_class_key { int dummy; };
-#define rwsem_acquire(l, s, t, i)	do { } while (0)
-#define rwsem_acquire_read(l, s, t, i)	do { } while (0)
-#define rwsem_release(l, i)		do { } while (0)
+#include <linux/lockdep.h>
 #define _THIS_IP_			((unsigned long)0)
 
 /* completion - use Linux header */
@@ -388,8 +384,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 /* RCU head for callbacks - defined in linux/compat.h as callback_head */
 
-/* lockdep stubs */
-#define lockdep_is_held(lock)		(1)
+/* lockdep_is_held is in linux/lockdep.h */
 
 /* Memory allocation - use linux/slab.h which is already available */
 #include <linux/slab.h>
@@ -938,8 +933,7 @@ struct dx_hash_info {
 /* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */
 /* pr_warn_once is in linux/printk.h */
 
-/* lockdep stubs */
-#define lockdep_assert_held_read(l)	do { (void)(l); } while (0)
+/* lockdep_assert_held_read is in linux/lockdep.h */
 
 /* strtomem_pad - copy string to fixed-size buffer with padding */
 #define strtomem_pad(dest, src, pad) do { \
@@ -987,9 +981,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define inode_trylock_shared(inode)	(1)
 #define inode_dio_wait(inode)		do { } while (0)
 
-/* Lock debugging - no-ops in U-Boot */
-#define lockdep_assert_held_write(l)	do { } while (0)
-#define lockdep_assert_held(l)		do { } while (0)
+/* Lock debugging stubs are in linux/lockdep.h */
 
 /* File operations */
 #define file_modified(file)		({ (void)(file); 0; })
@@ -2502,8 +2494,7 @@ struct wait_bit_entry {
 #define release_dentry_name_snapshot(snap) \
 	do { (void)(snap); } while (0)
 
-/* lockdep stubs */
-#define lockdep_assert_not_held(lock)	do { (void)(lock); } while (0)
+/* lockdep_assert_not_held is in linux/lockdep.h */
 
 /* Request flags for block I/O */
 #define REQ_IDLE		0
@@ -2591,8 +2582,7 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 	({ (void)(n); (void)(m); (void)(p); (void)(ops); (void)(d); (struct proc_dir_entry *)NULL; })
 #define remove_proc_entry(n, p)		do { (void)(n); (void)(p); } while (0)
 
-/* lockdep stubs (struct lock_class_key defined earlier) */
-#define lockdep_init_map(...)	do { } while (0)
+/* lockdep_init_map and lock_class_key are in linux/lockdep.h */
 
 /* Block device operations for journal.c */
 int bh_read(struct buffer_head *bh, int flags);
