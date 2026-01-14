@@ -165,6 +165,9 @@ typedef s64	ktime_t;
 typedef u64 sector_t;
 typedef u64 blkcnt_t;
 
+/* Page cache offset type */
+typedef unsigned long pgoff_t;
+
 #ifdef __linux__
 struct ustat {
 	__kernel_daddr_t	f_tfree;

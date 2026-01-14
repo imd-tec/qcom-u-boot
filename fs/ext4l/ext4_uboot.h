@@ -167,8 +167,7 @@ struct kobject {
 
 /* Forward declarations (struct inode, struct address_space) are in linux/fs.h */
 
-/* Page types */
-typedef unsigned long pgoff_t;
+/* pgoff_t is in linux/types.h */
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT	12
 #endif
