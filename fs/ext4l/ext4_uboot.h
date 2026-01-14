@@ -434,6 +434,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #define rcu_dereference_protected(p, c)	(p)
 #define rcu_assign_pointer(p, v)	((p) = (v))
 #define call_rcu(head, func)		do { func(head); } while (0)
+#define synchronize_rcu()		do { } while (0)
 
 /* RCU head for callbacks - defined in linux/compat.h as callback_head */
 
@@ -1519,8 +1520,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define filemap_write_and_wait(m)		({ (void)(m); 0; })
 #define filemap_dirty_folio(m, f)		({ (void)(m); (void)(f); false; })
 #define filemap_lock_folio(m, i)		((struct folio *)NULL)
-#define filemap_invalidate_lock_shared(m)	do { } while (0)
-#define filemap_invalidate_unlock_shared(m)	do { } while (0)
+/* filemap_invalidate_lock_shared defined earlier */
 #define mapping_tagged(m, t)			(0)
 #define tag_pages_for_writeback(m, s, e)	do { } while (0)
 #define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
@@ -2480,8 +2480,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 #undef folio_address
 #define folio_address(folio)		((folio)->data)
 
-/* sb_end_intwrite stub */
-#define sb_end_intwrite(sb)		do { (void)(sb); } while (0)
+/* sb_end_intwrite defined earlier */
 
 /* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
 #define WARN_RATELIMIT(condition, ...) (condition)
@@ -2533,11 +2532,7 @@ struct seq_operations {
 #define list_del_rcu(entry)		list_del(entry)
 #define list_add_rcu(new, head)		list_add(new, head)
 #define list_add_tail_rcu(new, head)	list_add_tail(new, head)
-#define rcu_read_lock()			do { } while (0)
-#define rcu_read_unlock()		do { } while (0)
-#define synchronize_rcu()		do { } while (0)
-#define rcu_assign_pointer(p, v)	((p) = (v))
-#define rcu_dereference(p)		(p)
+/* Other RCU stubs are defined earlier in this file */
 
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
