@@ -166,4 +166,12 @@ time64_t mktime64(const unsigned int year, const unsigned int mon,
 		  const unsigned int min, const unsigned int sec);
 #endif
 
+/* 64-bit time representation with nanoseconds */
+typedef s64 time64_t;
+
+struct timespec64 {
+	time_t tv_sec;
+	long tv_nsec;
+};
+
 #endif

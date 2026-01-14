@@ -42,6 +42,9 @@
 #ifndef __GFP_NOFAIL
 #define __GFP_NOFAIL	((gfp_t)0)
 #endif
+#ifndef GFP_NOIO
+#define GFP_NOIO	((gfp_t)0)
+#endif
 
 void *kmalloc(size_t size, gfp_t flags);
 
@@ -83,6 +86,19 @@ static inline void *krealloc(const void *p, size_t new_size, gfp_t flags)
 }
 
 void *kmemdup(const void *src, size_t len, gfp_t gfp);
+
+/**
+ * kmemdup_nul - Duplicate a string with null termination
+ * @s: Source string
+ * @len: Maximum length to copy
+ * @gfp: GFP flags for allocation
+ *
+ * Allocates len + 1 bytes, copies up to @len bytes from @s, and
+ * ensures the result is null-terminated.
+ *
+ * Return: pointer to new string, or NULL on allocation failure
+ */
+char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
 
 /* kmem_cache stubs */
 struct kmem_cache {

@@ -84,6 +84,17 @@
 #define printk_once(fmt, ...) \
 	printk(fmt, ##__VA_ARGS__)
 
+/* _once variants - just call the base function (no actual once tracking) */
+#define pr_warn_once(fmt, ...)		pr_warn(fmt, ##__VA_ARGS__)
+#define pr_info_once(fmt, ...)		pr_info(fmt, ##__VA_ARGS__)
+#define pr_notice_once(fmt, ...)	pr_notice(fmt, ##__VA_ARGS__)
+
+/* _ratelimited variants - just call the base function (no rate limiting) */
+#define printk_ratelimited(fmt, ...)		printk(fmt, ##__VA_ARGS__)
+#define pr_notice_ratelimited(fmt, ...)		pr_notice(fmt, ##__VA_ARGS__)
+#define pr_warn_ratelimited(fmt, ...)		pr_warn(fmt, ##__VA_ARGS__)
+#define pr_err_ratelimited(fmt, ...)		pr_err(fmt, ##__VA_ARGS__)
+
 struct va_format {
 	const char *fmt;
 	va_list *va;

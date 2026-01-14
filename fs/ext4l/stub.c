@@ -373,32 +373,8 @@ int ext4_update_overhead(struct super_block *sb, bool force)
 	return 0;
 }
 
-/* String stubs */
-/* strtomem_pad is now a macro in ext4_uboot.h */
-
-char *strreplace(const char *str, char old, char new)
-{
-	char *s = (char *)str;
-
-	while (*s) {
-		if (*s == old)
-			*s = new;
-		s++;
-	}
-	return (char *)str;
-}
-
-char *kmemdup_nul(const char *s, size_t len, gfp_t gfp)
-{
-	char *buf;
-
-	buf = kmalloc(len + 1, gfp);
-	if (buf) {
-		memcpy(buf, s, len);
-		buf[len] = '\0';
-	}
-	return buf;
-}
+/* strtomem_pad, strscpy_pad, strreplace are now in linux/string.h */
+/* kmemdup_nul is now in linux/slab.h, with implementation in lib/string.c */
 
 /* Page allocation */
 unsigned long get_zeroed_page(gfp_t gfp)
@@ -444,11 +420,7 @@ int sync_filesystem(void *sb)
 	return 0;
 }
 
-/* Quota */
-int dquot_suspend(void *sb, int flags)
-{
-	return 0;
-}
+/* dquot_suspend is now a macro in ext4_uboot.h */
 
 /* MMP daemon - now in mmp.c */
 
@@ -459,10 +431,7 @@ void ext4_unregister_sysfs(void *sb)
 
 /* jbd2_journal_destroy is now in journal.c */
 
-/* percpu rwsem */
-void percpu_free_rwsem(struct percpu_rw_semaphore *sem)
-{
-}
+/* percpu_free_rwsem is now in linux/percpu.h */
 
 /* Block device ops */
 int sync_blockdev(struct block_device *bdev)
@@ -486,10 +455,7 @@ void kobject_put(struct kobject *kobj)
 {
 }
 
-/* completion */
-void wait_for_completion(struct completion *comp)
-{
-}
+/* completion - now uses linux/completion.h macro */
 
 /* DAX */
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
@@ -516,8 +482,8 @@ int sb_set_blocksize(struct super_block *sb, int size)
 	return size;
 }
 
-/* strscpy_pad is now a macro in ext4_uboot.h */
-/* kmemdup_nul is defined earlier in this file */
+/* strscpy_pad is now a macro in linux/string.h */
+/* kmemdup_nul is now in lib/string.c */
 
 /* Address check */
 int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks)
@@ -596,11 +562,7 @@ void iput(struct inode *inode)
 	}
 }
 
-/* percpu init rwsem */
-int percpu_init_rwsem(struct percpu_rw_semaphore *sem)
-{
-	return 0;
-}
+/* percpu_init_rwsem is now in linux/percpu.h */
 
 /* atomic_add and atomic64_add are now in asm-generic/atomic.h */
 

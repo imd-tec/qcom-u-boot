@@ -79,6 +79,59 @@ static inline int atomic_add_negative(int i, volatile atomic_t *v)
 	return val < 0;
 }
 
+static inline int atomic_inc_return(atomic_t *v)
+{
+	unsigned long flags = 0;
+	int val;
+
+	local_irq_save(flags);
+	val = ++v->counter;
+	local_irq_restore(flags);
+
+	return val;
+}
+
+static inline int atomic_add_return(int i, atomic_t *v)
+{
+	unsigned long flags = 0;
+	int val;
+
+	local_irq_save(flags);
+	val = (v->counter += i);
+	local_irq_restore(flags);
+
+	return val;
+}
+
+static inline int atomic_dec_if_positive(atomic_t *v)
+{
+	unsigned long flags = 0;
+	int val;
+
+	local_irq_save(flags);
+	val = v->counter - 1;
+	if (val >= 0)
+		v->counter = val;
+	local_irq_restore(flags);
+
+	return val;
+}
+
+static inline int atomic_add_unless(atomic_t *v, int a, int u)
+{
+	unsigned long flags = 0;
+	int ret = 1;
+
+	local_irq_save(flags);
+	if (v->counter != u)
+		v->counter += a;
+	else
+		ret = 0;
+	local_irq_restore(flags);
+
+	return ret;
+}
+
 static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
 {
 	unsigned long flags = 0;

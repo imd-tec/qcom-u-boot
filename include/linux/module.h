@@ -33,5 +33,10 @@ struct module;
 #define MODULE_ALIAS(alias)
 #define MODULE_SOFTDEP(dep)
 #define MODULE_INFO(tag, info)
+#define MODULE_ALIAS_FS(name)
+
+/* Filesystem registration - not used in U-Boot */
+#define register_filesystem(fs)		({ (void)(fs); 0; })
+#define unregister_filesystem(fs)	({ (void)(fs); 0; })
 
 #endif /* _LINUX_MODULE_H */
