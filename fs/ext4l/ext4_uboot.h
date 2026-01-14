@@ -65,12 +65,7 @@
 #undef no_printk
 #define no_printk(fmt, ...)	({ 0; })
 
-/* Rotate left - not available in U-Boot */
-static inline u32 rol32(u32 word, unsigned int shift)
-{
-	return (word << (shift & 31)) | (word >> ((-shift) & 31));
-}
-
+/* rol32 and ror32 are now in linux/bitops.h */
 /* Time types - timespec64 and time64_t are now in linux/time.h */
 
 /*
