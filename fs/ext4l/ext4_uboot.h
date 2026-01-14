@@ -260,15 +260,10 @@ extern struct user_namespace init_user_ns;
 
 /* Trace stubs are now in ext4_trace.h */
 
-/* Buffer operations - stubs */
-#define wait_on_buffer(bh)		do { } while (0)
-#define __bforget(bh)			do { } while (0)
+/* Buffer operations - wait_on_buffer, lock_buffer, unlock_buffer etc are in linux/buffer_head.h */
 #define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
 #define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
-#define lock_buffer(bh)			set_buffer_locked(bh)
-#define unlock_buffer(bh)		clear_buffer_locked(bh)
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
-#define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
 #define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
 
 /* inode_needs_sync - stub */

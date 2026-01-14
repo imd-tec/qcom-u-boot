@@ -177,4 +177,13 @@ static inline void put_bh(struct buffer_head *bh)
 void brelse(struct buffer_head *bh);
 void __brelse(struct buffer_head *bh);
 
+/*
+ * Buffer operation stubs - U-Boot is single-threaded
+ */
+#define wait_on_buffer(bh)		do { } while (0)
+#define __bforget(bh)			do { } while (0)
+#define lock_buffer(bh)			set_buffer_locked(bh)
+#define unlock_buffer(bh)		clear_buffer_locked(bh)
+#define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
+
 #endif /* _LINUX_BUFFER_HEAD_H */
