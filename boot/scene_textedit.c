@@ -18,7 +18,7 @@ enum {
 	INITIAL_SIZE	= SZ_4K,
 };
 
-int scene_texted(struct scene *scn, const char *name, uint id, uint str_id,
+int scene_texted(struct scene *scn, const char *name, uint id,
 		 struct scene_obj_txtedit **teditp)
 {
 	struct scene_obj_txtedit *ted;
@@ -37,9 +37,6 @@ int scene_texted(struct scene *scn, const char *name, uint id, uint str_id,
 	buf = abuf_data(&ted->buf);
 	*buf = '\0';
 
-	ret = scene_txt_generic_init(scn->expo, &ted->gen, name, str_id, buf);
-	if (ret)
-		return log_msg_ret("teg", ret);
 	if (teditp)
 		*teditp = ted;
 
@@ -54,8 +51,6 @@ int scene_txted_set_font(struct scene *scn, uint id, const char *font_name,
 	ted = scene_obj_find(scn, id, SCENEOBJT_TEXTEDIT);
 	if (!ted)
 		return log_msg_ret("find", -ENOENT);
-	ted->gen.font_name = font_name;
-	ted->gen.font_size = font_size;
 
-	return 0;
+	return scene_txt_set_font(scn, ted->edit_id, font_name, font_size);
 }

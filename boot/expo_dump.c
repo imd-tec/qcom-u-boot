@@ -116,10 +116,8 @@ static void dump_textline(struct dump_ctx *ctx,
 static void dump_textedit(struct dump_ctx *ctx,
 			  struct scene_obj_txtedit *tedit)
 {
-	outf(ctx, "Textedit: str_id %x font_name '%s' font_size %x\n",
-	     tedit->gen.str_id,
-	     tedit->gen.font_name ? tedit->gen.font_name : "(default)",
-	     tedit->gen.font_size);
+	outf(ctx, "Textedit: label_id %x edit_id %x\n",
+	     tedit->label_id, tedit->edit_id);
 }
 
 static void obj_dump_(struct dump_ctx *ctx, struct scene_obj *obj)

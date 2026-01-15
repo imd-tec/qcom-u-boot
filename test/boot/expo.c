@@ -1503,7 +1503,6 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	struct scene_obj_txtedit *ted;
 	struct scene_obj_menu *menu;
 	struct abuf buf, logo_copy;
-	struct abuf orig, *text;
 	struct scene *scn;
 	struct udevice *dev;
 	struct expo *exp;
@@ -1512,20 +1511,29 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
 	dev = exp->display;
 
-	id = scene_texted(scn, "texted", OBJ_TEXTED, STR_TEXTED, &ted);
-	ut_asserteq(OBJ_TEXTED, id);
+	id = scene_texted(scn, "texted", OBJ_TEXTED, &ted);
+	ut_assert(id > 0);
 	ut_assertok(scene_obj_set_bbox(scn, OBJ_TEXTED, 100, 200, 400, 300));
-	ut_assertok(scene_txted_set_font(scn, OBJ_TEXTED,
-					 "nimbus_sans_l_regular", 20));
-	ut_assertok(expo_edit_str(exp, STR_TEXTED, &orig, &text));
 
-	abuf_printf(text, "This\nis the initial contents of the text editor "
-		"but it is quite likely that more will be added later");
+	/* create the label text object */
+	id = scene_txt_str(scn, "ted-label", 0, 0, "Editor:", NULL);
+	ut_assert(id > 0);
+	ted->label_id = id;
+
+	/* create the edit text object pointing to the textedit buffer */
+	abuf_printf(&ted->buf, "This\nis the initial contents of the text "
+		"editor but it is quite likely that more will be added later");
+	id = scene_txt_str(scn, "ted-edit", STR_TEXTED, 0, abuf_data(&ted->buf),
+			   NULL);
+	ut_assert(id > 0);
+	ted->edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, ted->edit_id,
+				       "nimbus_sans_l_regular", 20));
 
 	expo_set_scene_id(exp, SCENE1);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(19601, video_compress_fb(uts, dev, false));
+	ut_asserteq(19651, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);

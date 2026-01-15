@@ -468,6 +468,7 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 	case SCENEOBJT_MENU:
 	case SCENEOBJT_TEXTLINE:
 	case SCENEOBJT_BOX:
+	case SCENEOBJT_TEXTEDIT:
 		break;
 	case SCENEOBJT_IMAGE: {
 		struct scene_obj_img *img = (struct scene_obj_img *)obj;
@@ -479,18 +480,14 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 			*widthp = width;
 		return height;
 	}
-	case SCENEOBJT_TEXT:
-	case SCENEOBJT_TEXTEDIT: {
+	case SCENEOBJT_TEXT: {
 		struct scene_txt_generic *gen;
 		struct expo *exp = scn->expo;
 		struct vidconsole_bbox bbox;
 		int len, ret, limit;
 		const char *str;
 
-		if (obj->type == SCENEOBJT_TEXT)
-			gen = &((struct scene_obj_txt *)obj)->gen;
-		else
-			gen = &((struct scene_obj_txtedit *)obj)->gen;
+		gen = &((struct scene_obj_txt *)obj)->gen;
 
 		str = expo_get_str(exp, gen->str_id);
 		if (!str)
@@ -753,13 +750,10 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 			       obj->bbox.y1, box->width, vid_priv->colour_fg, box->fill);
 		break;
 	}
-	case SCENEOBJT_TEXTEDIT: {
-		struct scene_obj_txtedit *ted = (struct scene_obj_txtedit *)obj;
-
-		ret = scene_txt_render(exp, dev, cons, obj, &ted->gen, x, y,
-				       theme->menu_inset);
+	case SCENEOBJT_TEXTEDIT:
+		if (obj->flags & SCENEOF_OPEN)
+			scene_render_background(obj, true, false);
 		break;
-	}
 	}
 
 	return 0;
