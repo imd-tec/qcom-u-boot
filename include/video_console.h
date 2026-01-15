@@ -349,6 +349,28 @@ struct vidconsole_ops {
 		       uint num_chars, struct vidconsole_bbox *bbox);
 
 	/**
+	 * ctx_new() - Create a new context for a client
+	 *
+	 * Allocates and initialises a context for a client of the vidconsole.
+	 * The driver determines what information is stored in the context.
+	 *
+	 * @dev: Console device to use
+	 * @ctxp: Returns new context, on success
+	 * Return: 0 on success, -ENOMEM if out of memory
+	 */
+	int (*ctx_new)(struct udevice *dev, void **ctxp);
+
+	/**
+	 * ctx_dispose() - Dispose of a context
+	 *
+	 * Frees any memory allocated for the context.
+	 *
+	 * @dev: Console device to use
+	 * @ctx: Context to dispose of
+	 */
+	int (*ctx_dispose)(struct udevice *dev, void *ctx);
+
+	/**
 	 * entry_save() - Save any text-entry information for later use
 	 *
 	 * Saves text-entry context such as a list of positions for each
@@ -455,6 +477,28 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
  */
 int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 		       uint num_chars, struct vidconsole_bbox *bbox);
+
+/**
+ * vidconsole_ctx_new() - Create a new context for a client
+ *
+ * Allocates and initialises a context for a client of the vidconsole.
+ * The driver determines what information is stored in the context.
+ *
+ * @dev: Console device to use
+ * @ctxp: Returns new context, on success
+ * Return: 0 on success, -ENOMEM if out of memory
+ */
+int vidconsole_ctx_new(struct udevice *dev, void **ctxp);
+
+/**
+ * vidconsole_ctx_dispose() - Dispose of a context
+ *
+ * Frees any memory allocated for the context.
+ *
+ * @dev: Console device to use
+ * @ctx: Context to dispose of
+ */
+int vidconsole_ctx_dispose(struct udevice *dev, void *ctx);
 
 /**
  * vidconsole_entry_save() - Save any text-entry information for later use

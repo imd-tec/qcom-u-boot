@@ -1493,3 +1493,25 @@ static int dm_test_video_sync_damage(struct unit_test_state *uts)
 	return 0;
 }
 DM_TEST(dm_test_video_sync_damage, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+/* Test vidconsole context allocation */
+static int dm_test_video_context_alloc(struct unit_test_state *uts)
+{
+	struct udevice *dev, *con;
+	void *ctx;
+
+	ut_assertok(select_vidconsole(uts, "vidconsole0"));
+	ut_assertok(video_get_nologo(uts, &dev));
+	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
+
+	ut_assertok(vidconsole_ctx_new(con, &ctx));
+	ut_assertnonnull(ctx);
+
+	ut_assertok(vidconsole_ctx_dispose(con, ctx));
+
+	/* Dispose should handle NULL gracefully */
+	ut_assertok(vidconsole_ctx_dispose(con, NULL));
+
+	return 0;
+}
+DM_TEST(dm_test_video_context_alloc, UTF_SCAN_PDATA | UTF_SCAN_FDT);

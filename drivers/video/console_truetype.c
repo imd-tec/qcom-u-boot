@@ -1149,6 +1149,27 @@ static int truetype_nominal(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
+static int truetype_ctx_new(struct udevice *dev, void **ctxp)
+{
+	struct console_tt_ctx *ctx;
+
+	ctx = malloc(sizeof(*ctx));
+	if (!ctx)
+		return -ENOMEM;
+
+	memset(ctx, '\0', sizeof(*ctx));
+	*ctxp = ctx;
+
+	return 0;
+}
+
+static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
+{
+	free(ctx);
+
+	return 0;
+}
+
 static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
@@ -1331,6 +1352,8 @@ struct vidconsole_ops console_truetype_ops = {
 	.select_font	= truetype_select_font,
 	.measure	= truetype_measure,
 	.nominal	= truetype_nominal,
+	.ctx_new	= truetype_ctx_new,
+	.ctx_dispose	= truetype_ctx_dispose,
 	.entry_save	= truetype_entry_save,
 	.entry_restore	= truetype_entry_restore,
 	.get_cursor_info	= truetype_get_cursor_info,

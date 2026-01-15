@@ -690,6 +690,38 @@ int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
+int vidconsole_ctx_new(struct udevice *dev, void **ctxp)
+{
+	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
+	void *ctx;
+	int ret;
+
+	if (!ops->ctx_new)
+		return -ENOSYS;
+
+	ret = ops->ctx_new(dev, &ctx);
+	if (ret)
+		return ret;
+	*ctxp = ctx;
+
+	return 0;
+}
+
+int vidconsole_ctx_dispose(struct udevice *dev, void *ctx)
+{
+	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
+	int ret;
+
+	if (!ops->ctx_dispose)
+		return -ENOSYS;
+
+	ret = ops->ctx_dispose(dev, ctx);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 int vidconsole_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
