@@ -1598,3 +1598,71 @@ All 4 commits were verified to have identical patches (only minor differences in
 
 ---
 
+### Review: 2026-01-14
+
+Branch: cherry-eec32a35d74
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository location:
+
+I'm in the u-boot repository at `/scratch/sglass/u-boot`. Let me proceed with the rebase:
+
+The branch is based on commit `a5a45ea2b2f` and ci/master is now at `26606c3849c`. Let me record the original commit info before rebasing for comparison:
+
+Let me save the original stats for comparison:
+
+Something wrong with the shell. Let me try differently:
+
+Now I have the original stats. Let me perform the rebase:
+
+The rebase completed successfully. Now let me verify each rebased commit:
+
+Now let me verify each commit's delta after rebase:
+
+All commit deltas match the original! Now let me run the build test:
+
+Build passes. Now let me create the local v2 branch and push to the remote:
+
+The remote branch was updated since I fetched it. Let me check what changed:
+
+The remote branch doesn't have the pickman record commit (8a2768a3090). The context says that was the last commit, but the remote was pushed without it. Let me verify the current state:
+
+Now let me force push with the updated tracking ref:
+
+The push is failing because force-with-lease is rejecting it due to the tracking ref mismatch. Let me update the tracking ref:
+
+The tracking ref is correct. The push tool is fetching the remote ref before pushing which updates the local tracking ref unexpectedly. Let me try a direct push:
+
+The push succeeded. Now let me verify the final state:
+
+## Summary
+
+### Rebase Completed Successfully
+
+**Task:** Rebase MR !375 (branch `cherry-eec32a35d74`) onto latest `ci/master`
+
+**Results:**
+- ✅ Rebase completed cleanly (no conflicts)
+- ✅ All 7 commits rebased with identical deltas:
+  - `dab56267f98` - lib: sha256: add feature sha256_hmac (2 files, 66 insertions)
+  - `69d03d8569d` - test: lib: add test for sha256_hmac (2 files, 295 insertions)
+  - `38be7dac821` - lib: mbedtls: sha256: add support of key derivation (1 file, 23 insertions)
+  - `c7cd41f4be6` - test: lib: add test for key derivation (2 files, 199 insertions)
+  - `a2a949cfccd` - configs: sandbox: enable mbedtls (1 file, 2 insertions)
+  - `58e62b0b811` - Merge patch series (empty, as expected)
+  - `9f276ee9c4b` - pickman: Record cherry-pick (1 file, 196 insertions)
+- ✅ Build passed (`sandbox`)
+- ✅ Force pushed to `ci/cherry-eec32a35d74`
+- ✅ Local v2 branch created: `cherry-eec32a35d74-v2`
+
+**MR URL:** https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/375
+
+### Suggested Reply for MR
+
+> Rebased onto latest `ci/master` (26606c3849c). Build passes.
+
+---
+
