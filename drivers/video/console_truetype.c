@@ -207,9 +207,22 @@ struct console_tt_metrics {
  * struct console_tt_ctx - Per-client context for this driver
  *
  * @com:	Common fields from the vidconsole uclass
+ * @pos_ptr:	Current position in the position history
+ * @pos_start:	Value of pos_ptr when the cursor is at the start of the text
+ *		being entered by the user
+ * @pos_count:	Maximum value reached by pos_ptr (initially zero)
+ * @pos:	List of cursor positions for each character written. This is
+ *		used to handle backspace. We clear the frame buffer between
+ *		the last position and the current position, thus erasing the
+ *		last character. We record enough characters to go back to the
+ *		start of the current command line.
  */
 struct console_tt_ctx {
 	struct vidconsole_ctx com;
+	int pos_ptr;
+	int pos_start;
+	int pos_count;
+	struct pos_info pos[POS_HISTORY_SIZE];
 };
 
 /**
@@ -218,16 +231,8 @@ struct console_tt_ctx {
  * @cur_met:	Current metrics being used
  * @metrics:	List metrics that can be used
  * @num_metrics:	Number of available metrics
- * @pos:	List of cursor positions for each character written. This is
- *		used to handle backspace. We clear the frame buffer between
- *		the last position and the current position, thus erasing the
- *		last character. We record enough characters to go back to the
- *		start of the current command line.
- * @pos_ptr:	Current position in the position history
  * @cur_fontdata:	Current fixed font data (NULL if using TrueType)
- * @pos_start:	Value of pos_ptr when the cursor is at the start of the text
- *	being entered by the user
- * @pos_count:	Maximum value reached by pos_ptr (initially zero)
+ * @ctx:	Per-client context
  * @glyph_buf:	Pre-allocated buffer for rendering glyphs. If a glyph fits,
  *	this avoids malloc/free per character. Allocated lazily after
  *	relocation to avoid using early malloc space.
@@ -239,11 +244,8 @@ struct console_tt_priv {
 	struct console_tt_metrics *cur_met;
 	struct console_tt_metrics metrics[CONFIG_CONSOLE_TRUETYPE_MAX_METRICS];
 	int num_metrics;
-	struct pos_info pos[POS_HISTORY_SIZE];
-	int pos_ptr;
 	struct video_fontdata *cur_fontdata;
-	int pos_start;
-	int pos_count;
+	struct console_tt_ctx ctx;
 	u8 *glyph_buf;
 	int glyph_buf_size;
 	struct stbtt_scratch scratch;
@@ -325,6 +327,7 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	void *dst;
 	void *src;
 	int i, diff, font_height;
@@ -341,8 +344,8 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 
 	/* Scroll up our position history */
 	diff = (rowsrc - rowdst) * font_height;
-	for (i = 0; i < priv->pos_ptr; i++)
-		priv->pos[i].ypos -= diff;
+	for (i = 0; i < ctx->pos_ptr; i++)
+		ctx->pos[i].ypos -= diff;
 
 	video_damage(dev->parent,
 		     0,
@@ -367,20 +370,21 @@ static void clear_from(struct udevice *dev, int index)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	struct pos_info *start_pos, *end_pos;
 	int xstart, xend;
 	int ystart, yend;
 
-	assert(priv->pos_count && index && index < priv->pos_count);
+	assert(ctx->pos_count && index && index < ctx->pos_count);
 
-	start_pos = &priv->pos[index];
+	start_pos = &ctx->pos[index];
 	xstart = VID_TO_PIXEL(start_pos->xpos_frac);
 	ystart = start_pos->ypos;
 
 	/* End position is the last character in the position array */
-	end_pos = &priv->pos[priv->pos_count - 1];
+	end_pos = &ctx->pos[ctx->pos_count - 1];
 	xend = VID_TO_PIXEL(end_pos->xpos_frac) + end_pos->width;
 	yend = end_pos->ypos;
 
@@ -412,6 +416,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	struct console_tt_metrics *met = priv->cur_met;
 	stbtt_fontinfo *font;
 	int width, height, xoff, yoff;
@@ -440,8 +445,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	 * First out our current X position in fractional pixels. If we wrote
 	 * a character previously, use kerning to fine-tune the position of
 	 * this character */
-	pos = priv->pos_ptr < priv->pos_count ? &priv->pos[priv->pos_ptr] :
-		NULL;
+	pos = ctx->pos_ptr < ctx->pos_count ? &ctx->pos[ctx->pos_ptr] : NULL;
 	xpos = frac(VID_TO_PIXEL((double)x));
 	kern = 0;
 	if (vc_priv->last_ch) {
@@ -474,27 +478,27 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 		return -EAGAIN;
 
 	/* Write the current cursor position into history */
-	if (priv->pos_ptr < POS_HISTORY_SIZE) {
+	if (ctx->pos_ptr < POS_HISTORY_SIZE) {
 		bool erase = false;
 
 		/* Check if we're overwriting a different character */
 		if (pos && pos->cp != cp) {
 			erase = true;
 			/* Erase using the old character's position before updating */
-			clear_from(dev, priv->pos_ptr);
+			clear_from(dev, ctx->pos_ptr);
 
 			/* After erasing, we don't care about erased characters */
-			priv->pos_count = priv->pos_ptr;
+			ctx->pos_count = ctx->pos_ptr;
 		}
 
-		pos = &priv->pos[priv->pos_ptr];
+		pos = &ctx->pos[ctx->pos_ptr];
 		pos->xpos_frac = vc_priv->xcur_frac;
 		pos->ypos = vc_priv->ycur;
 		pos->width = (width_frac + VID_FRAC_DIV - 1) / VID_FRAC_DIV;
 		pos->cp = cp;
-		priv->pos_ptr++;
-		if (priv->pos_ptr > priv->pos_count)
-			priv->pos_count = priv->pos_ptr;
+		ctx->pos_ptr++;
+		if (ctx->pos_ptr > ctx->pos_count)
+			ctx->pos_count = ctx->pos_ptr;
 	}
 
 	/*
@@ -677,6 +681,7 @@ static int console_truetype_backspace(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	struct pos_info *pos;
@@ -686,11 +691,11 @@ static int console_truetype_backspace(struct udevice *dev)
 	 * This indicates a very strange error higher in the stack. The caller
 	 * has sent out n character and n + 1 backspaces.
 	 */
-	if (!priv->pos_ptr)
+	if (!ctx->pos_ptr)
 		return -ENOSYS;
 
 	/* Pop the last cursor position off the stack */
-	pos = &priv->pos[--priv->pos_ptr];
+	pos = &ctx->pos[--ctx->pos_ptr];
 
 	/*
 	 * Figure out the end position for clearing. Normally it is the current
@@ -713,10 +718,11 @@ static int console_truetype_entry_start(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 
 	/* A new input line has start, so clear our history */
-	priv->pos_ptr = 0;
-	priv->pos_count = 0;
+	ctx->pos_ptr = 0;
+	ctx->pos_count = 0;
 	vc_priv->last_ch = 0;
 
 	return 0;
@@ -1199,6 +1205,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	struct console_tt_store store;
 
 	if (xpl_phase() <= PHASE_SPL)
@@ -1208,11 +1215,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 
 	vc_priv->xcur_frac = store.cur.xpos_frac;
 	vc_priv->ycur = store.cur.ypos;
-	priv->pos_ptr = store.priv.pos_ptr;
-	priv->pos_start = store.priv.pos_start;
-	priv->pos_count = store.priv.pos_count;
-	memcpy(priv->pos, store.priv.pos,
-	       store.priv.pos_ptr * sizeof(struct pos_info));
+	*ctx = store.priv.ctx;
 
 	return 0;
 }
@@ -1221,6 +1224,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 	struct vidconsole_cursor *curs = &vc_priv->curs;
 	int x, y, index;
 	uint height;
@@ -1235,11 +1239,11 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	 *
 	 * A current quirk is that the cursor is always at xcur_frac, since we
 	 * output characters directly to the console as they are typed by the
-	 * user. So we never bother with priv->pos[index] for now.
+	 * user. So we never bother with ctx->pos[index] for now.
 	 */
-	index = priv->pos_ptr;
-	if (0 && index < priv->pos_count)
-		x = VID_TO_PIXEL(priv->pos[index].xpos_frac);
+	index = ctx->pos_ptr;
+	if (0 && index < ctx->pos_count)
+		x = VID_TO_PIXEL(ctx->pos[index].xpos_frac);
 	else
 		x = VID_TO_PIXEL(vc_priv->xcur_frac);
 	y = vc_priv->ycur;
@@ -1279,8 +1283,9 @@ const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 static int truetype_mark_start(struct udevice *dev)
 {
 	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = &priv->ctx;
 
-	priv->pos_start = priv->pos_ptr;
+	ctx->pos_start = ctx->pos_ptr;
 
 	return 0;
 }
