@@ -1209,6 +1209,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 	vc_priv->xcur_frac = store.cur.xpos_frac;
 	vc_priv->ycur = store.cur.ypos;
 	priv->pos_ptr = store.priv.pos_ptr;
+	priv->pos_start = store.priv.pos_start;
 	priv->pos_count = store.priv.pos_count;
 	memcpy(priv->pos, store.priv.pos,
 	       store.priv.pos_ptr * sizeof(struct pos_info));
