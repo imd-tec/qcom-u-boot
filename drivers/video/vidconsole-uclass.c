@@ -76,11 +76,11 @@ static int vidconsole_back(struct udevice *dev)
 	/* Hide cursor at old position if it's visible */
 	vidconsole_hide_cursor(dev);
 
-	priv->xcur_frac -= VID_TO_POS(priv->x_charsize);
+	priv->xcur_frac -= VID_TO_POS(ctx->x_charsize);
 	if (priv->xcur_frac < priv->xstart_frac) {
 		priv->xcur_frac = (ctx->cols - 1) *
-			VID_TO_POS(priv->x_charsize);
-		priv->ycur -= priv->y_charsize;
+			VID_TO_POS(ctx->x_charsize);
+		priv->ycur -= ctx->y_charsize;
 		if (priv->ycur < 0)
 			priv->ycur = 0;
 	}
@@ -101,17 +101,17 @@ static void vidconsole_newline(struct udevice *dev)
 	int i, ret;
 
 	priv->xcur_frac = priv->xstart_frac;
-	priv->ycur += priv->y_charsize;
+	priv->ycur += ctx->y_charsize;
 
 	/* Check if we need to scroll the terminal */
 	if (vid_priv->rot % 2 ?
-	    priv->ycur + priv->x_charsize > vid_priv->xsize :
-	    priv->ycur + priv->y_charsize > vid_priv->ysize) {
+	    priv->ycur + ctx->x_charsize > vid_priv->xsize :
+	    priv->ycur + ctx->y_charsize > vid_priv->ysize) {
 		vidconsole_move_rows(dev, 0, rows, ctx->rows - rows);
 		for (i = 0; i < rows; i++)
 			vidconsole_set_row(dev, ctx->rows - i - 1,
 					   vid_priv->colour_bg);
-		priv->ycur -= rows * priv->y_charsize;
+		priv->ycur -= rows * ctx->y_charsize;
 	}
 	priv->last_ch = 0;
 
@@ -178,9 +178,11 @@ static void set_cursor_position(struct udevice *dev, int row, int col)
 static void get_cursor_position(struct vidconsole_priv *priv,
 				int *row, int *col)
 {
-	*row = priv->ycur / priv->y_charsize;
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+
+	*row = priv->ycur / ctx->y_charsize;
 	*col = VID_TO_PIXEL(priv->xcur_frac - priv->xstart_frac) /
-	       priv->x_charsize;
+	       ctx->x_charsize;
 }
 
 /*
@@ -649,7 +651,7 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 		       const char *text, int limit,
 		       struct vidconsole_bbox *bbox, struct alist *lines)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 	int ret;
 
@@ -664,8 +666,8 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 	bbox->valid = true;
 	bbox->x0 = 0;
 	bbox->y0 = 0;
-	bbox->x1 = priv->x_charsize * strlen(text);
-	bbox->y1 = priv->y_charsize;
+	bbox->x1 = ctx->x_charsize * strlen(text);
+	bbox->y1 = ctx->y_charsize;
 
 	return 0;
 }
@@ -673,7 +675,7 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 		       uint num_chars, struct vidconsole_bbox *bbox)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 	int ret;
 
@@ -686,8 +688,8 @@ int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 	bbox->valid = true;
 	bbox->x0 = 0;
 	bbox->y0 = 0;
-	bbox->x1 = priv->x_charsize * num_chars;
-	bbox->y1 = priv->y_charsize;
+	bbox->x1 = ctx->x_charsize * num_chars;
+	bbox->y1 = ctx->y_charsize;
 
 	return 0;
 }
@@ -880,10 +882,11 @@ static int vidconsole_pre_probe(struct udevice *dev)
 static int vidconsole_post_probe(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct stdio_dev *sdev = &priv->sdev;
 
 	if (!priv->tab_width_frac)
-		priv->tab_width_frac = VID_TO_POS(priv->x_charsize) * 8;
+		priv->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
 
 	if (dev_seq(dev)) {
 		snprintf(sdev->name, sizeof(sdev->name), "vidconsole%d",
@@ -932,13 +935,13 @@ int vidconsole_clear_and_reset(struct udevice *dev)
 
 void vidconsole_position_cursor(struct udevice *dev, unsigned col, unsigned row)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	short x, y;
 
-	x = min_t(short, col * priv->x_charsize, vid_priv->xsize - 1);
-	y = min_t(short, row * priv->y_charsize, vid_priv->ysize - 1);
+	x = min_t(short, col * ctx->x_charsize, vid_priv->xsize - 1);
+	y = min_t(short, row * ctx->y_charsize, vid_priv->ysize - 1);
 	vidconsole_set_cursor_pos(dev, x, y);
 }
 
@@ -961,8 +964,8 @@ void vidconsole_set_bitmap_font(struct udevice *dev,
 	log_debug("byte width: %d\n", fontdata->byte_width);
 	log_debug("height: %d\n", fontdata->height);
 
-	vc_priv->x_charsize = fontdata->width;
-	vc_priv->y_charsize = fontdata->height;
+	ctx->x_charsize = fontdata->width;
+	ctx->y_charsize = fontdata->height;
 	if (vid_priv->rot % 2) {
 		ctx->cols = vid_priv->ysize / fontdata->width;
 		ctx->rows = vid_priv->xsize / fontdata->height;

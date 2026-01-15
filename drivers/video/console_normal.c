@@ -110,14 +110,14 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	index = vc_priv->cli_index;
 
 	/* rounded up character position in this line */
-	xpos = (x + vc_priv->x_charsize - 1) / vc_priv->x_charsize;
+	xpos = (x + ctx->x_charsize - 1) / ctx->x_charsize;
 
 	/* number of characters which can fit on this (first) line */
 	xspace = ctx->cols - xpos;
 
 	if (!curs->indent && index > xspace) {
 		/* move to the next line */
-		y += vc_priv->y_charsize;
+		y += ctx->y_charsize;
 		index -= xspace;
 
 		/* figure out the available space in subsequent lines */
@@ -140,7 +140,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	/* Store line pointer and height in cursor struct */
 	curs->x = x;
 	curs->y = y;
-	curs->height = vc_priv->y_charsize;
+	curs->height = ctx->y_charsize;
 	curs->index = vc_priv->cli_index;
 
 	return 0;

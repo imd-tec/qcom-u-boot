@@ -266,7 +266,7 @@ struct console_tt_store {
 static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	void *end, *line;
 	int font_height;
@@ -314,9 +314,9 @@ static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
 
 	video_damage(dev->parent,
 		     0,
-		     vc_priv->y_charsize * row,
+		     vc_ctx->y_charsize * row,
 		     vid_priv->xsize,
-		     vc_priv->y_charsize);
+		     vc_ctx->y_charsize);
 
 	return 0;
 }
@@ -325,7 +325,7 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 				     uint rowsrc, uint count)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 	void *dst;
@@ -349,9 +349,9 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 
 	video_damage(dev->parent,
 		     0,
-		     vc_priv->y_charsize * rowdst,
+		     vc_ctx->y_charsize * rowdst,
 		     vid_priv->xsize,
-		     vc_priv->y_charsize * count);
+		     vc_ctx->y_charsize * count);
 
 	return 0;
 }
@@ -369,6 +369,7 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 static void clear_from(struct udevice *dev, int index)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 	struct udevice *vid_dev = dev->parent;
@@ -390,21 +391,23 @@ static void clear_from(struct udevice *dev, int index)
 
 	/* If on the same line, just erase from start to end position */
 	if (ystart == yend) {
-		video_fill_part(vid_dev, xstart, ystart, xend, ystart + vc_priv->y_charsize,
+		video_fill_part(vid_dev, xstart, ystart, xend,
+				ystart + vc_ctx->y_charsize,
 				vid_priv->colour_bg);
 	} else {
 		/* Different lines - erase to end of first line */
 		video_fill_part(vid_dev, xstart, ystart, vid_priv->xsize,
-				ystart + vc_priv->y_charsize, vid_priv->colour_bg);
+				ystart + vc_ctx->y_charsize, vid_priv->colour_bg);
 
 		/* Erase any complete lines in between */
-		if (yend > ystart + vc_priv->y_charsize) {
-			video_fill_part(vid_dev, 0, ystart + vc_priv->y_charsize,
+		if (yend > ystart + vc_ctx->y_charsize) {
+			video_fill_part(vid_dev, 0, ystart + vc_ctx->y_charsize,
 					vid_priv->xsize, yend, vid_priv->colour_bg);
 		}
 
 		/* Erase from start of final line to end of last character */
-		video_fill_part(vid_dev, 0, yend, xend, yend + vc_priv->y_charsize,
+		video_fill_part(vid_dev, 0, yend, xend,
+				yend + vc_ctx->y_charsize,
 				vid_priv->colour_bg);
 	}
 }
@@ -938,8 +941,8 @@ static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 
 	priv->cur_met = met;
-	vc_priv->x_charsize = met->font_size;
-	vc_priv->y_charsize = met->font_size;
+	ctx->x_charsize = met->font_size;
+	ctx->y_charsize = met->font_size;
 	vc_priv->xstart_frac = VID_TO_POS(2);
 	ctx->cols = vid_priv->xsize / met->font_size;
 	ctx->rows = vid_priv->ysize / met->font_size;

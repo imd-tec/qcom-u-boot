@@ -79,19 +79,23 @@ struct vidconsole_cursor {
  * This holds per-client state for video consoles. It can be used by clients
  * to maintain separate contexts for different text-entry operations.
  *
- * @rows:	Number of text rows
- * @cols:	Number of text columns
+ * @rows:		Number of text rows
+ * @cols:		Number of text columns
+ * @x_charsize:		Character width in pixels
+ * @y_charsize:		Character height in pixels
  */
 struct vidconsole_ctx {
 	int rows;
 	int cols;
+	int x_charsize;
+	int y_charsize;
 };
 
 /**
  * struct vidconsole_priv - uclass-private data about a console device
  *
- * Drivers must set up @ctx.rows, @ctx.cols, @x_charsize, @y_charsize in their
- * probe() method. Drivers may set up @xstart_frac if desired.
+ * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
+ * in their probe() method. Drivers may set up @xstart_frac if desired.
  *
  * Note that these values relate to the rotated console, so that an 80x25
  * console which is rotated 90 degrees will have rows=80 and cols=25
@@ -105,8 +109,6 @@ struct vidconsole_ctx {
  * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
  * @ycur:		Current Y position in pixels (0=top)
  * @ctx:		Per-client context
- * @x_charsize:		Character width in pixels
- * @y_charsize:		Character height in pixels
  * @tab_width_frac:	Tab width in fractional units
  * @xsize_frac:		Width of the display in fractional units
  * @xstart_frac:	Left margin for the text console in fractional units
@@ -128,8 +130,6 @@ struct vidconsole_priv {
 	struct vidconsole_ctx ctx;
 	int xcur_frac;
 	int ycur;
-	int x_charsize;
-	int y_charsize;
 	int tab_width_frac;
 	int xsize_frac;
 	int xstart_frac;
