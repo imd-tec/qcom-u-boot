@@ -204,6 +204,15 @@ struct console_tt_metrics {
 };
 
 /**
+ * struct console_tt_ctx - Per-client context for this driver
+ *
+ * @com:	Common fields from the vidconsole uclass
+ */
+struct console_tt_ctx {
+	struct vidconsole_ctx com;
+};
+
+/**
  * struct console_tt_priv - Private data for this driver
  *
  * @cur_met:	Current metrics being used

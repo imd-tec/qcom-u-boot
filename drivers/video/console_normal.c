@@ -14,6 +14,15 @@
 #include <video_font.h>		/* Get font data, width and height */
 #include "vidconsole_internal.h"
 
+/**
+ * struct console_ctx - context for the normal console
+ *
+ * @com:	Common fields from the vidconsole uclass
+ */
+struct console_ctx {
+	struct vidconsole_ctx com;
+};
+
 struct console_store {
 	int xpos_frac;
 	int ypos;

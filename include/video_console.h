@@ -74,6 +74,15 @@ struct vidconsole_cursor {
 };
 
 /**
+ * struct vidconsole_ctx - per-client context for a video console
+ *
+ * This holds per-client state for video consoles. It can be used by clients
+ * to maintain separate contexts for different text-entry operations.
+ */
+struct vidconsole_ctx {
+};
+
+/**
  * struct vidconsole_priv - uclass-private data about a console device
  *
  * Drivers must set up @rows, @cols, @x_charsize, @y_charsize in their probe()
