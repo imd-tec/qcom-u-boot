@@ -1015,3 +1015,10 @@ void vidconsole_readline_end(void)
 	}
 }
 #endif /* CURSOR */
+
+void *vidconsole_ctx(struct udevice *dev)
+{
+	struct vidconsole_priv *uc_priv = dev_get_uclass_priv(dev);
+
+	return &uc_priv->ctx;
+}

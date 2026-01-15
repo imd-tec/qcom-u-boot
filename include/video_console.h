@@ -121,6 +121,7 @@ struct vidconsole_ctx {
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
+	struct vidconsole_ctx ctx;
 	int xcur_frac;
 	int ycur;
 	int rows;
@@ -420,6 +421,25 @@ struct vidconsole_ops {
 
 /* Get a pointer to the driver operations for a video console device */
 #define vidconsole_get_ops(dev)  ((struct vidconsole_ops *)(dev)->driver->ops)
+
+/**
+ * vidconsole_ctx() - Get the default context for a vidconsole device
+ *
+ * @dev: vidconsole device to check
+ * Return: pointer to context
+ */
+void *vidconsole_ctx(struct udevice *dev);
+
+/**
+ * vidconsole_ctx_from_priv() - Get the default context for a vidconsole device
+ *
+ * @priv: vidconsole uclass-private data
+ * Return: pointer to context
+ */
+static inline void *vidconsole_ctx_from_priv(struct vidconsole_priv *uc_priv)
+{
+	return &uc_priv->ctx;
+}
 
 /**
  * vidconsole_get_font() - Obtain information about a font
