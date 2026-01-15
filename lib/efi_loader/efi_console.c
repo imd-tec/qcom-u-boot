@@ -213,7 +213,7 @@ static int __maybe_unused query_vidconsole(int *rows, int *cols)
 	const char *stdout_name = env_get("stdout");
 	struct stdio_dev *stdout_dev;
 	struct udevice *dev;
-	struct vidconsole_priv *priv;
+	struct vidconsole_ctx *ctx;
 
 	if (!stdout_name || strncmp(stdout_name, "vidconsole", 10))
 		return -ENODEV;
@@ -223,11 +223,11 @@ static int __maybe_unused query_vidconsole(int *rows, int *cols)
 	dev = stdout_dev->priv;
 	if (!dev)
 		return -ENODEV;
-	priv = dev_get_uclass_priv(dev);
-	if (!priv)
+	ctx = vidconsole_ctx(dev);
+	if (!ctx)
 		return -ENODEV;
-	*rows = priv->rows;
-	*cols = priv->cols;
+	*rows = ctx->rows;
+	*cols = ctx->cols;
 	return 0;
 }
 

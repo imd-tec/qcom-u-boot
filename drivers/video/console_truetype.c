@@ -932,6 +932,7 @@ static void set_bitmap_font(struct udevice *dev,
 static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct udevice *vid_dev = dev_get_parent(dev);
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -940,8 +941,8 @@ static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 	vc_priv->x_charsize = met->font_size;
 	vc_priv->y_charsize = met->font_size;
 	vc_priv->xstart_frac = VID_TO_POS(2);
-	vc_priv->cols = vid_priv->xsize / met->font_size;
-	vc_priv->rows = vid_priv->ysize / met->font_size;
+	ctx->cols = vid_priv->xsize / met->font_size;
+	ctx->rows = vid_priv->ysize / met->font_size;
 	vc_priv->tab_width_frac = VID_TO_POS(met->font_size) * 8 / 2;
 }
 

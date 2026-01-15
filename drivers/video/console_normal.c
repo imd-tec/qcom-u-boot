@@ -95,6 +95,7 @@ int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
 static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_simple_priv *priv = dev_get_priv(dev);
 	struct video_fontdata *fontdata = priv->fontdata;
 	struct vidconsole_cursor *curs = &vc_priv->curs;
@@ -112,7 +113,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	xpos = (x + vc_priv->x_charsize - 1) / vc_priv->x_charsize;
 
 	/* number of characters which can fit on this (first) line */
-	xspace = vc_priv->cols - xpos;
+	xspace = ctx->cols - xpos;
 
 	if (!curs->indent && index > xspace) {
 		/* move to the next line */
@@ -121,7 +122,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 
 		/* figure out the available space in subsequent lines */
 		if (!curs->indent) {
-			xspace = vc_priv->cols;
+			xspace = ctx->cols;
 			x = 0;
 		}
 
