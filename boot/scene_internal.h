@@ -163,6 +163,20 @@ int scene_textline_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			   struct scene_obj_textline *tline);
 
 /**
+ * scene_txted_arrange() - Set the position of things in a textedit
+ *
+ * This updates any items associated with a textedit to make sure they are
+ * positioned correctly relative to the textedit.
+ *
+ * @scn: Scene to update
+ * @arr: Arrangement information
+ * @ted: textedit to process
+ * Returns: 0 if OK, -ve on error
+ */
+int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj_txtedit *ted);
+
+/**
  * scene_apply_theme() - Apply a theme to a scene
  *
  * @scn: Scene to update

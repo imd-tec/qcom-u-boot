@@ -55,3 +55,40 @@ int scene_txted_set_font(struct scene *scn, uint id, const char *font_name,
 
 	return scene_txt_set_font(scn, ted->edit_id, font_name, font_size);
 }
+
+int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj_txtedit *ted)
+{
+	const bool open = ted->obj.flags & SCENEOF_OPEN;
+	const struct expo_theme *theme = &scn->expo->theme;
+	bool point;
+	int x, y;
+	int ret;
+
+	x = ted->obj.req_bbox.x0;
+	y = ted->obj.req_bbox.y0;
+	if (ted->label_id) {
+		ret = scene_obj_set_pos(scn, ted->label_id, x, y);
+		if (ret < 0)
+			return log_msg_ret("tit", ret);
+
+		x += arr->label_width + theme->textline_label_margin_x;
+	}
+
+	/* constrain the edit text to fit within the textedit bbox */
+	ret = scene_obj_set_bbox(scn, ted->edit_id, x, y,
+				 ted->obj.req_bbox.x1, ted->obj.req_bbox.y1);
+	if (ret < 0)
+		return log_msg_ret("edi", ret);
+
+	point = scn->highlight_id == ted->obj.id;
+	point &= !open;
+	scene_obj_flag_clrset(scn, ted->edit_id, SCENEOF_POINT,
+			      point ? SCENEOF_POINT : 0);
+
+	ted->obj.dims.x = x - ted->obj.req_bbox.x0;
+	ted->obj.dims.y = y - ted->obj.req_bbox.y0;
+	scene_obj_set_size(scn, ted->obj.id, ted->obj.dims.x, ted->obj.dims.y);
+
+	return 0;
+}

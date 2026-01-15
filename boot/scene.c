@@ -868,7 +868,6 @@ int scene_arrange(struct scene *scn)
 		case SCENEOBJT_IMAGE:
 		case SCENEOBJT_TEXT:
 		case SCENEOBJT_BOX:
-		case SCENEOBJT_TEXTEDIT:
 			break;
 		case SCENEOBJT_MENU: {
 			struct scene_obj_menu *menu;
@@ -884,6 +883,15 @@ int scene_arrange(struct scene *scn)
 
 			tline = (struct scene_obj_textline *)obj,
 			ret = scene_textline_arrange(scn, &arr, tline);
+			if (ret)
+				return log_msg_ret("arr", ret);
+			break;
+		}
+		case SCENEOBJT_TEXTEDIT: {
+			struct scene_obj_txtedit *ted;
+
+			ted = (struct scene_obj_txtedit *)obj,
+			ret = scene_txted_arrange(scn, &arr, ted);
 			if (ret)
 				return log_msg_ret("arr", ret);
 			break;

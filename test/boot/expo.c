@@ -1533,7 +1533,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	expo_set_scene_id(exp, SCENE1);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(19651, video_compress_fb(uts, dev, false));
+	ut_asserteq(19493, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
