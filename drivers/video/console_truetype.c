@@ -249,15 +249,6 @@ struct console_tt_priv {
 	char *scratch_buf;
 };
 
-/**
- * struct console_tt_store - Format used for save/restore of entry information
- *
- * @ctx: Per-client context
- */
-struct console_tt_store {
-	struct console_tt_ctx ctx;
-};
-
 static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
@@ -1170,8 +1161,7 @@ static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
 static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	struct console_tt_store store;
-	const uint size = sizeof(store);
+	const uint size = sizeof(*ctx);
 
 	if (xpl_phase() <= PHASE_SPL)
 		return -ENOSYS;
@@ -1179,8 +1169,7 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 	if (!abuf_realloc(buf, size))
 		return log_msg_ret("sav", -ENOMEM);
 
-	store.ctx = *ctx;
-	memcpy(abuf_data(buf), &store, size);
+	memcpy(abuf_data(buf), ctx, size);
 
 	return 0;
 }
@@ -1188,13 +1177,11 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	struct console_tt_store store;
 
 	if (xpl_phase() <= PHASE_SPL)
 		return -ENOSYS;
 
-	memcpy(&store, abuf_data(buf), sizeof(store));
-	*ctx = store.ctx;
+	memcpy(ctx, abuf_data(buf), sizeof(*ctx));
 
 	return 0;
 }
