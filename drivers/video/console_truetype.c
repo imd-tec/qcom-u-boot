@@ -1375,10 +1375,20 @@ struct vidconsole_ops console_truetype_ops = {
 	.mark_start	= truetype_mark_start,
 };
 
+static int console_truetype_bind(struct udevice *dev)
+{
+	struct vidconsole_uc_plat *plat = dev_get_uclass_plat(dev);
+
+	plat->ctx_size = sizeof(struct console_tt_ctx);
+
+	return 0;
+}
+
 U_BOOT_DRIVER(vidconsole_truetype) = {
 	.name	= "vidconsole_tt",
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_truetype_ops,
+	.bind	= console_truetype_bind,
 	.probe	= console_truetype_probe,
 	.remove	= console_truetype_remove,
 	.priv_auto	= sizeof(struct console_tt_priv),
