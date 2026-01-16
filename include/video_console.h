@@ -137,6 +137,19 @@ struct vidconsole_ctx {
 };
 
 /**
+ * struct vidconsole_uc_plat - uclass platform data for a vidconsole device
+ *
+ * This holds information that the uclass needs to know about each device. It
+ * is accessed using dev_get_uclass_plat(dev).
+ *
+ * @ctx_size: Size of context data needed by the driver, or 0 to use the
+ *	default (sizeof(struct vidconsole_ctx))
+ */
+struct vidconsole_uc_plat {
+	uint ctx_size;
+};
+
+/**
  * struct vidconsole_priv - uclass-private data about a console device
  *
  * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize

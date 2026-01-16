@@ -928,6 +928,7 @@ UCLASS_DRIVER(vidconsole) = {
 	.post_probe	= vidconsole_post_probe,
 	.pre_remove	= vidconsole_pre_remove,
 	.per_device_auto	= sizeof(struct vidconsole_priv),
+	.per_device_plat_auto	= sizeof(struct vidconsole_uc_plat),
 };
 
 int vidconsole_clear_and_reset(struct udevice *dev)
