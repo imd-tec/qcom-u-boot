@@ -86,6 +86,7 @@
 #include <linux/blk_types.h>
 #include <linux/fs_context.h>
 #include <linux/fs_parser.h>
+#include <linux/dcache.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 
@@ -300,8 +301,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* icount - inode reference count */
 #define icount_read(inode)			(1)
 
-/* d_inode - get inode from dentry */
-#define d_inode(dentry)				((dentry) ? (dentry)->d_inode : NULL)
+/* d_inode is now in linux/dcache.h */
 
 /* Random number functions */
 #define get_random_u32_below(max)		(0)
@@ -444,18 +444,7 @@ struct ratelimit_state {
 /* IS_NOQUOTA - stub */
 #define IS_NOQUOTA(inode)	(0)
 
-/* dentry - stub */
-struct dentry {
-	struct qstr d_name;
-	struct inode *d_inode;
-	struct super_block *d_sb;
-	struct dentry *d_parent;
-};
-
-/* name_snapshot - for dentry name snapshots */
-struct name_snapshot {
-	struct qstr name;
-};
+/* dentry, name_snapshot are now in linux/dcache.h */
 
 /* VM types - use linux/mm_types.h */
 #include <linux/mm_types.h>
@@ -758,10 +747,7 @@ static inline void inode_state_assign(struct inode *inode, unsigned long flags)
 	inode->i_state = flags;
 }
 
-#define QSTR_INIT(n, l) { .name = (const unsigned char *)(n), .len = (l) }
-
-/* dotdot_name for ".." lookups */
-static const struct qstr dotdot_name = QSTR_INIT("..", 2);
+/* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
 /*
  * Hash info structure - defined in ext4.h.
@@ -999,16 +985,7 @@ typedef unsigned int projid_t;
 /* hash_64 - simple 64-bit hash */
 #define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
 
-/* Dentry operations - stubs */
-#define d_find_any_alias(i)			({ (void)(i); (struct dentry *)NULL; })
-#define dget_parent(d)				({ (void)(d); (struct dentry *)NULL; })
-#define dput(d)					do { (void)(d); } while (0)
-#define d_splice_alias(i, d)			({ (d)->d_inode = (i); (d); })
-#define d_obtain_alias(i)			({ (void)(i); (struct dentry *)NULL; })
-#define d_instantiate_new(d, i)			((void)((d)->d_inode = (i)))
-#define d_instantiate(d, i)			((void)((d)->d_inode = (i)))
-#define d_tmpfile(f, i)				do { (void)(f); (void)(i); } while (0)
-#define d_invalidate(d)				do { (void)(d); } while (0)
+/* Dentry operations are now in linux/dcache.h */
 #define finish_open_simple(f, e)		(e)
 #define ihold(i)				do { (void)(i); } while (0)
 
@@ -1678,9 +1655,7 @@ struct mb_cache_entry {
 #define PF_MEMALLOC_NOFS	0x00040000
 #endif
 
-/* Dentry operations - declarations for stub.c */
-void generic_set_sb_d_ops(struct super_block *sb);
-struct dentry *d_make_root(struct inode *inode);
+/* generic_set_sb_d_ops, d_make_root are now in linux/dcache.h */
 
 /* strreplace is in linux/string.h */
 
@@ -1909,11 +1884,7 @@ struct wait_bit_entry {
 #define finish_wait(wq, wait) \
 	do { (void)(wq); (void)(wait); } while (0)
 
-/* Dentry name snapshot operations */
-#define take_dentry_name_snapshot(snap, dentry) \
-	do { (snap)->name = (dentry)->d_name; } while (0)
-#define release_dentry_name_snapshot(snap) \
-	do { (void)(snap); } while (0)
+/* Dentry name snapshot operations are now in linux/dcache.h */
 
 /* lockdep_assert_not_held is in linux/lockdep.h */
 
@@ -1924,9 +1895,7 @@ struct wait_bit_entry {
 /* wake_up_bit - wake up threads waiting on a bit */
 #define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
 
-/* Dentry allocation stubs */
-#define d_alloc(parent, name)		({ (void)(parent); (void)(name); (struct dentry *)NULL; })
-#define d_drop(dentry)			do { (void)(dentry); } while (0)
+/* d_alloc, d_drop are now in linux/dcache.h */
 
 /* get_current_ioprio - I/O priority (not used in U-Boot) */
 #define get_current_ioprio()		(0)
