@@ -84,6 +84,8 @@
 #include <linux/jiffies.h>
 #include <linux/blkdev.h>
 #include <linux/blk_types.h>
+#include <linux/fs_context.h>
+#include <linux/fs_parser.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 
@@ -1302,87 +1304,10 @@ static inline const char *simple_get_link(struct dentry *dentry,
  * Additional stubs for super.c
  */
 
-/* fs_context and fs_parser stubs */
-struct constant_table {
-	const char *name;
-	int value;
-};
-
-struct fs_parameter_spec {
-	const char *name;
-	int opt;
-	unsigned short type;
-	const struct constant_table *data;
-};
-
-/* fs_parameter spec types */
-#define fs_param_is_flag	0
-#define fs_param_is_u32		1
-#define fs_param_is_s32		2
-#define fs_param_is_u64		3
-#define fs_param_is_enum	4
-#define fs_param_is_string	5
-#define fs_param_is_blob	6
-#define fs_param_is_fd		7
-#define fs_param_is_uid		8
-#define fs_param_is_gid		9
-#define fs_param_is_blockdev	10
-
-/* fsparam_* macros for mount option parsing - use literal values */
-#define fsparam_flag(name, opt) \
-	{(name), (opt), 0, NULL}
-#define fsparam_u32(name, opt) \
-	{(name), (opt), 1, NULL}
-#define fsparam_s32(name, opt) \
-	{(name), (opt), 2, NULL}
-#define fsparam_u64(name, opt) \
-	{(name), (opt), 3, NULL}
-#define fsparam_string(name, opt) \
-	{(name), (opt), 5, NULL}
-#define fsparam_string_empty(name, opt) \
-	{(name), (opt), 5, NULL}
-#define fsparam_enum(name, opt, array) \
-	{(name), (opt), 4, (array)}
-#define fsparam_bdev(name, opt) \
-	{(name), (opt), 10, NULL}
-#define fsparam_uid(name, opt) \
-	{(name), (opt), 8, NULL}
-#define fsparam_gid(name, opt) \
-	{(name), (opt), 9, NULL}
-#define __fsparam(type, name, opt, flags, data) \
-	{(name), (opt), (type), (data)}
-
 /* Quota format constants */
 #define QFMT_VFS_OLD		1
 #define QFMT_VFS_V0		2
 #define QFMT_VFS_V1		4
-
-struct fs_context;
-struct fs_parameter;
-
-struct fs_context_operations {
-	int (*parse_param)(struct fs_context *, struct fs_parameter *);
-	int (*get_tree)(struct fs_context *);
-	int (*reconfigure)(struct fs_context *);
-	void (*free)(struct fs_context *);
-};
-
-struct file_system_type {
-	struct module *owner;
-	const char *name;
-	int (*init_fs_context)(struct fs_context *);
-	const struct fs_parameter_spec *parameters;
-	void (*kill_sb)(struct super_block *);
-	int fs_flags;
-	struct list_head fs_supers;
-};
-
-#define FS_REQUIRES_DEV		1
-#define FS_BINARY_MOUNTDATA	2
-#define FS_HAS_SUBTYPE		4
-#define FS_USERNS_MOUNT		8
-#define FS_DISALLOW_NOTIFY_PERM	16
-#define FS_ALLOW_IDMAP		32
 
 /* Buffer read sync */
 static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
@@ -1510,81 +1435,10 @@ struct kstatfs {
 #define EXT4_GOING_FLAGS_LOGFLUSH	1
 #define EXT4_GOING_FLAGS_NOLOGFLUSH	2
 
-/* fs_context stubs */
-/* fs_context_purpose - what the context is for */
-enum fs_context_purpose {
-	FS_CONTEXT_FOR_MOUNT,
-	FS_CONTEXT_FOR_SUBMOUNT,
-	FS_CONTEXT_FOR_RECONFIGURE,
-};
-
-struct fs_context {
-	const struct fs_context_operations *ops;
-	struct file_system_type *fs_type;
-	void *fs_private;
-	struct dentry *root;
-	struct user_namespace *user_ns;
-	void *s_fs_info;		/* Filesystem specific info */
-	unsigned int sb_flags;
-	unsigned int sb_flags_mask;
-	unsigned int lsm_flags;
-	enum fs_context_purpose purpose;
-	bool sloppy;
-	bool silent;
-};
-
 /* ext4 superblock initialisation and commit */
 int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 int ext4_commit_super(struct super_block *sb);
 void ext4_unregister_li_request(struct super_block *sb);
-
-/* fs_parameter stubs */
-struct fs_parameter {
-	const char *key;
-	int type;
-	size_t size;
-	int dirfd;
-	union {
-		char *string;
-		int boolean;
-		int integer;
-	};
-};
-
-/* fs_value types - result type from parsing */
-enum fs_value_type {
-	fs_value_is_undefined,
-	fs_value_is_flag,
-	fs_value_is_string,
-	fs_value_is_blob,
-	fs_value_is_filename,
-	fs_value_is_file,
-};
-
-/* fs_parse_result - result of parsing a parameter */
-struct fs_parse_result {
-	bool negated;
-	union {
-		bool boolean;
-		int int_32;
-		unsigned int uint_32;
-		u64 uint_64;
-		kuid_t uid;
-		kgid_t gid;
-	};
-};
-
-/* fs_parse stubs */
-#define fs_parse(fc, desc, param, result) ({ (void)(fc); (void)(desc); (void)(param); (void)(result); -ENOPARAM; })
-#define ENOPARAM			519
-#define fs_lookup_param(fc, p, bdev, fl, path) ({ (void)(fc); (void)(p); (void)(bdev); (void)(fl); (void)(path); -EINVAL; })
-
-/* get_tree helpers */
-#define get_tree_bdev(fc, fill_super)	({ (void)(fc); (void)(fill_super); -ENODEV; })
-#define get_tree_nodev(fc, fill_super)	({ (void)(fc); (void)(fill_super); -ENODEV; })
-
-/* kill_sb helpers */
-#define kill_block_super(sb)		do { } while (0)
 
 /* prandom */
 #define get_random_u32()		0
