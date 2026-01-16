@@ -456,29 +456,15 @@ struct name_snapshot {
 	struct qstr name;
 };
 
-/* vm_fault_t - stub */
-typedef unsigned int vm_fault_t;
-
-/* VM flags */
-#define VM_SHARED		0x00000008
-#define VM_WRITE		0x00000002
-#define VM_HUGEPAGE		0x01000000
-#define FAULT_FLAG_WRITE	0x01
+/* VM types - use linux/mm_types.h */
+#include <linux/mm_types.h>
 
 /* pipe_inode_info - forward declaration */
 struct pipe_inode_info;
 
-/* vm_area_desc - for mmap_prepare */
-struct vm_area_desc {
-	struct file *file;
-	unsigned long vm_flags;
-	const struct vm_operations_struct *vm_ops;
-};
-
-/* Forward declarations for function prototypes */
+/* Forward declarations for function prototypes (vm_fault is in linux/mm_types.h) */
 struct kstat;
 struct path;
-struct vm_fault;
 struct file_kattr;
 struct dir_context;
 struct readahead_control;
@@ -592,10 +578,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define STATX_ATTR_ENCRYPTED	0x00000800
 #define STATX_ATTR_VERITY	0x00100000
 
-/* VM fault return values */
-#define VM_FAULT_SIGBUS		0x0002
-#define VM_FAULT_NOPAGE		0x0010
-#define VM_FAULT_LOCKED		0x0200
+/* VM fault return values are in linux/mm_types.h */
 
 /* struct path is defined in linux/fs.h */
 
@@ -625,43 +608,10 @@ struct kstat {
 	u32 atomic_write_segments_max;
 };
 
-/* struct vm_area_struct - virtual memory area */
-struct vm_area_struct {
-	unsigned long vm_start;
-	unsigned long vm_end;
-	struct file *vm_file;
-	unsigned long vm_flags;
-};
-
-/* struct page - minimal stub */
-struct page {
-	unsigned long flags;
-};
-
-/* struct vm_fault - virtual memory fault info */
-struct vm_fault {
-	struct vm_area_struct *vma;
-	unsigned long address;
-	unsigned int flags;
-	pgoff_t pgoff;
-	struct folio *folio;
-	struct page *page;
-};
-
-/* vm_operations_struct - virtual memory area operations */
-struct vm_operations_struct {
-	vm_fault_t (*fault)(struct vm_fault *vmf);
-	vm_fault_t (*huge_fault)(struct vm_fault *vmf, unsigned int order);
-	vm_fault_t (*page_mkwrite)(struct vm_fault *vmf);
-	vm_fault_t (*pfn_mkwrite)(struct vm_fault *vmf);
-	vm_fault_t (*map_pages)(struct vm_fault *vmf, pgoff_t start, pgoff_t end);
-};
+/* VM structs (vm_area_struct, page, vm_fault, vm_operations_struct) are in linux/mm_types.h */
 
 /* Forward declaration for swap */
 struct swap_info_struct;
-
-/* MAX_PAGECACHE_ORDER - maximum order for page cache allocations */
-#define MAX_PAGECACHE_ORDER	12
 
 /* Process flags */
 #define PF_MEMALLOC		0x00000800
