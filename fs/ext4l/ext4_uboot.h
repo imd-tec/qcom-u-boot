@@ -1976,23 +1976,8 @@ int ext4_update_overhead(struct super_block *sb, bool force);
  * Stubs for fsmap.c
  */
 
-/* fsmap.c stubs - struct fsmap from linux/fsmap.h */
-struct fsmap {
-	__u32	fmr_device;	/* device id */
-	__u32	fmr_flags;	/* mapping flags */
-	__u64	fmr_physical;	/* device offset of segment */
-	__u64	fmr_owner;	/* owner id */
-	__u64	fmr_offset;	/* file offset of segment */
-	__u64	fmr_length;	/* length of segment */
-	__u64	fmr_reserved[3]; /* must be zero */
-};
-
-#define FMR_OWN_FREE		(-1ULL)
-#define FMR_OWN_UNKNOWN		(-2ULL)
-#define FMR_OWNER(type, code)	(((__u64)(type) << 32) | (__u64)(code))
-#define FMR_OF_SPECIAL_OWNER	(1 << 0)
-#define FMH_IF_VALID		0
-#define FMH_OF_DEV_T		(1 << 0)
+/* fsmap is now in linux/fsmap.h */
+#include <linux/fsmap.h>
 
 /* list_sort and sort stubs for fsmap.c */
 #define list_sort(priv, head, cmp) \
