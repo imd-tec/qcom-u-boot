@@ -195,7 +195,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
-	struct vidconsole_ansi *ansi = &priv->ansi;
+	struct vidconsole_ansi *ansi = &ctx->ansi;
 
 	if (!IS_ENABLED(CONFIG_VIDEO_ANSI))
 		goto error;
@@ -487,7 +487,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
-	struct vidconsole_ansi *ansi = &priv->ansi;
+	struct vidconsole_ansi *ansi = &ctx->ansi;
 	int cp, ret;
 
 	/* Hide cursor to avoid artifacts */
@@ -526,7 +526,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		break;
 	default:
 		if (CONFIG_IS_ENABLED(CHARSET)) {
-			cp = utf8_to_utf32_stream(ch, priv->utf8_buf);
+			cp = utf8_to_utf32_stream(ch, ctx->utf8_buf);
 			if (cp == 0)
 				return 0;
 		} else {

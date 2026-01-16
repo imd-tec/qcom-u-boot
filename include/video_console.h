@@ -74,36 +74,6 @@ struct vidconsole_cursor {
 };
 
 /**
- * struct vidconsole_ctx - per-client context for a video console
- *
- * This holds per-client state for video consoles. It can be used by clients
- * to maintain separate contexts for different text-entry operations.
- *
- * @rows:		Number of text rows
- * @cols:		Number of text columns
- * @x_charsize:		Character width in pixels
- * @y_charsize:		Character height in pixels
- * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
- * @ycur:		Current Y position in pixels (0=top)
- * @last_ch:		Last character written to the text console on this line
- * @cli_index:		Character index into the CLI text (0=start)
- * @xmark_frac:		X position of start of CLI text entry, in fractional units
- * @ymark:		Y position of start of CLI text
- */
-struct vidconsole_ctx {
-	int rows;
-	int cols;
-	int x_charsize;
-	int y_charsize;
-	int xcur_frac;
-	int ycur;
-	int last_ch;
-	int cli_index;
-	int xmark_frac;
-	int ymark;
-};
-
-/**
  * struct vidconsole_ansi - ANSI escape-sequence state
  *
  * ANSI escape sequences are accumulated character by character, starting after
@@ -125,6 +95,40 @@ struct vidconsole_ansi {
 };
 
 /**
+ * struct vidconsole_ctx - per-client context for a video console
+ *
+ * This holds per-client state for video consoles. It can be used by clients
+ * to maintain separate contexts for different text-entry operations.
+ *
+ * @rows:		Number of text rows
+ * @cols:		Number of text columns
+ * @x_charsize:		Character width in pixels
+ * @y_charsize:		Character height in pixels
+ * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
+ * @ycur:		Current Y position in pixels (0=top)
+ * @last_ch:		Last character written to the text console on this line
+ * @cli_index:		Character index into the CLI text (0=start)
+ * @xmark_frac:		X position of start of CLI text entry, in fractional units
+ * @ymark:		Y position of start of CLI text
+ * @ansi:		ANSI escape-sequence state
+ * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
+ */
+struct vidconsole_ctx {
+	int rows;
+	int cols;
+	int x_charsize;
+	int y_charsize;
+	int xcur_frac;
+	int ycur;
+	int last_ch;
+	int cli_index;
+	int xmark_frac;
+	int ymark;
+	struct vidconsole_ansi ansi;
+	char utf8_buf[5];
+};
+
+/**
  * struct vidconsole_priv - uclass-private data about a console device
  *
  * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
@@ -143,8 +147,6 @@ struct vidconsole_ansi {
  * @tab_width_frac:	Tab width in fractional units
  * @xsize_frac:		Width of the display in fractional units
  * @xstart_frac:	Left margin for the text console in fractional units
- * @ansi:		ANSI escape-sequence state
- * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
  * @quiet:		Suppress all output from stdio
  * @curs:		Cursor state and management
  */
@@ -154,8 +156,6 @@ struct vidconsole_priv {
 	int tab_width_frac;
 	int xsize_frac;
 	int xstart_frac;
-	struct vidconsole_ansi ansi;
-	char utf8_buf[5];
 	bool quiet;
 	struct vidconsole_cursor curs;
 };
