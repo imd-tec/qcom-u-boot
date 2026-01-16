@@ -161,7 +161,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 		return log_msg_ret("sav", -ENOMEM);
 
 	store.xpos_frac = ctx->xcur_frac;
-	store.ypos  = vc_priv->ycur;
+	store.ypos  = ctx->ycur;
 	store.cli_index  = vc_priv->cli_index;
 	memcpy(abuf_data(buf), &store, size);
 
@@ -181,7 +181,7 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 	memcpy(&store, abuf_data(buf), sizeof(store));
 
 	ctx->xcur_frac = store.xpos_frac;
-	vc_priv->ycur = store.ypos;
+	ctx->ycur = store.ypos;
 	vc_priv->cli_index = store.cli_index;
 
 	return 0;

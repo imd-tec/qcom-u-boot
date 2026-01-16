@@ -84,6 +84,7 @@ struct vidconsole_cursor {
  * @x_charsize:		Character width in pixels
  * @y_charsize:		Character height in pixels
  * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
+ * @ycur:		Current Y position in pixels (0=top)
  */
 struct vidconsole_ctx {
 	int rows;
@@ -91,6 +92,7 @@ struct vidconsole_ctx {
 	int x_charsize;
 	int y_charsize;
 	int xcur_frac;
+	int ycur;
 };
 
 /**
@@ -123,13 +125,12 @@ struct vidconsole_ansi {
  * Note that these values relate to the rotated console, so that an 80x25
  * console which is rotated 90 degrees will have rows=80 and cols=25
  *
- * The ctx.xcur_frac and ycur values refer to the unrotated coordinates, that
- * is ctx.xcur_frac always advances with each character, even if its limit
+ * The ctx.xcur_frac and ctx.ycur values refer to the unrotated coordinates,
+ * that is ctx.xcur_frac always advances with each character, even if its limit
  * might be vid_priv->ysize instead of vid_priv->xsize if the console is
  * rotated 90 or 270 degrees.
  *
  * @sdev:		stdio device, acting as an output sink
- * @ycur:		Current Y position in pixels (0=top)
  * @ctx:		Per-client context
  * @tab_width_frac:	Tab width in fractional units
  * @xsize_frac:		Width of the display in fractional units
@@ -146,7 +147,6 @@ struct vidconsole_ansi {
 struct vidconsole_priv {
 	struct stdio_dev sdev;
 	struct vidconsole_ctx ctx;
-	int ycur;
 	int tab_width_frac;
 	int xsize_frac;
 	int xstart_frac;

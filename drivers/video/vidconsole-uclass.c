@@ -80,9 +80,9 @@ static int vidconsole_back(struct udevice *dev)
 	if (ctx->xcur_frac < priv->xstart_frac) {
 		ctx->xcur_frac = (ctx->cols - 1) *
 			VID_TO_POS(ctx->x_charsize);
-		priv->ycur -= ctx->y_charsize;
-		if (priv->ycur < 0)
-			priv->ycur = 0;
+		ctx->ycur -= ctx->y_charsize;
+		if (ctx->ycur < 0)
+			ctx->ycur = 0;
 	}
 	assert(priv->cli_index);
 	cli_index_adjust(priv, -1);
@@ -101,17 +101,17 @@ static void vidconsole_newline(struct udevice *dev)
 	int i, ret;
 
 	ctx->xcur_frac = priv->xstart_frac;
-	priv->ycur += ctx->y_charsize;
+	ctx->ycur += ctx->y_charsize;
 
 	/* Check if we need to scroll the terminal */
 	if (vid_priv->rot % 2 ?
-	    priv->ycur + ctx->x_charsize > vid_priv->xsize :
-	    priv->ycur + ctx->y_charsize > vid_priv->ysize) {
+	    ctx->ycur + ctx->x_charsize > vid_priv->xsize :
+	    ctx->ycur + ctx->y_charsize > vid_priv->ysize) {
 		vidconsole_move_rows(dev, 0, rows, ctx->rows - rows);
 		for (i = 0; i < rows; i++)
 			vidconsole_set_row(dev, ctx->rows - i - 1,
 					   vid_priv->colour_bg);
-		priv->ycur -= rows * ctx->y_charsize;
+		ctx->ycur -= rows * ctx->y_charsize;
 	}
 	priv->last_ch = 0;
 
@@ -140,7 +140,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
 
 	ctx->xcur_frac = VID_TO_POS(x);
 	priv->xstart_frac = ctx->xcur_frac;
-	priv->ycur = y;
+	ctx->ycur = y;
 
 	/* make sure not to kern against the previous character */
 	priv->last_ch = 0;
@@ -181,7 +181,7 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 {
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 
-	*row = priv->ycur / ctx->y_charsize;
+	*row = ctx->ycur / ctx->y_charsize;
 	*col = VID_TO_PIXEL(ctx->xcur_frac - priv->xstart_frac) /
 	       ctx->x_charsize;
 }
@@ -332,7 +332,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 				console_puts_select_stderr(true, "[vc err: video_sync]");
 #endif
 			}
-			priv->ycur = 0;
+			ctx->ycur = 0;
 			ctx->xcur_frac = priv->xstart_frac;
 		} else {
 			debug("unsupported clear mode: %d\n", mode);
@@ -467,10 +467,10 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	 * colour depth. Check this and return an error to help with
 	 * diagnosis.
 	 */
-	ret = vidconsole_putc_xy(dev, ctx->xcur_frac, priv->ycur, ch);
+	ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
 	if (ret == -EAGAIN) {
 		vidconsole_newline(dev);
-		ret = vidconsole_putc_xy(dev, ctx->xcur_frac, priv->ycur, ch);
+		ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
 	}
 	if (ret < 0)
 		return ret;
@@ -840,7 +840,7 @@ int vidconsole_mark_start(struct udevice *dev)
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
 	priv->xmark_frac = ctx->xcur_frac;
-	priv->ymark = priv->ycur;
+	priv->ymark = ctx->ycur;
 	priv->cli_index = 0;
 	if (ops->mark_start) {
 		int ret;

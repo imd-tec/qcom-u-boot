@@ -497,7 +497,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 
 		pos = &ctx->pos[ctx->pos_ptr];
 		pos->xpos_frac = vc_ctx->xcur_frac;
-		pos->ypos = vc_priv->ycur;
+		pos->ypos = vc_ctx->ycur;
 		pos->width = (width_frac + VID_FRAC_DIV - 1) / VID_FRAC_DIV;
 		pos->cp = cp;
 		ctx->pos_ptr++;
@@ -707,14 +707,14 @@ static int console_truetype_backspace(struct udevice *dev)
 	 * cursor position, but if we are clearing a character on the previous
 	 * line, we clear from the end of the line.
 	 */
-	if (pos->ypos == vc_priv->ycur)
+	if (pos->ypos == vc_ctx->ycur)
 		xend = VID_TO_PIXEL(vc_ctx->xcur_frac);
 	else
 		xend = vid_priv->xsize;
 
 	/* Move the cursor back to where it was when we pushed this record */
 	vc_ctx->xcur_frac = pos->xpos_frac;
-	vc_priv->ycur = pos->ypos;
+	vc_ctx->ycur = pos->ypos;
 
 	return 0;
 }
@@ -1202,7 +1202,7 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 
 	store.priv = *priv;
 	store.cur.xpos_frac = vc_ctx->xcur_frac;
-	store.cur.ypos  = vc_priv->ycur;
+	store.cur.ypos  = vc_ctx->ycur;
 	memcpy(abuf_data(buf), &store, size);
 
 	return 0;
@@ -1222,7 +1222,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 	memcpy(&store, abuf_data(buf), sizeof(store));
 
 	vc_ctx->xcur_frac = store.cur.xpos_frac;
-	vc_priv->ycur = store.cur.ypos;
+	vc_ctx->ycur = store.cur.ypos;
 	*ctx = store.priv.ctx;
 
 	return 0;
@@ -1255,7 +1255,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 		x = VID_TO_PIXEL(ctx->pos[index].xpos_frac);
 	else
 		x = VID_TO_PIXEL(vc_ctx->xcur_frac);
-	y = vc_priv->ycur;
+	y = vc_ctx->ycur;
 
 	/* Get font height from current font type */
 	if (priv->cur_fontdata)
