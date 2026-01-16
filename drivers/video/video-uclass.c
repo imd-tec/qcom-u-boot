@@ -665,13 +665,13 @@ static int show_splash(struct udevice *dev)
 
 int video_default_font_height(struct udevice *dev)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 
 	if (IS_ENABLED(CONFIG_CONSOLE_TRUETYPE))
 		return IF_ENABLED_INT(CONFIG_CONSOLE_TRUETYPE,
 				      CONFIG_CONSOLE_TRUETYPE_SIZE);
 
-	return vc_priv->y_charsize;
+	return ctx->y_charsize;
 }
 
 static void video_idle(struct cyclic_info *cyc)

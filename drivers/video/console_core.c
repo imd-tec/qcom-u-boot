@@ -340,6 +340,7 @@ int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
 			   struct video_fontdata *fontdata)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	int pbytes = VNBYTES(vid_priv->bpix);
@@ -349,7 +350,7 @@ int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
 	uchar *pfont = fontdata->video_fontdata +
 			ch * fontdata->char_pixel_bytes;
 
-	if (x_frac + VID_TO_POS(vc_priv->x_charsize) > vc_priv->xsize_frac)
+	if (x_frac + VID_TO_POS(ctx->x_charsize) > vc_priv->xsize_frac)
 		return -EAGAIN;
 	linenum = y;
 	x = VID_TO_PIXEL(x_frac);

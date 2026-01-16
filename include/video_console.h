@@ -74,68 +74,88 @@ struct vidconsole_cursor {
 };
 
 /**
- * struct vidconsole_priv - uclass-private data about a console device
+ * struct vidconsole_ansi - ANSI escape-sequence state
  *
- * Drivers must set up @rows, @cols, @x_charsize, @y_charsize in their probe()
- * method. Drivers may set up @xstart_frac if desired.
+ * ANSI escape sequences are accumulated character by character, starting after
+ * the ESC char (0x1b) until the entire sequence is consumed, at which point it
+ * is acted upon.
  *
- * Note that these values relate to the rotated console, so that an 80x25
- * console which is rotated 90 degrees will have rows=80 and cols=25
- *
- * The xcur_frac and ycur values refer to the unrotated coordinates, that is
- * xcur_frac always advances with each character, even if its limit might be
- * vid_priv->ysize instead of vid_priv->xsize if the console is rotated 90 or
- * 270 degrees.
- *
- * @sdev:		stdio device, acting as an output sink
- * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
- * @ycur:		Current Y position in pixels (0=top)
- * @rows:		Number of text rows
- * @cols:		Number of text columns
- * @x_charsize:		Character width in pixels
- * @y_charsize:		Character height in pixels
- * @tab_width_frac:	Tab width in fractional units
- * @xsize_frac:		Width of the display in fractional units
- * @xstart_frac:	Left margin for the text console in fractional units
- * @last_ch:		Last character written to the text console on this line
- * @xmark_frac:		X position of start of CLI text entry, in fractional units
- * @ymark:		Y position of start of CLI text
- * @cli_index:		Character index into the CLI text (0=start)
- * @escape:		TRUE if currently accumulating an ANSI escape sequence
- * @escape_len:		Length of accumulated escape sequence so far
- * @col_saved:		Saved X position, in fractional units (VID_TO_POS(x))
- * @row_saved:		Saved Y position in pixels (0=top)
- * @escape_buf:		Buffer to accumulate escape sequence
- * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
- * @quiet:		Suppress all output from stdio
- * @curs:		Cursor state and management
+ * @escape:	True if currently accumulating an ANSI escape sequence
+ * @escape_len:	Length of accumulated escape sequence so far
+ * @row_saved:	Saved Y position in pixels (0=top)
+ * @col_saved:	Saved X position, in fractional units (VID_TO_POS(x))
+ * @escape_buf:	Buffer to accumulate escape sequence
  */
-struct vidconsole_priv {
-	struct stdio_dev sdev;
-	int xcur_frac;
-	int ycur;
-	int rows;
-	int cols;
-	int x_charsize;
-	int y_charsize;
-	int tab_width_frac;
-	int xsize_frac;
-	int xstart_frac;
-	int last_ch;
-	int xmark_frac;
-	int ymark;
-	int cli_index;
-	/*
-	 * ANSI escape sequences are accumulated character by character,
-	 * starting after the ESC char (0x1b) until the entire sequence
-	 * is consumed at which point it is acted upon.
-	 */
+struct vidconsole_ansi {
 	int escape;
 	int escape_len;
 	int row_saved;
 	int col_saved;
 	char escape_buf[32];
+};
+
+/**
+ * struct vidconsole_ctx - per-client context for a video console
+ *
+ * This holds per-client state for video consoles. It can be used by clients
+ * to maintain separate contexts for different text-entry operations.
+ *
+ * @rows:		Number of text rows
+ * @cols:		Number of text columns
+ * @x_charsize:		Character width in pixels
+ * @y_charsize:		Character height in pixels
+ * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
+ * @ycur:		Current Y position in pixels (0=top)
+ * @last_ch:		Last character written to the text console on this line
+ * @cli_index:		Character index into the CLI text (0=start)
+ * @xmark_frac:		X position of start of CLI text entry, in fractional units
+ * @ymark:		Y position of start of CLI text
+ * @ansi:		ANSI escape-sequence state
+ * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
+ */
+struct vidconsole_ctx {
+	int rows;
+	int cols;
+	int x_charsize;
+	int y_charsize;
+	int xcur_frac;
+	int ycur;
+	int last_ch;
+	int cli_index;
+	int xmark_frac;
+	int ymark;
+	struct vidconsole_ansi ansi;
 	char utf8_buf[5];
+};
+
+/**
+ * struct vidconsole_priv - uclass-private data about a console device
+ *
+ * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
+ * in their probe() method. Drivers may set up @xstart_frac if desired.
+ *
+ * Note that these values relate to the rotated console, so that an 80x25
+ * console which is rotated 90 degrees will have rows=80 and cols=25
+ *
+ * The ctx.xcur_frac and ctx.ycur values refer to the unrotated coordinates,
+ * that is ctx.xcur_frac always advances with each character, even if its limit
+ * might be vid_priv->ysize instead of vid_priv->xsize if the console is
+ * rotated 90 or 270 degrees.
+ *
+ * @sdev:		stdio device, acting as an output sink
+ * @ctx:		Per-client context
+ * @tab_width_frac:	Tab width in fractional units
+ * @xsize_frac:		Width of the display in fractional units
+ * @xstart_frac:	Left margin for the text console in fractional units
+ * @quiet:		Suppress all output from stdio
+ * @curs:		Cursor state and management
+ */
+struct vidconsole_priv {
+	struct stdio_dev sdev;
+	struct vidconsole_ctx ctx;
+	int tab_width_frac;
+	int xsize_frac;
+	int xstart_frac;
 	bool quiet;
 	struct vidconsole_cursor curs;
 };
@@ -340,6 +360,28 @@ struct vidconsole_ops {
 		       uint num_chars, struct vidconsole_bbox *bbox);
 
 	/**
+	 * ctx_new() - Create a new context for a client
+	 *
+	 * Allocates and initialises a context for a client of the vidconsole.
+	 * The driver determines what information is stored in the context.
+	 *
+	 * @dev: Console device to use
+	 * @ctxp: Returns new context, on success
+	 * Return: 0 on success, -ENOMEM if out of memory
+	 */
+	int (*ctx_new)(struct udevice *dev, void **ctxp);
+
+	/**
+	 * ctx_dispose() - Dispose of a context
+	 *
+	 * Frees any memory allocated for the context.
+	 *
+	 * @dev: Console device to use
+	 * @ctx: Context to dispose of
+	 */
+	int (*ctx_dispose)(struct udevice *dev, void *ctx);
+
+	/**
 	 * entry_save() - Save any text-entry information for later use
 	 *
 	 * Saves text-entry context such as a list of positions for each
@@ -389,6 +431,25 @@ struct vidconsole_ops {
 
 /* Get a pointer to the driver operations for a video console device */
 #define vidconsole_get_ops(dev)  ((struct vidconsole_ops *)(dev)->driver->ops)
+
+/**
+ * vidconsole_ctx() - Get the default context for a vidconsole device
+ *
+ * @dev: vidconsole device to check
+ * Return: pointer to context
+ */
+void *vidconsole_ctx(struct udevice *dev);
+
+/**
+ * vidconsole_ctx_from_priv() - Get the default context for a vidconsole device
+ *
+ * @priv: vidconsole uclass-private data
+ * Return: pointer to context
+ */
+static inline void *vidconsole_ctx_from_priv(struct vidconsole_priv *uc_priv)
+{
+	return &uc_priv->ctx;
+}
 
 /**
  * vidconsole_get_font() - Obtain information about a font
@@ -446,6 +507,28 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
  */
 int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 		       uint num_chars, struct vidconsole_bbox *bbox);
+
+/**
+ * vidconsole_ctx_new() - Create a new context for a client
+ *
+ * Allocates and initialises a context for a client of the vidconsole.
+ * The driver determines what information is stored in the context.
+ *
+ * @dev: Console device to use
+ * @ctxp: Returns new context, on success
+ * Return: 0 on success, -ENOMEM if out of memory
+ */
+int vidconsole_ctx_new(struct udevice *dev, void **ctxp);
+
+/**
+ * vidconsole_ctx_dispose() - Dispose of a context
+ *
+ * Frees any memory allocated for the context.
+ *
+ * @dev: Console device to use
+ * @ctx: Context to dispose of
+ */
+int vidconsole_ctx_dispose(struct udevice *dev, void *ctx);
 
 /**
  * vidconsole_entry_save() - Save any text-entry information for later use
@@ -532,7 +615,7 @@ static inline void vidconsole_readline_end(void)
 static inline void cli_index_adjust(struct vidconsole_priv *priv, int by)
 {
 	if (CONFIG_IS_ENABLED(CURSOR))
-		priv->cli_index += by;
+		priv->ctx.cli_index += by;
 }
 
 /**

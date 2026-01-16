@@ -494,10 +494,10 @@ int calc_check_console_lines(void)
 		dev = sdev_file_has_uclass(stdout, UCLASS_VIDEO_CONSOLE);
 
 		if (dev) {
-			struct vidconsole_priv *priv;
+			struct vidconsole_ctx *ctx;
 
-			priv = dev_get_uclass_priv(dev);
-			dev_lines = priv->rows;
+			ctx = vidconsole_ctx(dev);
+			dev_lines = ctx->rows;
 		}
 	}
 	/* get number of lines from the serial console, if available */

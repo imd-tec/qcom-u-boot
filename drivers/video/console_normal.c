@@ -8,11 +8,21 @@
 
 #include <charset.h>
 #include <dm.h>
+#include <malloc.h>
 #include <spl.h>
 #include <video.h>
 #include <video_console.h>
 #include <video_font.h>		/* Get font data, width and height */
 #include "vidconsole_internal.h"
+
+/**
+ * struct console_ctx - context for the normal console
+ *
+ * @com:	Common fields from the vidconsole uclass
+ */
+struct console_ctx {
+	struct vidconsole_ctx com;
+};
 
 struct console_store {
 	int xpos_frac;
@@ -85,6 +95,7 @@ int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
 static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_simple_priv *priv = dev_get_priv(dev);
 	struct video_fontdata *fontdata = priv->fontdata;
 	struct vidconsole_cursor *curs = &vc_priv->curs;
@@ -94,24 +105,24 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	if (!IS_ENABLED(CONFIG_EXPO))
 		return -ENOSYS;
 
-	x = VID_TO_PIXEL(vc_priv->xmark_frac);
-	y = vc_priv->ymark;
-	index = vc_priv->cli_index;
+	x = VID_TO_PIXEL(ctx->xmark_frac);
+	y = ctx->ymark;
+	index = ctx->cli_index;
 
 	/* rounded up character position in this line */
-	xpos = (x + vc_priv->x_charsize - 1) / vc_priv->x_charsize;
+	xpos = (x + ctx->x_charsize - 1) / ctx->x_charsize;
 
 	/* number of characters which can fit on this (first) line */
-	xspace = vc_priv->cols - xpos;
+	xspace = ctx->cols - xpos;
 
 	if (!curs->indent && index > xspace) {
 		/* move to the next line */
-		y += vc_priv->y_charsize;
+		y += ctx->y_charsize;
 		index -= xspace;
 
 		/* figure out the available space in subsequent lines */
 		if (!curs->indent) {
-			xspace = vc_priv->cols;
+			xspace = ctx->cols;
 			x = 0;
 		}
 
@@ -129,8 +140,8 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	/* Store line pointer and height in cursor struct */
 	curs->x = x;
 	curs->y = y;
-	curs->height = vc_priv->y_charsize;
-	curs->index = vc_priv->cli_index;
+	curs->height = ctx->y_charsize;
+	curs->index = ctx->cli_index;
 
 	return 0;
 }
@@ -139,6 +150,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 					    struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_store store;
 	const uint size = sizeof(store);
 
@@ -148,9 +160,9 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 	if (!abuf_realloc(buf, size))
 		return log_msg_ret("sav", -ENOMEM);
 
-	store.xpos_frac = vc_priv->xcur_frac;
-	store.ypos  = vc_priv->ycur;
-	store.cli_index  = vc_priv->cli_index;
+	store.xpos_frac = ctx->xcur_frac;
+	store.ypos  = ctx->ycur;
+	store.cli_index  = ctx->cli_index;
 	memcpy(abuf_data(buf), &store, size);
 
 	return 0;
@@ -160,6 +172,7 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 					       struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_store store;
 
 	if (xpl_phase() <= PHASE_SPL)
@@ -167,9 +180,9 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 
 	memcpy(&store, abuf_data(buf), sizeof(store));
 
-	vc_priv->xcur_frac = store.xpos_frac;
-	vc_priv->ycur = store.ypos;
-	vc_priv->cli_index = store.cli_index;
+	ctx->xcur_frac = store.xpos_frac;
+	ctx->ycur = store.ypos;
+	ctx->cli_index = store.cli_index;
 
 	return 0;
 }
@@ -179,6 +192,27 @@ static int console_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
 	return console_normal_putc_xy(dev, x_frac, y, cp);
 }
 
+static int console_simple_ctx_new(struct udevice *dev, void **ctxp)
+{
+	struct console_ctx *ctx;
+
+	ctx = malloc(sizeof(*ctx));
+	if (!ctx)
+		return -ENOMEM;
+
+	memset(ctx, '\0', sizeof(*ctx));
+	*ctxp = ctx;
+
+	return 0;
+}
+
+static int console_simple_ctx_dispose(struct udevice *dev, void *ctx)
+{
+	free(ctx);
+
+	return 0;
+}
+
 struct vidconsole_ops console_ops = {
 	.putc_xy	= console_putc_xy,
 	.move_rows	= console_move_rows,
@@ -186,6 +220,8 @@ struct vidconsole_ops console_ops = {
 	.get_font_size	= console_simple_get_font_size,
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
+	.ctx_new	= console_simple_ctx_new,
+	.ctx_dispose	= console_simple_ctx_dispose,
 #ifdef CONFIG_CURSOR
 	.get_cursor_info	= console_get_cursor_info,
 	.entry_save	= normal_entry_save,
