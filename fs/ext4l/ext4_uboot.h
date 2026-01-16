@@ -94,15 +94,7 @@
 /* SMP stubs - U-Boot is single-threaded */
 #define raw_smp_processor_id()	0
 
-/* cmpxchg - compare and exchange, single-threaded version */
-#define cmpxchg(ptr, old, new) ({		\
-	typeof(*(ptr)) __cmpxchg_old = (old);	\
-	typeof(*(ptr)) __cmpxchg_new = (new);	\
-	typeof(*(ptr)) __cmpxchg_ret = *(ptr);	\
-	if (__cmpxchg_ret == __cmpxchg_old)	\
-		*(ptr) = __cmpxchg_new;		\
-	__cmpxchg_ret;				\
-})
+/* cmpxchg is now in asm-generic/atomic.h */
 
 /* Reference count type */
 typedef struct { atomic_t refs; } refcount_t;
