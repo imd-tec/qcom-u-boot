@@ -1086,28 +1086,8 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 #define i_uid_update(m, a, i)			do { } while (0)
 #define i_gid_update(m, a, i)			do { } while (0)
 
-/* Device encoding helpers */
-#ifndef MINORBITS
-#define MINORBITS	20
-#endif
-#ifndef MINORMASK
-#define MINORMASK	((1U << MINORBITS) - 1)
-#endif
-#ifndef MAJOR
-#define MAJOR(dev)	((unsigned int)((dev) >> MINORBITS))
-#endif
-#ifndef MINOR
-#define MINOR(dev)	((unsigned int)((dev) & MINORMASK))
-#endif
-#ifndef MKDEV
-#define MKDEV(ma, mi)	(((ma) << MINORBITS) | (mi))
-#endif
-
-#define old_valid_dev(dev)	(MAJOR(dev) < 256 && MINOR(dev) < 256)
-#define old_encode_dev(dev)	((MAJOR(dev) << 8) | MINOR(dev))
-#define old_decode_dev(dev)	MKDEV((dev) >> 8, (dev) & 0xff)
-#define new_encode_dev(dev)	((unsigned int)(dev))
-#define new_decode_dev(dev)	((dev_t)(dev))
+/* Device encoding helpers are now in linux/kdev_t.h */
+#include <linux/kdev_t.h>
 
 /* UID/GID bit helpers */
 #define low_16_bits(x)		((x) & 0xFFFF)
