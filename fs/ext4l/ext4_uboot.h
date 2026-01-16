@@ -925,12 +925,7 @@ static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
 	return PAGECACHE_TAG_DIRTY;
 }
 
-/* blk_plug - block I/O plugging stub */
-struct blk_plug {
-	int dummy;
-};
-#define blk_start_plug(p)		do { (void)(p); } while (0)
-#define blk_finish_plug(p)		do { (void)(p); } while (0)
+/* blk_plug is now in linux/blkdev.h */
 
 /* Writeback reasons */
 #define WB_REASON_FS_FREE_SPACE	0
