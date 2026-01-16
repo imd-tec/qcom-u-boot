@@ -24,12 +24,6 @@ struct console_ctx {
 	struct vidconsole_ctx com;
 };
 
-struct console_store {
-	int xpos_frac;
-	int ypos;
-	int cli_index;
-};
-
 static int console_set_row(struct udevice *dev, uint row, int clr)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
@@ -149,10 +143,8 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 static __maybe_unused int normal_entry_save(struct udevice *dev,
 					    struct abuf *buf)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
-	struct console_store store;
-	const uint size = sizeof(store);
+	struct console_ctx *ctx = vidconsole_ctx(dev);
+	const uint size = sizeof(*ctx);
 
 	if (xpl_phase() <= PHASE_SPL)
 		return -ENOSYS;
@@ -160,10 +152,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 	if (!abuf_realloc(buf, size))
 		return log_msg_ret("sav", -ENOMEM);
 
-	store.xpos_frac = ctx->xcur_frac;
-	store.ypos  = ctx->ycur;
-	store.cli_index  = ctx->cli_index;
-	memcpy(abuf_data(buf), &store, size);
+	memcpy(abuf_data(buf), ctx, size);
 
 	return 0;
 }
@@ -171,18 +160,12 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 static __maybe_unused int normal_entry_restore(struct udevice *dev,
 					       struct abuf *buf)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
-	struct console_store store;
+	struct console_ctx *ctx = vidconsole_ctx(dev);
 
 	if (xpl_phase() <= PHASE_SPL)
 		return -ENOSYS;
 
-	memcpy(&store, abuf_data(buf), sizeof(store));
-
-	ctx->xcur_frac = store.xpos_frac;
-	ctx->ycur = store.ypos;
-	ctx->cli_index = store.cli_index;
+	memcpy(ctx, abuf_data(buf), sizeof(*ctx));
 
 	return 0;
 }
