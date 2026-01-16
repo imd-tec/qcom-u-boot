@@ -1071,6 +1071,12 @@ LDFLAGS_u-boot += -z notext $(call ld-option,--apply-dynamic-relocs)
 
 LDFLAGS_u-boot += --build-id=none
 
+# EFI app builds use a linker script with INCLUDE; add the source tree to the
+# linker search path so includes can be found
+ifdef CONFIG_EFI_APP
+LDFLAGS_u-boot += -L $(srctree)
+endif
+
 ifeq ($(CONFIG_ARC)$(CONFIG_NIOS2)$(CONFIG_X86)$(CONFIG_XTENSA),)
 ifdef CONFIG_HAVE_TEXT_BASE
 LDFLAGS_u-boot += -Ttext $(CONFIG_TEXT_BASE)
