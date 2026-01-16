@@ -949,14 +949,7 @@ typedef unsigned int projid_t;
  * Additional stubs for inode.c
  */
 
-/* try_cmpxchg - compare and exchange with return value */
-#define try_cmpxchg(ptr, old, new) ({		\
-	typeof(*(old)) __old = *(old);		\
-	typeof(*(ptr)) __ret = cmpxchg(ptr, __old, (new));	\
-	if (__ret != __old)			\
-		*(old) = __ret;			\
-	__ret == __old;				\
-})
+/* try_cmpxchg is now in asm-generic/atomic.h */
 
 /* hash_64 - simple 64-bit hash */
 #define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
@@ -1743,8 +1736,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* refcount operations are now in linux/refcount.h */
 
-/* xchg - exchange value atomically */
-#define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
+/* xchg is now in asm-generic/atomic.h */
 
 /* printk_ratelimited is in linux/printk.h */
 
