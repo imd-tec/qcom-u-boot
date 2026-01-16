@@ -92,6 +92,27 @@ struct vidconsole_ctx {
 };
 
 /**
+ * struct vidconsole_ansi - ANSI escape-sequence state
+ *
+ * ANSI escape sequences are accumulated character by character, starting after
+ * the ESC char (0x1b) until the entire sequence is consumed, at which point it
+ * is acted upon.
+ *
+ * @escape:	True if currently accumulating an ANSI escape sequence
+ * @escape_len:	Length of accumulated escape sequence so far
+ * @row_saved:	Saved Y position in pixels (0=top)
+ * @col_saved:	Saved X position, in fractional units (VID_TO_POS(x))
+ * @escape_buf:	Buffer to accumulate escape sequence
+ */
+struct vidconsole_ansi {
+	int escape;
+	int escape_len;
+	int row_saved;
+	int col_saved;
+	char escape_buf[32];
+};
+
+/**
  * struct vidconsole_priv - uclass-private data about a console device
  *
  * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
@@ -116,11 +137,7 @@ struct vidconsole_ctx {
  * @xmark_frac:		X position of start of CLI text entry, in fractional units
  * @ymark:		Y position of start of CLI text
  * @cli_index:		Character index into the CLI text (0=start)
- * @escape:		TRUE if currently accumulating an ANSI escape sequence
- * @escape_len:		Length of accumulated escape sequence so far
- * @col_saved:		Saved X position, in fractional units (VID_TO_POS(x))
- * @row_saved:		Saved Y position in pixels (0=top)
- * @escape_buf:		Buffer to accumulate escape sequence
+ * @ansi:		ANSI escape-sequence state
  * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
  * @quiet:		Suppress all output from stdio
  * @curs:		Cursor state and management
@@ -137,16 +154,7 @@ struct vidconsole_priv {
 	int xmark_frac;
 	int ymark;
 	int cli_index;
-	/*
-	 * ANSI escape sequences are accumulated character by character,
-	 * starting after the ESC char (0x1b) until the entire sequence
-	 * is consumed at which point it is acted upon.
-	 */
-	int escape;
-	int escape_len;
-	int row_saved;
-	int col_saved;
-	char escape_buf[32];
+	struct vidconsole_ansi ansi;
 	char utf8_buf[5];
 	bool quiet;
 	struct vidconsole_cursor curs;

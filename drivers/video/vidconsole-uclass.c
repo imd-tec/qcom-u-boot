@@ -193,29 +193,30 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 static void vidconsole_escape_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ansi *ansi = &priv->ansi;
 
 	if (!IS_ENABLED(CONFIG_VIDEO_ANSI))
 		goto error;
 
 	/* Sanity checking for bogus ESC sequences: */
-	if (priv->escape_len >= sizeof(priv->escape_buf))
+	if (ansi->escape_len >= sizeof(ansi->escape_buf))
 		goto error;
-	if (priv->escape_len == 0) {
+	if (ansi->escape_len == 0) {
 		switch (ch) {
 		case '7':
 			/* Save cursor position */
-			get_cursor_position(priv, &priv->row_saved,
-					    &priv->col_saved);
-			priv->escape = 0;
+			get_cursor_position(priv, &ansi->row_saved,
+					    &ansi->col_saved);
+			ansi->escape = 0;
 
 			return;
 		case '8': {
 			/* Restore cursor position */
-			int row = priv->row_saved;
-			int col = priv->col_saved;
+			int row = ansi->row_saved;
+			int col = ansi->col_saved;
 
 			set_cursor_position(dev, row, col);
-			priv->escape = 0;
+			ansi->escape = 0;
 			return;
 		}
 		case '[':
@@ -225,7 +226,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 		}
 	}
 
-	priv->escape_buf[priv->escape_len++] = ch;
+	ansi->escape_buf[ansi->escape_len++] = ch;
 
 	/*
 	 * Escape sequences are terminated by a letter, so keep
@@ -239,7 +240,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 	 * surprising if you hit any debug prints that come back to
 	 * this console.
 	 */
-	priv->escape = 0;
+	ansi->escape = 0;
 
 	switch (ch) {
 	case 'A':
@@ -249,7 +250,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 	case 'E':
 	case 'F': {
 		int row, col, num;
-		char *s = priv->escape_buf;
+		char *s = ansi->escape_buf;
 
 		/*
 		 * Cursor up/down: [%dA, [%dB, [%dE, [%dF
@@ -282,7 +283,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 	case 'H':
 	case 'f': {
 		int row, col;
-		char *s = priv->escape_buf;
+		char *s = ansi->escape_buf;
 
 		/*
 		 * Set cursor position: [%d;%df or [%d;%dH
@@ -317,7 +318,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 		 * probably require some additions to video-uclass (and
 		 * are not really needed yet by efi_console)
 		 */
-		parsenum(priv->escape_buf + 1, &mode);
+		parsenum(ansi->escape_buf + 1, &mode);
 
 		if (mode == 2) {
 			int ret;
@@ -345,7 +346,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 		 *   [0K       - clear line to end
 		 *   [2K       - clear entire line
 		 */
-		parsenum(priv->escape_buf + 1, &mode);
+		parsenum(ansi->escape_buf + 1, &mode);
 
 		if (mode == 2) {
 			int row, col;
@@ -357,8 +358,8 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 	}
 	case 'm': {
 		struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-		char *s = priv->escape_buf;
-		char *end = &priv->escape_buf[priv->escape_len];
+		char *s = ansi->escape_buf;
+		char *end = &ansi->escape_buf[ansi->escape_len];
 
 		/*
 		 * Set graphics mode: [%d;...;%dm
@@ -437,14 +438,14 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 	}
 	default:
 		debug("unrecognized escape sequence: %*s\n",
-		      priv->escape_len, priv->escape_buf);
+		      ansi->escape_len, ansi->escape_buf);
 	}
 
 	return;
 
 error:
 	/* something went wrong, just revert to normal mode: */
-	priv->escape = 0;
+	ansi->escape = 0;
 }
 
 /* Put that actual character on the screen (using the UTF-32 code points). */
@@ -482,20 +483,21 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 int vidconsole_put_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ansi *ansi = &priv->ansi;
 	int cp, ret;
 
 	/* Hide cursor to avoid artifacts */
 	vidconsole_hide_cursor(dev);
 
-	if (priv->escape) {
+	if (ansi->escape) {
 		vidconsole_escape_char(dev, ch);
 		return 0;
 	}
 
 	switch (ch) {
 	case '\x1b':
-		priv->escape_len = 0;
-		priv->escape = 1;
+		ansi->escape_len = 0;
+		ansi->escape = 1;
 		break;
 	case '\a':
 		/* beep */
