@@ -89,13 +89,12 @@
 #include <linux/dcache.h>
 #include <linux/uuid.h>
 #include <linux/smp.h>
+#include <linux/refcount.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 /* cmpxchg is now in asm-generic/atomic.h */
 /* SMP stubs (raw_smp_processor_id, smp_*mb) are now in linux/smp.h */
-
-/* Reference count type */
-typedef struct { atomic_t refs; } refcount_t;
+/* refcount_t and operations are now in linux/refcount.h */
 
 /* rwlock_t and read_lock/read_unlock are now in linux/spinlock.h */
 #include <linux/spinlock.h>
@@ -1790,10 +1789,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
  */
 #include <linux/bio.h>
 
-/* refcount operations - map to atomic */
-#define refcount_set(r, v)		atomic_set((atomic_t *)(r), v)
-#define refcount_dec_and_test(r)	atomic_dec_and_test((atomic_t *)(r))
-#define refcount_inc(r)			atomic_inc((atomic_t *)(r))
+/* refcount operations are now in linux/refcount.h */
 
 /* xchg - exchange value atomically */
 #define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
