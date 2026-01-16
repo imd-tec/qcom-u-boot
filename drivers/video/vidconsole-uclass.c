@@ -839,8 +839,8 @@ int vidconsole_mark_start(struct udevice *dev)
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
-	priv->xmark_frac = ctx->xcur_frac;
-	priv->ymark = ctx->ycur;
+	ctx->xmark_frac = ctx->xcur_frac;
+	ctx->ymark = ctx->ycur;
 	ctx->cli_index = 0;
 	if (ops->mark_start) {
 		int ret;

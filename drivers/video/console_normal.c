@@ -105,8 +105,8 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	if (!IS_ENABLED(CONFIG_EXPO))
 		return -ENOSYS;
 
-	x = VID_TO_PIXEL(vc_priv->xmark_frac);
-	y = vc_priv->ymark;
+	x = VID_TO_PIXEL(ctx->xmark_frac);
+	y = ctx->ymark;
 	index = ctx->cli_index;
 
 	/* rounded up character position in this line */
