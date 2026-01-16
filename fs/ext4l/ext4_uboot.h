@@ -394,8 +394,7 @@ struct sb_writers {
 	int frozen;
 };
 
-/* mapping_large_folio_support stub */
-#define mapping_large_folio_support(m)	(0)
+/* mapping_large_folio_support is in linux/pagemap.h */
 
 /* sector_t is now in linux/types.h */
 
@@ -870,28 +869,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* Security checks - no security in U-Boot */
 #define IS_NOSEC(inode)			(1)
 
-/* Filemap operations */
-#define filemap_invalidate_lock(m)	do { } while (0)
-#define filemap_invalidate_unlock(m)	do { } while (0)
-#define filemap_invalidate_lock_shared(m) do { } while (0)
-#define filemap_invalidate_unlock_shared(m) do { } while (0)
-#define filemap_write_and_wait_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
-#define filemap_fdatawrite_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
-#define truncate_pagecache(i, s)	do { } while (0)
-#define pagecache_isize_extended(i, f, t) do { } while (0)
-#define invalidate_mapping_pages(m, s, e) do { (void)(m); (void)(s); (void)(e); } while (0)
-
-/* Filemap fault handlers - stubs */
-static inline vm_fault_t filemap_fault(struct vm_fault *vmf)
-{
-	return 0;
-}
-
-static inline vm_fault_t filemap_map_pages(struct vm_fault *vmf,
-					   pgoff_t start, pgoff_t end)
-{
-	return 0;
-}
+/* Filemap operations and fault handlers are in linux/pagemap.h */
 
 /* DAX device mapping check - always false in U-Boot */
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
@@ -935,8 +913,7 @@ static inline int in_range(unsigned long val, unsigned long start,
 /* umin - unsigned min (Linux 6.x) */
 #define umin(x, y)	((x) < (y) ? (x) : (y))
 
-/* truncate_inode_pages - stub */
-#define truncate_inode_pages(m, s)	do { } while (0)
+/* truncate_inode_pages is in linux/pagemap.h */
 
 /* ext4_sb_bread_nofail is stubbed in interface.c */
 
@@ -966,47 +943,11 @@ static inline int in_range(unsigned long val, unsigned long start,
 
 /* SEQ_START_TOKEN is in linux/seq_file.h */
 
-/* folio - memory page container stub */
-struct folio {
-	struct page *page;
-	unsigned long index;
-	struct address_space *mapping;
-	unsigned long flags;
-	void *data;
-	struct buffer_head *private;
-	int _refcount;
-};
-
-/* struct folio_batch is in linux/pagevec.h */
-
-/* folio operations - stubs */
-#define folio_mark_dirty(f)			do { (void)(f); } while (0)
-/*
- * offset_in_folio - calculate offset of pointer within folio's data
- * In Linux this uses page alignment, but in U-Boot we use the folio's
- * actual data pointer since our buffers are malloc'd.
- */
-#define offset_in_folio(f, p)			((f) ? (unsigned int)((uintptr_t)(p) - (uintptr_t)(f)->data) : 0U)
-#define folio_buffers(f)			({ (void)(f); (struct buffer_head *)NULL; })
-#define virt_to_folio(p)			({ (void)(p); (struct folio *)NULL; })
-#define folio_set_bh(bh, f, off)		do { if ((bh) && (f)) { (bh)->b_folio = (f); (bh)->b_data = (char *)(f)->data + (off); } } while (0)
-#define memcpy_from_folio(dst, f, off, len)	do { (void)(dst); (void)(f); (void)(off); (void)(len); } while (0)
-#define folio_test_uptodate(f)			({ (void)(f); 1; })
-#define folio_pos(f)				({ (void)(f); 0LL; })
-#define folio_size(f)				({ (void)(f); PAGE_SIZE; })
-#define folio_unlock(f)				do { (void)(f); } while (0)
-/* folio_put and folio_get are implemented in support.c */
-#define folio_lock(f)				do { (void)(f); } while (0)
-/* folio_batch_init is in linux/pagevec.h */
-#define filemap_get_folios(m, i, e, fb)		({ (void)(m); (void)(i); (void)(e); (void)(fb); 0U; })
+/* folio and pagemap - use linux/pagemap.h */
+#include <linux/pagemap.h>
 
 /* xa_mark_t - xarray mark type */
 typedef unsigned int xa_mark_t;
-
-/* Page cache tags */
-#define PAGECACHE_TAG_DIRTY	0
-#define PAGECACHE_TAG_TOWRITE	1
-#define PAGECACHE_TAG_WRITEBACK	2
 
 static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
 {
@@ -1025,54 +966,9 @@ struct blk_plug {
 /* Writeback reasons */
 #define WB_REASON_FS_FREE_SPACE	0
 
-/* readahead_control stub */
-struct readahead_control {
-	struct address_space *mapping;
-	struct file *file;
-	unsigned long _index;
-	unsigned int _batch_count;
-};
-
-#define readahead_pos(rac)		({ (void)(rac); 0LL; })
-#define readahead_length(rac)		({ (void)(rac); 0UL; })
-
 /* address_space_operations is in linux/fs.h */
 /* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
-
-/* Stub implementations for address_space_operations callbacks */
-static inline bool block_is_partially_uptodate(struct folio *folio,
-					       size_t from, size_t count)
-{
-	return false;
-}
-
-static inline int generic_error_remove_folio(struct address_space *mapping,
-					     struct folio *folio)
-{
-	return 0;
-}
-
-/* FGP flags for folio_grab_cache */
-#define FGP_ACCESSED	0x00000001
-#define FGP_LOCK	0x00000002
-#define FGP_CREAT	0x00000004
-#define FGP_WRITE	0x00000008
-#define FGP_NOFS	0x00000010
-#define FGP_NOWAIT	0x00000020
-#define FGP_FOR_MMAP	0x00000040
-#define FGP_STABLE	0x00000080
-#define FGP_WRITEBEGIN	(FGP_LOCK | FGP_WRITE | FGP_CREAT | FGP_STABLE)
-
-/* kmap/kunmap stubs for inline.c */
-#define kmap_local_folio(folio, off)	((folio) ? (char *)(folio)->data + (off) : NULL)
-#define kunmap_local(addr)		do { (void)(addr); } while (0)
-
-/* Folio zeroing stubs for inline.c */
-#define folio_zero_tail(f, off, kaddr)	({ (void)(f); (void)(off); (void)(kaddr); (void *)NULL; })
-#define folio_zero_segment(f, s, e)	do { (void)(f); (void)(s); (void)(e); } while (0)
-
-/* mapping_gfp_mask stub */
-#define mapping_gfp_mask(m)		({ (void)(m); GFP_KERNEL; })
+/* readahead_control, FGP_*, kmap/kunmap, folio stubs are in linux/pagemap.h */
 
 /* Folio operations - implemented in support.c */
 struct folio *__filemap_get_folio(struct address_space *mapping,
@@ -1154,43 +1050,8 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 #define inode_is_open_for_write(i)		(0)
 #define inode_is_dirtytime_only(i)		(0)
 
-/* Writeback stubs for super.c */
-#define writeback_iter(mapping, wbc, folio, error) \
-	({ (void)(mapping); (void)(wbc); (void)(error); (struct folio *)NULL; })
-#define folio_redirty_for_writepage(wbc, folio) \
-	({ (void)(wbc); (void)(folio); false; })
-
-/* Folio operations - additional stubs */
-#define folio_zero_segments(f, s1, e1, s2, e2)	do { } while (0)
-#define folio_zero_new_buffers(f, f2, t)	do { } while (0)
-#define folio_wait_stable(f)			do { } while (0)
-#define folio_zero_range(f, s, l)		do { } while (0)
-#define folio_mark_uptodate(f)			do { } while (0)
-#define folio_next_index(f)			((f)->index + 1)
-#define folio_next_pos(f)			((loff_t)folio_next_index(f) << PAGE_SHIFT)
-#define folio_mapped(f)				(0)
-
-/*
- * fgf_set_order - Set the order (size) for folio allocation
- * U-Boot doesn't support large folios, so this is a no-op stub.
- */
-#define fgf_set_order(size)			(0)
-#define folio_clear_dirty_for_io(f)		({ (void)(f); 1; })
-#define folio_clear_uptodate(f)			do { } while (0)
+/* Folio operations and writeback stubs are in linux/pagemap.h */
 #define folio_batch_release(fb)			do { } while (0)
-#define folio_nr_pages(f)			(1UL)
-#define folio_contains(f, idx)			({ (void)(f); (void)(idx); 1; })
-#define folio_clear_checked(f)			do { } while (0)
-#define folio_test_dirty(f)			(0)
-#define folio_test_writeback(f)			(0)
-#define folio_wait_writeback(f)			do { } while (0)
-#define folio_clear_dirty(f)			do { } while (0)
-#define folio_test_checked(f)			(0)
-#define folio_maybe_dma_pinned(f)		(0)
-#define folio_set_checked(f)			do { } while (0)
-#define folio_test_locked(f)			(0)
-#define folio_mkclean(f)			(0)
-#define page_folio(page)			((struct folio *)(page))
 
 /* Quota stubs - additional */
 #define dquot_claim_block(i, n)			({ (void)(i); (void)(n); 0; })
@@ -1202,20 +1063,8 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 
 /* percpu_counter_sub is in linux/percpu_counter.h */
 
-/* Filemap operations - additional */
-#define filemap_get_folio(m, i)			((struct folio *)NULL)
-#define filemap_get_folios_tag(m, s, e, t, fb)	({ (void)(m); (void)(s); (void)(e); (void)(t); (void)(fb); 0U; })
-#define filemap_flush(m)			({ (void)(m); 0; })
-#define filemap_write_and_wait(m)		({ (void)(m); 0; })
-#define filemap_dirty_folio(m, f)		({ (void)(m); (void)(f); false; })
-#define filemap_lock_folio(m, i)		((struct folio *)NULL)
-/* filemap_invalidate_lock_shared defined earlier */
-#define mapping_tagged(m, t)			(0)
-#define tag_pages_for_writeback(m, s, e)	do { } while (0)
+/* Filemap operations are in linux/pagemap.h */
 #define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
-#define mapping_gfp_constraint(m, g)		(g)
-#define mapping_set_folio_order_range(m, l, h)	do { } while (0)
-#define filemap_splice_read(i, p, pi, l, f)	({ (void)(i); (void)(p); (void)(pi); (void)(l); (void)(f); 0L; })
 
 /* Buffer operations - additional */
 #define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
@@ -1340,9 +1189,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 /* Block device alignment */
 #define bdev_dma_alignment(bd)		(0)
 
-/* Truncation */
-#define truncate_inode_pages_final(m)	do { } while (0)
-#define truncate_pagecache_range(i, s, e) do { } while (0)
+/* Truncation stubs are in linux/pagemap.h */
 
 /*
  * Additional stubs for dir.c
@@ -1353,9 +1200,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 
 /* fscrypt directory operations are in ext4_fscrypt.h */
 
-/* Readahead operations */
-#define ra_has_index(ra, idx)			({ (void)(ra); (void)(idx); 0; })
-#define page_cache_sync_readahead(m, ra, f, i, n) do { } while (0)
+/* Readahead operations are in linux/pagemap.h */
 
 /* Inode version operations */
 #define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
@@ -2072,9 +1917,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* CPU cycle counter stub */
 #define get_cycles()			(0ULL)
 
-/* folio_address - get virtual address of folio data */
-#undef folio_address
-#define folio_address(folio)		((folio)->data)
+/* folio_address is in linux/pagemap.h */
 
 /* sb_end_intwrite defined earlier */
 
@@ -2243,9 +2086,7 @@ typedef void *mempool_t;
 #define fsverity_verify_folio(f)	({ (void)(f); 1; })
 #define IS_VERITY(inode)		(0)
 
-/* readahead operations */
-#define readahead_count(rac)		({ (void)(rac); 0UL; })
-#define readahead_folio(rac)		({ (void)(rac); (struct folio *)NULL; })
+/* readahead operations are in linux/pagemap.h */
 
 /* prefetch operations */
 #define prefetchw(addr)			do { (void)(addr); } while (0)
@@ -2300,10 +2141,9 @@ struct wait_bit_entry {
 #define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
 #define spin_needbreak(l)		({ (void)(l); 0; })
 
-/* JBD2 commit.c stubs */
+/* JBD2 commit.c stubs (folio_trylock is in linux/pagemap.h) */
 #define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
 #define smp_mb__after_atomic()		do { } while (0)
-#define folio_trylock(f)		({ (void)(f); 1; })
 #define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
 	({ (void)(m); (void)(s); (void)(e); 0; })
@@ -2379,7 +2219,7 @@ int bh_read(struct buffer_head *bh, int flags);
 #ifndef SECTOR_SHIFT
 #define SECTOR_SHIFT	9
 #endif
-#define mapping_max_folio_order(m)	({ (void)(m); 0; })
+/* mapping_max_folio_order is in linux/pagemap.h */
 
 /* Memory allocation for journal.c */
 #define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
@@ -2410,9 +2250,7 @@ static inline struct new_utsname *init_utsname(void)
 #define down_write_nested(sem, subclass) \
 	do { (void)(sem); (void)(subclass); } while (0)
 
-/* filemap_release_folio - try to release a folio */
-#define filemap_release_folio(folio, gfp) \
-	({ (void)(folio); (void)(gfp); 1; })
+/* filemap_release_folio is in linux/pagemap.h */
 
 /* IS_SWAPFILE - check if inode is a swap file */
 #define IS_SWAPFILE(inode)	({ (void)(inode); 0; })
