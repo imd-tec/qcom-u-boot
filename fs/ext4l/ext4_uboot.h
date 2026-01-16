@@ -1032,26 +1032,8 @@ static inline void shrinker_free(struct shrinker *s)
 {
 }
 
-/* ktime functions */
-static inline ktime_t ktime_get(void)
-{
-	return 0;
-}
-
-static inline s64 ktime_to_ns(ktime_t kt)
-{
-	return kt;
-}
-
-static inline ktime_t ktime_sub(ktime_t a, ktime_t b)
-{
-	return a - b;
-}
-
-static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
-{
-	return kt + ns;
-}
+/* ktime functions - use linux/ktime.h */
+#include <linux/ktime.h>
 
 /* hrtimer stubs */
 #define HRTIMER_MODE_ABS		0
@@ -1983,8 +1965,7 @@ int IOPRIO_PRIO_VALUE(int class, int data);
 void *kvzalloc(size_t size, gfp_t flags);
 #define kvmalloc(size, flags)	kvzalloc(size, flags)
 
-/* Time operations */
-#define ktime_get_ns()			(0ULL)
+/* Time operations - ktime_get_ns is in linux/ktime.h */
 /* nsecs_to_jiffies is in linux/jiffies.h */
 
 /* Superblock write operations */
