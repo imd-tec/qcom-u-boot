@@ -221,6 +221,7 @@ struct console_tt_metrics {
 struct console_tt_ctx {
 	struct vidconsole_ctx com;
 	struct console_tt_metrics *cur_met;
+	struct video_fontdata *cur_fontdata;
 	int pos_ptr;
 	int pos_start;
 	int pos_count;
@@ -232,7 +233,6 @@ struct console_tt_ctx {
  *
  * @metrics:	List metrics that can be used
  * @num_metrics:	Number of available metrics
- * @cur_fontdata:	Current fixed font data (NULL if using TrueType)
  * @glyph_buf:	Pre-allocated buffer for rendering glyphs. If a glyph fits,
  *	this avoids malloc/free per character. Allocated lazily after
  *	relocation to avoid using early malloc space.
@@ -243,7 +243,6 @@ struct console_tt_ctx {
 struct console_tt_priv {
 	struct console_tt_metrics metrics[CONFIG_CONSOLE_TRUETYPE_MAX_METRICS];
 	int num_metrics;
-	struct video_fontdata *cur_fontdata;
 	u8 *glyph_buf;
 	int glyph_buf_size;
 	struct stbtt_scratch scratch;
@@ -266,13 +265,12 @@ static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
-	struct console_tt_priv *priv = dev_get_priv(dev);
 	void *end, *line;
 	int font_height;
 
 	/* Get font height from current font type */
-	if (priv->cur_fontdata)
-		font_height = priv->cur_fontdata->height;
+	if (ctx->cur_fontdata)
+		font_height = ctx->cur_fontdata->height;
 	else
 		font_height = ctx->cur_met->font_size;
 
@@ -324,16 +322,15 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 				     uint rowsrc, uint count)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct vidconsole_ctx *com = vidconsole_ctx(dev);
-	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct vidconsole_ctx *com = &ctx->com;
 	void *dst;
 	void *src;
 	int i, diff, font_height;
 
 	/* Get font height from current font type */
-	if (priv->cur_fontdata)
-		font_height = priv->cur_fontdata->height;
+	if (ctx->cur_fontdata)
+		font_height = ctx->cur_fontdata->height;
 	else
 		font_height = ctx->cur_met->font_size;
 
@@ -430,8 +427,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	bool use_buf;
 
 	/* Use fixed font if selected */
-	if (priv->cur_fontdata)
-		return console_fixed_putc_xy(dev, x, y, cp, priv->cur_fontdata);
+	if (ctx->cur_fontdata)
+		return console_fixed_putc_xy(dev, x, y, cp, ctx->cur_fontdata);
 
 	/* Reset scratch buffer for this character */
 	stbtt_scratch_reset(&priv->scratch);
@@ -916,9 +913,8 @@ static void set_bitmap_font(struct udevice *dev,
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
-	struct console_tt_priv *priv = dev_get_priv(dev);
 
-	priv->cur_fontdata = fontdata;
+	ctx->cur_fontdata = fontdata;
 	ctx->cur_met = NULL;
 
 	vidconsole_set_bitmap_font(dev, fontdata);
@@ -989,7 +985,7 @@ static int get_metrics(struct udevice *dev, const char *name, uint size,
 static int truetype_select_font(struct udevice *dev, const char *name,
 				uint size)
 {
-	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct console_tt_metrics *met;
 	struct video_fontdata *fontdata;
 	int ret;
@@ -1006,7 +1002,7 @@ static int truetype_select_font(struct udevice *dev, const char *name,
 	}
 
 	/* Continue with TrueType font selection */
-	priv->cur_fontdata = NULL;
+	ctx->cur_fontdata = NULL;
 	ret = get_metrics(dev, name, size, &met);
 	if (ret)
 		return log_msg_ret("sel", ret);
@@ -1216,7 +1212,6 @@ static int truetype_get_cursor_info(struct udevice *dev)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
-	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct vidconsole_cursor *curs = &com->curs;
 	int x, y, index;
 	uint height;
@@ -1241,8 +1236,8 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	y = com->ycur;
 
 	/* Get font height from current font type */
-	if (priv->cur_fontdata)
-		height = priv->cur_fontdata->height;
+	if (ctx->cur_fontdata)
+		height = ctx->cur_fontdata->height;
 	else
 		height = ctx->cur_met->font_size;
 
@@ -1258,12 +1253,11 @@ static int truetype_get_cursor_info(struct udevice *dev)
 const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	struct console_tt_priv *priv = dev_get_priv(dev);
 
-	if (priv->cur_fontdata) {
+	if (ctx->cur_fontdata) {
 		/* Using fixed font */
-		*sizep = priv->cur_fontdata->height;
-		return priv->cur_fontdata->name;
+		*sizep = ctx->cur_fontdata->height;
+		return ctx->cur_fontdata->name;
 	} else {
 		/* Using TrueType font */
 		struct console_tt_metrics *met = ctx->cur_met;
