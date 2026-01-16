@@ -207,6 +207,7 @@ struct console_tt_metrics {
  * struct console_tt_ctx - Per-client context for this driver
  *
  * @com:	Common fields from the vidconsole uclass
+ * @cur_met:	Current metrics being used
  * @pos_ptr:	Current position in the position history
  * @pos_start:	Value of pos_ptr when the cursor is at the start of the text
  *		being entered by the user
@@ -219,6 +220,7 @@ struct console_tt_metrics {
  */
 struct console_tt_ctx {
 	struct vidconsole_ctx com;
+	struct console_tt_metrics *cur_met;
 	int pos_ptr;
 	int pos_start;
 	int pos_count;
@@ -228,7 +230,6 @@ struct console_tt_ctx {
 /**
  * struct console_tt_priv - Private data for this driver
  *
- * @cur_met:	Current metrics being used
  * @metrics:	List metrics that can be used
  * @num_metrics:	Number of available metrics
  * @cur_fontdata:	Current fixed font data (NULL if using TrueType)
@@ -240,7 +241,6 @@ struct console_tt_ctx {
  * @scratch_buf: Memory for scratch buffer
  */
 struct console_tt_priv {
-	struct console_tt_metrics *cur_met;
 	struct console_tt_metrics metrics[CONFIG_CONSOLE_TRUETYPE_MAX_METRICS];
 	int num_metrics;
 	struct video_fontdata *cur_fontdata;
@@ -274,7 +274,7 @@ static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
 	if (priv->cur_fontdata)
 		font_height = priv->cur_fontdata->height;
 	else
-		font_height = priv->cur_met->font_size;
+		font_height = ctx->cur_met->font_size;
 
 	line = vid_priv->fb + row * font_height * vid_priv->line_length;
 	end = line + font_height * vid_priv->line_length;
@@ -335,7 +335,7 @@ static int console_truetype_move_rows(struct udevice *dev, uint rowdst,
 	if (priv->cur_fontdata)
 		font_height = priv->cur_fontdata->height;
 	else
-		font_height = priv->cur_met->font_size;
+		font_height = ctx->cur_met->font_size;
 
 	dst = vid_priv->fb + rowdst * font_height * vid_priv->line_length;
 	src = vid_priv->fb + rowsrc * font_height * vid_priv->line_length;
@@ -416,7 +416,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
 	struct console_tt_priv *priv = dev_get_priv(dev);
-	struct console_tt_metrics *met = priv->cur_met;
+	struct console_tt_metrics *met = ctx->cur_met;
 	stbtt_fontinfo *font;
 	int width, height, xoff, yoff;
 	double xpos, x_shift;
@@ -919,7 +919,7 @@ static void set_bitmap_font(struct udevice *dev,
 	struct console_tt_priv *priv = dev_get_priv(dev);
 
 	priv->cur_fontdata = fontdata;
-	priv->cur_met = NULL;
+	ctx->cur_met = NULL;
 
 	vidconsole_set_bitmap_font(dev, fontdata);
 
@@ -930,11 +930,10 @@ static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
-	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct udevice *vid_dev = dev_get_parent(dev);
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 
-	priv->cur_met = met;
+	ctx->cur_met = met;
 	com->x_charsize = met->font_size;
 	com->y_charsize = met->font_size;
 	com->xstart_frac = VID_TO_POS(2);
@@ -1245,7 +1244,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	if (priv->cur_fontdata)
 		height = priv->cur_fontdata->height;
 	else
-		height = priv->cur_met->font_size;
+		height = ctx->cur_met->font_size;
 
 	/* Store line pointer and height in cursor struct */
 	curs->x = x;
@@ -1258,6 +1257,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 
 const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 {
+	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 
 	if (priv->cur_fontdata) {
@@ -1266,7 +1266,7 @@ const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 		return priv->cur_fontdata->name;
 	} else {
 		/* Using TrueType font */
-		struct console_tt_metrics *met = priv->cur_met;
+		struct console_tt_metrics *met = ctx->cur_met;
 
 		*sizep = met->font_size;
 		return met->font_name;
@@ -1284,6 +1284,7 @@ static int truetype_mark_start(struct udevice *dev)
 
 static int console_truetype_probe(struct udevice *dev)
 {
+	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -1316,7 +1317,7 @@ static int console_truetype_probe(struct udevice *dev)
 	ret = truetype_add_metrics(dev, tab->name, font_size, tab->begin);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
-	priv->cur_met = &priv->metrics[ret];
+	ctx->cur_met = &priv->metrics[ret];
 
 	select_metrics(dev, &priv->metrics[ret]);
 
