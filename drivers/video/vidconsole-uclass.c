@@ -85,7 +85,7 @@ static int vidconsole_back(struct udevice *dev)
 			ctx->ycur = 0;
 	}
 	assert(ctx->cli_index);
-	cli_index_adjust(priv, -1);
+	cli_index_adjust(ctx, -1);
 
 	return video_sync(dev->parent, false);
 }
@@ -478,7 +478,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	ctx->last_ch = ch;
 	if (ctx->xcur_frac >= ctx->xsize_frac)
 		vidconsole_newline(dev);
-	cli_index_adjust(priv, 1);
+	cli_index_adjust(ctx, 1);
 
 	return 0;
 }

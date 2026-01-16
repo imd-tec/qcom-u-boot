@@ -612,10 +612,10 @@ static inline void vidconsole_readline_end(void)
 }
 #endif /* CONFIG_CURSOR */
 
-static inline void cli_index_adjust(struct vidconsole_priv *priv, int by)
+static inline void cli_index_adjust(struct vidconsole_ctx *ctx, int by)
 {
 	if (CONFIG_IS_ENABLED(CURSOR))
-		priv->ctx.cli_index += by;
+		ctx->cli_index += by;
 }
 
 /**
