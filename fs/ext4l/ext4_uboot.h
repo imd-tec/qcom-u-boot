@@ -112,10 +112,8 @@ typedef struct { unsigned int val; } kprojid_t;
 #define from_kprojid(ns, kprojid)	((kprojid).val)
 #define projid_eq(a, b)		((a).val == (b).val)
 
-/* kobject - stub */
-struct kobject {
-	const char *name;
-};
+/* kobject is now in linux/kobject.h */
+#include <linux/kobject.h>
 
 /* lockdep stubs - needed before jbd2.h is included */
 #include <linux/lockdep.h>
@@ -1489,8 +1487,7 @@ struct block_device *file_bdev(struct file *file);
 int sync_blockdev(struct block_device *bdev);
 void invalidate_bdev(struct block_device *bdev);
 
-/* Kobject - declarations for stub.c */
-void kobject_put(struct kobject *kobj);
+/* kobject_put is now in linux/kobject.h */
 /* wait_for_completion is now a macro in linux/completion.h */
 
 /* DAX - declaration for stub.c */
@@ -1591,7 +1588,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 	memcpy(sb->s_uuid.b, uuid, len);
 }
 
-#define super_set_sysfs_name_bdev(sb)		do { } while (0)
+/* super_set_sysfs_name_bdev is now in linux/kobject.h */
 
 /*
  * mb_cache - metadata block cache stubs for xattr.c
