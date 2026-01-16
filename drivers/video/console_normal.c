@@ -107,7 +107,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 
 	x = VID_TO_PIXEL(vc_priv->xmark_frac);
 	y = vc_priv->ymark;
-	index = vc_priv->cli_index;
+	index = ctx->cli_index;
 
 	/* rounded up character position in this line */
 	xpos = (x + ctx->x_charsize - 1) / ctx->x_charsize;
@@ -141,7 +141,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	curs->x = x;
 	curs->y = y;
 	curs->height = ctx->y_charsize;
-	curs->index = vc_priv->cli_index;
+	curs->index = ctx->cli_index;
 
 	return 0;
 }
@@ -162,7 +162,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 
 	store.xpos_frac = ctx->xcur_frac;
 	store.ypos  = ctx->ycur;
-	store.cli_index  = vc_priv->cli_index;
+	store.cli_index  = ctx->cli_index;
 	memcpy(abuf_data(buf), &store, size);
 
 	return 0;
@@ -182,7 +182,7 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 
 	ctx->xcur_frac = store.xpos_frac;
 	ctx->ycur = store.ypos;
-	vc_priv->cli_index = store.cli_index;
+	ctx->cli_index = store.cli_index;
 
 	return 0;
 }

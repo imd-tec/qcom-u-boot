@@ -84,7 +84,7 @@ static int vidconsole_back(struct udevice *dev)
 		if (ctx->ycur < 0)
 			ctx->ycur = 0;
 	}
-	assert(priv->cli_index);
+	assert(ctx->cli_index);
 	cli_index_adjust(priv, -1);
 
 	return video_sync(dev->parent, false);
@@ -841,7 +841,7 @@ int vidconsole_mark_start(struct udevice *dev)
 
 	priv->xmark_frac = ctx->xcur_frac;
 	priv->ymark = ctx->ycur;
-	priv->cli_index = 0;
+	ctx->cli_index = 0;
 	if (ops->mark_start) {
 		int ret;
 
