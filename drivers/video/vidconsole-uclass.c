@@ -476,7 +476,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 		return ret;
 	ctx->xcur_frac += ret;
 	ctx->last_ch = ch;
-	if (ctx->xcur_frac >= priv->xsize_frac)
+	if (ctx->xcur_frac >= ctx->xsize_frac)
 		vidconsole_newline(dev);
 	cli_index_adjust(priv, 1);
 
@@ -517,7 +517,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		ctx->xcur_frac = ((ctx->xcur_frac / ctx->tab_width_frac)
 				+ 1) * ctx->tab_width_frac;
 
-		if (ctx->xcur_frac >= priv->xsize_frac)
+		if (ctx->xcur_frac >= ctx->xsize_frac)
 			vidconsole_newline(dev);
 		break;
 	case '\b':
@@ -878,11 +878,11 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old)
 /* Set up the number of rows and colours (rotated drivers override this) */
 static int vidconsole_pre_probe(struct udevice *dev)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 
-	priv->xsize_frac = VID_TO_POS(vid_priv->xsize);
+	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 
 	return 0;
 }
@@ -978,7 +978,7 @@ void vidconsole_set_bitmap_font(struct udevice *dev,
 	if (vid_priv->rot % 2) {
 		ctx->cols = vid_priv->ysize / fontdata->width;
 		ctx->rows = vid_priv->xsize / fontdata->height;
-		vc_priv->xsize_frac = VID_TO_POS(vid_priv->ysize);
+		ctx->xsize_frac = VID_TO_POS(vid_priv->ysize);
 	} else {
 		ctx->cols = vid_priv->xsize / fontdata->width;
 		ctx->rows = vid_priv->ysize / fontdata->height;

@@ -350,7 +350,7 @@ int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
 	uchar *pfont = fontdata->video_fontdata +
 			ch * fontdata->char_pixel_bytes;
 
-	if (x_frac + VID_TO_POS(ctx->x_charsize) > vc_priv->xsize_frac)
+	if (x_frac + VID_TO_POS(ctx->x_charsize) > ctx->xsize_frac)
 		return -EAGAIN;
 	linenum = y;
 	x = VID_TO_PIXEL(x_frac);

@@ -477,7 +477,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	x_shift = xpos - (double)tt_floor(xpos);
 	xpos += advance * met->scale;
 	width_frac = (int)VID_TO_POS((kern + advance) * met->scale);
-	if (x + width_frac >= vc_priv->xsize_frac)
+	if (x + width_frac >= vc_ctx->xsize_frac)
 		return -EAGAIN;
 
 	/* Write the current cursor position into history */
