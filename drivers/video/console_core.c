@@ -280,7 +280,7 @@ int cursor_hide(struct vidconsole_cursor *curs, struct video_priv *vid_priv,
 
 int console_alloc_cursor(struct udevice *dev)
 {
-	struct vidconsole_priv *vc_priv;
+	struct vidconsole_ctx *ctx;
 	struct vidconsole_cursor *curs;
 	struct video_priv *vid_priv;
 	struct udevice *vid;
@@ -289,10 +289,10 @@ int console_alloc_cursor(struct udevice *dev)
 	if (!CONFIG_IS_ENABLED(CURSOR) || xpl_phase() < PHASE_BOARD_R)
 		return 0;
 
-	vc_priv = dev_get_uclass_priv(dev);
+	ctx = vidconsole_ctx(dev);
 	vid = dev_get_parent(dev);
 	vid_priv = dev_get_uclass_priv(vid);
-	curs = &vc_priv->curs;
+	curs = &ctx->curs;
 
 	/* Allocate cursor save buffer for maximum possible cursor height */
 	save_count = vid_priv->ysize * VIDCONSOLE_CURSOR_WIDTH;

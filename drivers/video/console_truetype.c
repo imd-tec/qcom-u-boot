@@ -1233,7 +1233,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	struct vidconsole_ctx *com = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
-	struct vidconsole_cursor *curs = &vc_priv->curs;
+	struct vidconsole_cursor *curs = &com->curs;
 	int x, y, index;
 	uint height;
 

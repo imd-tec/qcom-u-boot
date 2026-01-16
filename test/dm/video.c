@@ -1185,7 +1185,8 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 {
 	int with_a, with_cursor, after_backspace, after_idle, after_hide;
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(con);
-	struct vidconsole_cursor *curs = &vc_priv->curs;
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_cursor *curs = &ctx->curs;
 
 	/* Output chars without cursor */
 	ut_assert(!curs->visible);

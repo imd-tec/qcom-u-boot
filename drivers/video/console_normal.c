@@ -98,7 +98,7 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev)
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_simple_priv *priv = dev_get_priv(dev);
 	struct video_fontdata *fontdata = priv->fontdata;
-	struct vidconsole_cursor *curs = &vc_priv->curs;
+	struct vidconsole_cursor *curs = &ctx->curs;
 	int x, y, index, xspace, xpos;
 
 	/* for now, this is not used outside expo */

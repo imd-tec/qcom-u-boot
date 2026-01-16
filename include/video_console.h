@@ -112,6 +112,7 @@ struct vidconsole_ansi {
  * @ymark:		Y position of start of CLI text
  * @ansi:		ANSI escape-sequence state
  * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
+ * @curs:		Cursor state and management
  */
 struct vidconsole_ctx {
 	int rows;
@@ -126,6 +127,7 @@ struct vidconsole_ctx {
 	int ymark;
 	struct vidconsole_ansi ansi;
 	char utf8_buf[5];
+	struct vidconsole_cursor curs;
 };
 
 /**
@@ -148,7 +150,6 @@ struct vidconsole_ctx {
  * @xsize_frac:		Width of the display in fractional units
  * @xstart_frac:	Left margin for the text console in fractional units
  * @quiet:		Suppress all output from stdio
- * @curs:		Cursor state and management
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
@@ -157,7 +158,6 @@ struct vidconsole_priv {
 	int xsize_frac;
 	int xstart_frac;
 	bool quiet;
-	struct vidconsole_cursor curs;
 };
 
 /**
