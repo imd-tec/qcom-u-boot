@@ -992,36 +992,8 @@ static inline int in_range(unsigned long val, unsigned long start,
 
 /* extents_status.c stubs */
 
-/* shrinker - memory reclaim infrastructure (stub for U-Boot) */
-struct shrink_control {
-	gfp_t gfp_mask;
-	int nid;
-	unsigned long nr_to_scan;
-	unsigned long nr_scanned;
-};
-
-struct shrinker {
-	unsigned long (*count_objects)(struct shrinker *, struct shrink_control *);
-	unsigned long (*scan_objects)(struct shrinker *, struct shrink_control *);
-	void *private_data;
-};
-
-static inline struct shrinker *shrinker_alloc(unsigned int flags,
-					      const char *fmt, ...)
-{
-	/* Return static dummy - U-Boot doesn't need memory reclamation */
-	static struct shrinker dummy_shrinker;
-
-	return &dummy_shrinker;
-}
-
-static inline void shrinker_register(struct shrinker *s)
-{
-}
-
-static inline void shrinker_free(struct shrinker *s)
-{
-}
+/* shrinker - use linux/shrinker.h */
+#include <linux/shrinker.h>
 
 /* ktime functions - use linux/ktime.h */
 #include <linux/ktime.h>
