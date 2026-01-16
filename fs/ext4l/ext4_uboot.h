@@ -87,6 +87,7 @@
 #include <linux/fs_context.h>
 #include <linux/fs_parser.h>
 #include <linux/dcache.h>
+#include <linux/uuid.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
 
@@ -490,10 +491,7 @@ struct fstrim_range {
 
 /* SB_RDONLY, SB_I_VERSION, etc. superblock flags are in linux/fs.h */
 
-/* UUID type */
-typedef struct {
-	__u8 b[16];
-} uuid_t;
+/* uuid_t is now in linux/uuid.h */
 
 /* Forward declarations for super_block */
 struct super_operations;
