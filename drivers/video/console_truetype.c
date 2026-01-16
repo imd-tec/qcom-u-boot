@@ -253,11 +253,9 @@ struct console_tt_priv {
  * struct console_tt_store - Format used for save/restore of entry information
  *
  * @ctx: Per-client context
- * @cur: Current cursor position
  */
 struct console_tt_store {
 	struct console_tt_ctx ctx;
-	struct pos_info cur;
 };
 
 static int console_truetype_set_row(struct udevice *dev, uint row, int clr)
@@ -1172,7 +1170,6 @@ static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
 static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	struct vidconsole_ctx *com = &ctx->com;
 	struct console_tt_store store;
 	const uint size = sizeof(store);
 
@@ -1183,8 +1180,6 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 		return log_msg_ret("sav", -ENOMEM);
 
 	store.ctx = *ctx;
-	store.cur.xpos_frac = com->xcur_frac;
-	store.cur.ypos  = com->ycur;
 	memcpy(abuf_data(buf), &store, size);
 
 	return 0;
@@ -1193,16 +1188,12 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	struct vidconsole_ctx *com = &ctx->com;
 	struct console_tt_store store;
 
 	if (xpl_phase() <= PHASE_SPL)
 		return -ENOSYS;
 
 	memcpy(&store, abuf_data(buf), sizeof(store));
-
-	com->xcur_frac = store.cur.xpos_frac;
-	com->ycur = store.cur.ypos;
 	*ctx = store.ctx;
 
 	return 0;
