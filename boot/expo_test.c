@@ -120,6 +120,7 @@ int expo_test_render(struct expo *exp)
 	struct expo_test_mode *test = exp->test;
 	struct vidconsole_priv *cons_priv;
 	struct udevice *dev = exp->display;
+	struct vidconsole_ctx *ctx;
 	struct video_priv *vid_priv;
 	char buf[30];
 	ulong now;
@@ -140,6 +141,7 @@ int expo_test_render(struct expo *exp)
 
 	vid_priv = dev_get_uclass_priv(dev);
 	cons_priv = dev_get_uclass_priv(exp->cons);
+	ctx = vidconsole_ctx_from_priv(cons_priv);
 
 	/* Accumulate delta times for averaging */
 	test->render_total_us += test->render_delta_us;
@@ -176,7 +178,7 @@ int expo_test_render(struct expo *exp)
 
 	/* Display frame count */
 	snprintf(buf, sizeof(buf), "frame  %6d", test->render_count);
-	x = vid_priv->xsize - 18 * cons_priv->ctx.x_charsize;
+	x = vid_priv->xsize - 18 * ctx->x_charsize;
 	y = 10;
 	vidconsole_set_cursor_pos(exp->cons, x, y);
 	vidconsole_put_string(exp->cons, buf);
@@ -184,7 +186,7 @@ int expo_test_render(struct expo *exp)
 	/* Display FPS on next line (only if non-zero) */
 	if (test->fps_last > 0) {
 		snprintf(buf, sizeof(buf), "fps    %6d", test->fps_last);
-		y += cons_priv->ctx.y_charsize;
+		y += ctx->y_charsize;
 		vidconsole_set_cursor_pos(exp->cons, x, y);
 		vidconsole_put_string(exp->cons, buf);
 	}
@@ -193,7 +195,7 @@ int expo_test_render(struct expo *exp)
 	snprintf(buf, sizeof(buf), "render %6lu.%01lums",
 		 test->render_avg_us / 1000,
 		 (test->render_avg_us % 1000) / 100);
-	y += cons_priv->ctx.y_charsize;
+	y += ctx->y_charsize;
 	vidconsole_set_cursor_pos(exp->cons, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
@@ -201,7 +203,7 @@ int expo_test_render(struct expo *exp)
 	snprintf(buf, sizeof(buf), "sync   %6lu.%01lums",
 		 test->sync_avg_us / 1000,
 		 (test->sync_avg_us % 1000) / 100);
-	y += cons_priv->ctx.y_charsize;
+	y += ctx->y_charsize;
 	vidconsole_set_cursor_pos(exp->cons, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
@@ -209,7 +211,7 @@ int expo_test_render(struct expo *exp)
 	snprintf(buf, sizeof(buf), "poll   %6lu.%01lums",
 		 test->poll_avg_us / 1000,
 		 (test->poll_avg_us % 1000) / 100);
-	y += cons_priv->ctx.y_charsize;
+	y += ctx->y_charsize;
 	vidconsole_set_cursor_pos(exp->cons, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
