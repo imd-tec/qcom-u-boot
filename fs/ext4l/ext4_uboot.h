@@ -1972,60 +1972,9 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 	({ (void)(bdev); 0U; })
 
 /*
- * Stubs for page-io.c
+ * Stubs for page-io.c - bio types are in linux/bio.h
  */
-
-/* bio_vec - segment in a bio */
-struct bio_vec {
-	struct page *bv_page;
-	unsigned int bv_len;
-	unsigned int bv_offset;
-};
-
-/* bvec_iter - iterator for bio_vec */
-struct bvec_iter {
-	sector_t bi_sector;
-	unsigned int bi_size;
-	unsigned int bi_idx;
-	unsigned int bi_bvec_done;
-};
-
-/* bio - block I/O structure */
-struct bio {
-	struct bio *bi_next;
-	struct block_device *bi_bdev;
-	unsigned long bi_opf;
-	unsigned short bi_flags;
-	unsigned short bi_ioprio;
-	unsigned short bi_write_hint;
-	int bi_status;
-	struct bvec_iter bi_iter;
-	atomic_t __bi_remaining;
-	void *bi_private;
-	void (*bi_end_io)(struct bio *);
-};
-
-/* bio_sectors - return number of sectors in bio */
-static inline unsigned int bio_sectors(struct bio *bio)
-{
-	return bio->bi_iter.bi_size >> 9;
-}
-
-/* folio_iter for bio iteration */
-struct folio_iter {
-	int i;
-	struct folio *folio;
-	size_t offset;
-	size_t length;
-};
-
-/* bio operations - stubs */
-#define bio_for_each_folio_all(fi, bio) \
-	for ((fi).i = 0; (fi).i < 0; (fi).i++)
-#define bio_put(bio)			free(bio)
-#define bio_alloc(bdev, vecs, op, gfp)	((struct bio *)calloc(1, sizeof(struct bio)))
-#define submit_bio(bio)			do { } while (0)
-#define BIO_MAX_VECS			256
+#include <linux/bio.h>
 
 /* refcount operations - map to atomic */
 #define refcount_set(r, v)		atomic_set((atomic_t *)(r), v)
@@ -2036,12 +1985,6 @@ struct folio_iter {
 #define xchg(ptr, new)			({ typeof(*(ptr)) __old = *(ptr); *(ptr) = (new); __old; })
 
 /* printk_ratelimited is in linux/printk.h */
-
-/* mapping_set_error - record error in address_space */
-#define mapping_set_error(m, e)		do { (void)(m); (void)(e); } while (0)
-
-/* blk_status_to_errno - convert block status to errno */
-#define blk_status_to_errno(status)	(-(status))
 
 /* atomic_inc is in asm-generic/atomic.h */
 /* GFP_NOIO is in linux/slab.h */
@@ -2059,9 +2002,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 #define wbc_account_cgroup_owner(wbc, folio, bytes) \
 	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
 
-/* bio operations */
-#define bio_add_folio(bio, folio, len, off) \
-	({ (void)(bio); (void)(folio); (void)(len); (void)(off); 1; })
+/* bio_add_folio is in linux/bio.h */
 
 /*
  * Stubs for readpage.c
