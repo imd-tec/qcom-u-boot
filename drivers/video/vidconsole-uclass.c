@@ -77,7 +77,7 @@ static int vidconsole_back(struct udevice *dev)
 	vidconsole_hide_cursor(dev);
 
 	ctx->xcur_frac -= VID_TO_POS(ctx->x_charsize);
-	if (ctx->xcur_frac < priv->xstart_frac) {
+	if (ctx->xcur_frac < ctx->xstart_frac) {
 		ctx->xcur_frac = (ctx->cols - 1) *
 			VID_TO_POS(ctx->x_charsize);
 		ctx->ycur -= ctx->y_charsize;
@@ -100,7 +100,7 @@ static void vidconsole_newline(struct udevice *dev)
 	const int rows = CONFIG_VAL(CONSOLE_SCROLL_LINES);
 	int i, ret;
 
-	ctx->xcur_frac = priv->xstart_frac;
+	ctx->xcur_frac = ctx->xstart_frac;
 	ctx->ycur += ctx->y_charsize;
 
 	/* Check if we need to scroll the terminal */
@@ -139,7 +139,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
 	vidconsole_hide_cursor(dev);
 
 	ctx->xcur_frac = VID_TO_POS(x);
-	priv->xstart_frac = ctx->xcur_frac;
+	ctx->xstart_frac = ctx->xcur_frac;
 	ctx->ycur = y;
 
 	/* make sure not to kern against the previous character */
@@ -182,7 +182,7 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 
 	*row = ctx->ycur / ctx->y_charsize;
-	*col = VID_TO_PIXEL(ctx->xcur_frac - priv->xstart_frac) /
+	*col = VID_TO_PIXEL(ctx->xcur_frac - ctx->xstart_frac) /
 	       ctx->x_charsize;
 }
 
@@ -333,7 +333,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 #endif
 			}
 			ctx->ycur = 0;
-			ctx->xcur_frac = priv->xstart_frac;
+			ctx->xcur_frac = ctx->xstart_frac;
 		} else {
 			debug("unsupported clear mode: %d\n", mode);
 		}
@@ -507,7 +507,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		/* beep */
 		break;
 	case '\r':
-		ctx->xcur_frac = priv->xstart_frac;
+		ctx->xcur_frac = ctx->xstart_frac;
 		break;
 	case '\n':
 		vidconsole_newline(dev);
@@ -984,7 +984,7 @@ void vidconsole_set_bitmap_font(struct udevice *dev,
 		ctx->rows = vid_priv->ysize / fontdata->height;
 		/* xsize_frac is set in vidconsole_pre_probe() */
 	}
-	vc_priv->xstart_frac = 0;
+	ctx->xstart_frac = 0;
 }
 
 void vidconsole_idle(struct udevice *dev)

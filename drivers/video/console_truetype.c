@@ -944,7 +944,7 @@ static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 	priv->cur_met = met;
 	com->x_charsize = met->font_size;
 	com->y_charsize = met->font_size;
-	vc_priv->xstart_frac = VID_TO_POS(2);
+	com->xstart_frac = VID_TO_POS(2);
 	com->cols = vid_priv->xsize / met->font_size;
 	com->rows = vid_priv->ysize / met->font_size;
 	vc_priv->tab_width_frac = VID_TO_POS(met->font_size) * 8 / 2;
