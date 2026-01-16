@@ -113,7 +113,7 @@ static void vidconsole_newline(struct udevice *dev)
 					   vid_priv->colour_bg);
 		ctx->ycur -= rows * ctx->y_charsize;
 	}
-	priv->last_ch = 0;
+	ctx->last_ch = 0;
 
 	ret = video_sync(dev->parent, false);
 	if (ret) {
@@ -143,7 +143,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
 	ctx->ycur = y;
 
 	/* make sure not to kern against the previous character */
-	priv->last_ch = 0;
+	ctx->last_ch = 0;
 	vidconsole_entry_start(dev);
 }
 
@@ -460,7 +460,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	if (_DEBUG) {
 		console_printf_select_stderr(true,
 				     "glyph last_ch '%c': ch '%c' (%02x): ",
-				     priv->last_ch, ch >= ' ' ? ch : ' ', ch);
+				     ctx->last_ch, ch >= ' ' ? ch : ' ', ch);
 	}
 	/*
 	 * Failure of this function normally indicates an unsupported
@@ -475,7 +475,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	if (ret < 0)
 		return ret;
 	ctx->xcur_frac += ret;
-	priv->last_ch = ch;
+	ctx->last_ch = ch;
 	if (ctx->xcur_frac >= priv->xsize_frac)
 		vidconsole_newline(dev);
 	cli_index_adjust(priv, 1);
@@ -522,7 +522,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		break;
 	case '\b':
 		vidconsole_back(dev);
-		priv->last_ch = 0;
+		ctx->last_ch = 0;
 		break;
 	default:
 		if (CONFIG_IS_ENABLED(CHARSET)) {

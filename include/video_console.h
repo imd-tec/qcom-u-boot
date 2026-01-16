@@ -85,6 +85,7 @@ struct vidconsole_cursor {
  * @y_charsize:		Character height in pixels
  * @xcur_frac:		Current X position, in fractional units (VID_TO_POS(x))
  * @ycur:		Current Y position in pixels (0=top)
+ * @last_ch:		Last character written to the text console on this line
  */
 struct vidconsole_ctx {
 	int rows;
@@ -93,6 +94,7 @@ struct vidconsole_ctx {
 	int y_charsize;
 	int xcur_frac;
 	int ycur;
+	int last_ch;
 };
 
 /**
@@ -135,7 +137,6 @@ struct vidconsole_ansi {
  * @tab_width_frac:	Tab width in fractional units
  * @xsize_frac:		Width of the display in fractional units
  * @xstart_frac:	Left margin for the text console in fractional units
- * @last_ch:		Last character written to the text console on this line
  * @xmark_frac:		X position of start of CLI text entry, in fractional units
  * @ymark:		Y position of start of CLI text
  * @cli_index:		Character index into the CLI text (0=start)
@@ -150,7 +151,6 @@ struct vidconsole_priv {
 	int tab_width_frac;
 	int xsize_frac;
 	int xstart_frac;
-	int last_ch;
 	int xmark_frac;
 	int ymark;
 	int cli_index;

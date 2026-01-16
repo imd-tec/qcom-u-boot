@@ -452,8 +452,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 	pos = ctx->pos_ptr < ctx->pos_count ? &ctx->pos[ctx->pos_ptr] : NULL;
 	xpos = frac(VID_TO_PIXEL((double)x));
 	kern = 0;
-	if (vc_priv->last_ch) {
-		int last_cp = vc_priv->last_ch;
+	if (vc_ctx->last_ch) {
+		int last_cp = vc_ctx->last_ch;
 
 		if (pos)
 			last_cp = pos->cp;
@@ -722,13 +722,14 @@ static int console_truetype_backspace(struct udevice *dev)
 static int console_truetype_entry_start(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 
 	/* A new input line has start, so clear our history */
 	ctx->pos_ptr = 0;
 	ctx->pos_count = 0;
-	vc_priv->last_ch = 0;
+	vc_ctx->last_ch = 0;
 
 	return 0;
 }
