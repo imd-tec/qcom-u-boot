@@ -357,14 +357,8 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Block group lock - stub */
 #define bgl_lock_ptr(lock, group)	NULL
 
-/* RCU stubs */
-#define rcu_read_lock()			do { } while (0)
-#define rcu_read_unlock()		do { } while (0)
-#define rcu_dereference(p)		(p)
-#define rcu_dereference_protected(p, c)	(p)
-#define rcu_assign_pointer(p, v)	((p) = (v))
-#define call_rcu(head, func)		do { func(head); } while (0)
-#define synchronize_rcu()		do { } while (0)
+/* RCU stubs - use linux/rcupdate.h */
+#include <linux/rcupdate.h>
 
 /* RCU head for callbacks - defined in linux/compat.h as callback_head */
 
@@ -383,9 +377,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
  * rbtree_postorder_for_each_entry_safe are all provided by the real
  * implementation - do not stub them!
  */
-
-/* RCU barrier - stub */
-#define rcu_barrier()		do { } while (0)
 
 /* inode/dentry operations */
 void iput(struct inode *inode);
@@ -2198,13 +2189,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* atomic_sub, atomic64_sub, atomic_dec_and_test are in asm-generic/atomic.h */
 
-/* RCU list operations - use regular list operations in U-Boot */
-#define list_for_each_entry_rcu(pos, head, member, ...) \
-	list_for_each_entry(pos, head, member)
-#define list_del_rcu(entry)		list_del(entry)
-#define list_add_rcu(new, head)		list_add(new, head)
-#define list_add_tail_rcu(new, head)	list_add_tail(new, head)
-/* Other RCU stubs are defined earlier in this file */
+/* RCU list operations are in linux/rcupdate.h */
 
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
