@@ -88,13 +88,11 @@
 #include <linux/fs_parser.h>
 #include <linux/dcache.h>
 #include <linux/uuid.h>
+#include <linux/smp.h>
 
 /* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
-
-/* SMP stubs - U-Boot is single-threaded */
-#define raw_smp_processor_id()	0
-
 /* cmpxchg is now in asm-generic/atomic.h */
+/* SMP stubs (raw_smp_processor_id, smp_*mb) are now in linux/smp.h */
 
 /* Reference count type */
 typedef struct { atomic_t refs; } refcount_t;
@@ -255,10 +253,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
 
-/* Memory barriers - stubs for single-threaded */
-#define smp_rmb()	do { } while (0)
-#define smp_wmb()	do { } while (0)
-#define smp_mb()	do { } while (0)
+/* Memory barriers are now in linux/smp.h */
 
 /*
  * set_bit/clear_bit are declared extern in asm/bitops.h but not implemented.
@@ -1897,7 +1892,7 @@ struct wait_bit_entry {
 
 /* JBD2 commit.c stubs (folio_trylock is in linux/pagemap.h) */
 #define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
-#define smp_mb__after_atomic()		do { } while (0)
+/* smp_mb__after_atomic is now in linux/smp.h */
 #define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
 	({ (void)(m); (void)(s); (void)(e); 0; })
