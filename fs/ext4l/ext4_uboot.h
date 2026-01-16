@@ -915,10 +915,9 @@ static inline int in_range(unsigned long val, unsigned long start,
 
 /* folio and pagemap - use linux/pagemap.h */
 #include <linux/pagemap.h>
+#include <linux/xarray.h>
 
-/* xa_mark_t - xarray mark type */
-typedef unsigned int xa_mark_t;
-
+/* wbc_to_tag - convert writeback control to pagecache tag */
 static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
 {
 	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
@@ -1673,27 +1672,8 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
  * Stubs for mballoc.c
  */
 
-/* XArray stub structure */
-struct xarray {
-	int dummy;
-};
-
+/* XArray is now in linux/xarray.h */
 /* Per-CPU stubs are in linux/percpu.h */
-
-/* XArray function stubs */
-#define xa_init(xa)			do { } while (0)
-#define xa_destroy(xa)			do { } while (0)
-#define xa_load(xa, index)		((void *)NULL)
-#define xa_erase(xa, index)		do { (void)(xa); (void)(index); } while (0)
-#define xa_insert(xa, index, entry, gfp) ({ (void)(xa); (void)(index); (void)(entry); (void)(gfp); 0; })
-#define xa_empty(xa)			({ (void)(xa); 1; })
-
-/* XArray iteration stubs - iterate zero times */
-#define xa_for_each(xa, index, entry) \
-	for ((index) = 0, (entry) = NULL; 0; )
-
-#define xa_for_each_range(xa, index, entry, start, end) \
-	for ((index) = (start), (entry) = NULL; 0; )
 
 /* Bit operations for little-endian bitmaps */
 #define __clear_bit_le(bit, addr)	clear_bit_le(bit, addr)
