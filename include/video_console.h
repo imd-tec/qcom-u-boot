@@ -114,6 +114,7 @@ struct vidconsole_ansi {
  * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
  * @curs:		Cursor state and management
  * @xstart_frac:	Left margin for the text console in fractional units
+ * @tab_width_frac:	Tab width in fractional units
  */
 struct vidconsole_ctx {
 	int rows;
@@ -130,6 +131,7 @@ struct vidconsole_ctx {
 	char utf8_buf[5];
 	struct vidconsole_cursor curs;
 	int xstart_frac;
+	int tab_width_frac;
 };
 
 /**
@@ -148,14 +150,12 @@ struct vidconsole_ctx {
  *
  * @sdev:		stdio device, acting as an output sink
  * @ctx:		Per-client context
- * @tab_width_frac:	Tab width in fractional units
  * @xsize_frac:		Width of the display in fractional units
  * @quiet:		Suppress all output from stdio
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
 	struct vidconsole_ctx ctx;
-	int tab_width_frac;
 	int xsize_frac;
 	bool quiet;
 };

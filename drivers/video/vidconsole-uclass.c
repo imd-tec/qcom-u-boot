@@ -514,8 +514,8 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		vidconsole_entry_start(dev);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
-		ctx->xcur_frac = ((ctx->xcur_frac / priv->tab_width_frac)
-				+ 1) * priv->tab_width_frac;
+		ctx->xcur_frac = ((ctx->xcur_frac / ctx->tab_width_frac)
+				+ 1) * ctx->tab_width_frac;
 
 		if (ctx->xcur_frac >= priv->xsize_frac)
 			vidconsole_newline(dev);
@@ -894,8 +894,8 @@ static int vidconsole_post_probe(struct udevice *dev)
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct stdio_dev *sdev = &priv->sdev;
 
-	if (!priv->tab_width_frac)
-		priv->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
+	if (!ctx->tab_width_frac)
+		ctx->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
 
 	if (dev_seq(dev)) {
 		snprintf(sdev->name, sizeof(sdev->name), "vidconsole%d",

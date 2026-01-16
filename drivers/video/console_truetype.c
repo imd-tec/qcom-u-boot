@@ -923,6 +923,7 @@ static void set_bitmap_font(struct udevice *dev,
 			    struct video_fontdata *fontdata)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 
 	priv->cur_fontdata = fontdata;
@@ -930,7 +931,7 @@ static void set_bitmap_font(struct udevice *dev,
 
 	vidconsole_set_bitmap_font(dev, fontdata);
 
-	vc_priv->tab_width_frac = VID_TO_POS(fontdata->width) * 8 / 2;
+	ctx->tab_width_frac = VID_TO_POS(fontdata->width) * 8 / 2;
 }
 
 static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
@@ -947,7 +948,7 @@ static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
 	com->xstart_frac = VID_TO_POS(2);
 	com->cols = vid_priv->xsize / met->font_size;
 	com->rows = vid_priv->ysize / met->font_size;
-	vc_priv->tab_width_frac = VID_TO_POS(met->font_size) * 8 / 2;
+	com->tab_width_frac = VID_TO_POS(met->font_size) * 8 / 2;
 }
 
 static int get_metrics(struct udevice *dev, const char *name, uint size,
