@@ -416,6 +416,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 				    int cp)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	struct console_tt_priv *priv = dev_get_priv(dev);
@@ -495,7 +496,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 		}
 
 		pos = &ctx->pos[ctx->pos_ptr];
-		pos->xpos_frac = vc_priv->xcur_frac;
+		pos->xpos_frac = vc_ctx->xcur_frac;
 		pos->ypos = vc_priv->ycur;
 		pos->width = (width_frac + VID_FRAC_DIV - 1) / VID_FRAC_DIV;
 		pos->cp = cp;
@@ -683,6 +684,7 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 static int console_truetype_backspace(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 	struct udevice *vid_dev = dev->parent;
@@ -706,12 +708,12 @@ static int console_truetype_backspace(struct udevice *dev)
 	 * line, we clear from the end of the line.
 	 */
 	if (pos->ypos == vc_priv->ycur)
-		xend = VID_TO_PIXEL(vc_priv->xcur_frac);
+		xend = VID_TO_PIXEL(vc_ctx->xcur_frac);
 	else
 		xend = vid_priv->xsize;
 
 	/* Move the cursor back to where it was when we pushed this record */
-	vc_priv->xcur_frac = pos->xpos_frac;
+	vc_ctx->xcur_frac = pos->xpos_frac;
 	vc_priv->ycur = pos->ypos;
 
 	return 0;
@@ -1183,6 +1185,7 @@ static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
 static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_store store;
 	const uint size = sizeof(store);
@@ -1198,7 +1201,7 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 		return log_msg_ret("sav", -ENOMEM);
 
 	store.priv = *priv;
-	store.cur.xpos_frac = vc_priv->xcur_frac;
+	store.cur.xpos_frac = vc_ctx->xcur_frac;
 	store.cur.ypos  = vc_priv->ycur;
 	memcpy(abuf_data(buf), &store, size);
 
@@ -1208,6 +1211,7 @@ static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 	struct console_tt_store store;
@@ -1217,7 +1221,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 
 	memcpy(&store, abuf_data(buf), sizeof(store));
 
-	vc_priv->xcur_frac = store.cur.xpos_frac;
+	vc_ctx->xcur_frac = store.cur.xpos_frac;
 	vc_priv->ycur = store.cur.ypos;
 	*ctx = store.priv.ctx;
 
@@ -1227,6 +1231,7 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 static int truetype_get_cursor_info(struct udevice *dev)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *vc_ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_ctx *ctx = &priv->ctx;
 	struct vidconsole_cursor *curs = &vc_priv->curs;
@@ -1249,7 +1254,7 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	if (0 && index < ctx->pos_count)
 		x = VID_TO_PIXEL(ctx->pos[index].xpos_frac);
 	else
-		x = VID_TO_PIXEL(vc_priv->xcur_frac);
+		x = VID_TO_PIXEL(vc_ctx->xcur_frac);
 	y = vc_priv->ycur;
 
 	/* Get font height from current font type */

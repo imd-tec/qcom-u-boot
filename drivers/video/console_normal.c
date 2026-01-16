@@ -150,6 +150,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 					    struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_store store;
 	const uint size = sizeof(store);
 
@@ -159,7 +160,7 @@ static __maybe_unused int normal_entry_save(struct udevice *dev,
 	if (!abuf_realloc(buf, size))
 		return log_msg_ret("sav", -ENOMEM);
 
-	store.xpos_frac = vc_priv->xcur_frac;
+	store.xpos_frac = ctx->xcur_frac;
 	store.ypos  = vc_priv->ycur;
 	store.cli_index  = vc_priv->cli_index;
 	memcpy(abuf_data(buf), &store, size);
@@ -171,6 +172,7 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 					       struct abuf *buf)
 {
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct console_store store;
 
 	if (xpl_phase() <= PHASE_SPL)
@@ -178,7 +180,7 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 
 	memcpy(&store, abuf_data(buf), sizeof(store));
 
-	vc_priv->xcur_frac = store.xpos_frac;
+	ctx->xcur_frac = store.xpos_frac;
 	vc_priv->ycur = store.ypos;
 	vc_priv->cli_index = store.cli_index;
 

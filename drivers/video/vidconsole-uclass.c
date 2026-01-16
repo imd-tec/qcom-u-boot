@@ -76,9 +76,9 @@ static int vidconsole_back(struct udevice *dev)
 	/* Hide cursor at old position if it's visible */
 	vidconsole_hide_cursor(dev);
 
-	priv->xcur_frac -= VID_TO_POS(ctx->x_charsize);
-	if (priv->xcur_frac < priv->xstart_frac) {
-		priv->xcur_frac = (ctx->cols - 1) *
+	ctx->xcur_frac -= VID_TO_POS(ctx->x_charsize);
+	if (ctx->xcur_frac < priv->xstart_frac) {
+		ctx->xcur_frac = (ctx->cols - 1) *
 			VID_TO_POS(ctx->x_charsize);
 		priv->ycur -= ctx->y_charsize;
 		if (priv->ycur < 0)
@@ -100,7 +100,7 @@ static void vidconsole_newline(struct udevice *dev)
 	const int rows = CONFIG_VAL(CONSOLE_SCROLL_LINES);
 	int i, ret;
 
-	priv->xcur_frac = priv->xstart_frac;
+	ctx->xcur_frac = priv->xstart_frac;
 	priv->ycur += ctx->y_charsize;
 
 	/* Check if we need to scroll the terminal */
@@ -133,12 +133,13 @@ static char *parsenum(char *s, int *num)
 void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 
 	/* Hide cursor at old position if it's visible */
 	vidconsole_hide_cursor(dev);
 
-	priv->xcur_frac = VID_TO_POS(x);
-	priv->xstart_frac = priv->xcur_frac;
+	ctx->xcur_frac = VID_TO_POS(x);
+	priv->xstart_frac = ctx->xcur_frac;
 	priv->ycur = y;
 
 	/* make sure not to kern against the previous character */
@@ -181,7 +182,7 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 
 	*row = priv->ycur / ctx->y_charsize;
-	*col = VID_TO_PIXEL(priv->xcur_frac - priv->xstart_frac) /
+	*col = VID_TO_PIXEL(ctx->xcur_frac - priv->xstart_frac) /
 	       ctx->x_charsize;
 }
 
@@ -193,6 +194,7 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 static void vidconsole_escape_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ansi *ansi = &priv->ansi;
 
 	if (!IS_ENABLED(CONFIG_VIDEO_ANSI))
@@ -331,7 +333,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 #endif
 			}
 			priv->ycur = 0;
-			priv->xcur_frac = priv->xstart_frac;
+			ctx->xcur_frac = priv->xstart_frac;
 		} else {
 			debug("unsupported clear mode: %d\n", mode);
 		}
@@ -452,6 +454,7 @@ error:
 static int vidconsole_output_glyph(struct udevice *dev, int ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	int ret;
 
 	if (_DEBUG) {
@@ -464,16 +467,16 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	 * colour depth. Check this and return an error to help with
 	 * diagnosis.
 	 */
-	ret = vidconsole_putc_xy(dev, priv->xcur_frac, priv->ycur, ch);
+	ret = vidconsole_putc_xy(dev, ctx->xcur_frac, priv->ycur, ch);
 	if (ret == -EAGAIN) {
 		vidconsole_newline(dev);
-		ret = vidconsole_putc_xy(dev, priv->xcur_frac, priv->ycur, ch);
+		ret = vidconsole_putc_xy(dev, ctx->xcur_frac, priv->ycur, ch);
 	}
 	if (ret < 0)
 		return ret;
-	priv->xcur_frac += ret;
+	ctx->xcur_frac += ret;
 	priv->last_ch = ch;
-	if (priv->xcur_frac >= priv->xsize_frac)
+	if (ctx->xcur_frac >= priv->xsize_frac)
 		vidconsole_newline(dev);
 	cli_index_adjust(priv, 1);
 
@@ -483,6 +486,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 int vidconsole_put_char(struct udevice *dev, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ansi *ansi = &priv->ansi;
 	int cp, ret;
 
@@ -503,17 +507,17 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		/* beep */
 		break;
 	case '\r':
-		priv->xcur_frac = priv->xstart_frac;
+		ctx->xcur_frac = priv->xstart_frac;
 		break;
 	case '\n':
 		vidconsole_newline(dev);
 		vidconsole_entry_start(dev);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
-		priv->xcur_frac = ((priv->xcur_frac / priv->tab_width_frac)
+		ctx->xcur_frac = ((ctx->xcur_frac / priv->tab_width_frac)
 				+ 1) * priv->tab_width_frac;
 
-		if (priv->xcur_frac >= priv->xsize_frac)
+		if (ctx->xcur_frac >= priv->xsize_frac)
 			vidconsole_newline(dev);
 		break;
 	case '\b':
@@ -832,9 +836,10 @@ int vidconsole_hide_cursor(struct udevice *dev)
 int vidconsole_mark_start(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
-	priv->xmark_frac = priv->xcur_frac;
+	priv->xmark_frac = ctx->xcur_frac;
 	priv->ymark = priv->ycur;
 	priv->cli_index = 0;
 	if (ops->mark_start) {
