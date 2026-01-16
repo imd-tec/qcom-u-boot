@@ -1795,12 +1795,8 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
  * Stubs for readpage.c
  */
 
-/* mempool - memory pool stubs */
-typedef void *mempool_t;
-#define mempool_alloc(pool, gfp)	({ (void)(pool); (void)(gfp); (void *)NULL; })
-#define mempool_free(elem, pool)	do { (void)(elem); (void)(pool); } while (0)
-#define mempool_create_slab_pool(n, c)	({ (void)(n); (void)(c); (mempool_t *)NULL; })
-#define mempool_destroy(pool)		do { (void)(pool); } while (0)
+/* mempool is now in linux/mempool.h */
+#include <linux/mempool.h>
 
 /* folio read operations */
 #define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
