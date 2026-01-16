@@ -878,9 +878,18 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old)
 /* Set up the number of rows and colours (rotated drivers override this) */
 static int vidconsole_pre_probe(struct udevice *dev)
 {
-	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
+	struct vidconsole_uc_plat *plat = dev_get_uclass_plat(dev);
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
+	struct vidconsole_ctx *ctx;
+	uint size;
+
+	size = plat->ctx_size ?: sizeof(struct vidconsole_ctx);
+	ctx = calloc(1, size);
+	if (!ctx)
+		return -ENOMEM;
+	priv->ctx = ctx;
 
 	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 
@@ -914,9 +923,12 @@ static int vidconsole_post_probe(struct udevice *dev)
 
 static int vidconsole_pre_remove(struct udevice *dev)
 {
-	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = priv->ctx;
 
 	free(ctx->curs.save_data);
+	free(ctx);
+	priv->ctx = NULL;
 
 	return 0;
 }
@@ -1036,5 +1048,5 @@ void *vidconsole_ctx(struct udevice *dev)
 {
 	struct vidconsole_priv *uc_priv = dev_get_uclass_priv(dev);
 
-	return &uc_priv->ctx;
+	return uc_priv->ctx;
 }

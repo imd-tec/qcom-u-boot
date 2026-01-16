@@ -152,24 +152,25 @@ struct vidconsole_uc_plat {
 /**
  * struct vidconsole_priv - uclass-private data about a console device
  *
- * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
- * in their probe() method. Drivers may set up @ctx.xstart_frac if desired.
+ * Drivers must set up @ctx->rows, @ctx->cols, @ctx->x_charsize,
+ * @ctx->y_charsize in their probe() method. Drivers may set up
+ * @ctx->xstart_frac if desired.
  *
  * Note that these values relate to the rotated console, so that an 80x25
  * console which is rotated 90 degrees will have rows=80 and cols=25
  *
- * The ctx.xcur_frac and ctx.ycur values refer to the unrotated coordinates,
- * that is ctx.xcur_frac always advances with each character, even if its limit
- * might be vid_priv->ysize instead of vid_priv->xsize if the console is
+ * The ctx->xcur_frac and ctx->ycur values refer to the unrotated coordinates,
+ * that is ctx->xcur_frac always advances with each character, even if its
+ * limit might be vid_priv->ysize instead of vid_priv->xsize if the console is
  * rotated 90 or 270 degrees.
  *
  * @sdev:		stdio device, acting as an output sink
- * @ctx:		Per-client context
+ * @ctx:		Per-client context (allocated by the uclass)
  * @quiet:		Suppress all output from stdio
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
-	struct vidconsole_ctx ctx;
+	struct vidconsole_ctx *ctx;
 	bool quiet;
 };
 
@@ -461,7 +462,7 @@ void *vidconsole_ctx(struct udevice *dev);
  */
 static inline void *vidconsole_ctx_from_priv(struct vidconsole_priv *uc_priv)
 {
-	return &uc_priv->ctx;
+	return uc_priv->ctx;
 }
 
 /**
