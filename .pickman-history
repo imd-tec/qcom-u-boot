@@ -2296,3 +2296,64 @@ Rebased onto latest ci/master. Build test passes (sandbox).
 
 ---
 
+## 2026-01-16: us/next
+
+Branch: cherry-9698e8ddbf9
+
+Commits:
+- 9698e8ddbf9 acpi: don't fill FADT, MADT if CONFIG_QFW_ACPI=y
+- 9b5ff131d0b configs: am62x_evm_*: Set DFU buffer size to 256k
+- aba477ce0a9 arm: dts: Use upstream dts for additional bcmbca devices
+- 6cdbc41e01a arm: dts: Update nand node for bcmbca board dts
+- 65fcf33a3f3 arm: dts: Enable basic nand functionality for bcmbca devices
+- 4fd503bb8e6 sbp1: Add support for IBM SBP1 board
+- ca7881e7895 Merge patch series "Broadcom bcmbca dts updates"
+
+### Conversation log
+Now let me start cherry-picking the commits. First, let me check the commit marked as "maybe already applied" to verify if it's the same:
+
+The patches are essentially the same with only minor differences (line numbers, context). The commit 9698e8ddbf9 is already applied as 3ac9e52bc9b. I'll skip this one.
+
+Now let me cherry-pick the remaining commits:
+
+Build passed. Now let me cherry-pick the next commit:
+
+Now let me cherry-pick the merge commit:
+
+All commits have been successfully cherry-picked. Let me provide a summary:
+
+## Cherry-pick Summary
+
+**Branch created:** `cherry-9698e8ddbf9` (based on `ci/master`)
+
+### Commits status:
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 9698e8ddbf9 | acpi: don't fill FADT, MADT if CONFIG_QFW_ACPI=y | **SKIPPED** - Already applied as 3ac9e52bc9b (verified: patches are identical except for line numbers) |
+| 2 | 9b5ff131d0b | configs: am62x_evm_*: Set DFU buffer size to 256k | ✅ Applied as 36e0d47f56d |
+| 3 | aba477ce0a9 | arm: dts: Use upstream dts for additional bcmbca devices | ✅ Applied as 9c0e1f39b52 |
+| 4 | 6cdbc41e01a | arm: dts: Update nand node for bcmbca board dts | ✅ Applied as b46589ca548 |
+| 5 | 65fcf33a3f3 | arm: dts: Enable basic nand functionality for bcmbca devices | ✅ Applied as b89a8d9eb2f |
+| 6 | 4fd503bb8e6 | sbp1: Add support for IBM SBP1 board | ✅ Applied as 0072e03c2f3 |
+| 7 | ca7881e7895 | Merge patch series "Broadcom bcmbca dts updates" | ✅ Applied as 5a880d4ef64 (empty merge - all contents already in earlier commits) |
+
+### Build Results:
+- **Final build:** ✅ OK (sandbox built successfully)
+- All intermediate builds passed
+
+### Fix-ups made:
+- None required
+
+### Commits with concerning deltas:
+- None - all cherry-picked commits matched their originals exactly
+
+### Notes:
+- 6 commits successfully cherry-picked onto the branch
+- 1 commit (9698e8ddbf9) was verified as already applied and skipped
+- The merge commit (ca7881e7895) was applied as an empty commit since all its changes were already present via the individual commits
+
+The branch `cherry-9698e8ddbf9` is ready for pushing.
+
+---
+
