@@ -2413,3 +2413,58 @@ Rebased onto latest ci/master.
 
 ---
 
+### Review: 2026-01-16
+
+Branch: cherry-9698e8ddbf9
+
+Comments addressed:
+
+
+### Conversation log
+The branch needs to be rebased onto the latest ci/master (5acc63fcfeb). Let me first save the commit deltas before rebasing:
+
+Rebase completed. Now let me verify each commit delta after rebase:
+
+All commit deltas only differ in commit hash, which is expected after rebase. The actual changes are identical. Now let me run the build:
+
+Build passed. Now let me check for existing versioned branches and create the local -v2 (or higher) branch:
+
+There's already a local v2 branch. Let me create v3:
+
+The remote has changed. Let me check what's on the remote and force push:
+
+The remote was updated - it's missing the top pickman record commit (f1c15b719cc -> 4fb53fcb6df). Let me use regular force push:
+
+The branch is now rebased directly on top of ci/master.
+
+## Summary
+
+**Rebase completed successfully** for MR !378 (branch: cherry-9698e8ddbf9)
+
+### What was done:
+1. ✅ Checked out branch `cherry-9698e8ddbf9`
+2. ✅ Rebased 8 commits onto latest `ci/master` (5acc63fcfeb)
+3. ✅ Verified all commit deltas are unchanged after rebase (only commit hashes differ)
+4. ✅ Build passed (sandbox)
+5. ✅ Created local branch `cherry-9698e8ddbf9-v3`
+6. ✅ Force pushed to remote branch `cherry-9698e8ddbf9`
+
+### Commit mapping (old → new):
+| Original | Rebased | Subject |
+|----------|---------|---------|
+| f37722a4c0d | ae647dca426 | configs: am62x_evm_*: Set DFU buffer size to 256k |
+| b61e962ca11 | f4716698070 | arm: dts: Use upstream dts for additional bcmbca devices |
+| c9d2a36b825 | 96e5eedc325 | arm: dts: Update nand node for bcmbca board dts |
+| 0b006a3376e | e7f1ae84e92 | arm: dts: Enable basic nand functionality for bcmbca devices |
+| 51c528830f8 | f01ac8bc524 | sbp1: Add support for IBM SBP1 board |
+| a0269c2f493 | fea50736372 | Merge patch series "Broadcom bcmbca dts updates" |
+| 4fb53fcb6df | 96cf0e7f889 | pickman: Record cherry-pick of 7 commits from us/next |
+| f1c15b719cc | 4b202e0e11a | pickman: Record review handling for cherry-9698e8ddbf9 |
+
+### Reply for MR:
+```
+Rebased onto latest ci/master.
+```
+
+---
+
