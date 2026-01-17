@@ -2602,3 +2602,73 @@ Build verified: sandbox ✅
 
 ---
 
+## 2026-01-16: us/next
+
+Branch: cherry-302f866e5c2
+
+Commits:
+- 302f866e5c2 cyclic: Fix rollover every 72 min on 32 bits platforms
+- fb30f75655c cyclic: Fix typo in struct cyclic_info description
+- 01b1e062bac Merge https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Let me create and checkout the new branch based on ci/master:
+
+Good. Now let me verify the commit exists and cherry-pick the first commit:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The delta matches perfectly (1 file, 3+/3- lines). Now let me run the build test:
+
+Build passes. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify the delta and run the build test:
+
+Delta matches perfectly (1 file, 1+/1- lines). Now run the build test:
+
+Build passes. Now let me handle the third commit - the merge commit. First let me check if it's already applied as da67f5e9960:
+
+The commits have different subjects. Let me compare the actual changes between these two commits to see if they're really the same:
+
+Let me look at the actual changes (not just the merge metadata):
+
+These are different commits - they touch different files! The original `01b1e062bac` modifies `common/cyclic.c` and `include/cyclic.h`, while `da67f5e9960` modifies `.pickman-history` and `drivers/watchdog/rti_wdt.c`. These are NOT the same, so I should proceed with the cherry-pick of the merge commit.
+
+The merge commit is empty because the changes from the first two commits are already included. As per instructions, I need to include this merge commit even if empty, for tracking history:
+
+Good. Now let me verify the log and run the final build test:
+
+All 3 commits are present. Now run the final build test:
+
+Build passes.
+
+## Final Status Report
+
+### Cherry-pick Results
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 302f866e5c2 | cyclic: Fix rollover every 72 min on 32 bits platforms | ✅ Applied successfully |
+| fb30f75655c | cyclic: Fix typo in struct cyclic_info description | ✅ Applied successfully |
+| 01b1e062bac | Merge https://source.denx.de/u-boot/custodians/u-boot-watchdog | ✅ Applied (empty - changes already in prior commits) |
+
+### Build Result
+**OK** - sandbox build passes with no warnings or errors.
+
+### Fix-ups Made
+None required.
+
+### Commits with Concerning Deltas
+None - all deltas matched the originals exactly.
+
+### Notes
+- The merge commit `01b1e062bac` was applied as an empty commit because the changes it merged (the first two commits) were already cherry-picked individually before it. This is expected and the commit is preserved for history tracking purposes.
+- Verified that `da67f5e9960` is **NOT** the same commit as `01b1e062bac` - they touch different files entirely (da67f5e9960 modified `.pickman-history` and `drivers/watchdog/rti_wdt.c`, while 01b1e062bac modified `common/cyclic.c` and `include/cyclic.h`).
+
+### Branch Status
+Branch `cherry-302f866e5c2` is ready for pushing, 3 commits ahead of `ci/master`.
+
+---
+
