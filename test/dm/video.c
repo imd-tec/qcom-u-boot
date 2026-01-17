@@ -1185,7 +1185,8 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 {
 	int with_a, with_cursor, after_backspace, after_idle, after_hide;
 	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(con);
-	struct vidconsole_cursor *curs = &vc_priv->curs;
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_cursor *curs = &ctx->curs;
 
 	/* Output chars without cursor */
 	ut_assert(!curs->visible);
@@ -1515,3 +1516,70 @@ static int dm_test_video_context_alloc(struct unit_test_state *uts)
 	return 0;
 }
 DM_TEST(dm_test_video_context_alloc, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+/* Test vidconsole entry save/restore */
+static int check_entry_save(struct unit_test_state *uts, struct udevice *con)
+{
+	struct vidconsole_priv *priv;
+	struct vidconsole_ctx *ctx;
+	int xcur_frac, ycur;
+	struct abuf buf;
+
+	priv = dev_get_uclass_priv(con);
+	ctx = priv->ctx;
+
+	/* Move cursor to a known position */
+	vidconsole_position_cursor(con, 5, 3);
+	xcur_frac = ctx->xcur_frac;
+	ycur = ctx->ycur;
+
+	/* Save the state */
+	abuf_init(&buf);
+	ut_assertok(vidconsole_entry_save(con, &buf));
+
+	/* Move cursor to a different position */
+	vidconsole_position_cursor(con, 10, 7);
+	ut_assert(ctx->xcur_frac != xcur_frac || ctx->ycur != ycur);
+
+	/* Restore the state */
+	ut_assertok(vidconsole_entry_restore(con, &buf));
+
+	/* Verify cursor is back at saved position */
+	ut_asserteq(xcur_frac, ctx->xcur_frac);
+	ut_asserteq(ycur, ctx->ycur);
+
+	abuf_uninit(&buf);
+
+	return 0;
+}
+
+/* Test entry save/restore with bitmap font */
+static int dm_test_video_entry_save(struct unit_test_state *uts)
+{
+	struct udevice *dev, *con;
+
+	ut_assertok(select_vidconsole(uts, "vidconsole0"));
+	ut_assertok(video_get_nologo(uts, &dev));
+	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
+	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+
+	ut_assertok(check_entry_save(uts, con));
+
+	return 0;
+}
+DM_TEST(dm_test_video_entry_save, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+/* Test entry save/restore with truetype font */
+static int dm_test_video_entry_save_tt(struct unit_test_state *uts)
+{
+	struct udevice *dev, *con;
+
+	ut_assertok(video_get_nologo(uts, &dev));
+	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
+	ut_assertok(vidconsole_select_font(con, NULL, 30));
+
+	ut_assertok(check_entry_save(uts, con));
+
+	return 0;
+}
+DM_TEST(dm_test_video_entry_save_tt, UTF_SCAN_PDATA | UTF_SCAN_FDT);

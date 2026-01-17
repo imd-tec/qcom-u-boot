@@ -112,6 +112,10 @@ struct vidconsole_ansi {
  * @ymark:		Y position of start of CLI text
  * @ansi:		ANSI escape-sequence state
  * @utf8_buf:		Buffer to accumulate UTF-8 byte sequence
+ * @curs:		Cursor state and management
+ * @xstart_frac:	Left margin for the text console in fractional units
+ * @tab_width_frac:	Tab width in fractional units
+ * @xsize_frac:		Width of the display in fractional units
  */
 struct vidconsole_ctx {
 	int rows;
@@ -126,38 +130,48 @@ struct vidconsole_ctx {
 	int ymark;
 	struct vidconsole_ansi ansi;
 	char utf8_buf[5];
+	struct vidconsole_cursor curs;
+	int xstart_frac;
+	int tab_width_frac;
+	int xsize_frac;
+};
+
+/**
+ * struct vidconsole_uc_plat - uclass platform data for a vidconsole device
+ *
+ * This holds information that the uclass needs to know about each device. It
+ * is accessed using dev_get_uclass_plat(dev).
+ *
+ * @ctx_size: Size of context data needed by the driver, or 0 to use the
+ *	default (sizeof(struct vidconsole_ctx))
+ */
+struct vidconsole_uc_plat {
+	uint ctx_size;
 };
 
 /**
  * struct vidconsole_priv - uclass-private data about a console device
  *
- * Drivers must set up @ctx.rows, @ctx.cols, @ctx.x_charsize, @ctx.y_charsize
- * in their probe() method. Drivers may set up @xstart_frac if desired.
+ * Drivers must set up @ctx->rows, @ctx->cols, @ctx->x_charsize,
+ * @ctx->y_charsize in their probe() method. Drivers may set up
+ * @ctx->xstart_frac if desired.
  *
  * Note that these values relate to the rotated console, so that an 80x25
  * console which is rotated 90 degrees will have rows=80 and cols=25
  *
- * The ctx.xcur_frac and ctx.ycur values refer to the unrotated coordinates,
- * that is ctx.xcur_frac always advances with each character, even if its limit
- * might be vid_priv->ysize instead of vid_priv->xsize if the console is
+ * The ctx->xcur_frac and ctx->ycur values refer to the unrotated coordinates,
+ * that is ctx->xcur_frac always advances with each character, even if its
+ * limit might be vid_priv->ysize instead of vid_priv->xsize if the console is
  * rotated 90 or 270 degrees.
  *
  * @sdev:		stdio device, acting as an output sink
- * @ctx:		Per-client context
- * @tab_width_frac:	Tab width in fractional units
- * @xsize_frac:		Width of the display in fractional units
- * @xstart_frac:	Left margin for the text console in fractional units
+ * @ctx:		Per-client context (allocated by the uclass)
  * @quiet:		Suppress all output from stdio
- * @curs:		Cursor state and management
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
-	struct vidconsole_ctx ctx;
-	int tab_width_frac;
-	int xsize_frac;
-	int xstart_frac;
+	struct vidconsole_ctx *ctx;
 	bool quiet;
-	struct vidconsole_cursor curs;
 };
 
 /**
@@ -448,7 +462,7 @@ void *vidconsole_ctx(struct udevice *dev);
  */
 static inline void *vidconsole_ctx_from_priv(struct vidconsole_priv *uc_priv)
 {
-	return &uc_priv->ctx;
+	return uc_priv->ctx;
 }
 
 /**
@@ -612,10 +626,10 @@ static inline void vidconsole_readline_end(void)
 }
 #endif /* CONFIG_CURSOR */
 
-static inline void cli_index_adjust(struct vidconsole_priv *priv, int by)
+static inline void cli_index_adjust(struct vidconsole_ctx *ctx, int by)
 {
 	if (CONFIG_IS_ENABLED(CURSOR))
-		priv->ctx.cli_index += by;
+		ctx->cli_index += by;
 }
 
 /**

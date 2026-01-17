@@ -77,7 +77,7 @@ static int vidconsole_back(struct udevice *dev)
 	vidconsole_hide_cursor(dev);
 
 	ctx->xcur_frac -= VID_TO_POS(ctx->x_charsize);
-	if (ctx->xcur_frac < priv->xstart_frac) {
+	if (ctx->xcur_frac < ctx->xstart_frac) {
 		ctx->xcur_frac = (ctx->cols - 1) *
 			VID_TO_POS(ctx->x_charsize);
 		ctx->ycur -= ctx->y_charsize;
@@ -85,7 +85,7 @@ static int vidconsole_back(struct udevice *dev)
 			ctx->ycur = 0;
 	}
 	assert(ctx->cli_index);
-	cli_index_adjust(priv, -1);
+	cli_index_adjust(ctx, -1);
 
 	return video_sync(dev->parent, false);
 }
@@ -100,7 +100,7 @@ static void vidconsole_newline(struct udevice *dev)
 	const int rows = CONFIG_VAL(CONSOLE_SCROLL_LINES);
 	int i, ret;
 
-	ctx->xcur_frac = priv->xstart_frac;
+	ctx->xcur_frac = ctx->xstart_frac;
 	ctx->ycur += ctx->y_charsize;
 
 	/* Check if we need to scroll the terminal */
@@ -139,7 +139,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
 	vidconsole_hide_cursor(dev);
 
 	ctx->xcur_frac = VID_TO_POS(x);
-	priv->xstart_frac = ctx->xcur_frac;
+	ctx->xstart_frac = ctx->xcur_frac;
 	ctx->ycur = y;
 
 	/* make sure not to kern against the previous character */
@@ -182,7 +182,7 @@ static void get_cursor_position(struct vidconsole_priv *priv,
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 
 	*row = ctx->ycur / ctx->y_charsize;
-	*col = VID_TO_PIXEL(ctx->xcur_frac - priv->xstart_frac) /
+	*col = VID_TO_PIXEL(ctx->xcur_frac - ctx->xstart_frac) /
 	       ctx->x_charsize;
 }
 
@@ -333,7 +333,7 @@ static void vidconsole_escape_char(struct udevice *dev, char ch)
 #endif
 			}
 			ctx->ycur = 0;
-			ctx->xcur_frac = priv->xstart_frac;
+			ctx->xcur_frac = ctx->xstart_frac;
 		} else {
 			debug("unsupported clear mode: %d\n", mode);
 		}
@@ -476,9 +476,9 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 		return ret;
 	ctx->xcur_frac += ret;
 	ctx->last_ch = ch;
-	if (ctx->xcur_frac >= priv->xsize_frac)
+	if (ctx->xcur_frac >= ctx->xsize_frac)
 		vidconsole_newline(dev);
-	cli_index_adjust(priv, 1);
+	cli_index_adjust(ctx, 1);
 
 	return 0;
 }
@@ -507,17 +507,17 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		/* beep */
 		break;
 	case '\r':
-		ctx->xcur_frac = priv->xstart_frac;
+		ctx->xcur_frac = ctx->xstart_frac;
 		break;
 	case '\n':
 		vidconsole_newline(dev);
 		vidconsole_entry_start(dev);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
-		ctx->xcur_frac = ((ctx->xcur_frac / priv->tab_width_frac)
-				+ 1) * priv->tab_width_frac;
+		ctx->xcur_frac = ((ctx->xcur_frac / ctx->tab_width_frac)
+				+ 1) * ctx->tab_width_frac;
 
-		if (ctx->xcur_frac >= priv->xsize_frac)
+		if (ctx->xcur_frac >= ctx->xsize_frac)
 			vidconsole_newline(dev);
 		break;
 	case '\b':
@@ -767,8 +767,9 @@ int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf)
 int vidconsole_show_cursor(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	struct vidconsole_cursor *curs = &priv->curs;
+	struct vidconsole_cursor *curs = &ctx->curs;
 	int ret;
 
 	/* find out where the cursor should be drawn */
@@ -807,7 +808,8 @@ int vidconsole_show_cursor(struct udevice *dev)
 int vidconsole_hide_cursor(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_cursor *curs = &priv->curs;
+	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_cursor *curs = &ctx->curs;
 	int ret;
 
 	if (!curs->visible)
@@ -876,11 +878,20 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old)
 /* Set up the number of rows and colours (rotated drivers override this) */
 static int vidconsole_pre_probe(struct udevice *dev)
 {
+	struct vidconsole_uc_plat *plat = dev_get_uclass_plat(dev);
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
+	struct vidconsole_ctx *ctx;
+	uint size;
 
-	priv->xsize_frac = VID_TO_POS(vid_priv->xsize);
+	size = plat->ctx_size ?: sizeof(struct vidconsole_ctx);
+	ctx = calloc(1, size);
+	if (!ctx)
+		return -ENOMEM;
+	priv->ctx = ctx;
+
+	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 
 	return 0;
 }
@@ -892,8 +903,8 @@ static int vidconsole_post_probe(struct udevice *dev)
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct stdio_dev *sdev = &priv->sdev;
 
-	if (!priv->tab_width_frac)
-		priv->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
+	if (!ctx->tab_width_frac)
+		ctx->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
 
 	if (dev_seq(dev)) {
 		snprintf(sdev->name, sizeof(sdev->name), "vidconsole%d",
@@ -912,9 +923,12 @@ static int vidconsole_post_probe(struct udevice *dev)
 
 static int vidconsole_pre_remove(struct udevice *dev)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = priv->ctx;
 
-	free(vc_priv->curs.save_data);
+	free(ctx->curs.save_data);
+	free(ctx);
+	priv->ctx = NULL;
 
 	return 0;
 }
@@ -926,6 +940,7 @@ UCLASS_DRIVER(vidconsole) = {
 	.post_probe	= vidconsole_post_probe,
 	.pre_remove	= vidconsole_pre_remove,
 	.per_device_auto	= sizeof(struct vidconsole_priv),
+	.per_device_plat_auto	= sizeof(struct vidconsole_uc_plat),
 };
 
 int vidconsole_clear_and_reset(struct udevice *dev)
@@ -976,19 +991,19 @@ void vidconsole_set_bitmap_font(struct udevice *dev,
 	if (vid_priv->rot % 2) {
 		ctx->cols = vid_priv->ysize / fontdata->width;
 		ctx->rows = vid_priv->xsize / fontdata->height;
-		vc_priv->xsize_frac = VID_TO_POS(vid_priv->ysize);
+		ctx->xsize_frac = VID_TO_POS(vid_priv->ysize);
 	} else {
 		ctx->cols = vid_priv->xsize / fontdata->width;
 		ctx->rows = vid_priv->ysize / fontdata->height;
 		/* xsize_frac is set in vidconsole_pre_probe() */
 	}
-	vc_priv->xstart_frac = 0;
+	ctx->xstart_frac = 0;
 }
 
 void vidconsole_idle(struct udevice *dev)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_cursor *curs = &priv->curs;
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
+	struct vidconsole_cursor *curs = &ctx->curs;
 
 	/* Only handle cursor if it's enabled */
 	if (curs->enabled && !curs->visible) {
@@ -1008,10 +1023,10 @@ void vidconsole_readline_start(bool indent)
 	struct udevice *dev;
 
 	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc) {
-		struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+		struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 
-		priv->curs.indent = indent;
-		priv->curs.enabled = true;
+		ctx->curs.indent = indent;
+		ctx->curs.enabled = true;
 		vidconsole_mark_start(dev);
 	}
 }
@@ -1022,9 +1037,9 @@ void vidconsole_readline_end(void)
 	struct udevice *dev;
 
 	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc) {
-		struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+		struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 
-		priv->curs.enabled = false;
+		ctx->curs.enabled = false;
 	}
 }
 #endif /* CURSOR */
@@ -1033,5 +1048,5 @@ void *vidconsole_ctx(struct udevice *dev)
 {
 	struct vidconsole_priv *uc_priv = dev_get_uclass_priv(dev);
 
-	return &uc_priv->ctx;
+	return uc_priv->ctx;
 }

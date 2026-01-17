@@ -87,7 +87,7 @@ static int console_putc_xy_1(struct udevice *dev, uint x_frac, uint y, int cp)
 	uchar *pfont = fontdata->video_fontdata +
 			ch * fontdata->char_pixel_bytes;
 
-	if (x_frac + VID_TO_POS(ctx->x_charsize) > vc_priv->xsize_frac)
+	if (x_frac + VID_TO_POS(ctx->x_charsize) > ctx->xsize_frac)
 		return -EAGAIN;
 	linenum = VID_TO_PIXEL(x_frac) + 1;
 	x = y + 1;
@@ -176,7 +176,7 @@ static int console_putc_xy_2(struct udevice *dev, uint x_frac, uint y, int cp)
 	uchar *pfont = fontdata->video_fontdata +
 			ch * fontdata->char_pixel_bytes;
 
-	if (x_frac + VID_TO_POS(ctx->x_charsize) > vc_priv->xsize_frac)
+	if (x_frac + VID_TO_POS(ctx->x_charsize) > ctx->xsize_frac)
 		return -EAGAIN;
 	linenum = vid_priv->ysize - y - 1;
 	x = vid_priv->xsize - VID_TO_PIXEL(x_frac) - 1;
@@ -267,7 +267,7 @@ static int console_putc_xy_3(struct udevice *dev, uint x_frac, uint y, int cp)
 	uchar *pfont = fontdata->video_fontdata +
 			ch * fontdata->char_pixel_bytes;
 
-	if (x_frac + VID_TO_POS(ctx->x_charsize) > vc_priv->xsize_frac)
+	if (x_frac + VID_TO_POS(ctx->x_charsize) > ctx->xsize_frac)
 		return -EAGAIN;
 	x = y;
 	linenum = vid_priv->ysize - VID_TO_PIXEL(x_frac) - 1;

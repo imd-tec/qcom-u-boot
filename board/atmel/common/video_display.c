@@ -68,8 +68,8 @@ int at91_video_show_board_info(void)
 
 	priv = dev_get_uclass_priv(con);
 	vidconsole_position_cursor(con, 0, (logo_info.logo_height +
-				   priv->ctx.y_charsize - 1) /
-				   priv->ctx.y_charsize);
+				   priv->ctx->y_charsize - 1) /
+				   priv->ctx->y_charsize);
 	for (s = buf, i = 0; i < len; s++, i++)
 		vidconsole_put_char(con, *s);
 
