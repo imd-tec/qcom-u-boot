@@ -19,7 +19,7 @@ enum {
 };
 
 int scene_texted(struct scene *scn, const char *name, uint id,
-		 struct scene_obj_txtedit **teditp)
+		 uint line_chars, struct scene_obj_txtedit **teditp)
 {
 	struct scene_obj_txtedit *ted;
 	char *buf;
@@ -36,6 +36,7 @@ int scene_texted(struct scene *scn, const char *name, uint id,
 		return log_msg_ret("buf", -ENOMEM);
 	buf = abuf_data(&ted->buf);
 	*buf = '\0';
+	ted->line_chars = line_chars;
 
 	if (teditp)
 		*teditp = ted;

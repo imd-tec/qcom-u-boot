@@ -1511,7 +1511,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
 	dev = exp->display;
 
-	id = scene_texted(scn, "texted", OBJ_TEXTED, &ted);
+	id = scene_texted(scn, "texted", OBJ_TEXTED, 40, &ted);
 	ut_assert(id > 0);
 	ut_assertok(scene_obj_set_bbox(scn, OBJ_TEXTED, 100, 200, 400, 300));
 
