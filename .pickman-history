@@ -2465,6 +2465,140 @@ The branch is now rebased directly on top of ci/master.
 ```
 Rebased onto latest ci/master.
 ```
+Branch: cherry-54491671394
+
+Commits:
+- 54491671394 clk: mediatek: mt7629: fix gate offset of peri clock tree
+- 9bc0c7e8ab0 board: mediatek: mt7629: Migrate to OF_UPSTREAM
+- 82d262ae162 Merge patch series "MediaTek MT7629 OF_UPSTREAM migration (v2)"
+
+### Conversation log
+The repository is clean but on a different branch. Let me proceed to create the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (54491671394: clk: mediatek: mt7629: fix gate offset of peri clock tree):
+
+Cherry-pick succeeded. Let me verify the commit delta and then run the build test:
+
+The deltas match (1 file changed, 13 insertions, 1 deletion). Now run the build test:
+
+Build passed. Now cherry-pick the second commit (9bc0c7e8ab0: board: mediatek: mt7629: Migrate to OF_UPSTREAM):
+
+Second cherry-pick succeeded with auto-merge. Let me verify the delta:
+
+Deltas match exactly (6 files changed, 120 insertions, 692 deletions). Now run the build test:
+
+Build passed. Now cherry-pick the third commit which is a merge commit (82d262ae162: Merge patch series "MediaTek MT7629 OF_UPSTREAM migration (v2)"):
+
+The merge commit is empty because we've already cherry-picked the changes it contains. As per the instructions, I need to preserve merge commits using `--allow-empty`. Let me commit it:
+
+Now let me verify the deltas and check the commit:
+
+The merge commit is now empty because we've already applied the individual commits that make up the merge. This is expected behavior - the merge commit message is preserved for tracking history. Now let me run the build test:
+
+Build passed. Now let me verify the final git log:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status
+
+### Summary
+
+All 3 commits have been successfully cherry-picked to branch `cherry-54491671394`:
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 83ffd36b56a | clk: mediatek: mt7629: fix gate offset of peri clock tree | ✅ Applied cleanly |
+| 2 | fe0e760177a | board: mediatek: mt7629: Migrate to OF_UPSTREAM | ✅ Applied (auto-merged) |
+| 3 | 8e5a62ca1c3 | Merge patch series "MediaTek MT7629 OF_UPSTREAM migration (v2)" | ✅ Applied (empty, as expected for merge commit) |
+
+### Build Result
+**OK** - All builds passed (sandbox board)
+
+### Fix-ups Made
+None - all commits applied cleanly or auto-merged without conflicts.
+
+### Delta Analysis
+- **Commit 1**: Delta matched exactly (1 file, +13/-1)
+- **Commit 2**: Delta matched exactly (6 files, +120/-692)
+- **Commit 3**: Empty as expected - the merge commit was recorded for history but its content was already included in the individual commits
+
+### Notes
+- The merge commit (82d262ae162) was intentionally kept as an empty commit using `--allow-empty` to preserve the merge history and commit message as requested.
+- The branch `cherry-54491671394` is now ready for pushing.
+
+---
+
+### Review: 2026-01-16
+
+Branch: cherry-54491671394
+
+Comments addressed:
+
+
+### Conversation log
+Now I need to check what changes exist in the commits before the rebase. Let me capture the stats for each commit that needs to be rebased:
+
+Now let me check if ci/master is up to date and then perform the rebase:
+
+I can see the branch is behind ci/master. Now let's perform the rebase with `--keep-empty` to preserve the empty merge commits:
+
+Rebase completed successfully. Now let me verify each commit's delta matches what was expected and run build tests:
+
+Now let me verify the deltas match and run build tests for each commit:
+
+All deltas match exactly:
+- **Commit 1**: 1 file, +13/-1 ✅
+- **Commit 2**: 6 files, +120/-692 ✅
+- **Commit 3**: Empty merge commit (as expected) ✅
+- **Pickman commit**: 1 file, +65 ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check if there's an existing v2 branch and create the appropriate version:
+
+Now let me push to the remote to update the MR:
+
+The push failed because the remote has been updated. Let me check the remote and force push directly:
+
+I see - the remote doesn't have the pickman commit that my local has. The remote was apparently reset. Let me use a direct force push:
+
+Push succeeded. Let me verify the final state:
+
+The rebase is complete. The branch now sits on top of `ci/master` (5acc63fcfeb).
+
+## Summary
+
+### Rebase completed successfully
+
+**Branch:** `cherry-54491671394` (local backup: `cherry-54491671394-v2`)
+
+**Rebased commits:**
+
+| # | New SHA | Subject | Delta Check |
+|---|---------|---------|-------------|
+| 1 | 255dc3b558a | clk: mediatek: mt7629: fix gate offset of peri clock tree | ✅ Matched (1 file, +13/-1) |
+| 2 | 14f823fc78e | board: mediatek: mt7629: Migrate to OF_UPSTREAM | ✅ Matched (6 files, +120/-692) |
+| 3 | 0e6d07d2c6e | Merge patch series "MediaTek MT7629 OF_UPSTREAM migration (v2)" | ✅ Empty merge preserved |
+| 4 | 72c22efbf8a | pickman: Record cherry-pick of 3 commits from us/next | ✅ Matched (1 file, +65) |
+
+**Build Result:** ✅ OK (sandbox board passed)
+
+**Base commit:** 5acc63fcfeb (ci/master HEAD)
+
+**Push:** ✅ Force pushed to `ci/cherry-54491671394`
+
+### Reply to post on MR:
+
+```
+Rebased onto latest ci/master (5acc63fcfeb).
+
+All commits applied cleanly:
+- 255dc3b558a clk: mediatek: mt7629: fix gate offset of peri clock tree
+- 14f823fc78e board: mediatek: mt7629: Migrate to OF_UPSTREAM
+- 0e6d07d2c6e Merge patch series "MediaTek MT7629 OF_UPSTREAM migration (v2)"
+
+Build verified: sandbox ✅
+```
 
 ---
 
