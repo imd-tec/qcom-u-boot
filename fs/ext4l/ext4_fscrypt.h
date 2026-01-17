@@ -13,6 +13,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/dcache.h>
 
 /* Forward declarations */
 struct inode;
@@ -21,15 +22,7 @@ struct page;
 struct folio;
 struct bio;
 struct buffer_head;
-struct dentry;
 struct super_block;
-
-/* qstr - quick string for filenames (needed by fscrypt_name) */
-struct qstr {
-	u32 hash;
-	u32 len;
-	const unsigned char *name;
-};
 
 /* fscrypt_str - encrypted filename string */
 struct fscrypt_str {

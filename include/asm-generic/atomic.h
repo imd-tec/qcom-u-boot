@@ -200,4 +200,59 @@ static inline void atomic64_dec(volatile atomic64_t *v)
 	local_irq_restore(flags);
 }
 
+/**
+ * cmpxchg - compare and exchange
+ * @ptr: pointer to the value
+ * @old: expected old value
+ * @new: new value to store if current equals old
+ *
+ * Single-threaded version for U-Boot. Atomically compares *ptr with old
+ * and if equal, stores new. Returns the original value of *ptr.
+ */
+#ifndef cmpxchg
+#define cmpxchg(ptr, old, new) ({		\
+	typeof(*(ptr)) __cmpxchg_old = (old);	\
+	typeof(*(ptr)) __cmpxchg_new = (new);	\
+	typeof(*(ptr)) __cmpxchg_ret = *(ptr);	\
+	if (__cmpxchg_ret == __cmpxchg_old)	\
+		*(ptr) = __cmpxchg_new;		\
+	__cmpxchg_ret;				\
+})
+#endif
+
+/**
+ * try_cmpxchg - compare and exchange with boolean return
+ * @ptr: pointer to the value
+ * @oldp: pointer to expected old value (updated on failure)
+ * @new: new value to store if current equals old
+ *
+ * Returns true if exchange succeeded, false otherwise.
+ * On failure, *oldp is updated with the current value.
+ */
+#ifndef try_cmpxchg
+#define try_cmpxchg(ptr, oldp, new) ({		\
+	typeof(*(oldp)) __old = *(oldp);	\
+	typeof(*(ptr)) __ret = cmpxchg(ptr, __old, (new)); \
+	if (__ret != __old)			\
+		*(oldp) = __ret;		\
+	__ret == __old;				\
+})
+#endif
+
+/**
+ * xchg - exchange value atomically
+ * @ptr: pointer to the value
+ * @new: new value to store
+ *
+ * Atomically stores new value and returns the old value.
+ * Single-threaded version for U-Boot.
+ */
+#ifndef xchg
+#define xchg(ptr, new) ({			\
+	typeof(*(ptr)) __xchg_old = *(ptr);	\
+	*(ptr) = (new);				\
+	__xchg_old;				\
+})
+#endif
+
 #endif
