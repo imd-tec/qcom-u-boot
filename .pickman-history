@@ -2859,3 +2859,27 @@ The branch `cherry-5c713a9cf1f` is ready for pushing.
 
 ---
 
+
+## 2026-01-17: us/next (Rebase)
+
+Branch: cherry-b002ce88a9f
+
+Commits (rebased onto ci/master):
+- b002ce88a9f sunxi: clock: improve grouping of default clock register values
+- 9d87d5082dc sunxi: H616: DRAM: rename Kconfig parameters to be more generic
+- 1dadb246a3b power: pmic: sunxi: guard DCDC5 separately
+- bd03d35fae4 sunxi: defconfig: Add pstore support for pinephone
+- a4fc1e3e27f sunxi: pinephone: detect existed magnetometer and fixup dtb
+- dc2dd2de0f7 suniv: switch Allwinner F1Cx00 boards to OF_UPSTREAM
+- 08d65024e0e sunxi: switch Allwinner A10 boards to OF_UPSTREAM
+- 73cbb3baa6a sunxi: switch Allwinner A10s/A13 boards to OF_UPSTREAM
+- e67cbd7aba6 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sunxi
+
+### Rebase Summary
+Rebased branch cherry-b002ce88a9f onto latest ci/master (29 commits ahead).
+
+All 9 commits rebased successfully with no conflicts in source files.
+Only conflict was in .pickman-history tracking file (resolved by merging both entries).
+
+---
+
