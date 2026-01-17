@@ -2954,3 +2954,79 @@ The branch `cherry-626cdca5b68` is ready for pushing. It is 4 commits ahead of `
 
 ---
 
+## 2026-01-17: us/next
+
+Branch: cherry-4e599aa73a3
+
+Commits:
+- 4e599aa73a3 boot: android: Check kcmdline's for NULL in android_image_get_kernel()
+- af3afb70fc5 MAINTAINERS: move myself to reviewers for avb/ab
+- ae58cd7b392 bootstd: android: Add missing NULL in the avb partition list
+- 6745cbed6ed bootstd: android: Allow boot with AVB failures when unlocked
+- 8fcb7a88323 Merge tag 'u-boot-dfu-20250124' of https://source.denx.de/u-boot/custodians/u-boot-dfu
+
+### Conversation log
+Now I'll cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The deltas match exactly (1 file, 4 insertions, 4 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+Deltas match (1 file, 2 insertions, 2 deletions). Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third cherry-pick succeeded. Let me verify the delta:
+
+Deltas match (1 file, 1 insertion, 1 deletion). Now build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth cherry-pick succeeded. Let me verify the delta:
+
+Deltas match (1 file, 24 insertions, 13 deletions). Now build test:
+
+Build passed. Now the fifth commit is a merge commit (subject says "Merge tag"), so I'll use `-m 1 --allow-empty`:
+
+The cherry-pick resulted in an empty commit (all changes already applied). Since this is a merge commit and we need to preserve it, let me commit it as an empty commit:
+
+The merge commit has been preserved. Let me verify the delta:
+
+The cherry-picked merge commit is empty because all the changes from the merge were already cherry-picked in the previous 4 commits. This is expected behavior - the merge commit message is preserved but all changes are already in place. Let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 5 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick Summary:**
+
+All 5 commits were successfully cherry-picked to branch `cherry-4e599aa73a3`:
+
+| # | Original Commit | Subject | Status |
+|---|-----------------|---------|--------|
+| 1 | 4e599aa73a3 | boot: android: Check kcmdline's for NULL in android_image_get_kernel() | ✅ OK |
+| 2 | af3afb70fc5 | MAINTAINERS: move myself to reviewers for avb/ab | ✅ OK |
+| 3 | ae58cd7b392 | bootstd: android: Add missing NULL in the avb partition list | ✅ OK |
+| 4 | 6745cbed6ed | bootstd: android: Allow boot with AVB failures when unlocked | ✅ OK |
+| 5 | 8fcb7a88323 | Merge tag 'u-boot-dfu-20250124' (merge commit) | ✅ OK (empty - content already in prior commits) |
+
+**Build Result:** ✅ OK - All builds passed with no warnings or errors
+
+**Fix-ups Made:** None - all cherry-picks applied cleanly
+
+**Commits with Concerning Deltas:** None - all deltas matched exactly
+
+**Notes:**
+- The merge commit (8fcb7a88323) resulted in an empty commit because all its content was already cherry-picked in the previous 4 commits. The commit message is preserved as expected with `--allow-empty`.
+- The branch `cherry-4e599aa73a3` is ready for pushing.
+
+### Rebase 2026-01-17
+Rebased onto latest ci/master. No conflicts in source files. Only .pickman-history conflict resolved.
+
+---
