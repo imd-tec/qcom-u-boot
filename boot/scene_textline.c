@@ -213,6 +213,22 @@ int scene_textline_render_deps(struct scene *scn,
 	return 0;
 }
 
+/**
+ * scene_textline_putch() - Output a character to the vidconsole
+ *
+ * This is used as the putch callback for CLI line editing, so that characters
+ * are sent to the correct vidconsole.
+ *
+ * @cls: CLI line state
+ * @ch: Character to output
+ */
+static void scene_textline_putch(struct cli_line_state *cls, int ch)
+{
+	struct scene *scn = container_of(cls, struct scene, cls);
+
+	vidconsole_put_char(scn->expo->cons, ch);
+}
+
 int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
 {
 	struct udevice *cons = scn->expo->cons;
@@ -232,6 +248,7 @@ int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
 	vidconsole_entry_start(cons);
 	cli_cread_init(&scn->cls, abuf_data(&tline->buf), tline->max_chars);
 	scn->cls.insert = true;
+	scn->cls.putch = scene_textline_putch;
 	ret = vidconsole_entry_save(cons, &scn->entry_save);
 	if (ret)
 		return log_msg_ret("sav", ret);
