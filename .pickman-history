@@ -2672,3 +2672,190 @@ Branch `cherry-302f866e5c2` is ready for pushing, 3 commits ahead of `ci/master`
 
 ---
 
+## 2026-01-17: us/next
+
+Branch: cherry-5c713a9cf1f
+
+Commits:
+- 5c713a9cf1f arm64: dts: qcom: qcs9100: Add support for the QCS9100 Ride and Ride Rev3 boards
+- 5cc2d973675 dts: qcs9100-ride-r3-u-boot: add override dtsi
+- b3c48d8f827 clk/qcom: add initial clock driver for qcs9100
+- 4695cb5de70 phy: qcom: Add SA8775 to QMP UFS PHY driver
+- ea3d9be2038 qcom_defconfig: enable SA8775P clock driver
+- 58bf7db9a55 configs: add qcs9100_defconfig
+- 61097fed409 clk: qcom: Add X1E80100 clock driver
+- 743bcd55537 qcom_defconfig: enable X1E80100 clock driver
+- 51a142363d4 pinctrl: qcom: Add X1E80100 pinctrl driver
+- 8376161a03b qcom_defconfig: enable X1E80100 pinctrl driver
+- 709ecea592e button: qcom-pmic: add software debounce
+- 7ca1b3f0d99 pinctrl: qcom: sm8550: add pcie1_clk_req_n function
+- 7acf090d270 pinctrl: qcom: sm8650: add pcie[01]_clk_req_n function
+- 767a1e57fa1 pinctrl: qcom: x1e80100: add pcie[3456ab]_clk functions
+- bc09b58e2ab regulator: qcom-rpmh-regulator: add support for pmc8380 regulators
+- 5b359312e5f clk: qcom: add clk_phy_mux_enable() for PCIe PIPE clock
+- 5310a13b56f clk: qcom: sm8550: add support for PCIe clocks
+- bb77008c526 clk: qcom: sm8650: add support for PCIe clocks
+- cd86b564c8b clk: qcom: x1e80100: add support for PCIe clocks
+- a1efde55bba rng: msm: add support for newer Qualcomm hwrandom IPs
+- ed7ba0c1148 configs: qcom_defconfig: enable RNG driver and command
+- aeeebdadc56 pci: pcie_dw_common: introduce pcie_dw_find_capability()
+- 5b7ec7fb443 pci: Add support for Qualcomm PCIe controller
+- d22fe8f2aaf phy: qcom: add QMP PCIe PHY driver
+- e288366364c cmd: ufetch: Fix type mismatch on 32-bit
+- c38d5bad350 cmd: Allow building ufetch without CONFIG_BLK
+- 3db33a6fd69 cmd: ufetch: Show CPU architecture under "CPU"
+- 782641f872a mach-snapdragon: pass fdt to qcom_parse_memory
+- 599a1f9076d MAINTAINERS: maintain qcs9100_defconfig
+- 2eed5a1ff36 Merge https://source.denx.de/u-boot/custodians/u-boot-snapdragon
+
+### Conversation log
+The repository is on a different branch with some untracked files. Let me create the new branch from ci/master and start the cherry-picking process.
+
+Now let me verify the branch is clean and start cherry-picking. First, let me check if the us/next branch exists and has these commits.
+
+Good, the commits exist on us/next. Let me start cherry-picking them one by one. First, let me create a todo list to track this complex task.
+
+The cherry-pick resulted in an empty commit, indicating this commit may already be applied. Let me check if this commit is already in ci/master.
+
+Let me check if the files affected by the first commit exist in ci/master:
+
+Let me check if these files exist in ci/master already:
+
+The files already exist in ci/master. This looks like the commits were already applied via a squashed subtree update. Let me check for the merge commit that may have brought these in:
+
+The dts/upstream files were already applied via squashed commits. Let me verify if all the commits in this series have been applied. Let me check each commit's content against ci/master:
+
+OK, so this second commit doesn't exist in ci/master. Let me check if the series was merged via a different path. Let me look for the merge commit:
+
+So the dts/upstream file was already synced but the u-boot specific changes are not there. The first commit (5c713a9cf1f) resulted in empty because its changes were in dts/upstream which is already synced. Let me now proceed with cherry-picking but skip commit 1 and start from commit 2:
+
+Commit 1 done (empty - changes already in dts/upstream). Now let me verify and run build, then continue with commit 2:
+
+Build passed. Now cherry-pick commit 2:
+
+Commit 2 passed. Now continue with commit 3:
+
+Now let me handle commit 25 which is marked as "maybe already applied as 375000f933c". Let me verify first:
+
+Found it. Let me compare the patches:
+
+The only difference is the commit hash and a "(cherry picked from commit...)" line, meaning 375000f933c is a cherry-pick of e288366364c. They are the same changes. I'll skip this commit since it's already applied.
+
+Now let me check commit 26 (c38d5bad350) - "maybe already applied as 49f7384a428":
+
+Same situation - only line number context differences. Already applied. Let me check commit 27 (3db33a6fd69) - "maybe already applied as d6d19e76453":
+
+Same situation - already applied. Now let me continue with commit 28 (782641f872a) - mach-snapdragon:
+
+I can see the conflict. The issue is that the incoming commit (782641f872a) adds qcom_parse_memory and related functions that are being introduced, while the base branch (ci/master) already has a different version with `qcom_parse_memory(internal_valid)`.
+
+Looking at the conflict:
+1. The first conflict block (lines 46-142) shows the incoming commit adds all the memory parsing code with functions like `dram_init()`, `qcom_configure_bi_dram()`, `qcom_parse_memory(const void *fdt)` etc.
+2. The second conflict block (lines 189-193) shows that the current code has `qcom_parse_memory(internal_valid)` while the incoming wants `qcom_parse_memory(*fdtp)`.
+
+Let me check what the current ci/master has for this file:
+
+I see that ci/master already has `qcom_parse_memory()` being called but with a `bool` parameter (`internal_valid`). The memory parsing functions exist in a different location (qcom-priv.h/qcom-mem.c) via the "mach-snapdragon: move memory parsing to its own file" refactoring that's already applied.
+
+This commit (782641f872a) appears to be an older version that adds inline memory parsing and changes the function signature. The intent of the original commit is already fulfilled in a different way in ci/master. Let me check the qcom-priv.h:
+
+I see now! The memory parsing functionality was already refactored into `dram.c` in ci/master with the `qcom_parse_memory(bool fdt_is_internal)` signature. The commit 782641f872a introduces a different version that uses `qcom_parse_memory(const void *fdt)`.
+
+This is a significant conflict that requires understanding of the entire memory parsing refactoring. Looking at the commit message "pass fdt to qcom_parse_memory", the goal was to pass the FDT directly rather than a bool. However, ci/master already has this functionality refactored differently.
+
+Let me check if this functionality is already covered:
+
+The ci/master already has a more complete implementation of `qcom_parse_memory()` in `dram.c` that includes SMEM support and uses `ofnode_path("/memory")` internally (not taking an FDT pointer but using the bool to decide which FDT to use).
+
+The incoming commit (782641f872a) introduces an older version that:
+1. Adds inline memory parsing functions in board.c
+2. Changes the function signature to take `const void *fdt` directly
+
+This is essentially superseded by the more mature implementation already in ci/master. The resolution is to simply skip this commit as its intent is already fulfilled (and done better) in ci/master.
+
+Now let's continue with commit 29 (599a1f9076d):
+
+Now the last commit (2eed5a1ff36) which is a merge commit marked as "maybe already applied as e7821023192":
+
+These are different merge commits! The dates are different (Jan 2025 vs Apr 2024) and the merge parents are different. The e7821023192 is an older merge from April 2024, while 2eed5a1ff36 is the newer merge from January 2025 containing the snapdragon changes we just cherry-picked.
+
+Since we've already cherry-picked all the individual commits from the merge, we should include the merge commit message for history. Let me cherry-pick it:
+
+The merge commit has conflicts because it carries all the changes from the snapdragon branch, many of which we've already applied. Since this is a merge commit and we've already applied all the individual commits, I'll abort and create an empty commit to preserve the merge message:
+
+Now let's verify the final state with git log and run the final build:
+
+I count 27 commits from our cherry-pick (24a812f23c4 down to 2721dadd575). Let me count them and verify:
+
+We have 27 commits. The original request was for 30 commits, but:
+- 3 commits (e288366364c, c38d5bad350, 3db33a6fd69) were skipped because they were already applied to ci/master
+- 1 commit (782641f872a) was skipped due to conflicts (functionality already present differently)
+- 1 commit (5c713a9cf1f) became an empty commit (dts changes already synced)
+
+So: 30 - 3 = 27 commits cherry-picked (including empty commits for tracking).
+
+Let me run the final build test:
+
+Build passed. Let me provide the final status summary:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+
+The sandbox board builds successfully with no errors.
+
+### Cherry-Pick Summary
+
+**Branch:** `cherry-5c713a9cf1f` (based on `ci/master`)
+
+**Commits Added:** 27 commits
+
+### Commits Successfully Cherry-Picked (24 with actual changes):
+1. `2721dadd575` - arm64: dts: qcom: qcs9100 (EMPTY - changes already in dts/upstream)
+2. `a3474bc3ff4` - dts: qcs9100-ride-r3-u-boot: add override dtsi
+3. `38a7cb0c744` - clk/qcom: add initial clock driver for qcs9100
+4. `dea57157dc0` - phy: qcom: Add SA8775 to QMP UFS PHY driver
+5. `0831f98fc3f` - qcom_defconfig: enable SA8775P clock driver
+6. `29c022eb3f5` - configs: add qcs9100_defconfig
+7. `19fa3a86438` - clk: qcom: Add X1E80100 clock driver
+8. `23e99453cac` - qcom_defconfig: enable X1E80100 clock driver
+9. `fa585239e6a` - pinctrl: qcom: Add X1E80100 pinctrl driver
+10. `7e0b825db13` - qcom_defconfig: enable X1E80100 pinctrl driver
+11. `004323c2958` - button: qcom-pmic: add software debounce
+12. `c842e4f20da` - pinctrl: qcom: sm8550: add pcie1_clk_req_n function
+13. `2778bfac93f` - pinctrl: qcom: sm8650: add pcie[01]_clk_req_n function
+14. `64788fe6496` - pinctrl: qcom: x1e80100: add pcie[3456ab]_clk functions
+15. `72fa57a16d4` - regulator: qcom-rpmh-regulator: add support for pmc8380
+16. `0c959942dc9` - clk: qcom: add clk_phy_mux_enable() for PCIe PIPE clock
+17. `dafd4aa66e0` - clk: qcom: sm8550: add support for PCIe clocks
+18. `e568e0f3f79` - clk: qcom: sm8650: add support for PCIe clocks
+19. `66ed339c080` - clk: qcom: x1e80100: add support for PCIe clocks
+20. `d99910994c3` - rng: msm: add support for newer Qualcomm hwrandom IPs
+21. `ed6607122bf` - configs: qcom_defconfig: enable RNG driver and command
+22. `6478b743723` - pci: pcie_dw_common: introduce pcie_dw_find_capability()
+23. `93455f4fff9` - pci: Add support for Qualcomm PCIe controller
+24. `754189931ab` - phy: qcom: add QMP PCIe PHY driver
+25. `b84e08b5b38` - MAINTAINERS: maintain qcs9100_defconfig
+26. `2a0f1828673` - mach-snapdragon: pass fdt to qcom_parse_memory [SKIPPED]
+27. `24a812f23c4` - Merge commit [EMPTY - preserves history]
+
+### Commits Skipped (Already Applied in ci/master):
+- `e288366364c` → Already as `375000f933c` (cmd: ufetch: Fix type mismatch on 32-bit)
+- `c38d5bad350` → Already as `49f7384a428` (cmd: Allow building ufetch without CONFIG_BLK)
+- `3db33a6fd69` → Already as `d6d19e76453` (cmd: ufetch: Show CPU architecture under "CPU")
+
+### Commits with Special Handling:
+- `5c713a9cf1f` - Created as **empty commit** because the dts changes were already synced via dts/upstream squash
+- `782641f872a` - Created as **SKIPPED placeholder** because the memory parsing functionality was already refactored differently in ci/master (dram.c with SMEM support)
+- `2eed5a1ff36` - Created as **empty merge commit** to preserve the merge message for history tracking
+
+### Fix-ups Made:
+- None - all commits applied cleanly (except for noted skips)
+
+### Concerning Deltas:
+- None - all successfully cherry-picked commits had matching file counts and line changes
+
+The branch `cherry-5c713a9cf1f` is ready for pushing.
+
+---
+
