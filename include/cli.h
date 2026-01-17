@@ -36,6 +36,7 @@ struct cli_ch_state {
  *	be set)
  * @buf: Buffer containing line
  * @prompt: Prompt for the line
+ * @putch: Function to call to output a character (NULL to use putc())
  */
 struct cli_line_state {
 	uint num;
@@ -46,6 +47,7 @@ struct cli_line_state {
 	bool cmd_complete;
 	char *buf;
 	const char *prompt;
+	void (*putch)(struct cli_line_state *cls, int ch);
 };
 
 /**

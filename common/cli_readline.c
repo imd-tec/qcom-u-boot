@@ -71,9 +71,23 @@ static char *delete_char (char *buffer, char *p, int *colp, int *np, int plen)
 #define DEL7			((char)127)
 #define CREAD_HIST_CHAR		('!')
 
-#define getcmd_putch(ch)	putc(ch)
 #define getcmd_getch()		getchar()
-#define getcmd_cbeep()		getcmd_putch('\a')
+
+/**
+ * cls_putch() - Output a character, using callback if available
+ *
+ * @cls: CLI line state
+ * @ch: Character to output
+ */
+static void cls_putch(struct cli_line_state *cls, int ch)
+{
+	if (CONFIG_IS_ENABLED(CLI_READLINE_CALLBACK) && cls->putch)
+		cls->putch(cls, ch);
+	else
+		putc(ch);
+}
+
+#define getcmd_cbeep(cls)	cls_putch(cls, '\a')
 
 #ifdef CONFIG_XPL_BUILD
 #define HIST_MAX		3
@@ -95,12 +109,19 @@ static char *hist_list[HIST_MAX];
 
 #define add_idx_minus_one() ((hist_add_idx == 0) ? hist_max : hist_add_idx-1)
 
-static void getcmd_putchars(int count, int ch)
+/**
+ * cls_putchars() - Output a character multiple times
+ *
+ * @cls: CLI line state
+ * @count: Number of times to output the character
+ * @ch: Character to output
+ */
+static void cls_putchars(struct cli_line_state *cls, int count, int ch)
 {
 	int i;
 
 	for (i = 0; i < count; i++)
-		getcmd_putch(ch);
+		cls_putch(cls, ch);
 }
 
 static int hist_init(void)
@@ -206,7 +227,7 @@ void cread_print_hist_list(void)
 
 #define BEGINNING_OF_LINE() {			\
 	while (cls->num) {			\
-		getcmd_putch(CTL_BACKSPACE);	\
+		cls_putch(cls, CTL_BACKSPACE);	\
 		cls->num--;			\
 	}					\
 }
@@ -215,7 +236,7 @@ void cread_print_hist_list(void)
 	if (cls->num < cls->eol_num) {		\
 		printf("%*s", (int)(cls->eol_num - cls->num), ""); \
 		do {					\
-			getcmd_putch(CTL_BACKSPACE);	\
+			cls_putch(cls, CTL_BACKSPACE);	\
 		} while (--cls->eol_num > cls->num);	\
 	}						\
 }
@@ -228,15 +249,15 @@ void cread_print_hist_list(void)
 	}						\
 }
 
-static void cread_add_char(char ichar, int insert, uint *num,
-			   uint *eol_num, char *buf, uint len)
+static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
+			   uint *num, uint *eol_num, char *buf, uint len)
 {
 	uint wlen;
 
 	/* room ??? */
 	if (insert || *num == *eol_num) {
 		if (*eol_num > len - 1) {
-			getcmd_cbeep();
+			getcmd_cbeep(cls);
 			return;
 		}
 		(*eol_num)++;
@@ -251,7 +272,7 @@ static void cread_add_char(char ichar, int insert, uint *num,
 		putnstr(buf + *num, wlen);
 		(*num)++;
 		while (--wlen)
-			getcmd_putch(CTL_BACKSPACE);
+			cls_putch(cls, CTL_BACKSPACE);
 	} else {
 		/* echo the character */
 		wlen = 1;
@@ -261,11 +282,12 @@ static void cread_add_char(char ichar, int insert, uint *num,
 	}
 }
 
-static void cread_add_str(char *str, int strsize, int insert,
-			  uint *num, uint *eol_num, char *buf, uint len)
+static void cread_add_str(struct cli_line_state *cls, char *str, int strsize,
+			  int insert, uint *num, uint *eol_num, char *buf,
+			  uint len)
 {
 	while (strsize--) {
-		cread_add_char(*str, insert, num, eol_num, buf, len);
+		cread_add_char(cls, *str, insert, num, eol_num, buf, len);
 		str++;
 	}
 }
@@ -293,13 +315,13 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		return -EINTR;
 	case CTL_CH('f'):
 		if (cls->num < cls->eol_num) {
-			getcmd_putch(buf[cls->num]);
+			cls_putch(cls, buf[cls->num]);
 			cls->num++;
 		}
 		break;
 	case CTL_CH('b'):
 		if (cls->num) {
-			getcmd_putch(CTL_BACKSPACE);
+			cls_putch(cls, CTL_BACKSPACE);
 			cls->num--;
 		}
 		break;
@@ -314,9 +336,9 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 				putnstr(buf + cls->num, wlen);
 			}
 
-			getcmd_putch(' ');
+			cls_putch(cls, ' ');
 			do {
-				getcmd_putch(CTL_BACKSPACE);
+				cls_putch(cls, CTL_BACKSPACE);
 			} while (wlen--);
 			cls->eol_num--;
 		}
@@ -346,11 +368,11 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			memmove(&buf[base], &buf[cls->num],
 				cls->eol_num - base + 1);
 			cls->num = base;
-			getcmd_putchars(wlen, CTL_BACKSPACE);
+			cls_putchars(cls, wlen, CTL_BACKSPACE);
 			puts(buf + base);
-			getcmd_putchars(wlen, ' ');
-			getcmd_putchars(wlen + cls->eol_num - cls->num,
-					CTL_BACKSPACE);
+			cls_putchars(cls, wlen, ' ');
+			cls_putchars(cls, wlen + cls->eol_num - cls->num,
+				     CTL_BACKSPACE);
 		}
 		break;
 	case CTL_CH('x'):
@@ -367,11 +389,11 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			wlen = cls->eol_num - cls->num;
 			cls->num--;
 			memmove(&buf[cls->num], &buf[cls->num + 1], wlen);
-			getcmd_putch(CTL_BACKSPACE);
+			cls_putch(cls, CTL_BACKSPACE);
 			putnstr(buf + cls->num, wlen);
-			getcmd_putch(' ');
+			cls_putch(cls, ' ');
 			do {
-				getcmd_putch(CTL_BACKSPACE);
+				cls_putch(cls, CTL_BACKSPACE);
 			} while (wlen--);
 			cls->eol_num--;
 		}
@@ -387,7 +409,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 				hline = hist_next();
 
 			if (!hline) {
-				getcmd_cbeep();
+				getcmd_cbeep(cls);
 				break;
 			}
 
@@ -411,7 +433,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 
 			/* do not autocomplete when in the middle */
 			if (cls->num < cls->eol_num) {
-				getcmd_cbeep();
+				getcmd_cbeep(cls);
 				break;
 			}
 
@@ -427,8 +449,8 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		}
 		fallthrough;
 	default:
-		cread_add_char(ichar, cls->insert, &cls->num, &cls->eol_num,
-			       buf, cls->len);
+		cread_add_char(cls, ichar, cls->insert, &cls->num,
+			       &cls->eol_num, buf, cls->len);
 		break;
 	}
 
@@ -451,8 +473,8 @@ void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size)
 	cls->len = buf_size;
 
 	if (init_len)
-		cread_add_str(buf, init_len, 0, &cls->num, &cls->eol_num, buf,
-			      buf_size);
+		cread_add_str(cls, buf, init_len, 0, &cls->num, &cls->eol_num,
+			      buf, buf_size);
 }
 
 static int cread_line(const char *const prompt, char *buf, unsigned int *len,

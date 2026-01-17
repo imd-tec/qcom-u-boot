@@ -54,6 +54,14 @@ config CMDLINE_EDITING
 	  Enable editing and History functions for interactive command line
 	  input operations
 
+config CLI_READLINE_CALLBACK
+	bool "Support a callback for character output"
+	depends on CMDLINE_EDITING
+	help
+	  Enable a callback for character output during line editing. This
+	  allows redirection of output to a different destination, such as
+	  a vidconsole. This is used by expo to support textline editing.
+
 config CMDLINE_PS_SUPPORT
 	bool "Enable support for changing the command prompt string at run-time"
 	depends on HUSH_PARSER
