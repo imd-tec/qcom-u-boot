@@ -232,13 +232,14 @@ void cread_print_hist_list(void)
 	}					\
 }
 
-#define ERASE_TO_EOL() {				\
-	if (cls->num < cls->eol_num) {		\
-		printf("%*s", (int)(cls->eol_num - cls->num), ""); \
-		do {					\
-			cls_putch(cls, CTL_BACKSPACE);	\
-		} while (--cls->eol_num > cls->num);	\
-	}						\
+static void cread_erase_to_eol(struct cli_line_state *cls)
+{
+	if (cls->num < cls->eol_num) {
+		printf("%*s", (int)(cls->eol_num - cls->num), "");
+		do {
+			cls_putch(cls, CTL_BACKSPACE);
+		} while (--cls->eol_num > cls->num);
+	}
 }
 
 #define REFRESH_TO_EOL() {				\
@@ -344,7 +345,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		}
 		break;
 	case CTL_CH('k'):
-		ERASE_TO_EOL();
+		cread_erase_to_eol(cls);
 		break;
 	case CTL_CH('e'):
 		REFRESH_TO_EOL();
@@ -378,7 +379,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 	case CTL_CH('x'):
 	case CTL_CH('u'):
 		BEGINNING_OF_LINE();
-		ERASE_TO_EOL();
+		cread_erase_to_eol(cls);
 		break;
 	case DEL:
 	case DEL7:
@@ -418,7 +419,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			BEGINNING_OF_LINE();
 
 			/* erase to end of line */
-			ERASE_TO_EOL();
+			cread_erase_to_eol(cls);
 
 			/* copy new line into place and display */
 			strcpy(buf, hline);
