@@ -328,17 +328,17 @@ static int textline_build(struct build_info *info, ofnode node,
 	uint edit_id;
 	const char *name;
 	char buf[80];
-	u32 max_chars;
+	u32 line_chars;
 	int ret;
 
 	name = ofnode_get_name(node);
 
 	info->err_prop = "max-chars";
-	ret = ofnode_read_u32(node, "max-chars", &max_chars);
+	ret = ofnode_read_u32(node, "max-chars", &line_chars);
 	if (ret)
 		return log_msg_ret("max", -ENOENT);
 
-	ret = scene_textline(scn, name, id, max_chars, &ted);
+	ret = scene_textline(scn, name, id, line_chars, &ted);
 	if (ret < 0)
 		return log_msg_ret("ted", ret);
 

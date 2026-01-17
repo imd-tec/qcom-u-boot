@@ -538,7 +538,7 @@ static int h_read_settings(struct scene_obj *obj, void *vpriv)
 		tline = (struct scene_obj_textline *)obj;
 
 		val = ofnode_read_prop(node, obj->name, &len);
-		if (len >= tline->max_chars)
+		if (len >= tline->line_chars)
 			return log_msg_ret("str", -ENOSPC);
 		strcpy(abuf_data(&tline->buf), val);
 		break;
@@ -708,7 +708,7 @@ static int h_read_settings_env(struct scene_obj *obj, void *vpriv)
 
 		tline = (struct scene_obj_textline *)obj;
 		value = env_get(var);
-		if (value && strlen(value) >= tline->max_chars)
+		if (value && strlen(value) >= tline->line_chars)
 			return log_msg_ret("str", -ENOSPC);
 		if (!value)
 			value = "";

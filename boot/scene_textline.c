@@ -16,14 +16,14 @@
 #include <linux/string.h>
 #include "scene_internal.h"
 
-int scene_textline(struct scene *scn, const char *name, uint id, uint max_chars,
-		   struct scene_obj_textline **tlinep)
+int scene_textline(struct scene *scn, const char *name, uint id,
+		   uint line_chars, struct scene_obj_textline **tlinep)
 {
 	struct scene_obj_textline *tline;
 	char *buf;
 	int ret;
 
-	if (max_chars >= EXPO_MAX_CHARS)
+	if (line_chars >= EXPO_MAX_CHARS)
 		return log_msg_ret("chr", -E2BIG);
 
 	ret = scene_obj_add(scn, name, id, SCENEOBJT_TEXTLINE,
@@ -31,12 +31,12 @@ int scene_textline(struct scene *scn, const char *name, uint id, uint max_chars,
 			    (struct scene_obj **)&tline);
 	if (ret < 0)
 		return log_msg_ret("obj", -ENOMEM);
-	if (!abuf_init_size(&tline->buf, max_chars + 1))
+	if (!abuf_init_size(&tline->buf, line_chars + 1))
 		return log_msg_ret("buf", -ENOMEM);
 	buf = abuf_data(&tline->buf);
 	*buf = '\0';
-	tline->pos = max_chars;
-	tline->max_chars = max_chars;
+	tline->pos = line_chars;
+	tline->line_chars = line_chars;
 
 	if (tlinep)
 		*tlinep = tline;
@@ -73,7 +73,7 @@ int scene_textline_calc_dims(struct scene_obj_textline *tline,
 		return log_msg_ret("dim", -ENOENT);
 
 	ret = vidconsole_nominal(cons, txt->gen.font_name, txt->gen.font_size,
-				 tline->max_chars, &bbox);
+				 tline->line_chars, &bbox);
 	if (ret)
 		return log_msg_ret("nom", ret);
 
@@ -246,7 +246,7 @@ int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
 
 	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons);
-	cli_cread_init(&scn->cls, abuf_data(&tline->buf), tline->max_chars);
+	cli_cread_init(&scn->cls, abuf_data(&tline->buf), tline->line_chars);
 	scn->cls.insert = true;
 	scn->cls.putch = scene_textline_putch;
 	ret = vidconsole_entry_save(cons, &scn->entry_save);

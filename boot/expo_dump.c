@@ -109,7 +109,7 @@ static void dump_textline(struct dump_ctx *ctx,
 	outf(ctx, "Textline: label_id %x edit_id %x\n",
 	     tline->label_id, tline->edit_id);
 	ctx->indent += 2;
-	outf(ctx, "max_chars %x pos %x\n", tline->max_chars, tline->pos);
+	outf(ctx, "line_chars %x pos %x\n", tline->line_chars, tline->pos);
 	ctx->indent -= 2;
 }
 
