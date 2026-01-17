@@ -64,8 +64,6 @@ static char *delete_char (char *buffer, char *p, int *colp, int *np, int plen)
  * Author: Janghoon Lyu <nandy@mizi.com>
  */
 
-#define putnstr(str, n)	printf("%.*s", (int)n, str)
-
 #define CTL_BACKSPACE		('\b')
 #define DEL			((char)255)
 #define DEL7			((char)127)
@@ -85,6 +83,12 @@ static void cls_putch(struct cli_line_state *cls, int ch)
 		cls->putch(cls, ch);
 	else
 		putc(ch);
+}
+
+static void cls_putnstr(struct cli_line_state *cls, const char *str, size_t n)
+{
+	while (n-- > 0)
+		cls_putch(cls, *str++);
 }
 
 #define getcmd_cbeep(cls)	cls_putch(cls, '\a')
@@ -245,7 +249,7 @@ static void cread_erase_to_eol(struct cli_line_state *cls)
 #define REFRESH_TO_EOL() {				\
 	if (cls->num < cls->eol_num) {			\
 		uint wlen = cls->eol_num - cls->num;	\
-		putnstr(buf + cls->num, wlen);		\
+		cls_putnstr(cls, buf + cls->num, wlen);	\
 		cls->num = cls->eol_num;		\
 	}						\
 }
@@ -270,7 +274,7 @@ static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 			memmove(&buf[*num+1], &buf[*num], wlen-1);
 
 		buf[*num] = ichar;
-		putnstr(buf + *num, wlen);
+		cls_putnstr(cls, buf + *num, wlen);
 		(*num)++;
 		while (--wlen)
 			cls_putch(cls, CTL_BACKSPACE);
@@ -278,7 +282,7 @@ static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 		/* echo the character */
 		wlen = 1;
 		buf[*num] = ichar;
-		putnstr(buf + *num, wlen);
+		cls_putnstr(cls, buf + *num, wlen);
 		(*num)++;
 	}
 }
@@ -334,7 +338,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			if (wlen) {
 				memmove(&buf[cls->num], &buf[cls->num + 1],
 					wlen);
-				putnstr(buf + cls->num, wlen);
+				cls_putnstr(cls, buf + cls->num, wlen);
 			}
 
 			cls_putch(cls, ' ');
@@ -370,7 +374,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 				cls->eol_num - base + 1);
 			cls->num = base;
 			cls_putchars(cls, wlen, CTL_BACKSPACE);
-			puts(buf + base);
+			cls_putnstr(cls, buf + base, cls->eol_num - base);
 			cls_putchars(cls, wlen, ' ');
 			cls_putchars(cls, wlen + cls->eol_num - cls->num,
 				     CTL_BACKSPACE);
@@ -391,7 +395,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			cls->num--;
 			memmove(&buf[cls->num], &buf[cls->num + 1], wlen);
 			cls_putch(cls, CTL_BACKSPACE);
-			putnstr(buf + cls->num, wlen);
+			cls_putnstr(cls, buf + cls->num, wlen);
 			cls_putch(cls, ' ');
 			do {
 				cls_putch(cls, CTL_BACKSPACE);
