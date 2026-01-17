@@ -2883,3 +2883,74 @@ Only conflict was in .pickman-history tracking file (resolved by merging both en
 
 ---
 
+## 2026-01-17: us/next
+
+Branch: cherry-626cdca5b68
+
+Commits:
+- 626cdca5b68 net: mediatek: split ethernet switch code from mtk_eth.c
+- fe106f20937 net: mediatek: add support for MediaTek MT7987 SoC
+- cedafee9ff3 net: mediatek: add support for Airoha AN8855 ethernet switch
+- 1d81cb030ea Merge patch series "MediaTek ethernet driver refactor and updates"
+
+### Conversation log
+The repository state is mostly clean (untracked files are okay). Let me proceed to create the new branch based on ci/master.
+
+Branch created. Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me check the commit delta:
+
+The deltas match perfectly (same files and line counts). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me check the delta:
+
+Deltas match perfectly. Now build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked. Let me check the delta:
+
+Deltas match perfectly. Now build test:
+
+Build passed. Now let me cherry-pick the fourth commit (merge commit):
+
+The merge commit is empty (as expected since the individual commits were already cherry-picked). Let me commit it with --allow-empty:
+
+Let me verify the delta:
+
+The merge commit is empty in the cherry-picked version (which is expected since all the changes were already applied by the previous 3 commits). Now let me run the final build test:
+
+Build passed. Now let me verify the commit log:
+
+All 4 commits are present. Let me also run a final build verification:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All 4 commits were successfully cherry-picked from `us/next` to branch `cherry-626cdca5b68`:
+
+| Original Hash | Cherry-picked Hash | Subject | Status |
+|---------------|-------------------|---------|--------|
+| 626cdca5b68 | 6875a8d463d | net: mediatek: split ethernet switch code from mtk_eth.c | ✅ Clean |
+| fe106f20937 | 9891def3aa6 | net: mediatek: add support for MediaTek MT7987 SoC | ✅ Clean |
+| cedafee9ff3 | c5bf7169ec7 | net: mediatek: add support for Airoha AN8855 ethernet switch | ✅ Clean |
+| 1d81cb030ea | 08923335d5e | Merge patch series "MediaTek ethernet driver refactor and updates" | ✅ Empty (expected) |
+
+### Build Result
+**OK** - All builds passed with no warnings or errors
+
+### Fix-ups Made
+None - all commits applied cleanly
+
+### Commit Deltas
+- Commits 1-3: Deltas match exactly between original and cherry-picked versions
+- Commit 4: The merge commit is empty in the cherry-picked version (as expected, since the constituent commits were already applied individually)
+
+### Branch Status
+The branch `cherry-626cdca5b68` is ready for pushing. It is 4 commits ahead of `ci/master`.
+
+---
+
