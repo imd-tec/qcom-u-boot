@@ -1013,7 +1013,7 @@ static int expo_within_funcs(struct unit_test_state *uts)
 	/* test scene_textline_within() */
 	tline = scene_obj_find(scn, ID_MACHINE_NAME, SCENEOBJT_NONE);
 	ut_assertnonnull(tline);
-	obj = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
+	obj = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
 	ut_assertnonnull(obj);
 
 	/* positive test: point within textline bounds */
@@ -1400,19 +1400,19 @@ static int expo_render_textline(struct unit_test_state *uts)
 	id = scene_textline(scn, "textline", OBJ_TEXTLINE, 20, &tline);
 	ut_assert(id > 0);
 	ut_assertok(scene_obj_set_pos(scn, OBJ_TEXTLINE, 500, 500));
-	strcpy(abuf_data(&tline->buf), "sample hopwind");
+	strcpy(abuf_data(&tline->tin.buf), "sample hopwind");
 
 	/* create the label text object */
 	id = scene_txt_str(scn, "tline-label", 0, 0, "Label:", NULL);
 	ut_assert(id > 0);
-	tline->label_id = id;
+	tline->tin.label_id = id;
 
 	/* create the edit text object pointing to the textline buffer */
-	id = scene_txt_str(scn, "tline-edit", 0, 0, abuf_data(&tline->buf),
+	id = scene_txt_str(scn, "tline-edit", 0, 0, abuf_data(&tline->tin.buf),
 			   NULL);
 	ut_assert(id > 0);
-	tline->edit_id = id;
-	ut_assertok(scene_txt_set_font(scn, tline->edit_id,
+	tline->tin.edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, tline->tin.edit_id,
 				       "nimbus_sans_l_regular", 40));
 
 	expo_set_scene_id(exp, SCENE1);
@@ -1446,7 +1446,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check cursor moved back one position, before 'a' */
 	ut_asserteq(14, scn->cls.num);
 	ut_asserteq(15, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(19552, video_compress_fb(uts, dev, false));
@@ -1458,7 +1458,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check cursor moved back three more positions, before 'i' */
 	ut_asserteq(11, scn->cls.num);
 	ut_asserteq(15, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(19570, video_compress_fb(uts, dev, false));
@@ -1469,7 +1469,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check character deleted at cursor position */
 	ut_asserteq(11, scn->cls.num);
 	ut_asserteq(14, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(19505, video_compress_fb(uts, dev, false));
@@ -1483,7 +1483,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 
 	/* check the textline is closed and text was saved */
 	ut_asserteq(0, tline->obj.flags & SCENEOF_OPEN);
-	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
 	ut_asserteq(19543, video_compress_fb(uts, dev, false));
@@ -1518,16 +1518,16 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	/* create the label text object */
 	id = scene_txt_str(scn, "ted-label", 0, 0, "Editor:", NULL);
 	ut_assert(id > 0);
-	ted->label_id = id;
+	ted->tin.label_id = id;
 
 	/* create the edit text object pointing to the textedit buffer */
-	abuf_printf(&ted->buf, "This\nis the initial contents of the text "
+	abuf_printf(&ted->tin.buf, "This\nis the initial contents of the text "
 		"editor but it is quite likely that more will be added later");
-	id = scene_txt_str(scn, "ted-edit", STR_TEXTED, 0, abuf_data(&ted->buf),
-			   NULL);
+	id = scene_txt_str(scn, "ted-edit", STR_TEXTED, 0,
+			   abuf_data(&ted->tin.buf), NULL);
 	ut_assert(id > 0);
-	ted->edit_id = id;
-	ut_assertok(scene_txt_set_font(scn, ted->edit_id,
+	ted->tin.edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, ted->tin.edit_id,
 				       "nimbus_sans_l_regular", 20));
 
 	expo_set_scene_id(exp, SCENE1);

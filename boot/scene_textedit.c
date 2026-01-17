@@ -31,12 +31,12 @@ int scene_texted(struct scene *scn, const char *name, uint id,
 	if (ret < 0)
 		return log_msg_ret("obj", ret);
 
-	abuf_init(&ted->buf);
-	if (!abuf_realloc(&ted->buf, INITIAL_SIZE))
+	abuf_init(&ted->tin.buf);
+	if (!abuf_realloc(&ted->tin.buf, INITIAL_SIZE))
 		return log_msg_ret("buf", -ENOMEM);
-	buf = abuf_data(&ted->buf);
+	buf = abuf_data(&ted->tin.buf);
 	*buf = '\0';
-	ted->line_chars = line_chars;
+	ted->tin.line_chars = line_chars;
 
 	if (teditp)
 		*teditp = ted;
@@ -53,7 +53,7 @@ int scene_txted_set_font(struct scene *scn, uint id, const char *font_name,
 	if (!ted)
 		return log_msg_ret("find", -ENOENT);
 
-	return scene_txt_set_font(scn, ted->edit_id, font_name, font_size);
+	return scene_txt_set_font(scn, ted->tin.edit_id, font_name, font_size);
 }
 
 int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
@@ -67,8 +67,8 @@ int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
 
 	x = ted->obj.req_bbox.x0;
 	y = ted->obj.req_bbox.y0;
-	if (ted->label_id) {
-		ret = scene_obj_set_pos(scn, ted->label_id, x, y);
+	if (ted->tin.label_id) {
+		ret = scene_obj_set_pos(scn, ted->tin.label_id, x, y);
 		if (ret < 0)
 			return log_msg_ret("tit", ret);
 
@@ -76,14 +76,14 @@ int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
 	}
 
 	/* constrain the edit text to fit within the textedit bbox */
-	ret = scene_obj_set_bbox(scn, ted->edit_id, x, y,
+	ret = scene_obj_set_bbox(scn, ted->tin.edit_id, x, y,
 				 ted->obj.req_bbox.x1, ted->obj.req_bbox.y1);
 	if (ret < 0)
 		return log_msg_ret("edi", ret);
 
 	point = scn->highlight_id == ted->obj.id;
 	point &= !open;
-	scene_obj_flag_clrset(scn, ted->edit_id, SCENEOF_POINT,
+	scene_obj_flag_clrset(scn, ted->tin.edit_id, SCENEOF_POINT,
 			      point ? SCENEOF_POINT : 0);
 
 	ted->obj.dims.x = x - ted->obj.req_bbox.x0;

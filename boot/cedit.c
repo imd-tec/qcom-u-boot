@@ -433,7 +433,7 @@ static int h_write_settings(struct scene_obj *obj, void *vpriv)
 		const struct scene_obj_textline *tline;
 
 		tline = (struct scene_obj_textline *)obj;
-		ret = write_dt_string(buf, obj->name, abuf_data(&tline->buf));
+		ret = write_dt_string(buf, obj->name, abuf_data(&tline->tin.buf));
 		if (ret)
 			return log_msg_ret("wr2", ret);
 		break;
@@ -538,9 +538,9 @@ static int h_read_settings(struct scene_obj *obj, void *vpriv)
 		tline = (struct scene_obj_textline *)obj;
 
 		val = ofnode_read_prop(node, obj->name, &len);
-		if (len >= tline->line_chars)
+		if (len >= tline->tin.line_chars)
 			return log_msg_ret("str", -ENOSPC);
-		strcpy(abuf_data(&tline->buf), val);
+		strcpy(abuf_data(&tline->tin.buf), val);
 		break;
 	}
 	case SCENEOBJT_MENU: {
@@ -638,7 +638,7 @@ static int h_write_settings_env(struct scene_obj *obj, void *vpriv)
 		const struct scene_obj_textline *tline;
 
 		tline = (struct scene_obj_textline *)obj;
-		str = abuf_data(&tline->buf);
+		str = abuf_data(&tline->tin.buf);
 		ret = env_set(var, str);
 		if (ret)
 			return log_msg_ret("set", ret);
@@ -708,13 +708,13 @@ static int h_read_settings_env(struct scene_obj *obj, void *vpriv)
 
 		tline = (struct scene_obj_textline *)obj;
 		value = env_get(var);
-		if (value && strlen(value) >= tline->line_chars)
+		if (value && strlen(value) >= tline->tin.line_chars)
 			return log_msg_ret("str", -ENOSPC);
 		if (!value)
 			value = "";
 		if (priv->verbose)
 			printf("%s=%s\n", var, value);
-		strcpy(abuf_data(&tline->buf), value);
+		strcpy(abuf_data(&tline->tin.buf), value);
 		break;
 	}
 	}

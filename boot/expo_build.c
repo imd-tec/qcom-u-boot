@@ -347,7 +347,7 @@ static int textline_build(struct build_info *info, ofnode node,
 	ret = add_txt_str(info, node, scn, "title", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("tit", ret);
-	ted->label_id = ret;
+	ted->tin.label_id = ret;
 
 	/* Setup the editor */
 	info->err_prop = "edit-id";
@@ -356,11 +356,11 @@ static int textline_build(struct build_info *info, ofnode node,
 		return log_msg_ret("id", -ENOENT);
 
 	snprintf(buf, sizeof(buf), "%s.edit", name);
-	ret = scene_txt_str(scn, buf, edit_id, 0, abuf_data(&ted->buf),
+	ret = scene_txt_str(scn, buf, edit_id, 0, abuf_data(&ted->tin.buf),
 			    NULL);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
-	ted->edit_id = ret;
+	ted->tin.edit_id = ret;
 
 	return 0;
 }

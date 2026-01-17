@@ -503,23 +503,32 @@ struct scene_menitem {
 };
 
 /**
+ * struct scene_txtin - generic info for text-input objects
+ *
+ * @label_id: ID of the label text object (not string ID), or 0 if none
+ * @edit_id: ID of the editable text object (not string ID)
+ * @line_chars: Nominal number of characters in a line
+ * @buf: Text buffer containing current text
+ */
+struct scene_txtin {
+	uint label_id;
+	uint edit_id;
+	uint line_chars;
+	struct abuf buf;
+};
+
+/**
  * struct scene_obj_textline - information about a textline in a scene
  *
  * A textline has a prompt and a line of editable text
  *
  * @obj: Basic object information
- * @label_id: ID of the label text object (not string ID), or 0 if none
- * @edit_id: ID of the editable text object (not string ID)
- * @line_chars: Nominal number of characters in a line (also a hard limit)
- * @buf: Text buffer containing current text
+ * @tin: Text-input info
  * @pos: Cursor position
  */
 struct scene_obj_textline {
 	struct scene_obj obj;
-	uint label_id;
-	uint edit_id;
-	uint line_chars;
-	struct abuf buf;
+	struct scene_txtin tin;
 	uint pos;
 };
 
@@ -544,17 +553,11 @@ struct scene_obj_box {
  * A text editor which allows users to edit a small text file
  *
  * @obj: Basic object information
- * @label_id: ID of the label text object (not string ID), or 0 if none
- * @edit_id: ID of the editable text object (not string ID)
- * @line_chars: Nominal number of characters in a line
- * @buf: Text buffer containing current text
+ * @tin: Text-input info
  */
 struct scene_obj_txtedit {
 	struct scene_obj obj;
-	uint label_id;
-	uint edit_id;
-	uint line_chars;
-	struct abuf buf;
+	struct scene_txtin tin;
 };
 
 /**

@@ -384,23 +384,23 @@ static int check_passphrase(struct unit_test_state *uts,
 	/* Type 't', 'e', 's', 't' - each poll processes one character */
 	ut_asserteq(4, console_in_puts("test"));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("t", abuf_data(&tline->buf));
+	ut_asserteq_str("t", abuf_data(&tline->tin.buf));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("te", abuf_data(&tline->buf));
+	ut_asserteq_str("te", abuf_data(&tline->tin.buf));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("tes", abuf_data(&tline->buf));
+	ut_asserteq_str("tes", abuf_data(&tline->tin.buf));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("test", abuf_data(&tline->buf));
+	ut_asserteq_str("test", abuf_data(&tline->tin.buf));
 
 	/* Send backspace to remove one character */
 	ut_asserteq(1, console_in_puts("\b"));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("tes", abuf_data(&tline->buf));
+	ut_asserteq_str("tes", abuf_data(&tline->tin.buf));
 
 	/* Re-add the 't' and verify */
 	ut_asserteq(1, console_in_puts("t"));
 	ut_assertok(bc_ui_poll(ui_dev, &seq_out, &selected));
-	ut_asserteq_str("test", abuf_data(&tline->buf));
+	ut_asserteq_str("test", abuf_data(&tline->tin.buf));
 
 	/* Send return key to submit - should close textline and select */
 	ut_asserteq(1, console_in_puts("\n"));

@@ -786,7 +786,7 @@ int scene_calc_arrange(struct scene *scn, struct expo_arrange_info *arr)
 			struct scene_obj_textline *tline;
 
 			tline = (struct scene_obj_textline *)obj,
-			label_id = tline->label_id;
+			label_id = tline->tin.label_id;
 			break;
 		}
 		}

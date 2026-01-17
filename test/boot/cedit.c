@@ -89,7 +89,7 @@ static int cedit_fdt(struct unit_test_state *uts)
 	/* get a textline to fiddle with too */
 	tline = scene_obj_find(scn, ID_MACHINE_NAME, SCENEOBJT_TEXTLINE);
 	ut_assertnonnull(tline);
-	str = abuf_data(&tline->buf);
+	str = abuf_data(&tline->tin.buf);
 	strcpy(str, "my-machine");
 
 	ut_assertok(run_command("cedit write_fdt hostfs - settings.dtb", 0));
@@ -158,7 +158,7 @@ static int cedit_env(struct unit_test_state *uts)
 	/* get a textline to fiddle with too */
 	tline = scene_obj_find(scn, ID_MACHINE_NAME, SCENEOBJT_TEXTLINE);
 	ut_assertnonnull(tline);
-	str = abuf_data(&tline->buf);
+	str = abuf_data(&tline->tin.buf);
 	strcpy(str, "my-machine");
 
 	ut_assertok(run_command("cedit write_env -v", 0));
@@ -398,7 +398,7 @@ static int cedit_render_textline(struct unit_test_state *uts)
 	/* set up an initial value for the textline */
 	tline = scene_obj_find(scn, ID_MACHINE_NAME, SCENEOBJT_TEXTLINE);
 	ut_assertnonnull(tline);
-	str = abuf_data(&tline->buf);
+	str = abuf_data(&tline->tin.buf);
 	strcpy(str, "my-machine");
 	ut_asserteq(20, tline->pos);
 
@@ -655,7 +655,7 @@ static int cedit_mouse(struct unit_test_state *uts)
 		    speed->obj.flags);
 
 	/* click on the textline */
-	ut_assertok(click_check(uts, scn, mach->edit_id,
+	ut_assertok(click_check(uts, scn, mach->tin.edit_id,
 				EXPOACT_REPOINT_OPEN, &act));
 	ut_asserteq(ID_MACHINE_NAME, act.select.id);
 	ut_asserteq(ID_CPU_SPEED, act.select.prev_id);
