@@ -105,12 +105,8 @@
 #include <linux/percpu_counter.h>
 #include <linux/percpu.h>
 
-/* Project ID type */
-typedef struct { unsigned int val; } kprojid_t;
-
-#define make_kprojid(ns, id)	((kprojid_t){ .val = (id) })
-#define from_kprojid(ns, kprojid)	((kprojid).val)
-#define projid_eq(a, b)		((a).val == (b).val)
+/* Project ID type - use linux/projid.h */
+#include <linux/projid.h>
 
 /* kobject is now in linux/kobject.h */
 #include <linux/kobject.h>
@@ -421,11 +417,8 @@ typedef long long qsize_t;
 
 /* DT_* directory entry types are in linux/fs.h */
 
-/* mnt_idmap - stub */
-struct mnt_idmap {
-	int dummy;
-};
-extern struct mnt_idmap nop_mnt_idmap;
+/* mnt_idmap - use linux/mnt_idmapping.h */
+#include <linux/mnt_idmapping.h>
 
 /* fstrim_range - stub */
 struct fstrim_range {
@@ -900,8 +893,7 @@ void folio_put(struct folio *folio);
 void folio_get(struct folio *folio);
 void mapping_clear_folio_cache(struct address_space *mapping);
 
-/* projid_t - project ID type */
-typedef unsigned int projid_t;
+/* projid_t is now in linux/projid.h */
 
 /*
  * Additional stubs for inode.c
