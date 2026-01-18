@@ -493,8 +493,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 /* Forward declaration for swap */
 struct swap_info_struct;
 
-/* Process flags */
-#define PF_MEMALLOC		0x00000800
+/* PF_MEMALLOC is in linux/sched.h */
 
 /* Forward declarations for inode operations */
 struct inode_operations;
@@ -1354,10 +1353,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 /* Nested inode locking stub */
 #define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
 
-/* Process flags */
-#ifndef PF_MEMALLOC_NOFS
-#define PF_MEMALLOC_NOFS	0x00040000
-#endif
+/* PF_MEMALLOC_NOFS is in linux/sched.h */
 
 /* generic_set_sb_d_ops, d_make_root are now in linux/dcache.h */
 

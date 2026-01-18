@@ -16,6 +16,10 @@ struct io_context {
 	unsigned int ioprio;
 };
 
+/* Process flags */
+#define PF_MEMALLOC		0x00000800	/* Allocating memory */
+#define PF_MEMALLOC_NOFS	0x00040000	/* GFP_NOFS allocations */
+
 struct task_struct {
 	int pid;
 	char comm[16];
