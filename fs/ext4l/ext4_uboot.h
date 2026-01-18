@@ -384,10 +384,8 @@ typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 /* crc32c - from linux/crc32c.h */
 #include <linux/crc32c.h>
 
-/* ratelimit_state - stub */
-struct ratelimit_state {
-	int dummy;
-};
+/* ratelimit_state - use linux/ratelimit.h */
+#include <linux/ratelimit.h>
 
 /* fscrypt_dummy_policy and qstr are now in ext4_fscrypt.h */
 
@@ -869,12 +867,7 @@ static inline int in_range(unsigned long val, unsigned long start,
 
 /* percpu_counter_init/destroy are in linux/percpu_counter.h */
 
-/* ratelimit macros */
-#define DEFAULT_RATELIMIT_INTERVAL	(5 * 1000)
-#define DEFAULT_RATELIMIT_BURST		10
-#define DEFINE_RATELIMIT_STATE(name, interval, burst) \
-	int name __attribute__((unused)) = 0
-#define __ratelimit(state)		({ (void)(state); 1; })
+/* ratelimit macros are now in linux/ratelimit.h */
 
 /* SEQ_START_TOKEN is in linux/seq_file.h */
 
@@ -1364,8 +1357,7 @@ int trylock_buffer(struct buffer_head *bh);
 /* Trace stubs for super.c - declaration for stub.c implementation */
 void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
 
-/* Ratelimiting - declaration for stub.c */
-int ___ratelimit(struct ratelimit_state *rs, const char *func);
+/* ___ratelimit is now in linux/ratelimit.h */
 
 /* Filesystem notification - declaration for stub.c */
 void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
@@ -1502,8 +1494,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 
 /* strreplace is in linux/string.h */
 
-/* Ratelimit - declaration for stub.c */
-void ratelimit_state_init(void *rs, int interval, int burst);
+/* ratelimit_state_init is now in linux/ratelimit.h */
 
 /* Block device operations - declarations for stub.c */
 void bdev_fput(void *file);
