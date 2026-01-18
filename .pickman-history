@@ -3030,3 +3030,182 @@ All 5 commits were successfully cherry-picked to branch `cherry-4e599aa73a3`:
 Rebased onto latest ci/master. No conflicts in source files. Only .pickman-history conflict resolved.
 
 ---
+
+Branch: cherry-87f9f591bef
+
+Commits:
+- 87f9f591bef treewide: Replace Maximumm with Maximum in Kconfig symbol description
+- 9057a48af46 arm64: configs: Remove obsolete TI config
+- d51f35a553b test: str_ut.c depends on CONFIG_STRTO
+- 08a22b2cc44 test: Drop unused suite prototypes
+- 238ba333c36 test: Rename test_get_state() to ut_get_state()
+- 7b576f08476 test: Add functions to init and uninit the test state
+- 94b5284398e test: Pass the test-state into ut_run_list()
+- f0781acc37f Improve support for linker lists in data structures
+- ea2bb8e20f9 test: Add newlines to hush-test messages
+- 4d31a3bd337 test: Rename test suites to match their linker-list name
+- 67f84dba6b9 test: Update ut info to show suites
+- c16b388ea8b test/py: Add a test which runs all unit tests
+- 4ba3ab4901c test: Drop the _test suffix on linker lists
+- 7bbf2f7983c test: Introduce a better array of test suites
+- 9e93c249f7a test: Drop the function for running bdinfo tests
+- 6054e8463c5 test: Drop the function for running cmd tests
+- cfc0f46cd05 test: Drop the function for running common tests
+- 7c012db1060 test: Drop the function for running dm tests
+- 3e5e638e625 test: Drop the function for running env tests
+- ca917e491f8 test: Drop the function for running exit tests
+- 45dfbdde373 test: Drop the function for running fdt tests
+- a9976e52bea test: Drop the function for running font tests
+- d824e20fc27 test: Drop the function for running lib tests
+- 87cf479fdb7 test: Drop the function for running log tests
+- 1ade3afa2da test: Drop the function for running mbr tests
+- bda212bad51 test: Drop the function for running mem tests
+- cebdc5376f9 test: Drop the function for running setexpr tests
+- 446e6f9cd37 test: Drop the function for running measurement tests
+- 28b32858aaa test: Drop the function for running bloblist tests
+- 1ca67c3f040 test: Drop the function for running bootm tests
+- e6959512b6f test: Drop the function for running addrmap tests
+- d5e5cb48e64 test: Drop the function for running hush tests
+- 822cb558e1a test: Drop the function for running loadm tests
+- a2cf88d807a test: Drop the function for running pci_mps tests
+- b073d8a2727 test: Drop the function for running seama tests
+- 0af17462b96 test: Drop the function for running upl tests
+- 81c5434f499 test: Drop the info test from the list
+- 374203bd2ef test: Drop conditional compilation for suites
+- bbff0b165c1 test: Pass the test state to cmd_ut_category()
+- 0925659a522 test: Move stats into a struct
+- 561320beffd test: Keep a track of the numbers of tests run
+- 15c39587cf8 test: Move stat-printing into its own function
+- 6d97c98095a test: Record and show the totals for all test runs
+- 18aa9913a11 test: Sort the test suites
+- 39d2bb062e5 test: Disable test_suite
+- fc7968c1180 test: Move help into the suite declaration
+- 229d145f261 doc: Update ut documentation
+- 8162f35a108 Merge patch series "test: Improvements to ut command and test-suite running"
+
+### Conversation log
+The repository state is not fully clean (there's an untracked file), but there are no staged or modified files. Let me proceed with creating the new branch from ci/master.
+
+Now let me start cherry-picking the commits. Let me first verify the us/next branch exists and check the first commit:
+
+Good. Now let me start cherry-picking. First commit: `87f9f591bef`
+
+Good, delta matches. Let me run the build test:
+
+Build passes. Now let me continue with the second commit: `9057a48af46`
+
+Good. Now the third commit: `d51f35a553b`
+
+Good. Now the fourth commit `08a22b2cc44` - marked as "maybe already applied as 2d2bfb968fe". Let me first check if it's already applied:
+
+It exists. Let me compare the patches to verify it's the same:
+
+Only the commit hash differs. These are the same commits. I'll skip this one and continue. Now let me check the fifth commit `238ba333c36`:
+
+Same commit, only hash differs. Let me check all the remaining "maybe already applied" commits more efficiently:
+
+I see some commits have minor differences (like different index lines and line numbers), which typically indicates they're the same logical changes but applied at different points or with slightly different context. Let me look more closely at the ones that "DIFFER" to see if they're truly different in content:
+
+The content of the changes is the same - they are making the same changes. The differences are only in line numbers and index values due to different contexts. Let me also check the merge commit:
+
+Given that:
+1. Most of the "maybe already applied" commits have identical content (only line numbers differ)
+2. All the changes appear to be the same logical changes
+
+Let me verify if the merge commit's changes are already present by checking if the last commits in the series are already in ci/master:
+
+All the commits from the series are already present in ci/master with different hashes. Now I need to decide what to do. According to the instructions, commits that are "maybe already applied" and verified to be the same should be SKIPPED. Let me summarize:
+
+**Commits that need to be cherry-picked (not already applied):**
+1. ✅ `87f9f591bef` - treewide: Replace Maximumm with Maximum (DONE)
+2. ✅ `9057a48af46` - arm64: configs: Remove obsolete TI config (DONE)
+3. ✅ `d51f35a553b` - test: str_ut.c depends on CONFIG_STRTO (DONE)
+
+**Commits already applied (skip):**
+- All commits marked "maybe already applied" have been verified to be the same (only context/line numbers differ)
+- The merge commit `8162f35a108` is also effectively already applied since all its content is in ci/master
+
+Let me verify the current state of my branch:
+
+So I've successfully cherry-picked 3 commits. All the remaining 45 commits are already present in ci/master with different hashes. Let me run a final build to confirm everything is working:
+
+Build passes. Let me now provide a comprehensive final status report:
+
+## Final Status Report
+
+### Cherry-Pick Summary
+
+**Branch created:** `cherry-87f9f591bef` based on `ci/master`
+
+**Successfully cherry-picked (3 commits):**
+1. `c311aec07d5` ← `87f9f591bef`: treewide: Replace Maximumm with Maximum in Kconfig symbol description
+2. `d065d9366b9` ← `9057a48af46`: arm64: configs: Remove obsolete TI config
+3. `b87f28b8d7b` ← `d51f35a553b`: test: str_ut.c depends on CONFIG_STRTO
+
+**Skipped - Already Applied (45 commits):**
+All commits marked "maybe already applied" were verified to be identical (same content, different hashes due to different commit context). These include:
+
+| Original Hash | Already Applied As | Subject |
+|---------------|-------------------|---------|
+| 08a22b2cc44 | 2d2bfb968fe | test: Drop unused suite prototypes |
+| 238ba333c36 | 25e734f0de7 | test: Rename test_get_state() to ut_get_state() |
+| 7b576f08476 | abf3ef3162d | test: Add functions to init and uninit the test state |
+| 94b5284398e | 28efb7316cb | test: Pass the test-state into ut_run_list() |
+| f0781acc37f | fc72e93391a | Improve support for linker lists in data structures |
+| ea2bb8e20f9 | 32a45262252 | test: Add newlines to hush-test messages |
+| 4d31a3bd337 | b8b9716dbc9 | test: Rename test suites to match their linker-list name |
+| 67f84dba6b9 | c774445f299 | test: Update ut info to show suites |
+| c16b388ea8b | 17f4ac61cef | test/py: Add a test which runs all unit tests |
+| 4ba3ab4901c | a4a4b0641e4 | test: Drop the _test suffix on linker lists |
+| 7bbf2f7983c | 3d60be15494 | test: Introduce a better array of test suites |
+| 9e93c249f7a | d311ae22da4 | test: Drop the function for running bdinfo tests |
+| 6054e8463c5 | c862b178d5a | test: Drop the function for running cmd tests |
+| cfc0f46cd05 | 7905e0780eb | test: Drop the function for running common tests |
+| 7c012db1060 | f0700cc3a38 | test: Drop the function for running dm tests |
+| 3e5e638e625 | 3ab456ea663 | test: Drop the function for running env tests |
+| ca917e491f8 | 3ad2f721ad7 | test: Drop the function for running exit tests |
+| 45dfbdde373 | 494b56312d4 | test: Drop the function for running fdt tests |
+| a9976e52bea | eaf111fef86 | test: Drop the function for running font tests |
+| d824e20fc27 | f4e0199d481 | test: Drop the function for running lib tests |
+| 87cf479fdb7 | ad670c98634 | test: Drop the function for running log tests |
+| 1ade3afa2da | 230f92eb9b3 | test: Drop the function for running mbr tests |
+| bda212bad51 | 6a1c9e51e7b | test: Drop the function for running mem tests |
+| cebdc5376f9 | ad3a9a6de4c | test: Drop the function for running setexpr tests |
+| 446e6f9cd37 | 19791b6871b | test: Drop the function for running measurement tests |
+| 28b32858aaa | 01072ef8efb | test: Drop the function for running bloblist tests |
+| 1ca67c3f040 | 1b665cea1bf | test: Drop the function for running bootm tests |
+| e6959512b6f | 2f26bb86fc3 | test: Drop the function for running addrmap tests |
+| d5e5cb48e64 | 9ebb555e48a | test: Drop the function for running hush tests |
+| 822cb558e1a | d690f4a87bf | test: Drop the function for running loadm tests |
+| a2cf88d807a | 27c302f446a | test: Drop the function for running pci_mps tests |
+| b073d8a2727 | 690e5a35a03 | test: Drop the function for running seama tests |
+| 0af17462b96 | bf947cc140c | test: Drop the function for running upl tests |
+| 81c5434f499 | 7b37496a6f4 | test: Drop the info test from the list |
+| 374203bd2ef | 4da42b63eda | test: Drop conditional compilation for suites |
+| bbff0b165c1 | 5e6b79b37ea | test: Pass the test state to cmd_ut_category() |
+| 0925659a522 | a4d05c0996d | test: Move stats into a struct |
+| 561320beffd | c37b22bb305 | test: Keep a track of the numbers of tests run |
+| 15c39587cf8 | f86e5ab18d3 | test: Move stat-printing into its own function |
+| 6d97c98095a | e46eb7b69a1 | test: Record and show the totals for all test runs |
+| 18aa9913a11 | 8711f246006 | test: Sort the test suites |
+| 39d2bb062e5 | 2011e28d547 | test: Disable test_suite |
+| fc7968c1180 | b9c671580e7 | test: Move help into the suite declaration |
+| 229d145f261 | f1ea51a0321 | doc: Update ut documentation |
+| 8162f35a108 | N/A (merge) | Merge patch series "test: Improvements to ut command and test-suite running" |
+
+### Build Result
+✅ **Build passes** - `buildman -L --board sandbox -w -o /tmp/pickman` completed successfully
+
+### Fix-ups Made
+None required - all cherry-picks applied cleanly
+
+### Commits with Concerning Deltas
+None - all cherry-picked commits matched their originals exactly
+
+### Summary
+- **3 of 48 commits** were cherry-picked successfully
+- **45 of 48 commits** were skipped because they were already present in ci/master with different hashes (applied via a different path)
+- The branch `cherry-87f9f591bef` is ready for pushing
+
+---
+
