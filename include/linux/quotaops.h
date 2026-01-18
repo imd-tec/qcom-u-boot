@@ -61,6 +61,11 @@ struct super_block;
 #define dquot_writeback_dquots(sb, type)	do { (void)(sb); (void)(type); } while (0)
 #define dquot_file_open(inode, file)		({ (void)(inode); (void)(file); 0; })
 
+/* Quota format identifiers */
+#define QFMT_VFS_OLD		1	/* Original quota format */
+#define QFMT_VFS_V0		2	/* 32-bit UID/GID quota */
+#define QFMT_VFS_V1		4	/* 32-bit UID/GID with grace period */
+
 /* Quota status queries */
 #define sb_has_quota_usage_enabled(sb, type)	0
 #define sb_has_quota_limits_enabled(sb, type)	0

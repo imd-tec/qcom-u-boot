@@ -1092,10 +1092,7 @@ static inline const char *simple_get_link(struct dentry *dentry,
  * Additional stubs for super.c
  */
 
-/* Quota format constants */
-#define QFMT_VFS_OLD		1
-#define QFMT_VFS_V0		2
-#define QFMT_VFS_V1		4
+/* QFMT_VFS_* quota format constants are in linux/quotaops.h */
 
 /* Buffer read sync */
 static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
