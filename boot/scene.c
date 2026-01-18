@@ -535,13 +535,27 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 
 		limit = obj->flags & SCENEOF_SIZE_VALID ?
 			obj->req_bbox.x1 - obj->req_bbox.x0 : -1;
-		log_debug("obj %s limit %d\n", obj->name, limit);
 
 		ret = vidconsole_measure(scn->expo->cons, gen->font_name,
 					 gen->font_size, str, limit, &bbox,
 					 &gen->lines);
 		if (ret)
 			return log_msg_ret("mea", ret);
+		if (scene_chklog(obj->name)) {
+			log_debug("obj %s limit %d: %d lines, width %d height %d\n",
+				  obj->name, limit, gen->lines.count,
+				  bbox.x1, bbox.y1);
+			for (int i = 0; i < gen->lines.count; i++) {
+				const struct vidconsole_mline *mline;
+
+				mline = alist_get(&gen->lines, i,
+						  struct vidconsole_mline);
+				log_content("line %d: %d,%d %d,%d '%.*s'\n", i,
+					    mline->bbox.x0, mline->bbox.y0,
+					    mline->bbox.x1, mline->bbox.y1,
+					    mline->len, str + mline->start);
+			}
+		}
 		if (widthp)
 			*widthp = bbox.x1;
 
