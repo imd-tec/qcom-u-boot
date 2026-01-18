@@ -6,6 +6,7 @@
  */
 
 #include <dm.h>
+#include <asm/state.h>
 #include <dm/test.h>
 #include <test/test.h>
 #include <test/ut.h>
@@ -121,3 +122,25 @@ static int dm_test_sb_devoff_not_bound(struct unit_test_state *uts)
 	return 0;
 }
 DM_TEST(dm_test_sb_devoff_not_bound, UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Test 'sb grid' command */
+static int dm_test_sb_grid(struct unit_test_state *uts)
+{
+	struct sandbox_state *state = state_get_current();
+
+	/* Ensure grid is initially off */
+	state->show_grid = false;
+
+	/* Enable grid */
+	ut_assertok(run_command("sb grid 1", 0));
+	ut_assert_console_end();
+	ut_asserteq(true, state->show_grid);
+
+	/* Disable grid */
+	ut_assertok(run_command("sb grid 0", 0));
+	ut_assert_console_end();
+	ut_asserteq(false, state->show_grid);
+
+	return 0;
+}
+DM_TEST(dm_test_sb_grid, UTF_CONSOLE);

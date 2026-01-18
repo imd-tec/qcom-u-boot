@@ -179,6 +179,7 @@ struct sandbox_state {
 	bool no_term_present;		/* Assume no terminal present */
 	bool quiet_vidconsole;		/* Don't use vidconsole for stdout */
 	bool disable_mcheck;		/* Disable mcheck heap protection */
+	bool show_grid;			/* Show grid overlay on video */
 	int video_test;			/* ms to wait before next assert */
 	const char *video_frames_dir;	/* Directory to write video frames */
 	int video_frame_count;		/* Number of frames written */
