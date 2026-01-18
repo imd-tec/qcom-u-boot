@@ -758,8 +758,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 
 /* extents.c stubs */
 
-/* rwsem is_locked stub */
-#define rwsem_is_locked(sem)		(1)
+/* rwsem_is_locked is in linux/rwsem.h */
 
 /* Buffer operations */
 #define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
