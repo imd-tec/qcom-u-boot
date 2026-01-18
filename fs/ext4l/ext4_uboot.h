@@ -1300,21 +1300,8 @@ static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
 	return fsid;
 }
 
-/* kstatfs for statfs */
-struct kstatfs {
-	long f_type;
-	long f_bsize;
-	u64 f_blocks;
-	u64 f_bfree;
-	u64 f_bavail;
-	u64 f_files;
-	u64 f_ffree;
-	__kernel_fsid_t f_fsid;
-	long f_namelen;
-	long f_frsize;
-	long f_flags;
-	long f_spare[4];
-};
+/* kstatfs - use linux/statfs.h */
+#include <linux/statfs.h>
 
 /* struct seq_file is in linux/seq_file.h */
 
