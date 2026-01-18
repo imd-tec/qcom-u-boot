@@ -164,23 +164,8 @@ typedef struct { unsigned int val; } kprojid_t;
 
 /* struct file is defined in linux/fs.h */
 
-/* kiocb - kernel I/O control block */
-struct iov_iter;
-
-struct kiocb {
-	int ki_flags;
-	struct file *ki_filp;
-	loff_t ki_pos;
-};
-
-#define IOCB_DIRECT		0x0001
-#define IOCB_NOWAIT		0x0002
-#define IOCB_ATOMIC		0x0004
-
-/* iov_iter stubs */
-#define iov_iter_truncate(i, count)	do { } while (0)
-#define iov_iter_count(i)		0
-#define iov_iter_alignment(iter)	0
+/* kiocb, iov_iter - use linux/uio.h */
+#include <linux/uio.h>
 
 /* __counted_by attribute - not available in U-Boot */
 #define __counted_by(x)
