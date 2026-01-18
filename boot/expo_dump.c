@@ -12,6 +12,7 @@
 #include <expo.h>
 #include <mapmem.h>
 #include <membuf.h>
+#include <os.h>
 #include <video.h>
 #include <video_console.h>
 #include "scene_internal.h"
@@ -305,4 +306,39 @@ void expo_dump(struct expo *exp, struct membuf *mb)
 	ctx.indent = 0;
 
 	expo_dump_(&ctx, exp);
+}
+
+/**
+ * dump_out_file() - Output function that writes to a file
+ *
+ * @priv: Pointer to file descriptor (int *)
+ * @buf: Buffer containing data to output
+ * @len: Length of data in buffer
+ */
+static void dump_out_file(void *priv, const char *buf, int len)
+{
+	int *fdp = priv;
+
+	os_write(*fdp, buf, len);
+}
+
+int expo_dump_file(struct expo *exp, const char *fname)
+{
+	struct dump_ctx ctx;
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	ctx.out = dump_out_file;
+	ctx.priv = &fd;
+	ctx.scn = NULL;
+	ctx.indent = 0;
+
+	expo_dump_(&ctx, exp);
+
+	os_close(fd);
+
+	return 0;
 }

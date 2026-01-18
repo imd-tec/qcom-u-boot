@@ -1280,6 +1280,15 @@ void expo_damage_add(struct expo *exp, const struct vid_bbox *bbox);
 void expo_dump(struct expo *exp, struct membuf *mb);
 
 /**
+ * expo_dump_file() - Dump expo structure to a file (sandbox only)
+ *
+ * @exp: Expo to dump
+ * @fname: Filename to write to
+ * Return: 0 if OK, -ve on error
+ */
+int expo_dump_file(struct expo *exp, const char *fname);
+
+/**
  * scene_dump() - Dump scene structure to a membuf
  *
  * @mb: membuf to write to
