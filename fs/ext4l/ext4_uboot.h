@@ -1194,11 +1194,7 @@ void ext4_unregister_li_request(struct super_block *sb);
 #define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
 #define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
 
-/* Block open flags */
-#define BLK_OPEN_READ			(1 << 0)
-#define BLK_OPEN_WRITE			(1 << 1)
-#define BLK_OPEN_RESTRICT_WRITES	(1 << 2)
-
+/* BLK_OPEN_* flags are in linux/blkdev.h */
 /* REQ_OP_*, REQ_SYNC, REQ_FUA are in linux/blk_types.h */
 
 /* blk_holder_ops for block device */
