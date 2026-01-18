@@ -12,6 +12,14 @@
 
 #include <linux/types.h>
 
+/* Sector size definitions */
+#ifndef SECTOR_SHIFT
+#define SECTOR_SHIFT		9
+#endif
+#ifndef SECTOR_SIZE
+#define SECTOR_SIZE		(1 << SECTOR_SHIFT)
+#endif
+
 /* Block I/O operation flags */
 typedef __u32 __bitwise blk_opf_t;
 

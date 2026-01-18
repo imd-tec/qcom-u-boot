@@ -1611,9 +1611,7 @@ int bh_read(struct buffer_head *bh, int flags);
 	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
 #define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
 	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
-#ifndef SECTOR_SHIFT
-#define SECTOR_SHIFT	9
-#endif
+/* SECTOR_SHIFT, SECTOR_SIZE are in linux/blk_types.h */
 /* mapping_max_folio_order is in linux/pagemap.h */
 
 /* Memory allocation for journal.c */
