@@ -1447,22 +1447,11 @@ int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox bbox[])
 		scene_menu_calc_bbox(menu, bbox);
 		break;
 	}
-	case SCENEOBJT_TEXTLINE: {
-		struct scene_obj_textline *tline;
-
-		tline = (struct scene_obj_textline *)obj;
-		scene_txtin_calc_bbox(obj, &tline->tin, &bbox[SCENEBB_all],
-				      &bbox[SCENEBB_label]);
+	case SCENEOBJT_TEXTLINE:
+	case SCENEOBJT_TEXTEDIT:
+		scene_txtin_calc_bbox(obj, scene_obj_txtin(obj),
+				      &bbox[SCENEBB_all], &bbox[SCENEBB_label]);
 		break;
-	}
-	case SCENEOBJT_TEXTEDIT: {
-		struct scene_obj_txtedit *ted;
-
-		ted = (struct scene_obj_txtedit *)obj;
-		scene_txtin_calc_bbox(obj, &ted->tin, &bbox[SCENEBB_all],
-				      &bbox[SCENEBB_label]);
-		break;
-	}
 	}
 
 	return 0;
