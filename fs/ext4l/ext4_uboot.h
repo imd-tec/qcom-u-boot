@@ -1742,13 +1742,8 @@ int bmap(struct inode *inode, sector_t *block);
 #define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
 #define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
 
-/* proc_ops structure for journal.c */
-struct proc_ops {
-	int (*proc_open)(struct inode *, struct file *);
-	ssize_t (*proc_read)(struct file *, char *, size_t, loff_t *);
-	loff_t (*proc_lseek)(struct file *, loff_t, int);
-	int (*proc_release)(struct inode *, struct file *);
-};
+/* proc_ops - use linux/proc_fs.h */
+#include <linux/proc_fs.h>
 
 /* seq_read and seq_lseek declarations (defined in stub.c) */
 ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
@@ -1756,11 +1751,7 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* S_IRUGO is in linux/fs.h */
 
-/* procfs stubs */
-#define proc_mkdir(name, parent)	({ (void)(name); (void)(parent); (struct proc_dir_entry *)NULL; })
-#define proc_create_data(n, m, p, ops, d) \
-	({ (void)(n); (void)(m); (void)(p); (void)(ops); (void)(d); (struct proc_dir_entry *)NULL; })
-#define remove_proc_entry(n, p)		do { (void)(n); (void)(p); } while (0)
+/* procfs stubs are now in linux/proc_fs.h */
 
 /* lockdep_init_map and lock_class_key are in linux/lockdep.h */
 
@@ -1790,15 +1781,8 @@ int bh_read(struct buffer_head *bh, int flags);
  * Stubs for mmp.c
  */
 
-/* init_utsname - returns pointer to system name structure */
-struct new_utsname {
-	char nodename[65];
-};
-static inline struct new_utsname *init_utsname(void)
-{
-	static struct new_utsname uts = { .nodename = "u-boot" };
-	return &uts;
-}
+/* init_utsname - use linux/utsname.h */
+#include <linux/utsname.h>
 
 /*
  * Stubs for move_extent.c
