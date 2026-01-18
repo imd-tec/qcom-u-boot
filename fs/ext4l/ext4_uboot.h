@@ -920,7 +920,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 #include <linux/path.h>
 
 /* fscrypt_file_open is in ext4_fscrypt.h */
-#define fsverity_file_open(i, f)		({ (void)(i); (void)(f); 0; })
+/* fsverity_file_open is in linux/fsverity.h */
+#include <linux/fsverity.h>
 
 /* Quota file open - stub */
 #define dquot_file_open(i, f)			({ (void)(i); (void)(f); 0; })
@@ -963,9 +964,7 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* fscrypt_name, fscrypt_match_name, and fscrypt stubs are in ext4_fscrypt.h */
 
-/* fsverity stubs */
-#define fsverity_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
-#define fsverity_active(i)			(0)
+/* fsverity stubs are in linux/fsverity.h */
 
 /* Inode time setters - needed for ext4.h */
 static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
@@ -1351,8 +1350,7 @@ int inode_generic_drop(struct inode *inode);
 #define invalidate_inode_buffers(i)	do { } while (0)
 #define clear_inode(i)			do { } while (0)
 
-/* fsverity stubs (fscrypt macros are in ext4_fscrypt.h) */
-#define fsverity_cleanup_inode(i)	do { } while (0)
+/* fsverity_cleanup_inode is in linux/fsverity.h */
 
 /* NFS export helpers are now in linux/exportfs.h */
 
@@ -1610,11 +1608,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 
 /* fscrypt readpage stubs are in ext4_fscrypt.h */
 
-/* fsverity stubs */
-#define fsverity_verify_bio(bio)	do { (void)(bio); } while (0)
-#define fsverity_enqueue_verify_work(work) do { (void)(work); } while (0)
-#define fsverity_verify_folio(f)	({ (void)(f); 1; })
-#define IS_VERITY(inode)		(0)
+/* fsverity stubs are in linux/fsverity.h */
 
 /* readahead operations are in linux/pagemap.h */
 
