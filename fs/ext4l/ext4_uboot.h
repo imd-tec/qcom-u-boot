@@ -252,8 +252,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 
 /* d_inode is now in linux/dcache.h */
 
-/* Random number functions */
-#define get_random_u32_below(max)		(0)
+/* Random number functions - use linux/random.h */
+#include <linux/random.h>
 
 /* Buffer cache operations */
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
@@ -1267,9 +1267,7 @@ int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 int ext4_commit_super(struct super_block *sb);
 void ext4_unregister_li_request(struct super_block *sb);
 
-/* prandom */
-#define get_random_u32()		0
-#define prandom_u32_max(max)		0
+/* prandom - get_random_u32, prandom_u32_max are in linux/random.h */
 
 /* ctype */
 #include <linux/ctype.h>
