@@ -1477,33 +1477,8 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 
 /* super_set_sysfs_name_bdev is now in linux/kobject.h */
 
-/*
- * mb_cache - metadata block cache stubs for xattr.c
- * Not supported in U-Boot - xattr caching disabled
- */
-struct mb_cache {
-	int dummy;
-};
-
-struct mb_cache_entry {
-	u64 e_value;
-	unsigned long e_flags;
-};
-
-/* MB cache flags */
-#define MBE_REUSABLE_B	0
-
-#define mb_cache_create(bits)			kzalloc(sizeof(struct mb_cache), GFP_KERNEL)
-#define mb_cache_destroy(cache)			do { kfree(cache); } while (0)
-#define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_get(c, k, v)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_put(c, e)		do { (void)(c); (void)(e); } while (0)
-#define mb_cache_entry_create(c, f, k, v, r)	({ (void)(c); (void)(f); (void)(k); (void)(v); (void)(r); 0; })
-#define mb_cache_entry_delete(c, k, v)		do { (void)(c); (void)(k); (void)(v); } while (0)
-#define mb_cache_entry_touch(c, e)		do { (void)(c); (void)(e); } while (0)
-#define mb_cache_entry_wait_unused(e)		do { (void)(e); } while (0)
+/* mb_cache - use linux/mbcache.h */
+#include <linux/mbcache.h>
 
 /* xattr helper stubs for xattr.c */
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
