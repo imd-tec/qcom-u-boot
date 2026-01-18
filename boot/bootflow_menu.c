@@ -315,14 +315,14 @@ int bootflow_menu_add(struct expo *exp, struct bootflow *bflow, int seq,
 			    "Passphrase:", NULL);
 	if (ret < 0)
 		return log_msg_ret("itl", -EINVAL);
-	tline->label_id = ret;
+	tline->tin.label_id = ret;
 
 	snprintf(name, sizeof(name), "item%d.pass.edit", seq);
 	ret = scene_txt_str(scn, name, ITEM_PASS_EDIT + seq, 0,
-			    abuf_data(&tline->buf), &txt);
+			    abuf_data(&tline->tin.buf), &txt);
 	if (ret < 0)
 		return log_msg_ret("ite", -EINVAL);
-	tline->edit_id = ret;
+	tline->tin.edit_id = ret;
 	txt->obj.flags |= SCENEOF_PASSWORD;
 
 	/* Create message text (hidden by default) for success/error feedback */

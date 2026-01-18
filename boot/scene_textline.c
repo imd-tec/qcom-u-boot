@@ -16,14 +16,13 @@
 #include <linux/string.h>
 #include "scene_internal.h"
 
-int scene_textline(struct scene *scn, const char *name, uint id, uint max_chars,
-		   struct scene_obj_textline **tlinep)
+int scene_textline(struct scene *scn, const char *name, uint id,
+		   uint line_chars, struct scene_obj_textline **tlinep)
 {
 	struct scene_obj_textline *tline;
-	char *buf;
 	int ret;
 
-	if (max_chars >= EXPO_MAX_CHARS)
+	if (line_chars >= EXPO_MAX_CHARS)
 		return log_msg_ret("chr", -E2BIG);
 
 	ret = scene_obj_add(scn, name, id, SCENEOBJT_TEXTLINE,
@@ -31,33 +30,15 @@ int scene_textline(struct scene *scn, const char *name, uint id, uint max_chars,
 			    (struct scene_obj **)&tline);
 	if (ret < 0)
 		return log_msg_ret("obj", -ENOMEM);
-	if (!abuf_init_size(&tline->buf, max_chars + 1))
-		return log_msg_ret("buf", -ENOMEM);
-	buf = abuf_data(&tline->buf);
-	*buf = '\0';
-	tline->pos = max_chars;
-	tline->max_chars = max_chars;
+	ret = scene_txtin_init(&tline->tin, line_chars + 1, line_chars);
+	if (ret)
+		return log_msg_ret("tin", ret);
+	tline->pos = line_chars;
 
 	if (tlinep)
 		*tlinep = tline;
 
 	return tline->obj.id;
-}
-
-void scene_textline_calc_bbox(struct scene_obj_textline *tline,
-			      struct vidconsole_bbox *bbox,
-			      struct vidconsole_bbox *edit_bbox)
-{
-	const struct expo_theme *theme = &tline->obj.scene->expo->theme;
-	int inset = theme->menu_inset;
-
-	bbox->valid = false;
-	scene_bbox_union(tline->obj.scene, tline->label_id, inset, bbox);
-	scene_bbox_union(tline->obj.scene, tline->edit_id, inset, bbox);
-
-	edit_bbox->valid = false;
-	scene_bbox_union(tline->obj.scene, tline->edit_id, inset,
-			 edit_bbox);
 }
 
 int scene_textline_calc_dims(struct scene_obj_textline *tline,
@@ -68,12 +49,12 @@ int scene_textline_calc_dims(struct scene_obj_textline *tline,
 	struct scene_obj_txt *txt;
 	int ret;
 
-	txt = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
+	txt = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
 	if (!txt)
 		return log_msg_ret("dim", -ENOENT);
 
 	ret = vidconsole_nominal(cons, txt->gen.font_name, txt->gen.font_size,
-				 tline->max_chars, &bbox);
+				 tline->tin.line_chars, &bbox);
 	if (ret)
 		return log_msg_ret("nom", ret);
 
@@ -90,37 +71,24 @@ int scene_textline_calc_dims(struct scene_obj_textline *tline,
 int scene_textline_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			   struct scene_obj_textline *tline)
 {
-	const bool open = tline->obj.flags & SCENEOF_OPEN;
-	const struct expo_theme *theme = &scn->expo->theme;
-	bool point;
+	struct scene_obj *edit;
 	int x, y;
 	int ret;
 
-	x = tline->obj.req_bbox.x0;
+	x = scene_txtin_arrange(scn, arr, &tline->obj, &tline->tin);
+	if (x < 0)
+		return log_msg_ret("arr", x);
+
 	y = tline->obj.req_bbox.y0;
-	if (tline->label_id) {
-		struct scene_obj *edit;
+	ret = scene_obj_set_pos(scn, tline->tin.edit_id, x, y);
+	if (ret < 0)
+		return log_msg_ret("pos", ret);
 
-		ret = scene_obj_set_pos(scn, tline->label_id, x, y);
-		if (ret < 0)
-			return log_msg_ret("tit", ret);
-
-		x += arr->label_width + theme->textline_label_margin_x;
-		ret = scene_obj_set_pos(scn, tline->edit_id, x, y);
-		if (ret < 0)
-			return log_msg_ret("til", ret);
-
-		edit = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
-		if (!edit)
-			return log_msg_ret("tie", -ENOENT);
-		x += edit->dims.x;
-		y += edit->dims.y;
-	}
-
-	point = scn->highlight_id == tline->obj.id;
-	point &= !open;
-	scene_obj_flag_clrset(scn, tline->edit_id, SCENEOF_POINT,
-			      point ? SCENEOF_POINT : 0);
+	edit = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
+	if (!edit)
+		return log_msg_ret("fnd", -ENOENT);
+	x += edit->dims.x;
+	y += edit->dims.y;
 
 	tline->obj.dims.x = x - tline->obj.req_bbox.x0;
 	tline->obj.dims.y = y - tline->obj.req_bbox.y0;
@@ -143,7 +111,7 @@ int scene_textline_send_key(struct scene *scn, struct scene_obj_textline *tline,
 			event->select.id = tline->obj.id;
 
 			/* Copy the backup text from the scene buffer */
-			memcpy(abuf_data(&tline->buf), abuf_data(&scn->buf),
+			memcpy(abuf_data(&tline->tin.buf), abuf_data(&scn->buf),
 			       abuf_size(&scn->buf));
 
 			/* cursor is not needed now */
@@ -181,7 +149,7 @@ int scene_textline_send_key(struct scene *scn, struct scene_obj_textline *tline,
 bool scene_textline_within(const struct scene *scn,
 			   struct scene_obj_textline *tline, int x, int y)
 {
-	return scene_within(scn, tline->edit_id, x, y);
+	return scene_within(scn, tline->tin.edit_id, x, y);
 }
 
 int scene_textline_render_deps(struct scene *scn,
@@ -198,7 +166,7 @@ int scene_textline_render_deps(struct scene *scn,
 		ret = vidconsole_entry_restore(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
-		scene_render_obj(scn, tline->edit_id);
+		scene_render_obj(scn, tline->tin.edit_id);
 
 		/* move cursor back to the correct position */
 		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
@@ -213,6 +181,22 @@ int scene_textline_render_deps(struct scene *scn,
 	return 0;
 }
 
+/**
+ * scene_textline_putch() - Output a character to the vidconsole
+ *
+ * This is used as the putch callback for CLI line editing, so that characters
+ * are sent to the correct vidconsole.
+ *
+ * @cls: CLI line state
+ * @ch: Character to output
+ */
+static void scene_textline_putch(struct cli_line_state *cls, int ch)
+{
+	struct scene *scn = container_of(cls, struct scene, cls);
+
+	vidconsole_put_char(scn->expo->cons, ch);
+}
+
 int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
 {
 	struct udevice *cons = scn->expo->cons;
@@ -220,18 +204,19 @@ int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
 	int ret;
 
 	/* Copy the text into the scene buffer in case the edit is cancelled */
-	memcpy(abuf_data(&scn->buf), abuf_data(&tline->buf),
+	memcpy(abuf_data(&scn->buf), abuf_data(&tline->tin.buf),
 	       abuf_size(&scn->buf));
 
 	/* get the position of the editable */
-	txt = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
+	txt = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
 	if (!txt)
 		return log_msg_ret("cur", -ENOENT);
 
 	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons);
-	cli_cread_init(&scn->cls, abuf_data(&tline->buf), tline->max_chars);
+	cli_cread_init(&scn->cls, abuf_data(&tline->tin.buf), tline->tin.line_chars);
 	scn->cls.insert = true;
+	scn->cls.putch = scene_textline_putch;
 	ret = vidconsole_entry_save(cons, &scn->entry_save);
 	if (ret)
 		return log_msg_ret("sav", ret);

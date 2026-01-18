@@ -596,7 +596,7 @@ static int multiboot_ui_show_pass(struct udevice *dev, int seq, bool show)
 				       SCENEOBJT_TEXTLINE);
 		if (!tline)
 			return log_msg_ret("tln", -ENOENT);
-		buf = abuf_data(&tline->buf);
+		buf = abuf_data(&tline->tin.buf);
 		*buf = '\0';
 
 		/* Set highlight and open the textline for editing */
@@ -625,7 +625,7 @@ static int multiboot_ui_get_pass(struct udevice *dev, int seq,
 	if (!tline)
 		return log_msg_ret("tln", -ENOENT);
 
-	*passp = abuf_data(&tline->buf);
+	*passp = abuf_data(&tline->tin.buf);
 
 	return 0;
 }

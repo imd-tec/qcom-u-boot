@@ -503,23 +503,32 @@ struct scene_menitem {
 };
 
 /**
+ * struct scene_txtin - generic info for text-input objects
+ *
+ * @label_id: ID of the label text object (not string ID), or 0 if none
+ * @edit_id: ID of the editable text object (not string ID)
+ * @line_chars: Nominal number of characters in a line
+ * @buf: Text buffer containing current text
+ */
+struct scene_txtin {
+	uint label_id;
+	uint edit_id;
+	uint line_chars;
+	struct abuf buf;
+};
+
+/**
  * struct scene_obj_textline - information about a textline in a scene
  *
  * A textline has a prompt and a line of editable text
  *
  * @obj: Basic object information
- * @label_id: ID of the label text object (not string ID), or 0 if none
- * @edit_id: ID of the editable text object (not string ID)
- * @max_chars: Maximum number of characters allowed
- * @buf: Text buffer containing current text
+ * @tin: Text-input info
  * @pos: Cursor position
  */
 struct scene_obj_textline {
 	struct scene_obj obj;
-	uint label_id;
-	uint edit_id;
-	uint max_chars;
-	struct abuf buf;
+	struct scene_txtin tin;
 	uint pos;
 };
 
@@ -539,18 +548,16 @@ struct scene_obj_box {
 };
 
 /**
- * struct scene_obj_txtedit - information about a box in a scene
+ * struct scene_obj_txtedit - information about a textedit in a scene
  *
  * A text editor which allows users to edit a small text file
  *
  * @obj: Basic object information
- * @gen: Generic information common to all objects which show text
- * @buf: Text buffer containing current text
+ * @tin: Text-input info
  */
 struct scene_obj_txtedit {
 	struct scene_obj obj;
-	struct scene_txt_generic gen;
-	struct abuf buf;
+	struct scene_txtin tin;
 };
 
 /**
@@ -853,12 +860,12 @@ int scene_menu(struct scene *scn, const char *name, uint id,
  * @scn: Scene to update
  * @name: Name to use (this is allocated by this call)
  * @id: ID to use for the new object (0 to allocate one)
- * @max_chars: Maximum length of the textline in characters
+ * @line_chars: Number of characters in a line (also a hard limit)
  * @tlinep: If non-NULL, returns the new object
  * Returns: ID number for the object (typically @id), or -ve on error
  */
-int scene_textline(struct scene *scn, const char *name, uint id, uint max_chars,
-		   struct scene_obj_textline **tlinep);
+int scene_textline(struct scene *scn, const char *name, uint id,
+		   uint line_chars, struct scene_obj_textline **tlinep);
 
 /**
  *  scene_box() - create a box
@@ -890,12 +897,12 @@ int scene_box_set_fill(struct scene *scn, uint id, bool fill);
  * @scn: Scene to update
  * @name: Name to use (this is allocated by this call)
  * @id: ID to use for the new object (0 to allocate one)
- * @strid: ID of the string to edit
+ * @line_chars: Nominal number of characters in a line
  * @teditp: If non-NULL, returns the new object
  * Returns: ID number for the object (typically @id), or -ve on error
  */
-int scene_texted(struct scene *scn, const char *name, uint id, uint strid,
-		 struct scene_obj_txtedit **teditp);
+int scene_texted(struct scene *scn, const char *name, uint id,
+		 uint line_chars, struct scene_obj_txtedit **teditp);
 
 /**
  * scene_txt_set_font() - Set the font for an object

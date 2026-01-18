@@ -328,17 +328,17 @@ static int textline_build(struct build_info *info, ofnode node,
 	uint edit_id;
 	const char *name;
 	char buf[80];
-	u32 max_chars;
+	u32 line_chars;
 	int ret;
 
 	name = ofnode_get_name(node);
 
 	info->err_prop = "max-chars";
-	ret = ofnode_read_u32(node, "max-chars", &max_chars);
+	ret = ofnode_read_u32(node, "max-chars", &line_chars);
 	if (ret)
 		return log_msg_ret("max", -ENOENT);
 
-	ret = scene_textline(scn, name, id, max_chars, &ted);
+	ret = scene_textline(scn, name, id, line_chars, &ted);
 	if (ret < 0)
 		return log_msg_ret("ted", ret);
 
@@ -347,7 +347,7 @@ static int textline_build(struct build_info *info, ofnode node,
 	ret = add_txt_str(info, node, scn, "title", buf, 0);
 	if (ret < 0)
 		return log_msg_ret("tit", ret);
-	ted->label_id = ret;
+	ted->tin.label_id = ret;
 
 	/* Setup the editor */
 	info->err_prop = "edit-id";
@@ -356,11 +356,11 @@ static int textline_build(struct build_info *info, ofnode node,
 		return log_msg_ret("id", -ENOENT);
 
 	snprintf(buf, sizeof(buf), "%s.edit", name);
-	ret = scene_txt_str(scn, buf, edit_id, 0, abuf_data(&ted->buf),
+	ret = scene_txt_str(scn, buf, edit_id, 0, abuf_data(&ted->tin.buf),
 			    NULL);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
-	ted->edit_id = ret;
+	ted->tin.edit_id = ret;
 
 	return 0;
 }

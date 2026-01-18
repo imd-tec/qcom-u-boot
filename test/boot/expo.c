@@ -490,7 +490,6 @@ static int create_test_expo(struct unit_test_state *uts, struct expo **expp,
 	struct scene_obj_menu *menu;
 	struct abuf buf, logo_copy;
 	struct scene *scn;
-	struct abuf orig, *text;
 	struct udevice *dev;
 	struct expo *exp;
 	int id, size;
@@ -594,14 +593,6 @@ static int create_test_expo(struct unit_test_state *uts, struct expo **expp,
 	id = scene_box(scn, "box2", OBJ_BOX2, 1, false, NULL);
 	ut_assert(id > 0);
 	ut_assertok(scene_obj_set_bbox(scn, OBJ_BOX, 500, 200, 1000, 350));
-
-	id = scene_texted(scn, "editor", OBJ_TEXTED, STR_TEXTED, NULL);
-	ut_assert(id > 0);
-	ut_assertok(scene_obj_set_bbox(scn, OBJ_TEXTED, 100, 200, 400, 650));
-	ut_assertok(expo_edit_str(exp, STR_TEXTED, &orig, &text));
-
-	abuf_printf(text, "This\nis the initial contents of the text editor "
-		"but it is quite likely that more will be added later");
 
 	/*
 	 * Add an extra text object that overlaps with OBJ_TEXT to test reverse
@@ -732,17 +723,17 @@ static int expo_render_image(struct unit_test_state *uts)
 	/* render it */
 	expo_set_scene_id(exp, SCENE1);
 	ut_assertok(expo_render(exp));
-	ut_asserteq(19065, video_compress_fb(uts, dev, false));
+	ut_asserteq(15711, video_compress_fb(uts, dev, false));
 
 	ut_asserteq(0, scn->highlight_id);
 	ut_assertok(scene_arrange(scn));
 	ut_asserteq(0, scn->highlight_id);
 	ut_assertok(expo_render(exp));
-	ut_asserteq(20707, video_compress_fb(uts, dev, false));
+	ut_asserteq(17342, video_compress_fb(uts, dev, false));
 
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(20707, video_compress_fb(uts, dev, false));
+	ut_asserteq(17342, video_compress_fb(uts, dev, false));
 
 	scene_set_highlight_id(scn, OBJ_MENU);
 	ut_asserteq(OBJ_MENU, scn->highlight_id);
@@ -754,7 +745,7 @@ static int expo_render_image(struct unit_test_state *uts)
 	ut_assert(!(obj->flags & SCENEOF_HIDE));
 
 	ut_assertok(expo_render(exp));
-	ut_asserteq(20707, video_compress_fb(uts, dev, false));
+	ut_asserteq(17342, video_compress_fb(uts, dev, false));
 
 	/* move down */
 	ut_assertok(expo_send_key(exp, BKEY_DOWN));
@@ -767,11 +758,8 @@ static int expo_render_image(struct unit_test_state *uts)
 	ut_asserteq(ITEM2, scene_menu_get_cur_item(scn, OBJ_MENU));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(19953, video_compress_fb(uts, dev, false));
+	ut_asserteq(16637, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
-
-	/* hide the text editor since the following tests don't need it */
-	scene_obj_set_hide(scn, OBJ_TEXTED, true);
 
 	/* do some alignment checks */
 	ut_assertok(scene_obj_set_halign(scn, OBJ_TEXT3, SCENEOA_CENTRE));
@@ -1025,7 +1013,7 @@ static int expo_within_funcs(struct unit_test_state *uts)
 	/* test scene_textline_within() */
 	tline = scene_obj_find(scn, ID_MACHINE_NAME, SCENEOBJT_NONE);
 	ut_assertnonnull(tline);
-	obj = scene_obj_find(scn, tline->edit_id, SCENEOBJT_NONE);
+	obj = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
 	ut_assertnonnull(obj);
 
 	/* positive test: point within textline bounds */
@@ -1412,31 +1400,31 @@ static int expo_render_textline(struct unit_test_state *uts)
 	id = scene_textline(scn, "textline", OBJ_TEXTLINE, 20, &tline);
 	ut_assert(id > 0);
 	ut_assertok(scene_obj_set_pos(scn, OBJ_TEXTLINE, 500, 500));
-	strcpy(abuf_data(&tline->buf), "sample hopwind");
+	strcpy(abuf_data(&tline->tin.buf), "sample hopwind");
 
 	/* create the label text object */
 	id = scene_txt_str(scn, "tline-label", 0, 0, "Label:", NULL);
 	ut_assert(id > 0);
-	tline->label_id = id;
+	tline->tin.label_id = id;
 
 	/* create the edit text object pointing to the textline buffer */
-	id = scene_txt_str(scn, "tline-edit", 0, 0, abuf_data(&tline->buf),
+	id = scene_txt_str(scn, "tline-edit", 0, 0, abuf_data(&tline->tin.buf),
 			   NULL);
 	ut_assert(id > 0);
-	tline->edit_id = id;
-	ut_assertok(scene_txt_set_font(scn, tline->edit_id,
+	tline->tin.edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, tline->tin.edit_id,
 				       "nimbus_sans_l_regular", 40));
 
 	expo_set_scene_id(exp, SCENE1);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(21007, video_compress_fb(uts, dev, false));
+	ut_asserteq(17714, video_compress_fb(uts, dev, false));
 
 	/* highlight the textline and re-render */
 	scene_set_highlight_id(scn, OBJ_TEXTLINE);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22693, video_compress_fb(uts, dev, false));
+	ut_asserteq(19382, video_compress_fb(uts, dev, false));
 
 	/* open the textline and re-render */
 	ut_assertok(scene_set_open(scn, OBJ_TEXTLINE, true));
@@ -1444,13 +1432,13 @@ static int expo_render_textline(struct unit_test_state *uts)
 	ut_assertok(expo_render(exp));
 
 	/* the cursor should be at the end */
-	ut_asserteq(22695, video_compress_fb(uts, dev, false));
+	ut_asserteq(19347, video_compress_fb(uts, dev, false));
 
 	/* send a keypress to add a character */
 	ut_assertok(expo_send_key(exp, 'a'));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22818, video_compress_fb(uts, dev, false));
+	ut_asserteq(19524, video_compress_fb(uts, dev, false));
 
 	/* move cursor left 3 times */
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
@@ -1458,10 +1446,10 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check cursor moved back one position, before 'a' */
 	ut_asserteq(14, scn->cls.num);
 	ut_asserteq(15, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22884, video_compress_fb(uts, dev, false));
+	ut_asserteq(19552, video_compress_fb(uts, dev, false));
 
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
@@ -1470,10 +1458,10 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check cursor moved back three more positions, before 'i' */
 	ut_asserteq(11, scn->cls.num);
 	ut_asserteq(15, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwinda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22915, video_compress_fb(uts, dev, false));
+	ut_asserteq(19570, video_compress_fb(uts, dev, false));
 
 	/* delete a character at the cursor */
 	ut_assertok(expo_send_key(exp, CTL_CH('d')));
@@ -1481,10 +1469,10 @@ static int expo_render_textline(struct unit_test_state *uts)
 	/* check character deleted at cursor position */
 	ut_asserteq(11, scn->cls.num);
 	ut_asserteq(14, scn->cls.eol_num);
-	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22856, video_compress_fb(uts, dev, false));
+	ut_asserteq(19505, video_compress_fb(uts, dev, false));
 
 	/* close the textline with Enter (BKEY_SELECT) */
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
@@ -1495,10 +1483,10 @@ static int expo_render_textline(struct unit_test_state *uts)
 
 	/* check the textline is closed and text was saved */
 	ut_asserteq(0, tline->obj.flags & SCENEOF_OPEN);
-	ut_asserteq_str("sample hopwnda", abuf_data(&tline->buf));
+	ut_asserteq_str("sample hopwnda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(22839, video_compress_fb(uts, dev, false));
+	ut_asserteq(19543, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
@@ -1508,3 +1496,50 @@ static int expo_render_textline(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(expo_render_textline, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);
+
+/* Check rendering a textedit */
+static int expo_render_textedit(struct unit_test_state *uts)
+{
+	struct scene_obj_txtedit *ted;
+	struct scene_obj_menu *menu;
+	struct abuf buf, logo_copy;
+	struct scene *scn;
+	struct udevice *dev;
+	struct expo *exp;
+	int id;
+
+	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
+	dev = exp->display;
+
+	id = scene_texted(scn, "texted", OBJ_TEXTED, 40, &ted);
+	ut_assert(id > 0);
+	ut_assertok(scene_obj_set_bbox(scn, OBJ_TEXTED, 100, 200, 400, 300));
+
+	/* create the label text object */
+	id = scene_txt_str(scn, "ted-label", 0, 0, "Editor:", NULL);
+	ut_assert(id > 0);
+	ted->tin.label_id = id;
+
+	/* create the edit text object pointing to the textedit buffer */
+	abuf_printf(&ted->tin.buf, "This\nis the initial contents of the text "
+		"editor but it is quite likely that more will be added later");
+	id = scene_txt_str(scn, "ted-edit", STR_TEXTED, 0,
+			   abuf_data(&ted->tin.buf), NULL);
+	ut_assert(id > 0);
+	ted->tin.edit_id = id;
+	ut_assertok(scene_txt_set_font(scn, ted->tin.edit_id,
+				       "nimbus_sans_l_regular", 20));
+
+	expo_set_scene_id(exp, SCENE1);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(19860, video_compress_fb(uts, dev, false));
+
+	abuf_uninit(&buf);
+	abuf_uninit(&logo_copy);
+
+	expo_destroy(exp);
+
+	return 0;
+}
+BOOTSTD_TEST(expo_render_textedit, UTF_DM | UTF_SCAN_FDT | UTF_NO_SILENT);

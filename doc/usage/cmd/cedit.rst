@@ -362,7 +362,7 @@ This shows dumping the cedit::
         bbox: (0,0)-(0,0)
         dims: 0x0
         Textline: label_id 39 edit_id 18
-            max_chars 20 pos 20
+            line_chars 14 pos 14
         Object 39 (title): type text
         flags
         bbox: (0,0)-(0,0)

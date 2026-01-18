@@ -20,6 +20,7 @@ struct scene_obj_dims;
 struct scene_obj_menu;
 struct scene_obj_textline;
 struct scene_obj_txtedit;
+struct scene_txtin;
 struct scene_txt_generic;
 struct udevice;
 struct vidconsole_bbox;
@@ -48,6 +49,20 @@ enum scene_bbox_t {
 
 	SCENEBB_count,
 };
+
+/**
+ * scene_obj_txtin() - Get text-input info from a scene object
+ *
+ * This works for both textline and textedit objects since they have
+ * struct scene_txtin at the same offset (immediately after struct scene_obj).
+ *
+ * @obj: Object to get text-input info from
+ * Return: pointer to the text-input info
+ */
+static inline struct scene_txtin *scene_obj_txtin(struct scene_obj *obj)
+{
+	return (struct scene_txtin *)(obj + 1);
+}
 
 /**
  * expo_lookup_scene_id() - Look up a scene ID
@@ -161,6 +176,20 @@ int scene_menu_arrange(struct scene *scn, struct expo_arrange_info *arr,
  */
 int scene_textline_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			   struct scene_obj_textline *tline);
+
+/**
+ * scene_txted_arrange() - Set the position of things in a textedit
+ *
+ * This updates any items associated with a textedit to make sure they are
+ * positioned correctly relative to the textedit.
+ *
+ * @scn: Scene to update
+ * @arr: Arrangement information
+ * @ted: textedit to process
+ * Returns: 0 if OK, -ve on error
+ */
+int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj_txtedit *ted);
 
 /**
  * scene_apply_theme() - Apply a theme to a scene
@@ -473,6 +502,17 @@ int scene_textline_calc_dims(struct scene_obj_textline *tline,
 			     struct udevice *cons);
 
 /**
+ * scene_txted_calc_dims() - Calculate the dimensions of a textedit
+ *
+ * Updates the width and height of the textedit based on its contents
+ *
+ * @ted: Textedit to update
+ * @cons: UCLASS_VIDEO_CONSOLE device (cannot be NULL)
+ * Returns 0 if OK, -ve on error
+ */
+int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons);
+
+/**
  * scene_menu_calc_bbox() - Calculate bounding boxes for the menu
  *
  * @menu: Menu to process
@@ -483,16 +523,40 @@ void scene_menu_calc_bbox(struct scene_obj_menu *menu,
 			  struct vidconsole_bbox *bbox);
 
 /**
- * scene_textline_calc_bbox() - Calculate bounding box for the textline
+ * scene_txtin_init() - Initialise common text-input fields
  *
- * @textline: Menu to process
- * @bbox: Returns bounding box of textline including prompt
- * @edit_bbox: Returns bounding box of editable part
- * Return: 0 if OK, -ve on error
+ * @tin: Text-input info to init
+ * @size: Size to use for buffer
+ * @line_chars: Number of characters in the text line
+ * Return: 0 if OK, -ENOMEM if out of memory
  */
-void scene_textline_calc_bbox(struct scene_obj_textline *menu,
-			      struct vidconsole_bbox *bbox,
-			      struct vidconsole_bbox *label_bbox);
+int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars);
+
+/**
+ * scene_txtin_arrange() - Arrange common parts of a text-input object
+ *
+ * Sets the label position and SCENEOF_POINT flag
+ *
+ * @scn: Scene containing the object
+ * @arr: Arrangement info
+ * @obj: Object to arrange
+ * @tin: Text-input info
+ * Return: x position for edit object (positive), or -ve on error
+ */
+int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj *obj, struct scene_txtin *tin);
+
+/**
+ * scene_txtin_calc_bbox() - Calculate bounding box for a text-input object
+ *
+ * @obj: Object to process
+ * @tin: Text-input object info
+ * @bbox: Returns bounding box of object including label
+ * @edit_bbox: Returns bounding box of editable part
+ */
+void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
+			   struct vidconsole_bbox *bbox,
+			   struct vidconsole_bbox *edit_bbox);
 
 /**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object
