@@ -152,35 +152,6 @@ bool scene_textline_within(const struct scene *scn,
 	return scene_within(scn, tline->tin.edit_id, x, y);
 }
 
-int scene_textline_render_deps(struct scene *scn,
-			       struct scene_obj_textline *tline)
-{
-	const bool open = tline->obj.flags & SCENEOF_OPEN;
-	struct udevice *cons = scn->expo->cons;
-	uint i;
-
-	/* if open, render the edit text on top of the background */
-	if (open) {
-		int ret;
-
-		ret = vidconsole_entry_restore(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-		scene_render_obj(scn, tline->tin.edit_id);
-
-		/* move cursor back to the correct position */
-		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
-			vidconsole_put_char(cons, '\b');
-		ret = vidconsole_entry_save(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-
-		vidconsole_show_cursor(cons);
-	}
-
-	return 0;
-}
-
 /**
  * scene_textline_putch() - Output a character to the vidconsole
  *

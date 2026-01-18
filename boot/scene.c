@@ -993,8 +993,7 @@ int scene_render_deps(struct scene *scn, uint id)
 					       (struct scene_obj_menu *)obj);
 			break;
 		case SCENEOBJT_TEXTLINE:
-			scene_textline_render_deps(scn,
-					(struct scene_obj_textline *)obj);
+			scene_txtin_render_deps(scn, obj, scene_obj_txtin(obj));
 			break;
 		}
 	}

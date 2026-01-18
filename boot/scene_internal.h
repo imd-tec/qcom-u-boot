@@ -373,18 +373,6 @@ int scene_render_deps(struct scene *scn, uint id);
 int scene_menu_render_deps(struct scene *scn, struct scene_obj_menu *menu);
 
 /**
- * scene_textline_render_deps() - Render a textline and its dependencies
- *
- * Renders the textline and all of its attached objects
- *
- * @scn: Scene to render
- * @tline: textline to render
- * Returns: 0 if OK, -ve on error
- */
-int scene_textline_render_deps(struct scene *scn,
-			       struct scene_obj_textline *tline);
-
-/**
  * scene_iter_objs() - Iterate through all scene objects
  *
  * @scn: Scene to process
@@ -557,6 +545,19 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 			   struct vidconsole_bbox *bbox,
 			   struct vidconsole_bbox *edit_bbox);
+
+/**
+ * scene_txtin_render_deps() - Render dependencies for a text-input object
+ *
+ * Renders the edit text on top of the background if open
+ *
+ * @scn: Scene containing the object
+ * @obj: Object to render
+ * @tin: Text-input info
+ * Return: 0 if OK, -ve on error
+ */
+int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
+			    struct scene_txtin *tin);
 
 /**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object
