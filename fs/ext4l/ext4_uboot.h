@@ -839,9 +839,8 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* ktime functions - use linux/ktime.h */
 #include <linux/ktime.h>
 
-/* hrtimer stubs */
-#define HRTIMER_MODE_ABS		0
-#define schedule_hrtimeout(exp, mode)	({ (void)(exp); (void)(mode); 0; })
+/* hrtimer - use linux/hrtimer.h */
+#include <linux/hrtimer.h>
 
 /* write lock variants */
 #define write_trylock(lock)		({ (void)(lock); 1; })
