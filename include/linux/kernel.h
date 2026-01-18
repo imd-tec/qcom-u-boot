@@ -296,4 +296,21 @@
  */
 #define find_closest(x, a, as) __find_closest(x, a, as, <=)
 
+/*
+ * System state values - stub for U-Boot.
+ * U-Boot is always in running state.
+ */
+enum system_states {
+	SYSTEM_BOOTING,
+	SYSTEM_SCHEDULING,
+	SYSTEM_FREEING_INITMEM,
+	SYSTEM_RUNNING,
+	SYSTEM_HALT,
+	SYSTEM_POWER_OFF,
+	SYSTEM_RESTART,
+	SYSTEM_SUSPEND,
+};
+
+#define system_state	SYSTEM_RUNNING
+
 #endif

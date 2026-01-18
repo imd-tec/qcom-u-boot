@@ -1108,11 +1108,7 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 #define sectors			__ext4_sectors
 #define part_stat_read(p, f)	({ (void)(p); (void)(f); 0ULL; })
 
-/* System state - U-Boot is always running */
-#define system_state		0
-#define SYSTEM_HALT		1
-#define SYSTEM_POWER_OFF	2
-#define SYSTEM_RESTART		3
+/* system_state, SYSTEM_HALT, etc. are in linux/kernel.h */
 
 /* Hex dump */
 #define DUMP_PREFIX_ADDRESS	0
