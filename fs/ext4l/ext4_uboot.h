@@ -863,18 +863,10 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #include <linux/pagemap.h>
 #include <linux/xarray.h>
 
-/* wbc_to_tag - convert writeback control to pagecache tag */
-static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
-{
-	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
-		return PAGECACHE_TAG_TOWRITE;
-	return PAGECACHE_TAG_DIRTY;
-}
+/* wbc_to_tag, WB_REASON_* - use linux/writeback.h */
+#include <linux/writeback.h>
 
 /* blk_plug is now in linux/blkdev.h */
-
-/* Writeback reasons */
-#define WB_REASON_FS_FREE_SPACE	0
 
 /* address_space_operations is in linux/fs.h */
 /* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
@@ -952,7 +944,7 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* percpu_counter_sub is in linux/percpu_counter.h */
 
 /* Filemap operations are in linux/pagemap.h */
-#define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
+/* try_to_writeback_inodes_sb is in linux/writeback.h */
 
 /* Buffer operations - additional */
 #define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
