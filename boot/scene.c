@@ -1440,7 +1440,6 @@ int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox bbox[])
 	case SCENEOBJT_IMAGE:
 	case SCENEOBJT_TEXT:
 	case SCENEOBJT_BOX:
-	case SCENEOBJT_TEXTEDIT:
 		return -ENOSYS;
 	case SCENEOBJT_MENU: {
 		struct scene_obj_menu *menu = (struct scene_obj_menu *)obj;
@@ -1452,8 +1451,16 @@ int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox bbox[])
 		struct scene_obj_textline *tline;
 
 		tline = (struct scene_obj_textline *)obj;
-		scene_textline_calc_bbox(tline, &bbox[SCENEBB_all],
-					 &bbox[SCENEBB_label]);
+		scene_txtin_calc_bbox(obj, &tline->tin, &bbox[SCENEBB_all],
+				      &bbox[SCENEBB_label]);
+		break;
+	}
+	case SCENEOBJT_TEXTEDIT: {
+		struct scene_obj_txtedit *ted;
+
+		ted = (struct scene_obj_txtedit *)obj;
+		scene_txtin_calc_bbox(obj, &ted->tin, &bbox[SCENEBB_all],
+				      &bbox[SCENEBB_label]);
 		break;
 	}
 	}

@@ -20,6 +20,7 @@ struct scene_obj_dims;
 struct scene_obj_menu;
 struct scene_obj_textline;
 struct scene_obj_txtedit;
+struct scene_txtin;
 struct scene_txt_generic;
 struct udevice;
 struct vidconsole_bbox;
@@ -497,16 +498,16 @@ void scene_menu_calc_bbox(struct scene_obj_menu *menu,
 			  struct vidconsole_bbox *bbox);
 
 /**
- * scene_textline_calc_bbox() - Calculate bounding box for the textline
+ * scene_txtin_calc_bbox() - Calculate bounding box for a text-input object
  *
- * @textline: Menu to process
- * @bbox: Returns bounding box of textline including prompt
+ * @obj: Object to process
+ * @tin: Text-input object info
+ * @bbox: Returns bounding box of object including label
  * @edit_bbox: Returns bounding box of editable part
- * Return: 0 if OK, -ve on error
  */
-void scene_textline_calc_bbox(struct scene_obj_textline *menu,
-			      struct vidconsole_bbox *bbox,
-			      struct vidconsole_bbox *label_bbox);
+void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
+			   struct vidconsole_bbox *bbox,
+			   struct vidconsole_bbox *edit_bbox);
 
 /**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object

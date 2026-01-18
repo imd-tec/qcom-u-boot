@@ -56,6 +56,30 @@ int scene_txted_set_font(struct scene *scn, uint id, const char *font_name,
 	return scene_txt_set_font(scn, ted->tin.edit_id, font_name, font_size);
 }
 
+int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons)
+{
+	struct scene *scn = ted->obj.scene;
+	struct scene_obj_txt *txt;
+	int ret;
+
+	txt = scene_obj_find(scn, ted->tin.edit_id, SCENEOBJT_NONE);
+	if (!txt)
+		return log_msg_ret("txt", -ENOENT);
+
+	/*
+	 * Set the edit text's bbox to match the textedit's bbox. This ensures
+	 * SCENEOF_SIZE_VALID is set so vidconsole_measure() applies the width
+	 * limit for word-wrapping/clipping.
+	 */
+	ret = scene_obj_set_bbox(scn, ted->tin.edit_id,
+				 ted->obj.req_bbox.x0, ted->obj.req_bbox.y0,
+				 ted->obj.req_bbox.x1, ted->obj.req_bbox.y1);
+	if (ret < 0)
+		return log_msg_ret("sbb", ret);
+
+	return 0;
+}
+
 int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			struct scene_obj_txtedit *ted)
 {
