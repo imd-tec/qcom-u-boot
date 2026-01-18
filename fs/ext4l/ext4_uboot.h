@@ -1557,11 +1557,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* Dentry name snapshot operations are now in linux/dcache.h */
 
 /* lockdep_assert_not_held is in linux/lockdep.h */
-
-/* Request flags for block I/O */
-#define REQ_IDLE		0
-#define REQ_PREFLUSH		0
-
+/* REQ_IDLE, REQ_PREFLUSH are in linux/blk_types.h */
 /* wake_up_bit is now in linux/wait_bit.h */
 
 /* d_alloc, d_drop are now in linux/dcache.h */

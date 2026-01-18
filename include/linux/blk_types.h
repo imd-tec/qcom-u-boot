@@ -23,5 +23,7 @@ typedef __u32 __bitwise blk_opf_t;
 /* Block request flags (bits 8+) */
 #define REQ_SYNC		(1 << 8)	/* Synchronous I/O */
 #define REQ_FUA			(1 << 9)	/* Forced unit access */
+#define REQ_PREFLUSH		(1 << 10)	/* Request cache flush */
+#define REQ_IDLE		(1 << 11)	/* Anticipate more I/O */
 
 #endif /* _LINUX_BLK_TYPES_H */
