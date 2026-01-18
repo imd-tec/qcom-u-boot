@@ -281,23 +281,30 @@ DM_TEST(dm_test_rtc_reset, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 /* Check that two RTC devices can be used independently */
 static int dm_test_rtc_dual(struct unit_test_state *uts)
 {
-	struct rtc_time now1, now2, cmp;
+	struct rtc_time now1, cmp;
 	struct udevice *dev1, *dev2;
 	struct udevice *emul1, *emul2;
-	long offset;
 
 	ut_assertok(uclass_get_device(UCLASS_RTC, 0, &dev1));
-	ut_assertok(dm_rtc_get(dev1, &now1));
 	ut_assertok(uclass_get_device(UCLASS_RTC, 1, &dev2));
-	ut_assertok(dm_rtc_get(dev2, &now2));
 
 	ut_assertok(i2c_emul_find(dev1, &emul1));
 	ut_assertnonnull(emul1);
 	ut_assertok(i2c_emul_find(dev2, &emul2));
 	ut_assertnonnull(emul2);
 
-	offset = sandbox_i2c_rtc_set_offset(emul1, false, -1);
-	sandbox_i2c_rtc_set_offset(emul2, false, offset + 1);
+	/*
+	 * Put both emulators in manual mode before reading, to avoid a race
+	 * with system time. With use_system_time=true, times are based on
+	 * os_localtime() which advances with real time; with it false, they
+	 * use the fixed base_time captured at bind. Use a large offset
+	 * difference (10s) to account for the fact that each emulator has
+	 * its own base_time, which could differ slightly.
+	 */
+	sandbox_i2c_rtc_set_offset(emul1, false, 0);
+	ut_assertok(dm_rtc_get(dev1, &now1));
+
+	sandbox_i2c_rtc_set_offset(emul2, false, 10);
 	memset(&cmp, '\0', sizeof(cmp));
 	ut_assertok(dm_rtc_get(dev2, &cmp));
 	ut_asserteq(-EINVAL, cmp_times(&now1, &cmp, false));
