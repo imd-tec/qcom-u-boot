@@ -138,6 +138,9 @@ typedef struct { unsigned int val; } kprojid_t;
 #define __GFP_MOVABLE	0
 #define __GFP_FS	0
 
+/* Capabilities - use linux/capability.h */
+#include <linux/capability.h>
+
 /* FIEMAP extent flags */
 #define FIEMAP_EXTENT_LAST		0x00000001
 #define FIEMAP_EXTENT_UNKNOWN		0x00000002
@@ -197,11 +200,6 @@ struct fiemap_extent_info {
 	unsigned int fi_extents_max;
 	void *fi_extents_start;
 };
-
-/* Capabilities - stubs (always allow) */
-#define CAP_SYS_ADMIN		0
-#define CAP_SYS_RESOURCE	0
-#define capable(cap)		(1)
 
 /* fscrypt_str, qstr are now in ext4_fscrypt.h */
 
