@@ -1254,8 +1254,8 @@ void ext4_unregister_li_request(struct super_block *sb);
 
 /* Timer and timing stubs are in linux/jiffies.h */
 
-/* Path lookup flags */
-#define LOOKUP_FOLLOW			0x0001
+/* Path lookup flags - use linux/namei.h */
+#include <linux/namei.h>
 
 /* I/O priority classes */
 #define IOPRIO_CLASS_BE			2
