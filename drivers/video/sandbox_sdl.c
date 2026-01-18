@@ -149,6 +149,7 @@ static int sandbox_sdl_video_sync(struct udevice *vid, uint flags)
 		       sizeof(plat->last_sync_damage));
 
 	opts.draw_grid = state->show_grid;
+	opts.grid_size = state->grid_size;
 
 	return sandbox_sdl_sync(uc_priv->fb, damage, &opts);
 }

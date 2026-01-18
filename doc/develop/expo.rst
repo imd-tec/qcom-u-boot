@@ -797,6 +797,10 @@ For example, to watch an expo test render with a visible display::
 
     ./u-boot -T -l -V 500 --video_frames /tmp/good -c "ut bootstd expo_render_image"
 
+The :doc:`../usage/cmd/sb` ``grid`` subcommand can be used to overlay a grid on
+the display, to help with checking alignment of objects. The grid size defaults
+to 0x20 pixels but can be specified as a parameter.
+
 This will write each asserted expo frame to ``/tmp/good/frame0.bmp``,
 ``/tmp/good/frame1.bmp``, etc.
 

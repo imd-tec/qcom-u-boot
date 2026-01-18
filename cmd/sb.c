@@ -106,6 +106,8 @@ static int do_sb_grid(struct cmd_tbl *cmdtp, int flag, int argc,
 		return CMD_RET_USAGE;
 
 	state->show_grid = hextoul(argv[1], NULL);
+	if (argc >= 3)
+		state->grid_size = hextoul(argv[2], NULL);
 
 	return 0;
 }
@@ -160,7 +162,7 @@ static int do_sb_devoff(struct cmd_tbl *cmdtp, int flag, int argc,
 U_BOOT_LONGHELP(sb,
 	"devoff <node>  - Disable device from device tree node\n"
 	"sb devon <node>   - Enable device from device tree node\n"
-	"sb grid <0|1>     - Enable/disable grid overlay on video\n"
+	"sb grid <0|1> [<size>] - Enable/disable grid overlay on video\n"
 	"sb handoff        - Show handoff data received from SPL\n"
 	"sb map            - Show mapped memory\n"
 	"sb state          - Show sandbox state");
@@ -168,7 +170,7 @@ U_BOOT_LONGHELP(sb,
 U_BOOT_CMD_WITH_SUBCMDS(sb, "Sandbox status commands", sb_help_text,
 	U_BOOT_SUBCMD_MKENT(devoff, 2, 1, do_sb_devoff),
 	U_BOOT_SUBCMD_MKENT(devon, 2, 1, do_sb_devon),
-	U_BOOT_SUBCMD_MKENT(grid, 2, 1, do_sb_grid),
+	U_BOOT_SUBCMD_MKENT(grid, 3, 1, do_sb_grid),
 	U_BOOT_SUBCMD_MKENT(handoff, 1, 1, do_sb_handoff),
 	U_BOOT_SUBCMD_MKENT(map, 1, 1, do_sb_map),
 	U_BOOT_SUBCMD_MKENT(state, 1, 1, do_sb_state));

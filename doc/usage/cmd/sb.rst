@@ -13,7 +13,7 @@ Synopsis
 
     sb devoff <node>
     sb devon <node>
-    sb grid <0|1>
+    sb grid <0|1> [<size>]
     sb handoff
     sb map
     sb state
@@ -45,8 +45,9 @@ sb grid
 ~~~~~~~
 
 This enables or disables a grid overlay on the video display. When enabled,
-a 10-pixel grid is drawn over the display, which is useful for debugging UI
-layout and alignment. Use ``sb grid 1`` to enable and ``sb grid 0`` to disable.
+a grid is drawn over the display, which is useful for debugging UI layout and
+alignment. Use ``sb grid 1`` to enable and ``sb grid 0`` to disable. An
+optional second parameter specifies the grid size in pixels (default 0x20).
 
 sb handoff
 ~~~~~~~~~~

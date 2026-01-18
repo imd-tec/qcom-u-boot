@@ -130,6 +130,7 @@ static int dm_test_sb_grid(struct unit_test_state *uts)
 
 	/* Ensure grid is initially off */
 	state->show_grid = false;
+	state->grid_size = 0;
 
 	/* Enable grid */
 	ut_assertok(run_command("sb grid 1", 0));
@@ -140,6 +141,16 @@ static int dm_test_sb_grid(struct unit_test_state *uts)
 	ut_assertok(run_command("sb grid 0", 0));
 	ut_assert_console_end();
 	ut_asserteq(false, state->show_grid);
+
+	/* Enable grid with custom size (0x14 = 20 decimal) */
+	ut_assertok(run_command("sb grid 1 14", 0));
+	ut_assert_console_end();
+	ut_asserteq(true, state->show_grid);
+	ut_asserteq(0x14, state->grid_size);
+
+	/* Clean up */
+	state->show_grid = false;
+	state->grid_size = 0;
 
 	return 0;
 }
