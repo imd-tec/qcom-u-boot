@@ -141,11 +141,8 @@ typedef struct { unsigned int val; } kprojid_t;
 /* Capabilities - use linux/capability.h */
 #include <linux/capability.h>
 
-/* FIEMAP extent flags */
-#define FIEMAP_EXTENT_LAST		0x00000001
-#define FIEMAP_EXTENT_UNKNOWN		0x00000002
-#define FIEMAP_EXTENT_DELALLOC		0x00000004
-#define FIEMAP_EXTENT_UNWRITTEN		0x00000800
+/* FIEMAP types - use linux/fiemap.h */
+#include <linux/fiemap.h>
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
 
 /* FALLOC_FL_* flags are in linux/fs.h */
@@ -173,18 +170,6 @@ typedef struct { unsigned int val; } kprojid_t;
 /* dir_context, filldir_t are in linux/fs.h */
 
 /* iomap types and structs are in linux/iomap.h */
-
-/* fiemap types */
-#define FIEMAP_FLAG_SYNC	0x00000001
-#define FIEMAP_FLAG_XATTR	0x00000002
-#define FIEMAP_FLAG_CACHE	0x00000004
-
-struct fiemap_extent_info {
-	unsigned int fi_flags;
-	unsigned int fi_extents_mapped;
-	unsigned int fi_extents_max;
-	void *fi_extents_start;
-};
 
 /* fscrypt_str, qstr are now in ext4_fscrypt.h */
 
@@ -850,10 +835,7 @@ static inline int in_range(unsigned long val, unsigned long start,
 /* Quota stub */
 #define dquot_reclaim_block(i, n)	do { } while (0)
 
-/* fiemap stubs */
-#define fiemap_prep(i, fi, s, l, f)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(f); 0; })
-#define fiemap_fill_next_extent(fi, l, p, sz, f) ({ (void)(fi); (void)(l); (void)(p); (void)(sz); (void)(f); 0; })
-#define iomap_fiemap(i, fi, s, l, o)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(o); 0; })
+/* fiemap stubs are now in linux/fiemap.h */
 
 /* Memory retry wait */
 #define memalloc_retry_wait(g)		do { } while (0)
