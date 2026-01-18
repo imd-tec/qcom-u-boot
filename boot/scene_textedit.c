@@ -22,7 +22,6 @@ int scene_texted(struct scene *scn, const char *name, uint id,
 		 uint line_chars, struct scene_obj_txtedit **teditp)
 {
 	struct scene_obj_txtedit *ted;
-	char *buf;
 	int ret;
 
 	ret = scene_obj_add(scn, name, id, SCENEOBJT_TEXTEDIT,
@@ -31,12 +30,9 @@ int scene_texted(struct scene *scn, const char *name, uint id,
 	if (ret < 0)
 		return log_msg_ret("obj", ret);
 
-	abuf_init(&ted->tin.buf);
-	if (!abuf_realloc(&ted->tin.buf, INITIAL_SIZE))
-		return log_msg_ret("buf", -ENOMEM);
-	buf = abuf_data(&ted->tin.buf);
-	*buf = '\0';
-	ted->tin.line_chars = line_chars;
+	ret = scene_txtin_init(&ted->tin, INITIAL_SIZE, line_chars);
+	if (ret)
+		return log_msg_ret("tin", ret);
 
 	if (teditp)
 		*teditp = ted;

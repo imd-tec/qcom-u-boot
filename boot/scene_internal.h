@@ -512,6 +512,16 @@ void scene_menu_calc_bbox(struct scene_obj_menu *menu,
 			  struct vidconsole_bbox *bbox);
 
 /**
+ * scene_txtin_init() - Initialise common text-input fields
+ *
+ * @tin: Text-input info to init
+ * @size: Size to use for buffer
+ * @line_chars: Number of characters in the text line
+ * Return: 0 if OK, -ENOMEM if out of memory
+ */
+int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars);
+
+/**
  * scene_txtin_calc_bbox() - Calculate bounding box for a text-input object
  *
  * @obj: Object to process

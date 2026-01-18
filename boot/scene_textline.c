@@ -20,7 +20,6 @@ int scene_textline(struct scene *scn, const char *name, uint id,
 		   uint line_chars, struct scene_obj_textline **tlinep)
 {
 	struct scene_obj_textline *tline;
-	char *buf;
 	int ret;
 
 	if (line_chars >= EXPO_MAX_CHARS)
@@ -31,12 +30,10 @@ int scene_textline(struct scene *scn, const char *name, uint id,
 			    (struct scene_obj **)&tline);
 	if (ret < 0)
 		return log_msg_ret("obj", -ENOMEM);
-	if (!abuf_init_size(&tline->tin.buf, line_chars + 1))
-		return log_msg_ret("buf", -ENOMEM);
-	buf = abuf_data(&tline->tin.buf);
-	*buf = '\0';
+	ret = scene_txtin_init(&tline->tin, line_chars + 1, line_chars);
+	if (ret)
+		return log_msg_ret("tin", ret);
 	tline->pos = line_chars;
-	tline->tin.line_chars = line_chars;
 
 	if (tlinep)
 		*tlinep = tline;

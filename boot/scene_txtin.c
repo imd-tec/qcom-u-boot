@@ -11,7 +11,21 @@
 #include <expo.h>
 #include <log.h>
 #include <video_console.h>
+#include <linux/errno.h>
 #include "scene_internal.h"
+
+int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
+{
+	char *buf;
+
+	if (!abuf_init_size(&tin->buf, size))
+		return log_msg_ret("buf", -ENOMEM);
+	buf = abuf_data(&tin->buf);
+	*buf = '\0';
+	tin->line_chars = line_chars;
+
+	return 0;
+}
 
 void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 			   struct vidconsole_bbox *bbox,
