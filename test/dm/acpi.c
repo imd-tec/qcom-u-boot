@@ -1012,9 +1012,12 @@ static int dm_test_acpi_fpdt(struct unit_test_state *uts)
 	ut_asserteq_ptr(rec, (struct acpi_fpdt_boot *)(fpdt + 1));
 	ut_asserteq(1234, rec->reset_end);
 
-	/* Update a timing field */
-	rec->ebs_entry = 123;
-	rec->ebs_exit = 456;
+	/*
+	 * Update timing fields - use 0 since we know the original values are
+	 * non-zero
+	 */
+	rec->ebs_entry = 0;
+	rec->ebs_exit = 0;
 
 	/* Checksum should now be invalid */
 	ut_assert(table_compute_checksum(fpdt, fpdt->header.length) != 0);
@@ -1026,8 +1029,8 @@ static int dm_test_acpi_fpdt(struct unit_test_state *uts)
 	ut_asserteq(0, table_compute_checksum(fpdt, fpdt->header.length));
 
 	/* Verify the updated values are still there */
-	ut_asserteq(123, rec->ebs_entry);
-	ut_asserteq(456, rec->ebs_exit);
+	ut_asserteq(0, rec->ebs_entry);
+	ut_asserteq(0, rec->ebs_exit);
 
 	unmap_sysmem(buf);
 
