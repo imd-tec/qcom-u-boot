@@ -73,6 +73,11 @@ int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons)
 	if (ret < 0)
 		return log_msg_ret("sbb", ret);
 
+	/* Measure the edit text now that its bbox is set correctly */
+	ret = scene_obj_get_hw(scn, ted->tin.edit_id, NULL);
+	if (ret < 0)
+		return log_msg_ret("hw", ret);
+
 	return 0;
 }
 
