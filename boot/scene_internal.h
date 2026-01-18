@@ -582,15 +582,22 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin);
 
 /**
- * scene_textline_close() - Close a textline object
+ * scene_txtin_close() - Close a text-input object
  *
  * Close out the text editor after use
  *
- * @scn: Scene containing the textline
- * @tline: textline object
+ * @scn: Scene containing the object
+ */
+void scene_txtin_close(struct scene *scn);
+
+/**
+ * scene_obj_calc_bbox() - Calculate bounding boxes for an object
+ *
+ * @obj: Object to process
+ * @bbox: Returns bounding boxes for object
  * Return: 0 if OK, -ve on error
  */
-int scene_textline_close(struct scene *scn, struct scene_obj_textline *tline);
+int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox *bbox);
 
 /**
  * scene_calc_arrange() - Calculate sizes needed to arrange a scene

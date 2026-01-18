@@ -104,6 +104,12 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 	vidconsole_put_char(scn->expo->cons, ch);
 }
 
+void scene_txtin_close(struct scene *scn)
+{
+	/* cursor is not needed now */
+	vidconsole_readline_end();
+}
+
 int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
