@@ -1259,34 +1259,8 @@ struct super_operations {
 	struct dentry *(*get_dquots)(struct inode *);
 };
 
-/* export_operations for NFS */
-struct export_operations {
-	int (*encode_fh)(struct inode *, __u32 *, int *, struct inode *);
-	struct dentry *(*fh_to_dentry)(struct super_block *, struct fid *, int, int);
-	struct dentry *(*fh_to_parent)(struct super_block *, struct fid *, int, int);
-	struct dentry *(*get_parent)(struct dentry *);
-	int (*commit_metadata)(struct inode *);
-};
-
-/* Generic file handle encoder for NFS exports - stub */
-static inline int generic_encode_ino32_fh(struct inode *inode, __u32 *fh,
-					  int *max_len, struct inode *parent)
-{
-	return 0;
-}
-
-/* fid for export_operations */
-struct fid {
-	union {
-		struct {
-			u32 ino;
-			u32 gen;
-			u32 parent_ino;
-			u32 parent_gen;
-		} i32;
-		__u32 raw[0];
-	};
-};
+/* export_operations and fid - use linux/exportfs.h */
+#include <linux/exportfs.h>
 
 /* uuid_to_fsid - convert UUID to fsid */
 static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
@@ -1433,13 +1407,7 @@ int inode_generic_drop(struct inode *inode);
 /* fsverity stubs (fscrypt macros are in ext4_fscrypt.h) */
 #define fsverity_cleanup_inode(i)	do { } while (0)
 
-/* NFS export helpers - declarations for stub.c */
-struct dentry *generic_fh_to_dentry(struct super_block *sb, struct fid *fid,
-				    int fh_len, int fh_type,
-				    struct inode *(*get_inode)(struct super_block *, u64, u32));
-struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
-				    int fh_len, int fh_type,
-				    struct inode *(*get_inode)(struct super_block *, u64, u32));
+/* NFS export helpers are now in linux/exportfs.h */
 
 /* Path operations */
 #define path_put(p)			do { } while (0)
