@@ -620,35 +620,7 @@ long ext4_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 /* nop_mnt_idmap - no-op mount ID map for xattr.c */
 struct mnt_idmap nop_mnt_idmap;
 
-/* Quota stubs for xattr.c */
-int dquot_alloc_space_nodirty(struct inode *inode, loff_t size)
-{
-	return 0;
-}
-
-void dquot_free_space_nodirty(struct inode *inode, loff_t size)
-{
-}
-
-int dquot_alloc_block(struct inode *inode, loff_t nr)
-{
-	/*
-	 * Update i_blocks to reflect the allocated blocks.
-	 * i_blocks is in 512-byte units, so convert from fs blocks.
-	 */
-	inode->i_blocks += nr << (inode->i_blkbits - 9);
-
-	return 0;
-}
-
-void dquot_free_block(struct inode *inode, loff_t nr)
-{
-	/*
-	 * Update i_blocks to reflect the freed blocks.
-	 * i_blocks is in 512-byte units, so convert from fs blocks.
-	 */
-	inode->i_blocks -= nr << (inode->i_blkbits - 9);
-}
+/* Quota stubs are now macros in linux/quotaops.h */
 
 /*
  * JBD2 stubs - temporary stubs until other jbd2 files are added

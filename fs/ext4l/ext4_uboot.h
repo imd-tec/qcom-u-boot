@@ -239,13 +239,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
 
-/* Quota operations - stubs */
-#define dquot_alloc_block_nofail(inode, nr)	\
-	({ (inode)->i_blocks += (nr) << ((inode)->i_blkbits - 9); 0; })
-#define dquot_initialize(inode)			({ (void)(inode); 0; })
-#define dquot_free_inode(inode)			do { (void)(inode); } while (0)
-#define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
-#define dquot_drop(inode)			do { (void)(inode); } while (0)
+/* Quota operations - use linux/quotaops.h */
+#include <linux/quotaops.h>
 
 /* icount - inode reference count */
 #define icount_read(inode)			(1)
@@ -818,8 +813,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* in_range - use linux/minmax.h */
 #include <linux/minmax.h>
 
-/* Quota stub */
-#define dquot_reclaim_block(i, n)	do { } while (0)
+/* dquot_reclaim_block is in linux/quotaops.h */
 
 /* fiemap stubs are now in linux/fiemap.h */
 
@@ -923,8 +917,7 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* fsverity_file_open is in linux/fsverity.h */
 #include <linux/fsverity.h>
 
-/* Quota file open - stub */
-#define dquot_file_open(i, f)			({ (void)(i); (void)(f); 0; })
+/* dquot_file_open is in linux/quotaops.h */
 
 /* Inode I/O list management */
 #define inode_io_list_del(inode)		do { } while (0)
@@ -934,13 +927,7 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* Folio operations and writeback stubs are in linux/pagemap.h */
 #define folio_batch_release(fb)			do { } while (0)
 
-/* Quota stubs - additional */
-#define dquot_claim_block(i, n)			({ (void)(i); (void)(n); 0; })
-#define dquot_reserve_block(i, n)		({ (void)(i); (void)(n); 0; })
-#define dquot_release_reservation_block(i, n)	do { } while (0)
-#define dquot_initialize_needed(i)		(0)
-#define dquot_transfer(m, i, a)			({ (void)(m); (void)(i); (void)(a); 0; })
-#define is_quota_modification(m, i, a)		({ (void)(m); (void)(i); (void)(a); 0; })
+/* Quota stubs are in linux/quotaops.h */
 
 /* percpu_counter_sub is in linux/percpu_counter.h */
 
@@ -1455,12 +1442,7 @@ void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);
 
-/* Quota - declarations for stub.c */
-#define dquot_suspend(sb, type)		({ (void)(sb); (void)(type); 0; })
-int dquot_alloc_space_nodirty(struct inode *inode, loff_t size);
-void dquot_free_space_nodirty(struct inode *inode, loff_t size);
-int dquot_alloc_block(struct inode *inode, loff_t nr);
-void dquot_free_block(struct inode *inode, loff_t nr);
+/* Quota operations are in linux/quotaops.h */
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
@@ -1468,10 +1450,7 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 
 /* flush_workqueue is now in linux/workqueue.h */
 
-/* Quota stubs for super.c */
-#define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)
-#define dquot_resume(sb, type)		do { (void)(sb); (void)(type); } while (0)
-#define sb_any_quota_suspended(sb)	({ (void)(sb); 0; })
+/* Quota stubs for super.c are in linux/quotaops.h */
 
 /*
  * Stubs for mballoc.c
