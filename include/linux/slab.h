@@ -42,6 +42,12 @@
 #ifndef __GFP_NOFAIL
 #define __GFP_NOFAIL	((gfp_t)0)
 #endif
+#ifndef __GFP_MOVABLE
+#define __GFP_MOVABLE	((gfp_t)0)
+#endif
+#ifndef __GFP_FS
+#define __GFP_FS	((gfp_t)0)
+#endif
 #ifndef GFP_NOIO
 #define GFP_NOIO	((gfp_t)0)
 #endif

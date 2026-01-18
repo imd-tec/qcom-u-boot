@@ -126,10 +126,7 @@
 #define data_race(expr)			(expr)
 
 /* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
-
-/* GFP flags - stubs */
-#define __GFP_MOVABLE	0
-#define __GFP_FS	0
+/* __GFP_MOVABLE, __GFP_FS are in linux/slab.h */
 
 /* Capabilities - use linux/capability.h */
 #include <linux/capability.h>
