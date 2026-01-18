@@ -400,15 +400,7 @@ int ___ratelimit(struct ratelimit_state *rs, const char *func)
 	return 1;
 }
 
-/* I/O priority */
-int IOPRIO_PRIO_VALUE(int class, int data)
-{
-	return (class << 13) | data;
-}
-
-void set_task_ioprio(void *task, int ioprio)
-{
-}
+/* I/O priority stubs are now in linux/ioprio.h */
 
 /* ext4_fc_init is now in fast_commit.c */
 

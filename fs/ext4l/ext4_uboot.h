@@ -1243,8 +1243,8 @@ void ext4_unregister_li_request(struct super_block *sb);
 /* Path lookup flags - use linux/namei.h */
 #include <linux/namei.h>
 
-/* I/O priority classes */
-#define IOPRIO_CLASS_BE			2
+/* I/O priority classes - use linux/ioprio.h */
+#include <linux/ioprio.h>
 
 /* SB_INLINECRYPT, SB_SILENT, SB_POSIXACL are in linux/fs.h */
 #define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
@@ -1343,8 +1343,7 @@ int inode_generic_drop(struct inode *inode);
 
 /* Path operations - path_put, d_path are in linux/path.h */
 
-/* I/O priority - declaration for stub.c */
-int IOPRIO_PRIO_VALUE(int class, int data);
+/* I/O priority stubs are in linux/ioprio.h */
 
 /* kmemdup_nul is in linux/slab.h */
 /* fscrypt declarations are in ext4_fscrypt.h */
@@ -1393,8 +1392,7 @@ unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 
 /* bgl_lock_init is now in linux/blockgroup_lock.h */
 
-/* Task I/O priority - declaration for stub.c */
-void set_task_ioprio(void *task, int ioprio);
+/* set_task_ioprio is in linux/ioprio.h */
 
 /* Superblock identity functions */
 static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
@@ -1617,8 +1615,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 
 /* d_alloc, d_drop are now in linux/dcache.h */
 
-/* get_current_ioprio - I/O priority (not used in U-Boot) */
-#define get_current_ioprio()		(0)
+/* get_current_ioprio is in linux/ioprio.h */
 
 /* JBD2 checkpoint.c stubs */
 #define mutex_lock_io(m)		mutex_lock(m)
