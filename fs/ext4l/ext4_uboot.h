@@ -1294,8 +1294,7 @@ void *kvzalloc(size_t size, gfp_t flags);
 #define sb_start_write(sb)		do { } while (0)
 #define sb_end_write(sb)		do { } while (0)
 
-/* Scheduler stubs */
-#define schedule_timeout_interruptible(t)	({ (void)(t); 0; })
+/* schedule_timeout_interruptible is in linux/sched.h */
 
 /* Page allocation - declarations for stub.c */
 unsigned long get_zeroed_page(gfp_t gfp);
@@ -1465,9 +1464,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
 
-/* Scheduler stubs */
-#define schedule_timeout_uninterruptible(t) do { } while (0)
-#define need_resched()			(0)
+/* schedule_timeout_uninterruptible, need_resched are in linux/sched.h */
 
 /* Block device operations */
 #define sb_find_get_block_nonatomic(sb, block) \
