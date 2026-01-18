@@ -346,9 +346,7 @@ void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 	return NULL;
 }
 
-void inode_set_iversion(struct inode *inode, u64 version)
-{
-}
+/* inode_set_iversion is now a macro in linux/iversion.h */
 
 /* rwlock_init is now a macro in linux/spinlock.h */
 

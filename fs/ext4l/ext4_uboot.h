@@ -982,13 +982,9 @@ static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
 	return ts;
 }
 
-/* Inode version operations */
-#define inode_peek_iversion_raw(i)		(0ULL)
-#define inode_peek_iversion(i)			(0ULL)
+/* Inode version operations - use linux/iversion.h */
+#include <linux/iversion.h>
 #define inode_set_flags(i, f, m)		do { } while (0)
-#define inode_set_iversion_raw(i, v)		do { } while (0)
-#define inode_set_iversion_queried(i, v)	do { } while (0)
-#define inode_inc_iversion(i)			do { } while (0)
 
 /* Inode credential helpers */
 static inline unsigned int i_uid_read(const struct inode *inode)
@@ -1062,9 +1058,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 
 /* Readahead operations are in linux/pagemap.h */
 
-/* Inode version operations */
-#define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
-#define inode_query_iversion(i)			({ (void)(i); 0ULL; })
+/* Inode version operations are in linux/iversion.h */
 
 /* dir_emit, dir_relax_shared are in linux/fs.h */
 
@@ -1344,7 +1338,7 @@ void fs_put_dax(void *dax, void *holder);
 /* Inode allocation - declaration for stub.c */
 void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 		     gfp_t gfp);
-void inode_set_iversion(struct inode *inode, u64 version);
+/* inode_set_iversion is in linux/iversion.h */
 int inode_generic_drop(struct inode *inode);
 
 /* rwlock_init is a macro in linux/spinlock.h */
