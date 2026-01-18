@@ -1344,11 +1344,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
 #define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
 
-/* Inode lock mutex classes */
-#define I_MUTEX_XATTR		5
-#define I_MUTEX_CHILD		4
-#define I_MUTEX_PARENT		3
-#define I_MUTEX_NORMAL		2
+/* I_MUTEX_* inode lock classes are in linux/fs.h */
 
 /* Nested inode locking stub */
 #define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)

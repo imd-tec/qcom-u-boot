@@ -260,4 +260,14 @@ static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
 
 #define dir_relax_shared(i)	({ (void)(i); 1; })
 
+/* Inode mutex nesting classes */
+enum {
+	I_MUTEX_NORMAL,
+	I_MUTEX_PARENT,
+	I_MUTEX_CHILD,
+	I_MUTEX_XATTR,
+	I_MUTEX_NONDIR2,
+	I_MUTEX_PARENT2,
+};
+
 #endif /* _LINUX_FS_H */
