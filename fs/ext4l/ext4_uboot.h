@@ -213,7 +213,7 @@ extern struct user_namespace init_user_ns;
 #define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
 #define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
-#define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
+/* wait_on_bit_io is now in linux/wait_bit.h */
 
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
@@ -1685,20 +1685,8 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
  * Stubs for fast_commit.c
  */
 
-/* Wait bit operations - stubbed for single-threaded U-Boot */
-struct wait_bit_entry {
-	struct list_head wq_entry;
-};
-#define DEFINE_WAIT_BIT(name, word, bit) \
-	struct wait_bit_entry name = { }
-#define bit_waitqueue(word, bit) \
-	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
-#define prepare_to_wait(wq, wait, state) \
-	do { (void)(wq); (void)(wait); (void)(state); } while (0)
-#define prepare_to_wait_exclusive(wq, wait, state) \
-	do { (void)(wq); (void)(wait); (void)(state); } while (0)
-#define finish_wait(wq, wait) \
-	do { (void)(wq); (void)(wait); } while (0)
+/* Wait bit operations - use linux/wait_bit.h */
+#include <linux/wait_bit.h>
 
 /* Dentry name snapshot operations are now in linux/dcache.h */
 
@@ -1708,8 +1696,7 @@ struct wait_bit_entry {
 #define REQ_IDLE		0
 #define REQ_PREFLUSH		0
 
-/* wake_up_bit - wake up threads waiting on a bit */
-#define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
+/* wake_up_bit is now in linux/wait_bit.h */
 
 /* d_alloc, d_drop are now in linux/dcache.h */
 
