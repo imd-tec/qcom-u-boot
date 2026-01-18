@@ -38,9 +38,9 @@ static const char *const scene_obj_type_names[] = {
 	"image",
 	"text",
 	"box",
-	"textedit",
 	"menu",
 	"textline",
+	"textedit",
 };
 
 bool scene_chklog(const char *name)

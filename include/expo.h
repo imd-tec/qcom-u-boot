@@ -242,11 +242,11 @@ enum scene_obj_t {
 	SCENEOBJT_IMAGE,
 	SCENEOBJT_TEXT,
 	SCENEOBJT_BOX,
-	SCENEOBJT_TEXTEDIT,
 
 	/* types from here on can be highlighted */
 	SCENEOBJT_MENU,
 	SCENEOBJT_TEXTLINE,
+	SCENEOBJT_TEXTEDIT,
 };
 
 /**

@@ -1254,7 +1254,7 @@ static int expo_scene_obj_type_name(struct unit_test_state *uts)
 	ut_asserteq_str("textedit", scene_obj_type_name(SCENEOBJT_TEXTEDIT));
 
 	/* Test invalid type (out of range) */
-	ut_asserteq_str("unknown", scene_obj_type_name(SCENEOBJT_TEXTLINE + 1));
+	ut_asserteq_str("unknown", scene_obj_type_name(SCENEOBJT_TEXTEDIT + 1));
 
 	return 0;
 }
