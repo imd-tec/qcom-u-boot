@@ -491,48 +491,9 @@ static inline int bdev_read_only(struct block_device *bdev)
 
 /* SB_LAZYTIME is in linux/fs.h */
 /* ATTR_* iattr valid flags are in linux/fs.h */
-
-/* STATX flags and attributes */
-#define STATX_BTIME		0x00000800U
-#define STATX_DIOALIGN		0x00002000U
-#define STATX_WRITE_ATOMIC	0x00004000U
-#define STATX_ATTR_COMPRESSED	0x00000004
-#define STATX_ATTR_IMMUTABLE	0x00000010
-#define STATX_ATTR_APPEND	0x00000020
-#define STATX_ATTR_NODUMP	0x00000040
-#define STATX_ATTR_ENCRYPTED	0x00000800
-#define STATX_ATTR_VERITY	0x00100000
-
+/* STATX_* flags and struct kstat are in linux/stat.h */
 /* VM fault return values are in linux/mm_types.h */
-
 /* struct path is defined in linux/fs.h */
-
-/* struct kstat - stat buffer */
-struct kstat {
-	u64 ino;
-	dev_t dev;
-	umode_t mode;
-	unsigned int nlink;
-	uid_t uid;
-	gid_t gid;
-	dev_t rdev;
-	loff_t size;
-	struct timespec64 atime;
-	struct timespec64 mtime;
-	struct timespec64 ctime;
-	struct timespec64 btime;
-	u64 blocks;
-	u32 blksize;
-	u64 attributes;
-	u64 attributes_mask;
-	u32 result_mask;
-	u32 dio_mem_align;
-	u32 dio_offset_align;
-	u32 atomic_write_unit_min;
-	u32 atomic_write_unit_max;
-	u32 atomic_write_segments_max;
-};
-
 /* VM structs (vm_area_struct, page, vm_fault, vm_operations_struct) are in linux/mm_types.h */
 
 /* Forward declaration for swap */
