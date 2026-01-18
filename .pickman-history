@@ -3209,3 +3209,147 @@ None - all cherry-picked commits matched their originals exactly
 
 ---
 
+## 2026-01-17: us/next
+
+Branch: cherry-0e198ff1a91
+
+Commits:
+- 0e198ff1a91 configs: Resync with savedefconfig
+- ba87a2fcfbf test/py: Provide the correct U_BOOT_SOURCE_DIR to getrole
+- 64d5a0550a1 test/py: Handle u-boot-test-getrole failure
+- dd7138dde77 buildman: Drop unused OUTPUT_FILE constant
+- bd7883f3467 buildman: Record an error if a toolchain is missing
+- 1135dc50a3e gitlab: Add a StarFive VisionFive2 to the sjg lab
+- 292278d6828 Merge patch series "gitlab: Fixes to get StarFive VisionFive2 into the sjg lab"
+
+### Conversation log
+Now I need to verify whether the commits are already applied before cherry-picking. Let me start by checking the first commit:
+
+The commits are significantly different - 0e198ff1a91 has many config file changes while 4e743f3c604 is a smaller patch. Let me check the other commits:
+
+The patches are nearly identical with only minor differences (commit hashes, line numbers, context). Let me verify by looking at the actual content of the patches more carefully:
+
+Commits 2-6 have identical code changes. Now let me check commit 1 more carefully and also check the merge commit:
+
+So commit 0e198ff1a91 modifies 87 files while 4e743f3c604 only modifies 5 files. They have the same subject but very different content - these are NOT the same commit. The first commit is a much larger resync that needs to be cherry-picked.
+
+Now let me check the merge commit:
+
+Now I understand:
+- Commits 2-6 (ba87a2fcfbf, 64d5a0550a1, dd7138dde77, bd7883f3467, 1135dc50a3e) are **already applied** in ci/master as different hashes (2f2000eb536, 171ebccf93a, e22893f324f, 0452cf10a98, 6dd21719ebb) - the patches are identical
+- Commit 1 (0e198ff1a91) is a **different** commit than 4e743f3c604 - same subject but much larger (87 files vs 5 files)
+- The merge commit (292278d6828) is NOT in ci/master
+
+So I need to cherry-pick:
+1. 0e198ff1a91 - configs: Resync with savedefconfig (different from 4e743f3c604)
+2. SKIP - ba87a2fcfbf (already applied as 2f2000eb536)
+3. SKIP - 64d5a0550a1 (already applied as 171ebccf93a)
+4. SKIP - dd7138dde77 (already applied as e22893f324f)
+5. SKIP - bd7883f3467 (already applied as 0452cf10a98)
+6. SKIP - 1135dc50a3e (already applied as 6dd21719ebb)
+7. 292278d6828 - Merge commit (not in ci/master)
+
+Let me start cherry-picking:
+
+There are conflicts. Let me analyze them:
+
+Now I understand the conflicts - the original commit is trying to remove duplicates or reorder items, but ci/master has already applied some of these changes via other commits. The conflicts are:
+
+1. `phycore-imx8mm_defconfig`: HEAD has `CONFIG_IMX8M_OPTEE_LOAD_ADDR=0x56000000`, cherry-pick wants to remove it
+2. `snow_defconfig`: HEAD has `CONFIG_BLOBLIST_FIXED=y` and `CONFIG_BLOBLIST_ADDR=0x43d00000`, cherry-pick wants to remove them
+3. `zynq_cse_*_defconfig`: HEAD already has `CONFIG_SYS_LDSCRIPT` at the top, cherry-pick wants to add it (duplicate line removal)
+
+For the zynq cases, HEAD already has the line, so the cherry-pick is trying to add a duplicate. For phycore and snow, the cherry-pick is removing lines that HEAD has.
+
+Let me resolve these conflicts:
+
+I see the issue - line 10 has `CONFIG_IMX8M_OPTEE_LOAD_ADDR=0x56000000` in the HEAD section, and line 18 also has the same line. The cherry-pick wanted to remove the duplicate. Since line 18 already has this config, I should resolve by taking the version that removes the early occurrence (theirs):
+
+For snow_defconfig, I need to check if these BLOBLIST configs should be kept (HEAD) or removed (cherry-pick). Let me check what the original commit intended:
+
+The original commit only removes `CONFIG_BLOBLIST_ADDR`, but doesn't remove `CONFIG_BLOBLIST_FIXED`. Let me check what the current ci/master has:
+
+So ci/master has both `CONFIG_BLOBLIST_FIXED=y` and `CONFIG_BLOBLIST_ADDR=0x43d00000`. The original commit (0e198ff1a91) wanted to remove just `CONFIG_BLOBLIST_ADDR=0x43d00000`. So the correct resolution is to keep `CONFIG_BLOBLIST_FIXED=y` but remove `CONFIG_BLOBLIST_ADDR=0x43d00000`:
+
+Now let me fix the zynq files - they have duplicate CONFIG_SYS_LDSCRIPT lines and the conflict is trying to add an extra one:
+
+Now let me stage the resolved files and continue:
+
+Now let me verify the cherry-pick and run the build test:
+
+The original commit modified 87 files with -281/+69 lines, but the cherry-picked version only modified 44 files with -112/+53 lines. This is expected because:
+1. Many files (like khadas-edge2-rk3588s, maxbcm, etc.) were already modified by previous commits in ci/master
+2. The zynq files had conflicts that resolved to keeping HEAD's version
+3. Several xilinx and other configs were already synced in ci/master
+
+Let me now run the build test:
+
+Build passed! Now let me amend the commit message to note the fix-ups:
+
+Now I need to skip commits 2-6 (already applied) and cherry-pick the merge commit (7):
+
+There are conflicts in the merge commit. Let me examine them:
+
+The gitlab-ci.yml conflict is simple - HEAD has additional content (colibrimx8, rockpro64, etc. and the trigger_snap_builds section), while the merge commit just adds vf2 which is already there. So I should just keep HEAD's version:
+
+Good, vf2 is already there. Now let me check conftest.py:
+
+This is just a whitespace conflict (tabs vs spaces). Both versions are essentially the same comment. Let me keep HEAD's version (with spaces):
+
+I see - the merge commit is trying to bring in the simpler version, but HEAD (ci/master) has a refactored version with `_write_toolchain_result` method. This is complex. The merge commit is from the original us/next branch and contains the older code, while ci/master has been refactored.
+
+Since the individual commits (2-6) that the merge commit combines are already applied in ci/master (with identical patches), and the merge commit itself is just a merge that combines those commits, the merge commit would result in an empty commit if applied cleanly. The conflicts are because the individual commits were cherry-picked at different points in history.
+
+Let me check if we should just create an empty merge commit to preserve the history:
+
+Hmm, let me check more carefully:
+
+Good - vf2 is already in ci/master. The individual commits (2-6) were already applied. Since this is a merge commit combining those changes, and those changes are already present in ci/master, the merge commit will be empty. Let me abort and just create an empty commit to preserve the merge commit message:
+
+Now let me verify the final state and run the build test:
+
+We have 2 commits:
+1. `cd5a5ae6181` - configs: Resync with savedefconfig (cherry-picked from 0e198ff1a91)
+2. `7698b52c7ae` - Merge patch series (empty commit preserving merge history)
+
+Now let me run the final build test:
+
+Build passed. Let me provide the final summary:
+
+## Cherry-Pick Summary
+
+### Final Status
+
+**Branch:** `cherry-0e198ff1a91` (based on `ci/master`)
+
+**Build Result:** ✅ OK - sandbox builds successfully
+
+### Commits Applied
+
+| # | Original | Status | Notes |
+|---|----------|--------|-------|
+| 1 | 0e198ff1a91 (configs: Resync with savedefconfig) | ✅ Cherry-picked | Conflicts resolved in 5 files |
+| 2 | ba87a2fcfbf (test/py: Provide the correct U_BOOT_SOURCE_DIR) | ⏭️ **SKIPPED** | Already in ci/master as 2f2000eb536 |
+| 3 | 64d5a0550a1 (test/py: Handle u-boot-test-getrole failure) | ⏭️ **SKIPPED** | Already in ci/master as 171ebccf93a |
+| 4 | dd7138dde77 (buildman: Drop unused OUTPUT_FILE constant) | ⏭️ **SKIPPED** | Already in ci/master as e22893f324f |
+| 5 | bd7883f3467 (buildman: Record an error if a toolchain is missing) | ⏭️ **SKIPPED** | Already in ci/master as 0452cf10a98 |
+| 6 | 1135dc50a3e (gitlab: Add a StarFive VisionFive2 to the sjg lab) | ⏭️ **SKIPPED** | Already in ci/master as 6dd21719ebb |
+| 7 | 292278d6828 (Merge patch series...) | ✅ Empty commit | All merged commits already present |
+
+### Fix-ups Made
+
+**Commit 1 (0e198ff1a91):** Conflicts resolved in:
+- `configs/phycore-imx8mm_defconfig` - Removed duplicate OPTEE_LOAD_ADDR (kept the one at line 18)
+- `configs/snow_defconfig` - Kept BLOBLIST_FIXED=y, removed BLOBLIST_ADDR as intended by original commit
+- `configs/zynq_cse_nand_defconfig`, `configs/zynq_cse_nor_defconfig`, `configs/zynq_cse_qspi_defconfig` - Kept existing SYS_LDSCRIPT, avoided duplicates
+
+### Delta Comparison
+
+- **Original commit 1:** 87 files, -281/+69 lines
+- **Cherry-picked:** 44 files, -112/+53 lines
+- **Reason:** Many files were already synced in ci/master via other commits
+
+The branch is ready for pushing.
+
+---
+
