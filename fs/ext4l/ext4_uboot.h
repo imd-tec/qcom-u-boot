@@ -815,12 +815,8 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
 #define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
-/* in_range helper - check if value is in range [start, start+len) */
-static inline int in_range(unsigned long val, unsigned long start,
-			   unsigned long len)
-{
-	return val >= start && val < start + len;
-}
+/* in_range - use linux/minmax.h */
+#include <linux/minmax.h>
 
 /* Quota stub */
 #define dquot_reclaim_block(i, n)	do { } while (0)
