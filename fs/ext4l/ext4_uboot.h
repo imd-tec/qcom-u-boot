@@ -105,12 +105,8 @@
 #include <linux/percpu_counter.h>
 #include <linux/percpu.h>
 
-/* Project ID type */
-typedef struct { unsigned int val; } kprojid_t;
-
-#define make_kprojid(ns, id)	((kprojid_t){ .val = (id) })
-#define from_kprojid(ns, kprojid)	((kprojid).val)
-#define projid_eq(a, b)		((a).val == (b).val)
+/* Project ID type - use linux/projid.h */
+#include <linux/projid.h>
 
 /* kobject is now in linux/kobject.h */
 #include <linux/kobject.h>
@@ -138,11 +134,11 @@ typedef struct { unsigned int val; } kprojid_t;
 #define __GFP_MOVABLE	0
 #define __GFP_FS	0
 
-/* FIEMAP extent flags */
-#define FIEMAP_EXTENT_LAST		0x00000001
-#define FIEMAP_EXTENT_UNKNOWN		0x00000002
-#define FIEMAP_EXTENT_DELALLOC		0x00000004
-#define FIEMAP_EXTENT_UNWRITTEN		0x00000800
+/* Capabilities - use linux/capability.h */
+#include <linux/capability.h>
+
+/* FIEMAP types - use linux/fiemap.h */
+#include <linux/fiemap.h>
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
 
 /* FALLOC_FL_* flags are in linux/fs.h */
@@ -161,23 +157,8 @@ typedef struct { unsigned int val; } kprojid_t;
 
 /* struct file is defined in linux/fs.h */
 
-/* kiocb - kernel I/O control block */
-struct iov_iter;
-
-struct kiocb {
-	int ki_flags;
-	struct file *ki_filp;
-	loff_t ki_pos;
-};
-
-#define IOCB_DIRECT		0x0001
-#define IOCB_NOWAIT		0x0002
-#define IOCB_ATOMIC		0x0004
-
-/* iov_iter stubs */
-#define iov_iter_truncate(i, count)	do { } while (0)
-#define iov_iter_count(i)		0
-#define iov_iter_alignment(iter)	0
+/* kiocb, iov_iter - use linux/uio.h */
+#include <linux/uio.h>
 
 /* __counted_by attribute - not available in U-Boot */
 #define __counted_by(x)
@@ -185,23 +166,6 @@ struct kiocb {
 /* dir_context, filldir_t are in linux/fs.h */
 
 /* iomap types and structs are in linux/iomap.h */
-
-/* fiemap types */
-#define FIEMAP_FLAG_SYNC	0x00000001
-#define FIEMAP_FLAG_XATTR	0x00000002
-#define FIEMAP_FLAG_CACHE	0x00000004
-
-struct fiemap_extent_info {
-	unsigned int fi_flags;
-	unsigned int fi_extents_mapped;
-	unsigned int fi_extents_max;
-	void *fi_extents_start;
-};
-
-/* Capabilities - stubs (always allow) */
-#define CAP_SYS_ADMIN		0
-#define CAP_SYS_RESOURCE	0
-#define capable(cap)		(1)
 
 /* fscrypt_str, qstr are now in ext4_fscrypt.h */
 
@@ -245,7 +209,7 @@ extern struct user_namespace init_user_ns;
 #define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
 #define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
-#define wait_on_bit_io(addr, bit, mode)	do { (void)(addr); (void)(bit); (void)(mode); } while (0)
+/* wait_on_bit_io is now in linux/wait_bit.h */
 
 /* inode_needs_sync - stub */
 #define inode_needs_sync(inode)		(0)
@@ -341,8 +305,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 /* atomic_add_unless is now in asm-generic/atomic.h */
 
-/* Block group lock - stub */
-#define bgl_lock_ptr(lock, group)	NULL
+/* bgl_lock_ptr is now in linux/blockgroup_lock.h */
 
 /* RCU stubs - use linux/rcupdate.h */
 #include <linux/rcupdate.h>
@@ -416,10 +379,8 @@ typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 /* crc32c - from linux/crc32c.h */
 #include <linux/crc32c.h>
 
-/* ratelimit_state - stub */
-struct ratelimit_state {
-	int dummy;
-};
+/* ratelimit_state - use linux/ratelimit.h */
+#include <linux/ratelimit.h>
 
 /* fscrypt_dummy_policy and qstr are now in ext4_fscrypt.h */
 
@@ -455,11 +416,8 @@ typedef long long qsize_t;
 
 /* DT_* directory entry types are in linux/fs.h */
 
-/* mnt_idmap - stub */
-struct mnt_idmap {
-	int dummy;
-};
-extern struct mnt_idmap nop_mnt_idmap;
+/* mnt_idmap - use linux/mnt_idmapping.h */
+#include <linux/mnt_idmapping.h>
 
 /* fstrim_range - stub */
 struct fstrim_range {
@@ -867,10 +825,7 @@ static inline int in_range(unsigned long val, unsigned long start,
 /* Quota stub */
 #define dquot_reclaim_block(i, n)	do { } while (0)
 
-/* fiemap stubs */
-#define fiemap_prep(i, fi, s, l, f)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(f); 0; })
-#define fiemap_fill_next_extent(fi, l, p, sz, f) ({ (void)(fi); (void)(l); (void)(p); (void)(sz); (void)(f); 0; })
-#define iomap_fiemap(i, fi, s, l, o)	({ (void)(i); (void)(fi); (void)(s); (void)(l); (void)(o); 0; })
+/* fiemap stubs are now in linux/fiemap.h */
 
 /* Memory retry wait */
 #define memalloc_retry_wait(g)		do { } while (0)
@@ -904,12 +859,7 @@ static inline int in_range(unsigned long val, unsigned long start,
 
 /* percpu_counter_init/destroy are in linux/percpu_counter.h */
 
-/* ratelimit macros */
-#define DEFAULT_RATELIMIT_INTERVAL	(5 * 1000)
-#define DEFAULT_RATELIMIT_BURST		10
-#define DEFINE_RATELIMIT_STATE(name, interval, burst) \
-	int name __attribute__((unused)) = 0
-#define __ratelimit(state)		({ (void)(state); 1; })
+/* ratelimit macros are now in linux/ratelimit.h */
 
 /* SEQ_START_TOKEN is in linux/seq_file.h */
 
@@ -942,8 +892,7 @@ void folio_put(struct folio *folio);
 void folio_get(struct folio *folio);
 void mapping_clear_folio_cache(struct address_space *mapping);
 
-/* projid_t - project ID type */
-typedef unsigned int projid_t;
+/* projid_t is now in linux/projid.h */
 
 /*
  * Additional stubs for inode.c
@@ -951,8 +900,8 @@ typedef unsigned int projid_t;
 
 /* try_cmpxchg is now in asm-generic/atomic.h */
 
-/* hash_64 - simple 64-bit hash */
-#define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
+/* hash_64 - use linux/hash.h */
+#include <linux/hash.h>
 
 /* Dentry operations are now in linux/dcache.h */
 #define finish_open_simple(f, e)		(e)
@@ -1157,17 +1106,8 @@ struct file_operations {
 	int (*release)(struct inode *, struct file *);
 };
 
-/* delayed_call - for delayed freeing of symlink data */
-typedef void (*delayed_call_func_t)(const void *);
-struct delayed_call {
-	delayed_call_func_t fn;
-	const void *arg;
-};
-
-#define set_delayed_call(dc, func, data) do { \
-	(dc)->fn = (func); \
-	(dc)->arg = (data); \
-} while (0)
+/* delayed_call - use linux/delayed_call.h */
+#include <linux/delayed_call.h>
 
 #define kfree_link		kfree
 
@@ -1294,34 +1234,8 @@ struct super_operations {
 	struct dentry *(*get_dquots)(struct inode *);
 };
 
-/* export_operations for NFS */
-struct export_operations {
-	int (*encode_fh)(struct inode *, __u32 *, int *, struct inode *);
-	struct dentry *(*fh_to_dentry)(struct super_block *, struct fid *, int, int);
-	struct dentry *(*fh_to_parent)(struct super_block *, struct fid *, int, int);
-	struct dentry *(*get_parent)(struct dentry *);
-	int (*commit_metadata)(struct inode *);
-};
-
-/* Generic file handle encoder for NFS exports - stub */
-static inline int generic_encode_ino32_fh(struct inode *inode, __u32 *fh,
-					  int *max_len, struct inode *parent)
-{
-	return 0;
-}
-
-/* fid for export_operations */
-struct fid {
-	union {
-		struct {
-			u32 ino;
-			u32 gen;
-			u32 parent_ino;
-			u32 parent_gen;
-		} i32;
-		__u32 raw[0];
-	};
-};
+/* export_operations and fid - use linux/exportfs.h */
+#include <linux/exportfs.h>
 
 /* uuid_to_fsid - convert UUID to fsid */
 static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
@@ -1335,21 +1249,8 @@ static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
 	return fsid;
 }
 
-/* kstatfs for statfs */
-struct kstatfs {
-	long f_type;
-	long f_bsize;
-	u64 f_blocks;
-	u64 f_bfree;
-	u64 f_bavail;
-	u64 f_files;
-	u64 f_ffree;
-	__kernel_fsid_t f_fsid;
-	long f_namelen;
-	long f_frsize;
-	long f_flags;
-	long f_spare[4];
-};
+/* kstatfs - use linux/statfs.h */
+#include <linux/statfs.h>
 
 /* struct seq_file is in linux/seq_file.h */
 
@@ -1424,10 +1325,8 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* Max file size for large files */
 #define MAX_LFS_FILESIZE		((loff_t)LLONG_MAX)
 
-/* blockgroup_lock for per-group locking */
-struct blockgroup_lock {
-	int num_locks;	/* U-Boot doesn't need real locking */
-};
+/* blockgroup_lock - use linux/blockgroup_lock.h */
+#include <linux/blockgroup_lock.h>
 
 /* Buffer submission stubs - declarations for stub.c implementations */
 int submit_bh(int op_flags, struct buffer_head *bh);
@@ -1438,8 +1337,7 @@ int trylock_buffer(struct buffer_head *bh);
 /* Trace stubs for super.c - declaration for stub.c implementation */
 void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
 
-/* Ratelimiting - declaration for stub.c */
-int ___ratelimit(struct ratelimit_state *rs, const char *func);
+/* ___ratelimit is now in linux/ratelimit.h */
 
 /* Filesystem notification - declaration for stub.c */
 void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
@@ -1481,13 +1379,7 @@ int inode_generic_drop(struct inode *inode);
 /* fsverity stubs (fscrypt macros are in ext4_fscrypt.h) */
 #define fsverity_cleanup_inode(i)	do { } while (0)
 
-/* NFS export helpers - declarations for stub.c */
-struct dentry *generic_fh_to_dentry(struct super_block *sb, struct fid *fid,
-				    int fh_len, int fh_type,
-				    struct inode *(*get_inode)(struct super_block *, u64, u32));
-struct dentry *generic_fh_to_parent(struct super_block *sb, struct fid *fid,
-				    int fh_len, int fh_type,
-				    struct inode *(*get_inode)(struct super_block *, u64, u32));
+/* NFS export helpers are now in linux/exportfs.h */
 
 /* Path operations */
 #define path_put(p)			do { } while (0)
@@ -1540,8 +1432,7 @@ int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
 u64 sb_bdev_nr_blocks(struct super_block *sb);
 unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 
-/* Blockgroup lock init - stub */
-#define bgl_lock_init(lock)		do { } while (0)
+/* bgl_lock_init is now in linux/blockgroup_lock.h */
 
 /* Task I/O priority - declaration for stub.c */
 void set_task_ioprio(void *task, int ioprio);
@@ -1557,33 +1448,8 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 
 /* super_set_sysfs_name_bdev is now in linux/kobject.h */
 
-/*
- * mb_cache - metadata block cache stubs for xattr.c
- * Not supported in U-Boot - xattr caching disabled
- */
-struct mb_cache {
-	int dummy;
-};
-
-struct mb_cache_entry {
-	u64 e_value;
-	unsigned long e_flags;
-};
-
-/* MB cache flags */
-#define MBE_REUSABLE_B	0
-
-#define mb_cache_create(bits)			kzalloc(sizeof(struct mb_cache), GFP_KERNEL)
-#define mb_cache_destroy(cache)			do { kfree(cache); } while (0)
-#define mb_cache_entry_find_first(c, h)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_find_next(c, e)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_delete_or_get(c, k, v)	((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_get(c, k, v)		((struct mb_cache_entry *)NULL)
-#define mb_cache_entry_put(c, e)		do { (void)(c); (void)(e); } while (0)
-#define mb_cache_entry_create(c, f, k, v, r)	({ (void)(c); (void)(f); (void)(k); (void)(v); (void)(r); 0; })
-#define mb_cache_entry_delete(c, k, v)		do { (void)(c); (void)(k); (void)(v); } while (0)
-#define mb_cache_entry_touch(c, e)		do { (void)(c); (void)(e); } while (0)
-#define mb_cache_entry_wait_unused(e)		do { (void)(e); } while (0)
+/* mb_cache - use linux/mbcache.h */
+#include <linux/mbcache.h>
 
 /* xattr helper stubs for xattr.c */
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
@@ -1607,8 +1473,7 @@ struct mb_cache_entry {
 
 /* strreplace is in linux/string.h */
 
-/* Ratelimit - declaration for stub.c */
-void ratelimit_state_init(void *rs, int interval, int burst);
+/* ratelimit_state_init is now in linux/ratelimit.h */
 
 /* Block device operations - declarations for stub.c */
 void bdev_fput(void *file);
@@ -1790,20 +1655,8 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
  * Stubs for fast_commit.c
  */
 
-/* Wait bit operations - stubbed for single-threaded U-Boot */
-struct wait_bit_entry {
-	struct list_head wq_entry;
-};
-#define DEFINE_WAIT_BIT(name, word, bit) \
-	struct wait_bit_entry name = { }
-#define bit_waitqueue(word, bit) \
-	({ (void)(word); (void)(bit); (wait_queue_head_t *)NULL; })
-#define prepare_to_wait(wq, wait, state) \
-	do { (void)(wq); (void)(wait); (void)(state); } while (0)
-#define prepare_to_wait_exclusive(wq, wait, state) \
-	do { (void)(wq); (void)(wait); (void)(state); } while (0)
-#define finish_wait(wq, wait) \
-	do { (void)(wq); (void)(wait); } while (0)
+/* Wait bit operations - use linux/wait_bit.h */
+#include <linux/wait_bit.h>
 
 /* Dentry name snapshot operations are now in linux/dcache.h */
 
@@ -1813,8 +1666,7 @@ struct wait_bit_entry {
 #define REQ_IDLE		0
 #define REQ_PREFLUSH		0
 
-/* wake_up_bit - wake up threads waiting on a bit */
-#define wake_up_bit(word, bit)		do { (void)(word); (void)(bit); } while (0)
+/* wake_up_bit is now in linux/wait_bit.h */
 
 /* d_alloc, d_drop are now in linux/dcache.h */
 
@@ -1869,13 +1721,8 @@ int bmap(struct inode *inode, sector_t *block);
 #define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
 #define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
 
-/* proc_ops structure for journal.c */
-struct proc_ops {
-	int (*proc_open)(struct inode *, struct file *);
-	ssize_t (*proc_read)(struct file *, char *, size_t, loff_t *);
-	loff_t (*proc_lseek)(struct file *, loff_t, int);
-	int (*proc_release)(struct inode *, struct file *);
-};
+/* proc_ops - use linux/proc_fs.h */
+#include <linux/proc_fs.h>
 
 /* seq_read and seq_lseek declarations (defined in stub.c) */
 ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
@@ -1883,11 +1730,7 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* S_IRUGO is in linux/fs.h */
 
-/* procfs stubs */
-#define proc_mkdir(name, parent)	({ (void)(name); (void)(parent); (struct proc_dir_entry *)NULL; })
-#define proc_create_data(n, m, p, ops, d) \
-	({ (void)(n); (void)(m); (void)(p); (void)(ops); (void)(d); (struct proc_dir_entry *)NULL; })
-#define remove_proc_entry(n, p)		do { (void)(n); (void)(p); } while (0)
+/* procfs stubs are now in linux/proc_fs.h */
 
 /* lockdep_init_map and lock_class_key are in linux/lockdep.h */
 
@@ -1917,15 +1760,8 @@ int bh_read(struct buffer_head *bh, int flags);
  * Stubs for mmp.c
  */
 
-/* init_utsname - returns pointer to system name structure */
-struct new_utsname {
-	char nodename[65];
-};
-static inline struct new_utsname *init_utsname(void)
-{
-	static struct new_utsname uts = { .nodename = "u-boot" };
-	return &uts;
-}
+/* init_utsname - use linux/utsname.h */
+#include <linux/utsname.h>
 
 /*
  * Stubs for move_extent.c
@@ -1971,7 +1807,7 @@ int ext4_update_overhead(struct super_block *sb, bool force);
 /* fsmap is now in linux/fsmap.h */
 #include <linux/fsmap.h>
 
-/* list_sort and sort stubs for fsmap.c */
+/* list_sort and sort stubs for fsmap.c - not used in U-Boot */
 #define list_sort(priv, head, cmp) \
 	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
 #define sort(base, num, size, cmp, swap) \

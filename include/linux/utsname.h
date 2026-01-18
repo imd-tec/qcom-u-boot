@@ -18,4 +18,16 @@ struct uts_namespace {
 
 extern struct uts_namespace init_uts_ns;
 
+/**
+ * init_utsname() - get initial UTS name structure
+ *
+ * Return: pointer to static utsname structure
+ */
+static inline struct new_utsname *init_utsname(void)
+{
+	static struct new_utsname uts = { .nodename = "u-boot" };
+
+	return &uts;
+}
+
 #endif /* _LINUX_UTSNAME_H */

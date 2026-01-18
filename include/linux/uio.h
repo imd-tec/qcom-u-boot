@@ -63,4 +63,23 @@ static inline size_t iov_iter_alignment(const struct iov_iter *i)
 	return 0;  /* Stub - assume aligned */
 }
 
+/**
+ * struct kiocb - kernel I/O control block
+ * @ki_flags: I/O flags
+ * @ki_filp: file pointer
+ * @ki_pos: file position
+ *
+ * U-Boot stub for asynchronous I/O control.
+ */
+struct kiocb {
+	int ki_flags;
+	struct file *ki_filp;
+	loff_t ki_pos;
+};
+
+/* kiocb flags */
+#define IOCB_DIRECT		0x0001
+#define IOCB_NOWAIT		0x0002
+#define IOCB_ATOMIC		0x0004
+
 #endif /* __LINUX_UIO_H */

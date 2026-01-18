@@ -12,6 +12,7 @@
 #ifndef _LINUX_CAPABILITY_H
 #define _LINUX_CAPABILITY_H
 
+#define CAP_SYS_ADMIN		21
 #define CAP_SYS_RESOURCE	24
 
 static inline bool capable(int cap)
