@@ -928,13 +928,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 #define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
 #define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
 
-/* d_path - get pathname - stub returns empty path */
-static inline char *d_path(const struct path *path, char *buf, int buflen)
-{
-	if (buflen > 0)
-		buf[0] = '\0';
-	return buf;
-}
+/* d_path, path_put - use linux/path.h */
+#include <linux/path.h>
 
 /* fscrypt_file_open is in ext4_fscrypt.h */
 #define fsverity_file_open(i, f)		({ (void)(i); (void)(f); 0; })
@@ -1379,8 +1374,7 @@ int inode_generic_drop(struct inode *inode);
 
 /* NFS export helpers are now in linux/exportfs.h */
 
-/* Path operations */
-#define path_put(p)			do { } while (0)
+/* Path operations - path_put, d_path are in linux/path.h */
 
 /* I/O priority - declaration for stub.c */
 int IOPRIO_PRIO_VALUE(int class, int data);

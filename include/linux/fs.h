@@ -51,11 +51,8 @@ struct vfsmount {
 	struct dentry *mnt_root;
 };
 
-/* path - pathname components */
-struct path {
-	struct vfsmount *mnt;
-	struct dentry *dentry;
-};
+/* path - use linux/path.h */
+#include <linux/path.h>
 
 /* Buffer operations are in buffer_head.h */
 
