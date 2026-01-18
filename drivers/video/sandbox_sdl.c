@@ -146,7 +146,7 @@ static int sandbox_sdl_video_sync(struct udevice *vid, uint flags)
 		memset(&plat->last_sync_damage, '\0',
 		       sizeof(plat->last_sync_damage));
 
-	return sandbox_sdl_sync(uc_priv->fb, damage);
+	return sandbox_sdl_sync(uc_priv->fb, damage, NULL);
 }
 
 static const struct video_ops sandbox_sdl_ops = {

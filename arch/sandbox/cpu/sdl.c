@@ -11,6 +11,7 @@
 #include <sysreset.h>
 #include <linux/input.h>
 #include <SDL2/SDL.h>
+#include <asm/sdl_sync.h>
 #include <asm/state.h>
 #include <video_defs.h>
 
@@ -310,7 +311,21 @@ static int copy_to_texture(void *lcd_base, const struct vid_bbox *damage)
 	return 0;
 }
 
-int sandbox_sdl_sync(void *lcd_base, const struct vid_bbox *damage)
+static void draw_grid(void)
+{
+	int x, y;
+
+	SDL_SetRenderDrawColor(sdl.renderer, 192, 192, 192, SDL_ALPHA_OPAQUE);
+
+	for (x = 0; x < sdl.vis_width; x += 10)
+		SDL_RenderDrawLine(sdl.renderer, x, 0, x, sdl.vis_height - 1);
+
+	for (y = 0; y < sdl.vis_height; y += 10)
+		SDL_RenderDrawLine(sdl.renderer, 0, y, sdl.vis_width - 1, y);
+}
+
+int sandbox_sdl_sync(void *lcd_base, const struct vid_bbox *damage,
+		     const struct sandbox_sdl_sync_opts *opts)
 {
 	struct SDL_Rect rect;
 	int ret;
@@ -328,6 +343,9 @@ int sandbox_sdl_sync(void *lcd_base, const struct vid_bbox *damage)
 		printf("SDL copy %d: %s\n", ret, SDL_GetError());
 		return -EIO;
 	}
+
+	if (opts && opts->draw_grid)
+		draw_grid();
 
 	/*
 	 * On some machines this does not appear. Draw an empty rectangle which
