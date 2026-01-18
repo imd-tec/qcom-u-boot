@@ -30,20 +30,6 @@ enum scene_obj_t;
 typedef int (*expo_scene_obj_iterator)(struct scene_obj *obj, void *priv);
 
 /**
- * scene_obj_txtin() - Get text-input info from a scene object
- *
- * This works for both textline and textedit objects since they have
- * struct scene_txtin at the same offset (immediately after struct scene_obj).
- *
- * @obj: Object to get text-input info from
- * Return: pointer to the text-input info
- */
-static inline struct scene_txtin *scene_obj_txtin(struct scene_obj *obj)
-{
-	return (struct scene_txtin *)(obj + 1);
-}
-
-/**
  * enum scene_bbox_t - Parts of an object which can have a bounding box
  *
  * Objects can provide any or all of these bounding boxes
@@ -63,6 +49,20 @@ enum scene_bbox_t {
 
 	SCENEBB_count,
 };
+
+/**
+ * scene_obj_txtin() - Get text-input info from a scene object
+ *
+ * This works for both textline and textedit objects since they have
+ * struct scene_txtin at the same offset (immediately after struct scene_obj).
+ *
+ * @obj: Object to get text-input info from
+ * Return: pointer to the text-input info
+ */
+static inline struct scene_txtin *scene_obj_txtin(struct scene_obj *obj)
+{
+	return (struct scene_txtin *)(obj + 1);
+}
 
 /**
  * expo_lookup_scene_id() - Look up a scene ID
@@ -500,6 +500,17 @@ int scene_dims_union(struct scene *scn, uint id, struct scene_obj_dims *dims);
  */
 int scene_textline_calc_dims(struct scene_obj_textline *tline,
 			     struct udevice *cons);
+
+/**
+ * scene_txted_calc_dims() - Calculate the dimensions of a textedit
+ *
+ * Updates the width and height of the textedit based on its contents
+ *
+ * @ted: Textedit to update
+ * @cons: UCLASS_VIDEO_CONSOLE device (cannot be NULL)
+ * Returns 0 if OK, -ve on error
+ */
+int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons);
 
 /**
  * scene_menu_calc_bbox() - Calculate bounding boxes for the menu

@@ -773,7 +773,6 @@ int scene_calc_arrange(struct scene *scn, struct expo_arrange_info *arr)
 		case SCENEOBJT_IMAGE:
 		case SCENEOBJT_TEXT:
 		case SCENEOBJT_BOX:
-		case SCENEOBJT_TEXTEDIT:
 			break;
 		case SCENEOBJT_MENU: {
 			struct scene_obj_menu *menu;
@@ -782,13 +781,10 @@ int scene_calc_arrange(struct scene *scn, struct expo_arrange_info *arr)
 			label_id = menu->title_id;
 			break;
 		}
-		case SCENEOBJT_TEXTLINE: {
-			struct scene_obj_textline *tline;
-
-			tline = (struct scene_obj_textline *)obj,
-			label_id = tline->tin.label_id;
+		case SCENEOBJT_TEXTLINE:
+		case SCENEOBJT_TEXTEDIT:
+			label_id = scene_obj_txtin(obj)->label_id;
 			break;
-		}
 		}
 
 		if (label_id) {
@@ -1517,7 +1513,6 @@ int scene_calc_dims(struct scene *scn)
 			case SCENEOBJT_NONE:
 			case SCENEOBJT_TEXT:
 			case SCENEOBJT_BOX:
-			case SCENEOBJT_TEXTEDIT:
 			case SCENEOBJT_IMAGE: {
 				int width;
 
@@ -1533,6 +1528,19 @@ int scene_calc_dims(struct scene *scn)
 			}
 			case SCENEOBJT_MENU:
 				break;
+			case SCENEOBJT_TEXTEDIT: {
+				struct scene_obj_txtedit *ted;
+
+				ted = (struct scene_obj_txtedit *)obj;
+				if (!scn->expo->cons || do_menus)
+					continue;
+
+				ret = scene_txted_calc_dims(ted, scn->expo->cons);
+				if (ret)
+					return log_msg_ret("ted", ret);
+
+				break;
+			}
 			case SCENEOBJT_TEXTLINE: {
 				struct scene_obj_textline *tline;
 
