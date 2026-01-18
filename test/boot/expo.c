@@ -1572,6 +1572,12 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_assertok(expo_render(exp));
 	ut_asserteq(19841, video_compress_fb(uts, dev, false));
 
+	/* highlight the textedit and re-render */
+	scene_set_highlight_id(scn, OBJ_TEXTED);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21662, video_compress_fb(uts, dev, false));
+
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
 
