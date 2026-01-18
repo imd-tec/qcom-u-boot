@@ -54,21 +54,31 @@ int scene_txted_set_font(struct scene *scn, uint id, const char *font_name,
 
 int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons)
 {
+	const struct expo_theme *theme = &ted->obj.scene->expo->theme;
 	struct scene *scn = ted->obj.scene;
 	struct scene_obj_txt *txt;
-	int ret;
+	int x0, ret;
 
 	txt = scene_obj_find(scn, ted->tin.edit_id, SCENEOBJT_NONE);
 	if (!txt)
 		return log_msg_ret("txt", -ENOENT);
 
 	/*
-	 * Set the edit text's bbox to match the textedit's bbox. This ensures
-	 * SCENEOF_SIZE_VALID is set so vidconsole_measure() applies the width
-	 * limit for word-wrapping/clipping.
+	 * Set the edit text's bbox to fit within the textedit's bbox, after
+	 * the label. This ensures SCENEOF_SIZE_VALID is set so
+	 * vidconsole_measure() applies the width limit for word-wrapping.
 	 */
+	x0 = ted->obj.req_bbox.x0;
+	if (ted->tin.label_id) {
+		int width;
+
+		ret = scene_obj_get_hw(scn, ted->tin.label_id, &width);
+		if (ret < 0)
+			return log_msg_ret("lab", ret);
+		x0 += width + theme->textline_label_margin_x;
+	}
 	ret = scene_obj_set_bbox(scn, ted->tin.edit_id,
-				 ted->obj.req_bbox.x0, ted->obj.req_bbox.y0,
+				 x0, ted->obj.req_bbox.y0,
 				 ted->obj.req_bbox.x1, ted->obj.req_bbox.y1);
 	if (ret < 0)
 		return log_msg_ret("sbb", ret);
@@ -84,7 +94,8 @@ int scene_txted_calc_dims(struct scene_obj_txtedit *ted, struct udevice *cons)
 int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			struct scene_obj_txtedit *ted)
 {
-	int x;
+	struct scene_obj *edit;
+	int x, y;
 	int ret;
 
 	x = scene_txtin_arrange(scn, arr, &ted->obj, &ted->tin);
@@ -92,14 +103,29 @@ int scene_txted_arrange(struct scene *scn, struct expo_arrange_info *arr,
 		return log_msg_ret("arr", x);
 
 	/* constrain the edit text to fit within the textedit bbox */
-	ret = scene_obj_set_bbox(scn, ted->tin.edit_id, x, ted->obj.req_bbox.y0,
+	y = ted->obj.req_bbox.y0;
+	ret = scene_obj_set_bbox(scn, ted->tin.edit_id, x, y,
 				 ted->obj.req_bbox.x1, ted->obj.req_bbox.y1);
 	if (ret < 0)
 		return log_msg_ret("edi", ret);
 
+	/* Re-measure text with the correct limit (bbox may have changed) */
+	ret = scene_obj_get_hw(scn, ted->tin.edit_id, NULL);
+	if (ret < 0)
+		return log_msg_ret("hw", ret);
+
+	edit = scene_obj_find(scn, ted->tin.edit_id, SCENEOBJT_NONE);
+	if (!edit)
+		return log_msg_ret("fnd", -ENOENT);
+	x += edit->dims.x;
+	y += edit->dims.y;
+
+	/*
+	 * Set dims based on content size, but don't call scene_obj_set_size()
+	 * as that would overwrite the user-specified req_bbox
+	 */
 	ted->obj.dims.x = x - ted->obj.req_bbox.x0;
-	ted->obj.dims.y = 0;
-	scene_obj_set_size(scn, ted->obj.id, ted->obj.dims.x, ted->obj.dims.y);
+	ted->obj.dims.y = y - ted->obj.req_bbox.y0;
 
 	return 0;
 }
