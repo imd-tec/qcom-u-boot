@@ -46,6 +46,10 @@
 #define GFP_NOIO	((gfp_t)0)
 #endif
 
+/* Slab cache creation flags */
+#define SLAB_RECLAIM_ACCOUNT	0x00020000UL	/* Track pages reclaimed */
+#define SLAB_ACCOUNT		0x00000000UL	/* Account to memcg (no-op) */
+
 void *kmalloc(size_t size, gfp_t flags);
 
 static inline void *kzalloc(size_t size, gfp_t flags)

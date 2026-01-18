@@ -1106,8 +1106,8 @@ static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
 		clear_buffer_uptodate(bh);
 	unlock_buffer(bh);
 }
-#define REQ_OP_READ		0
 
+/* REQ_OP_READ is in linux/blk_types.h */
 /* SB_ACTIVE is in linux/fs.h */
 
 /* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
@@ -1127,9 +1127,7 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 #define DUMP_PREFIX_ADDRESS	0
 #define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
-/* Slab flags */
-#define SLAB_RECLAIM_ACCOUNT	0
-#define SLAB_ACCOUNT		0
+/* SLAB_RECLAIM_ACCOUNT, SLAB_ACCOUNT are in linux/slab.h */
 
 /* Forward declarations for super_operations and export_operations */
 struct kstatfs;
@@ -1214,13 +1212,7 @@ void ext4_unregister_li_request(struct super_block *sb);
 #define BLK_OPEN_WRITE			(1 << 1)
 #define BLK_OPEN_RESTRICT_WRITES	(1 << 2)
 
-/* Request operation (bits 0-7) and flags (bits 8+) */
-#define REQ_OP_WRITE			1
-#define REQ_OP_MASK			0xff
-
-/* ensure these values are outside the operations mask */
-#define REQ_SYNC			(1 << 8)
-#define REQ_FUA				(1 << 9)
+/* REQ_OP_*, REQ_SYNC, REQ_FUA are in linux/blk_types.h */
 
 /* blk_holder_ops for block device */
 struct blk_holder_ops {
