@@ -901,8 +901,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* try_cmpxchg is now in asm-generic/atomic.h */
 
-/* hash_64 - simple 64-bit hash */
-#define hash_64(val, bits)	((unsigned long)((val) >> (64 - (bits))))
+/* hash_64 - use linux/hash.h */
+#include <linux/hash.h>
 
 /* Dentry operations are now in linux/dcache.h */
 #define finish_open_simple(f, e)		(e)
@@ -1820,7 +1820,7 @@ int ext4_update_overhead(struct super_block *sb, bool force);
 /* fsmap is now in linux/fsmap.h */
 #include <linux/fsmap.h>
 
-/* list_sort and sort stubs for fsmap.c */
+/* list_sort and sort stubs for fsmap.c - not used in U-Boot */
 #define list_sort(priv, head, cmp) \
 	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
 #define sort(base, num, size, cmp, swap) \
