@@ -25,5 +25,8 @@ typedef __u32 __bitwise blk_opf_t;
 #define REQ_FUA			(1 << 9)	/* Forced unit access */
 #define REQ_PREFLUSH		(1 << 10)	/* Request cache flush */
 #define REQ_IDLE		(1 << 11)	/* Anticipate more I/O */
+#define REQ_META		(1 << 12)	/* Metadata I/O request */
+#define REQ_PRIO		(1 << 13)	/* Boost priority */
+#define REQ_RAHEAD		(1 << 14)	/* Read ahead */
 
 #endif /* _LINUX_BLK_TYPES_H */

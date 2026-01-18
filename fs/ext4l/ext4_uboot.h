@@ -125,10 +125,7 @@
 #define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
 #define data_race(expr)			(expr)
 
-/* Block I/O request flags - stubs */
-#define REQ_META	0
-#define REQ_PRIO	0
-#define REQ_RAHEAD	0
+/* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
 
 /* GFP flags - stubs */
 #define __GFP_MOVABLE	0
