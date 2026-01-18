@@ -71,37 +71,24 @@ int scene_textline_calc_dims(struct scene_obj_textline *tline,
 int scene_textline_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			   struct scene_obj_textline *tline)
 {
-	const bool open = tline->obj.flags & SCENEOF_OPEN;
-	const struct expo_theme *theme = &scn->expo->theme;
-	bool point;
+	struct scene_obj *edit;
 	int x, y;
 	int ret;
 
-	x = tline->obj.req_bbox.x0;
+	x = scene_txtin_arrange(scn, arr, &tline->obj, &tline->tin);
+	if (x < 0)
+		return log_msg_ret("arr", x);
+
 	y = tline->obj.req_bbox.y0;
-	if (tline->tin.label_id) {
-		struct scene_obj *edit;
+	ret = scene_obj_set_pos(scn, tline->tin.edit_id, x, y);
+	if (ret < 0)
+		return log_msg_ret("pos", ret);
 
-		ret = scene_obj_set_pos(scn, tline->tin.label_id, x, y);
-		if (ret < 0)
-			return log_msg_ret("tit", ret);
-
-		x += arr->label_width + theme->textline_label_margin_x;
-		ret = scene_obj_set_pos(scn, tline->tin.edit_id, x, y);
-		if (ret < 0)
-			return log_msg_ret("til", ret);
-
-		edit = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
-		if (!edit)
-			return log_msg_ret("tie", -ENOENT);
-		x += edit->dims.x;
-		y += edit->dims.y;
-	}
-
-	point = scn->highlight_id == tline->obj.id;
-	point &= !open;
-	scene_obj_flag_clrset(scn, tline->tin.edit_id, SCENEOF_POINT,
-			      point ? SCENEOF_POINT : 0);
+	edit = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
+	if (!edit)
+		return log_msg_ret("fnd", -ENOENT);
+	x += edit->dims.x;
+	y += edit->dims.y;
 
 	tline->obj.dims.x = x - tline->obj.req_bbox.x0;
 	tline->obj.dims.y = y - tline->obj.req_bbox.y0;

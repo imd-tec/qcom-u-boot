@@ -522,6 +522,20 @@ void scene_menu_calc_bbox(struct scene_obj_menu *menu,
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars);
 
 /**
+ * scene_txtin_arrange() - Arrange common parts of a text-input object
+ *
+ * Sets the label position and SCENEOF_POINT flag
+ *
+ * @scn: Scene containing the object
+ * @arr: Arrangement info
+ * @obj: Object to arrange
+ * @tin: Text-input info
+ * Return: x position for edit object (positive), or -ve on error
+ */
+int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj *obj, struct scene_txtin *tin);
+
+/**
  * scene_txtin_calc_bbox() - Calculate bounding box for a text-input object
  *
  * @obj: Object to process

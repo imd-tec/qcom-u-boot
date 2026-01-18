@@ -27,6 +27,32 @@ int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
 	return 0;
 }
 
+int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
+			struct scene_obj *obj, struct scene_txtin *tin)
+{
+	const bool open = obj->flags & SCENEOF_OPEN;
+	const struct expo_theme *theme = &scn->expo->theme;
+	bool point;
+	int x;
+	int ret;
+
+	x = obj->req_bbox.x0;
+	if (tin->label_id) {
+		ret = scene_obj_set_pos(scn, tin->label_id, x, obj->req_bbox.y0);
+		if (ret < 0)
+			return log_msg_ret("lab", ret);
+
+		x += arr->label_width + theme->textline_label_margin_x;
+	}
+
+	point = scn->highlight_id == obj->id;
+	point &= !open;
+	scene_obj_flag_clrset(scn, tin->edit_id, SCENEOF_POINT,
+			      point ? SCENEOF_POINT : 0);
+
+	return x;
+}
+
 void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 			   struct vidconsole_bbox *bbox,
 			   struct vidconsole_bbox *edit_bbox)
