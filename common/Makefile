@@ -97,6 +97,7 @@ obj-$(CONFIG_DFU_OVER_USB) += dfu.o
 obj-y += command.o
 obj-$(CONFIG_$(PHASE_)LOG) += log.o
 obj-$(CONFIG_$(PHASE_)LOG_CONSOLE) += log_console.o
+obj-$(CONFIG_LOG_FILE) += log_file.o
 obj-$(CONFIG_$(PHASE_)LOG_SYSLOG) += log_syslog.o
 obj-y += s_record.o
 obj-$(CONFIG_CMD_LOADB) += xyzModem.o

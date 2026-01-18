@@ -453,6 +453,14 @@ config LOG_SYSLOG
 	  Enables a log driver which broadcasts log records via UDP port 514
 	  to syslog servers.
 
+config LOG_FILE
+	bool "Log output to a file (sandbox only)"
+	depends on SANDBOX
+	help
+	  Enables a log driver which writes log records to a file. Set the
+	  'log_file' environment variable to the filename to use, or call
+	  log_file_set_fname() to set it programmatically.
+
 config SPL_LOG
 	bool "Enable logging support in SPL"
 	depends on LOG && SPL

@@ -172,9 +172,14 @@ enabled or disabled independently:
 
 * console - goes to stdout
 * syslog - broadcast RFC 3164 messages to syslog servers on UDP port 514
+* file - writes to a file (sandbox only)
 
 The syslog driver sends the value of environmental variable 'log_hostname' as
 HOSTNAME if available.
+
+The file driver sends log records to a file and is only available in sandbox.
+Set the 'log_file' environment variable to specify the filename, or call
+log_file_set_fname() to set it programmatically.
 
 Filters
 -------

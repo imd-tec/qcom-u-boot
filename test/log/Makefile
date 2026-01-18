@@ -10,6 +10,7 @@ ifdef CONFIG_UT_LOG
 ifdef CONFIG_SANDBOX
 obj-$(CONFIG_LOG_SYSLOG) += syslog_test.o
 obj-$(CONFIG_LOG_SYSLOG) += syslog_test_ndebug.o
+obj-$(CONFIG_LOG_FILE) += log_file_test.o
 endif
 
 ifdef CONFIG_LOG

@@ -675,6 +675,17 @@ int log_remove_filter(const char *drv_name, int filter_num);
  */
 int log_device_set_enable(struct log_driver *drv, bool enable);
 
+/**
+ * log_file_set_fname() - Set the filename for the file log driver
+ *
+ * This sets or changes the file used by the file log driver. If a file is
+ * already open it is closed first.
+ *
+ * @fname: Filename to use, or NULL to close any existing file
+ * Return: 0 if OK, -ve on error
+ */
+int log_file_set_fname(const char *fname);
+
 #if CONFIG_IS_ENABLED(LOG)
 /**
  * log_init() - Set up the log system ready for use

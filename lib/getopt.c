@@ -25,8 +25,8 @@ int __getopt(struct getopt_state *gs, int argc, char *const argv[],
 	const char *curoptp; /* pointer to the current option in optstring */
 
 	while (1) {
-		log_debug("arg_index: %d index: %d\n", gs->arg_index,
-			  gs->index);
+		log_content("arg_index: %d index: %d\n", gs->arg_index,
+			    gs->index);
 
 		/* `--` indicates the end of options */
 		if (gs->arg_index == 1 && argv[gs->index] &&

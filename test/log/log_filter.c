@@ -39,11 +39,12 @@ static int log_test_filter(struct unit_test_state *uts)
 
 #define create_filter(args, filter_num) do {\
 	ut_assertok(run_command("log filter-add -p " args, 0)); \
+	console_record_readline(uts->actual_str, sizeof(uts->actual_str)); \
 	ut_assertok(strict_strtoul(uts->actual_str, 10, &(filter_num))); \
 	ut_assert_console_end(); \
 } while (0)
 
-	create_filter("", filt1);
+	create_filter("-l info", filt1);
 	create_filter("-DL warning -cmmc -cspi -ffile", filt2);
 
 	ldev = log_device_find_by_name("console");
@@ -52,7 +53,7 @@ static int log_test_filter(struct unit_test_state *uts)
 		if (filt->filter_num == filt1) {
 			filt1_found = true;
 			ut_asserteq(0, filt->flags);
-			ut_asserteq(LOGL_MAX, filt->level);
+			ut_asserteq(LOGL_INFO, filt->level);
 			ut_assertnull(filt->file_list);
 		} else if (filt->filter_num == filt2) {
 			filt2_found = true;
@@ -89,8 +90,8 @@ static int log_test_filter(struct unit_test_state *uts)
 	ut_asserteq(false, filt1_found);
 	ut_asserteq(false, filt2_found);
 
-	create_filter("", filt1);
-	create_filter("", filt2);
+	create_filter("-l info", filt1);
+	create_filter("-l info", filt2);
 
 	ut_assertok(run_command("log filter-remove -a", 0));
 	ut_assert_console_end();
