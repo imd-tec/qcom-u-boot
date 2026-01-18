@@ -786,6 +786,7 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 		break;
 	}
 	case SCENEOBJT_TEXTLINE:
+	case SCENEOBJT_TEXTEDIT:
 		if (obj->flags & SCENEOF_OPEN)
 			scene_render_background(obj, true, false);
 		break;
@@ -796,10 +797,6 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 			       obj->bbox.y1, box->width, vid_priv->colour_fg, box->fill);
 		break;
 	}
-	case SCENEOBJT_TEXTEDIT:
-		if (obj->flags & SCENEOF_OPEN)
-			scene_render_background(obj, true, false);
-		break;
 	}
 
 	return 0;
@@ -1621,10 +1618,7 @@ int scene_apply_theme(struct scene *scn, struct expo_theme *theme)
 		case SCENEOBJT_MENU:
 		case SCENEOBJT_BOX:
 		case SCENEOBJT_TEXTLINE:
-			break;
 		case SCENEOBJT_TEXTEDIT:
-			scene_txted_set_font(scn, obj->id, NULL,
-					     theme->font_size);
 			break;
 		case SCENEOBJT_TEXT:
 			scene_txt_set_font(scn, obj->id, NULL,
