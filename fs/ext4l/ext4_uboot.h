@@ -305,8 +305,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 /* atomic_add_unless is now in asm-generic/atomic.h */
 
-/* Block group lock - stub */
-#define bgl_lock_ptr(lock, group)	NULL
+/* bgl_lock_ptr is now in linux/blockgroup_lock.h */
 
 /* RCU stubs - use linux/rcupdate.h */
 #include <linux/rcupdate.h>
@@ -1107,17 +1106,8 @@ struct file_operations {
 	int (*release)(struct inode *, struct file *);
 };
 
-/* delayed_call - for delayed freeing of symlink data */
-typedef void (*delayed_call_func_t)(const void *);
-struct delayed_call {
-	delayed_call_func_t fn;
-	const void *arg;
-};
-
-#define set_delayed_call(dc, func, data) do { \
-	(dc)->fn = (func); \
-	(dc)->arg = (data); \
-} while (0)
+/* delayed_call - use linux/delayed_call.h */
+#include <linux/delayed_call.h>
 
 #define kfree_link		kfree
 
@@ -1335,10 +1325,8 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* Max file size for large files */
 #define MAX_LFS_FILESIZE		((loff_t)LLONG_MAX)
 
-/* blockgroup_lock for per-group locking */
-struct blockgroup_lock {
-	int num_locks;	/* U-Boot doesn't need real locking */
-};
+/* blockgroup_lock - use linux/blockgroup_lock.h */
+#include <linux/blockgroup_lock.h>
 
 /* Buffer submission stubs - declarations for stub.c implementations */
 int submit_bh(int op_flags, struct buffer_head *bh);
@@ -1444,8 +1432,7 @@ int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
 u64 sb_bdev_nr_blocks(struct super_block *sb);
 unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 
-/* Blockgroup lock init - stub */
-#define bgl_lock_init(lock)		do { } while (0)
+/* bgl_lock_init is now in linux/blockgroup_lock.h */
 
 /* Task I/O priority - declaration for stub.c */
 void set_task_ioprio(void *task, int ioprio);
