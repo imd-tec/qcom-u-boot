@@ -569,15 +569,17 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox *bbox);
 
 /**
- * scene_textline_open() - Open a textline object
+ * scene_txtin_open() - Open a text-input object
  *
  * Set up the text editor ready for use
  *
- * @scn: Scene containing the textline
- * @tline: textline object
+ * @scn: Scene containing the object
+ * @obj: Object to open
+ * @tin: Text-input info
  * Return: 0 if OK, -ve on error
  */
-int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline);
+int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
+		     struct scene_txtin *tin);
 
 /**
  * scene_textline_close() - Close a textline object

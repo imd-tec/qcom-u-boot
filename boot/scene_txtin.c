@@ -10,8 +10,10 @@
 
 #include <expo.h>
 #include <log.h>
+#include <menu.h>
 #include <video_console.h>
 #include <linux/errno.h>
+#include <linux/string.h>
 #include "scene_internal.h"
 
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
@@ -82,6 +84,53 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 
 		vidconsole_show_cursor(cons);
 	}
+
+	return 0;
+}
+
+/**
+ * scene_txtin_putch() - Output a character to the vidconsole
+ *
+ * This is used as the putch callback for CLI line editing, so that characters
+ * are sent to the correct vidconsole.
+ *
+ * @cls: CLI line state
+ * @ch: Character to output
+ */
+static void scene_txtin_putch(struct cli_line_state *cls, int ch)
+{
+	struct scene *scn = container_of(cls, struct scene, cls);
+
+	vidconsole_put_char(scn->expo->cons, ch);
+}
+
+int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
+		     struct scene_txtin *tin)
+{
+	struct udevice *cons = scn->expo->cons;
+	struct scene_obj_txt *txt;
+	int ret;
+
+	/* Copy the text into the scene buffer in case the edit is cancelled */
+	memcpy(abuf_data(&scn->buf), abuf_data(&tin->buf),
+	       abuf_size(&scn->buf));
+
+	/* get the position of the editable */
+	txt = scene_obj_find(scn, tin->edit_id, SCENEOBJT_NONE);
+	if (!txt)
+		return log_msg_ret("cur", -ENOENT);
+
+	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
+	vidconsole_entry_start(cons);
+	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
+	scn->cls.insert = true;
+	scn->cls.putch = scene_txtin_putch;
+	ret = vidconsole_entry_save(cons, &scn->entry_save);
+	if (ret)
+		return log_msg_ret("sav", ret);
+
+	/* make sure the cursor is visible */
+	vidconsole_readline_start(true);
 
 	return 0;
 }

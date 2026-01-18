@@ -1670,11 +1670,10 @@ static int scene_obj_open(struct scene *scn, struct scene_obj *obj)
 	case SCENEOBJT_MENU:
 	case SCENEOBJT_TEXT:
 	case SCENEOBJT_BOX:
-	case SCENEOBJT_TEXTEDIT:
 		break;
 	case SCENEOBJT_TEXTLINE:
-		ret = scene_textline_open(scn,
-					  (struct scene_obj_textline *)obj);
+	case SCENEOBJT_TEXTEDIT:
+		ret = scene_txtin_open(scn, obj, scene_obj_txtin(obj));
 		if (ret)
 			return log_msg_ret("op", ret);
 		break;
