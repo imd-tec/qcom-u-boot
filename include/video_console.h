@@ -278,7 +278,7 @@ struct vidconsole_ops {
 	 * entry_start() - Indicate that text entry is starting afresh
 	 *
 	 * @dev:	Device to adjust
-	 * @ctx:	Vidconsole context to use
+	 * @ctx:	Vidconsole context to use (cannot be NULL)
 	 * Returns: 0 on success, -ve on error
 	 *
 	 * Consoles which use proportional fonts need to track the position of
@@ -596,9 +596,10 @@ int vidconsole_hide_cursor(struct udevice *dev);
  * Called at the start of command line input to show the cursor
  *
  * @dev: vidconsole device
+ * @vctx: vidconsole context to use, or NULL to use the default
  * @indent: indent subsequent lines to the same position as the first line
  */
-void vidconsole_readline_start(struct udevice *dev, bool indent);
+void vidconsole_readline_start(struct udevice *dev, void *vctx, bool indent);
 
 /**
  * vidconsole_readline_end() - Disable cursor for a video console
@@ -606,8 +607,9 @@ void vidconsole_readline_start(struct udevice *dev, bool indent);
  * Called at the end of command line input to hide the cursor
  *
  * @dev: vidconsole device
+ * @vctx: vidconsole context to use, or NULL to use the default
  */
-void vidconsole_readline_end(struct udevice *dev);
+void vidconsole_readline_end(struct udevice *dev, void *vctx);
 
 /**
  * vidconsole_readline_start_all() - Enable cursor for all video consoles
@@ -637,11 +639,12 @@ static inline int vidconsole_hide_cursor(struct udevice *dev)
 	return 0;
 }
 
-static inline void vidconsole_readline_start(struct udevice *dev, bool indent)
+static inline void vidconsole_readline_start(struct udevice *dev, void *vctx,
+					     bool indent)
 {
 }
 
-static inline void vidconsole_readline_end(struct udevice *dev)
+static inline void vidconsole_readline_end(struct udevice *dev, void *vctx)
 {
 }
 
