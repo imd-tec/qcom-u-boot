@@ -454,10 +454,9 @@ error:
 }
 
 /* Put that actual character on the screen (using the UTF-32 code points). */
-static int vidconsole_output_glyph(struct udevice *dev, int ch)
+static int vidconsole_output_glyph(struct udevice *dev,
+				   struct vidconsole_ctx *ctx, int ch)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	int ret;
 
 	if (_DEBUG) {
@@ -473,7 +472,8 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	ret = vidconsole_putc_xy(dev, ctx, ctx->xcur_frac, ctx->ycur, ch);
 	if (ret == -EAGAIN) {
 		vidconsole_newline(dev, ctx);
-		ret = vidconsole_putc_xy(dev, ctx, ctx->xcur_frac, ctx->ycur, ch);
+		ret = vidconsole_putc_xy(dev, ctx, ctx->xcur_frac, ctx->ycur,
+					 ch);
 	}
 	if (ret < 0)
 		return ret;
@@ -535,7 +535,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		} else {
 			cp = ch;
 		}
-		ret = vidconsole_output_glyph(dev, cp);
+		ret = vidconsole_output_glyph(dev, ctx, cp);
 		if (ret < 0)
 			return ret;
 		break;
