@@ -42,9 +42,19 @@
 #ifndef __GFP_NOFAIL
 #define __GFP_NOFAIL	((gfp_t)0)
 #endif
+#ifndef __GFP_MOVABLE
+#define __GFP_MOVABLE	((gfp_t)0)
+#endif
+#ifndef __GFP_FS
+#define __GFP_FS	((gfp_t)0)
+#endif
 #ifndef GFP_NOIO
 #define GFP_NOIO	((gfp_t)0)
 #endif
+
+/* Slab cache creation flags */
+#define SLAB_RECLAIM_ACCOUNT	0x00020000UL	/* Track pages reclaimed */
+#define SLAB_ACCOUNT		0x00000000UL	/* Account to memcg (no-op) */
 
 void *kmalloc(size_t size, gfp_t flags);
 

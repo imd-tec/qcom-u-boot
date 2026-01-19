@@ -18,6 +18,13 @@ struct gendisk;
 /* Block size helpers */
 #define bdev_logical_block_size(bdev)	512
 
+/* Block device open flags */
+#define BLK_OPEN_READ			(1 << 0)
+#define BLK_OPEN_WRITE			(1 << 1)
+#define BLK_OPEN_EXCL			(1 << 2)
+#define BLK_OPEN_NDELAY			(1 << 3)
+#define BLK_OPEN_RESTRICT_WRITES	(1 << 4)
+
 /**
  * struct blk_plug - block I/O plug
  *

@@ -24,5 +24,6 @@ struct rw_semaphore {
 #define down_write_trylock(sem)	1
 #define up_write(sem)		do { } while (0)
 #define downgrade_write(sem)	do { } while (0)
+#define rwsem_is_locked(sem)	(1)
 
 #endif /* _LINUX_RWSEM_H */

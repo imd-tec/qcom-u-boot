@@ -346,9 +346,7 @@ void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 	return NULL;
 }
 
-void inode_set_iversion(struct inode *inode, u64 version)
-{
-}
+/* inode_set_iversion is now a macro in linux/iversion.h */
 
 /* rwlock_init is now a macro in linux/spinlock.h */
 
@@ -402,15 +400,7 @@ int ___ratelimit(struct ratelimit_state *rs, const char *func)
 	return 1;
 }
 
-/* I/O priority */
-int IOPRIO_PRIO_VALUE(int class, int data)
-{
-	return (class << 13) | data;
-}
-
-void set_task_ioprio(void *task, int ioprio)
-{
-}
+/* I/O priority stubs are now in linux/ioprio.h */
 
 /* ext4_fc_init is now in fast_commit.c */
 
@@ -622,35 +612,7 @@ long ext4_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 /* nop_mnt_idmap - no-op mount ID map for xattr.c */
 struct mnt_idmap nop_mnt_idmap;
 
-/* Quota stubs for xattr.c */
-int dquot_alloc_space_nodirty(struct inode *inode, loff_t size)
-{
-	return 0;
-}
-
-void dquot_free_space_nodirty(struct inode *inode, loff_t size)
-{
-}
-
-int dquot_alloc_block(struct inode *inode, loff_t nr)
-{
-	/*
-	 * Update i_blocks to reflect the allocated blocks.
-	 * i_blocks is in 512-byte units, so convert from fs blocks.
-	 */
-	inode->i_blocks += nr << (inode->i_blkbits - 9);
-
-	return 0;
-}
-
-void dquot_free_block(struct inode *inode, loff_t nr)
-{
-	/*
-	 * Update i_blocks to reflect the freed blocks.
-	 * i_blocks is in 512-byte units, so convert from fs blocks.
-	 */
-	inode->i_blocks -= nr << (inode->i_blkbits - 9);
-}
+/* Quota stubs are now macros in linux/quotaops.h */
 
 /*
  * JBD2 stubs - temporary stubs until other jbd2 files are added

@@ -180,4 +180,52 @@ struct stat {
 }
 #endif
 
+/*
+ * STATX flags and attributes
+ */
+#define STATX_BTIME		0x00000800U	/* Want/got btime */
+#define STATX_DIOALIGN		0x00002000U	/* Want/got dio alignment */
+#define STATX_WRITE_ATOMIC	0x00004000U	/* Want/got atomic writes */
+
+/* File attributes for STATX */
+#define STATX_ATTR_COMPRESSED	0x00000004	/* Compressed file */
+#define STATX_ATTR_IMMUTABLE	0x00000010	/* Immutable file */
+#define STATX_ATTR_APPEND	0x00000020	/* Append-only file */
+#define STATX_ATTR_NODUMP	0x00000040	/* No dump file */
+#define STATX_ATTR_ENCRYPTED	0x00000800	/* Encrypted file */
+#define STATX_ATTR_VERITY	0x00100000	/* Verity protected file */
+
+#include <linux/time.h>
+
+/**
+ * struct kstat - stat buffer for VFS
+ *
+ * Extended stat buffer used internally by the VFS. Contains all information
+ * returned by statx() system call.
+ */
+struct kstat {
+	u64 ino;
+	dev_t dev;
+	umode_t mode;
+	unsigned int nlink;
+	uid_t uid;
+	gid_t gid;
+	dev_t rdev;
+	loff_t size;
+	struct timespec64 atime;
+	struct timespec64 mtime;
+	struct timespec64 ctime;
+	struct timespec64 btime;		/* Birth/creation time */
+	u64 blocks;
+	u32 blksize;
+	u64 attributes;
+	u64 attributes_mask;
+	u32 result_mask;
+	u32 dio_mem_align;
+	u32 dio_offset_align;
+	u32 atomic_write_unit_min;
+	u32 atomic_write_unit_max;
+	u32 atomic_write_segments_max;
+};
+
 #endif

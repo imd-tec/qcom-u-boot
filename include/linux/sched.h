@@ -16,6 +16,10 @@ struct io_context {
 	unsigned int ioprio;
 };
 
+/* Process flags */
+#define PF_MEMALLOC		0x00000800	/* Allocating memory */
+#define PF_MEMALLOC_NOFS	0x00040000	/* GFP_NOFS allocations */
+
 struct task_struct {
 	int pid;
 	char comm[16];
@@ -40,5 +44,12 @@ extern struct task_struct *current;
 
 #define signal_pending(task)	0
 #define fatal_signal_pending(task)	0
+
+/* Scheduler timeout stubs - return immediately in U-Boot */
+#define schedule_timeout_interruptible(timeout)		({ (void)(timeout); 0; })
+#define schedule_timeout_uninterruptible(timeout)	do { (void)(timeout); } while (0)
+
+/* Check if rescheduling is needed - always false in single-threaded U-Boot */
+#define need_resched()		(0)
 
 #endif /* _LINUX_SCHED_H */

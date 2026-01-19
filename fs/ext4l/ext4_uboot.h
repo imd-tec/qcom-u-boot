@@ -125,14 +125,8 @@
 #define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
 #define data_race(expr)			(expr)
 
-/* Block I/O request flags - stubs */
-#define REQ_META	0
-#define REQ_PRIO	0
-#define REQ_RAHEAD	0
-
-/* GFP flags - stubs */
-#define __GFP_MOVABLE	0
-#define __GFP_FS	0
+/* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
+/* __GFP_MOVABLE, __GFP_FS are in linux/slab.h */
 
 /* Capabilities - use linux/capability.h */
 #include <linux/capability.h>
@@ -239,21 +233,16 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* Group permission - stub */
 #define in_group_p(gid)			(0)
 
-/* Quota operations - stubs */
-#define dquot_alloc_block_nofail(inode, nr)	\
-	({ (inode)->i_blocks += (nr) << ((inode)->i_blkbits - 9); 0; })
-#define dquot_initialize(inode)			({ (void)(inode); 0; })
-#define dquot_free_inode(inode)			do { (void)(inode); } while (0)
-#define dquot_alloc_inode(inode)		({ (void)(inode); 0; })
-#define dquot_drop(inode)			do { (void)(inode); } while (0)
+/* Quota operations - use linux/quotaops.h */
+#include <linux/quotaops.h>
 
 /* icount - inode reference count */
 #define icount_read(inode)			(1)
 
 /* d_inode is now in linux/dcache.h */
 
-/* Random number functions */
-#define get_random_u32_below(max)		(0)
+/* Random number functions - use linux/random.h */
+#include <linux/random.h>
 
 /* Buffer cache operations */
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
@@ -496,55 +485,15 @@ static inline int bdev_read_only(struct block_device *bdev)
 
 /* SB_LAZYTIME is in linux/fs.h */
 /* ATTR_* iattr valid flags are in linux/fs.h */
-
-/* STATX flags and attributes */
-#define STATX_BTIME		0x00000800U
-#define STATX_DIOALIGN		0x00002000U
-#define STATX_WRITE_ATOMIC	0x00004000U
-#define STATX_ATTR_COMPRESSED	0x00000004
-#define STATX_ATTR_IMMUTABLE	0x00000010
-#define STATX_ATTR_APPEND	0x00000020
-#define STATX_ATTR_NODUMP	0x00000040
-#define STATX_ATTR_ENCRYPTED	0x00000800
-#define STATX_ATTR_VERITY	0x00100000
-
+/* STATX_* flags and struct kstat are in linux/stat.h */
 /* VM fault return values are in linux/mm_types.h */
-
 /* struct path is defined in linux/fs.h */
-
-/* struct kstat - stat buffer */
-struct kstat {
-	u64 ino;
-	dev_t dev;
-	umode_t mode;
-	unsigned int nlink;
-	uid_t uid;
-	gid_t gid;
-	dev_t rdev;
-	loff_t size;
-	struct timespec64 atime;
-	struct timespec64 mtime;
-	struct timespec64 ctime;
-	struct timespec64 btime;
-	u64 blocks;
-	u32 blksize;
-	u64 attributes;
-	u64 attributes_mask;
-	u32 result_mask;
-	u32 dio_mem_align;
-	u32 dio_offset_align;
-	u32 atomic_write_unit_min;
-	u32 atomic_write_unit_max;
-	u32 atomic_write_segments_max;
-};
-
 /* VM structs (vm_area_struct, page, vm_fault, vm_operations_struct) are in linux/mm_types.h */
 
 /* Forward declaration for swap */
 struct swap_info_struct;
 
-/* Process flags */
-#define PF_MEMALLOC		0x00000800
+/* PF_MEMALLOC is in linux/sched.h */
 
 /* Forward declarations for inode operations */
 struct inode_operations;
@@ -763,8 +712,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 
 /* extents.c stubs */
 
-/* rwsem is_locked stub */
-#define rwsem_is_locked(sem)		(1)
+/* rwsem_is_locked is in linux/rwsem.h */
 
 /* Buffer operations */
 #define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
@@ -815,15 +763,10 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
 #define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
-/* in_range helper - check if value is in range [start, start+len) */
-static inline int in_range(unsigned long val, unsigned long start,
-			   unsigned long len)
-{
-	return val >= start && val < start + len;
-}
+/* in_range - use linux/minmax.h */
+#include <linux/minmax.h>
 
-/* Quota stub */
-#define dquot_reclaim_block(i, n)	do { } while (0)
+/* dquot_reclaim_block is in linux/quotaops.h */
 
 /* fiemap stubs are now in linux/fiemap.h */
 
@@ -850,9 +793,8 @@ static inline int in_range(unsigned long val, unsigned long start,
 /* ktime functions - use linux/ktime.h */
 #include <linux/ktime.h>
 
-/* hrtimer stubs */
-#define HRTIMER_MODE_ABS		0
-#define schedule_hrtimeout(exp, mode)	({ (void)(exp); (void)(mode); 0; })
+/* hrtimer - use linux/hrtimer.h */
+#include <linux/hrtimer.h>
 
 /* write lock variants */
 #define write_trylock(lock)		({ (void)(lock); 1; })
@@ -867,18 +809,10 @@ static inline int in_range(unsigned long val, unsigned long start,
 #include <linux/pagemap.h>
 #include <linux/xarray.h>
 
-/* wbc_to_tag - convert writeback control to pagecache tag */
-static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
-{
-	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
-		return PAGECACHE_TAG_TOWRITE;
-	return PAGECACHE_TAG_DIRTY;
-}
+/* wbc_to_tag, WB_REASON_* - use linux/writeback.h */
+#include <linux/writeback.h>
 
 /* blk_plug is now in linux/blkdev.h */
-
-/* Writeback reasons */
-#define WB_REASON_FS_FREE_SPACE	0
 
 /* address_space_operations is in linux/fs.h */
 /* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
@@ -928,19 +862,14 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 #define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
 #define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
 
-/* d_path - get pathname - stub returns empty path */
-static inline char *d_path(const struct path *path, char *buf, int buflen)
-{
-	if (buflen > 0)
-		buf[0] = '\0';
-	return buf;
-}
+/* d_path, path_put - use linux/path.h */
+#include <linux/path.h>
 
 /* fscrypt_file_open is in ext4_fscrypt.h */
-#define fsverity_file_open(i, f)		({ (void)(i); (void)(f); 0; })
+/* fsverity_file_open is in linux/fsverity.h */
+#include <linux/fsverity.h>
 
-/* Quota file open - stub */
-#define dquot_file_open(i, f)			({ (void)(i); (void)(f); 0; })
+/* dquot_file_open is in linux/quotaops.h */
 
 /* Inode I/O list management */
 #define inode_io_list_del(inode)		do { } while (0)
@@ -950,18 +879,12 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 /* Folio operations and writeback stubs are in linux/pagemap.h */
 #define folio_batch_release(fb)			do { } while (0)
 
-/* Quota stubs - additional */
-#define dquot_claim_block(i, n)			({ (void)(i); (void)(n); 0; })
-#define dquot_reserve_block(i, n)		({ (void)(i); (void)(n); 0; })
-#define dquot_release_reservation_block(i, n)	do { } while (0)
-#define dquot_initialize_needed(i)		(0)
-#define dquot_transfer(m, i, a)			({ (void)(m); (void)(i); (void)(a); 0; })
-#define is_quota_modification(m, i, a)		({ (void)(m); (void)(i); (void)(a); 0; })
+/* Quota stubs are in linux/quotaops.h */
 
 /* percpu_counter_sub is in linux/percpu_counter.h */
 
 /* Filemap operations are in linux/pagemap.h */
-#define try_to_writeback_inodes_sb(sb, r)	do { } while (0)
+/* try_to_writeback_inodes_sb is in linux/writeback.h */
 
 /* Buffer operations - additional */
 #define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
@@ -980,9 +903,7 @@ static inline char *d_path(const struct path *path, char *buf, int buflen)
 
 /* fscrypt_name, fscrypt_match_name, and fscrypt stubs are in ext4_fscrypt.h */
 
-/* fsverity stubs */
-#define fsverity_prepare_setattr(d, a)		({ (void)(d); (void)(a); 0; })
-#define fsverity_active(i)			(0)
+/* fsverity stubs are in linux/fsverity.h */
 
 /* Inode time setters - needed for ext4.h */
 static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
@@ -999,13 +920,9 @@ static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
 	return ts;
 }
 
-/* Inode version operations */
-#define inode_peek_iversion_raw(i)		(0ULL)
-#define inode_peek_iversion(i)			(0ULL)
+/* Inode version operations - use linux/iversion.h */
+#include <linux/iversion.h>
 #define inode_set_flags(i, f, m)		do { } while (0)
-#define inode_set_iversion_raw(i, v)		do { } while (0)
-#define inode_set_iversion_queried(i, v)	do { } while (0)
-#define inode_inc_iversion(i)			do { } while (0)
 
 /* Inode credential helpers */
 static inline unsigned int i_uid_read(const struct inode *inode)
@@ -1079,9 +996,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 
 /* Readahead operations are in linux/pagemap.h */
 
-/* Inode version operations */
-#define inode_eq_iversion(i, v)			({ (void)(i); (void)(v); 1; })
-#define inode_query_iversion(i)			({ (void)(i); 0ULL; })
+/* Inode version operations are in linux/iversion.h */
 
 /* dir_emit, dir_relax_shared are in linux/fs.h */
 
@@ -1170,10 +1085,7 @@ static inline const char *simple_get_link(struct dentry *dentry,
  * Additional stubs for super.c
  */
 
-/* Quota format constants */
-#define QFMT_VFS_OLD		1
-#define QFMT_VFS_V0		2
-#define QFMT_VFS_V1		4
+/* QFMT_VFS_* quota format constants are in linux/quotaops.h */
 
 /* Buffer read sync */
 static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
@@ -1184,8 +1096,8 @@ static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
 		clear_buffer_uptodate(bh);
 	unlock_buffer(bh);
 }
-#define REQ_OP_READ		0
 
+/* REQ_OP_READ is in linux/blk_types.h */
 /* SB_ACTIVE is in linux/fs.h */
 
 /* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
@@ -1195,19 +1107,13 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 #define sectors			__ext4_sectors
 #define part_stat_read(p, f)	({ (void)(p); (void)(f); 0ULL; })
 
-/* System state - U-Boot is always running */
-#define system_state		0
-#define SYSTEM_HALT		1
-#define SYSTEM_POWER_OFF	2
-#define SYSTEM_RESTART		3
+/* system_state, SYSTEM_HALT, etc. are in linux/kernel.h */
 
 /* Hex dump */
 #define DUMP_PREFIX_ADDRESS	0
 #define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
-/* Slab flags */
-#define SLAB_RECLAIM_ACCOUNT	0
-#define SLAB_ACCOUNT		0
+/* SLAB_RECLAIM_ACCOUNT, SLAB_ACCOUNT are in linux/slab.h */
 
 /* Forward declarations for super_operations and export_operations */
 struct kstatfs;
@@ -1267,9 +1173,7 @@ int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
 int ext4_commit_super(struct super_block *sb);
 void ext4_unregister_li_request(struct super_block *sb);
 
-/* prandom */
-#define get_random_u32()		0
-#define prandom_u32_max(max)		0
+/* prandom - get_random_u32, prandom_u32_max are in linux/random.h */
 
 /* ctype */
 #include <linux/ctype.h>
@@ -1279,28 +1183,18 @@ void ext4_unregister_li_request(struct super_block *sb);
 
 /* Timer and timing stubs are in linux/jiffies.h */
 
-/* Path lookup flags */
-#define LOOKUP_FOLLOW			0x0001
+/* Path lookup flags - use linux/namei.h */
+#include <linux/namei.h>
 
-/* I/O priority classes */
-#define IOPRIO_CLASS_BE			2
+/* I/O priority classes - use linux/ioprio.h */
+#include <linux/ioprio.h>
 
 /* SB_INLINECRYPT, SB_SILENT, SB_POSIXACL are in linux/fs.h */
 #define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
 #define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
 
-/* Block open flags */
-#define BLK_OPEN_READ			(1 << 0)
-#define BLK_OPEN_WRITE			(1 << 1)
-#define BLK_OPEN_RESTRICT_WRITES	(1 << 2)
-
-/* Request operation (bits 0-7) and flags (bits 8+) */
-#define REQ_OP_WRITE			1
-#define REQ_OP_MASK			0xff
-
-/* ensure these values are outside the operations mask */
-#define REQ_SYNC			(1 << 8)
-#define REQ_FUA				(1 << 9)
+/* BLK_OPEN_* flags are in linux/blkdev.h */
+/* REQ_OP_*, REQ_SYNC, REQ_FUA are in linux/blk_types.h */
 
 /* blk_holder_ops for block device */
 struct blk_holder_ops {
@@ -1363,7 +1257,7 @@ void fs_put_dax(void *dax, void *holder);
 /* Inode allocation - declaration for stub.c */
 void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 		     gfp_t gfp);
-void inode_set_iversion(struct inode *inode, u64 version);
+/* inode_set_iversion is in linux/iversion.h */
 int inode_generic_drop(struct inode *inode);
 
 /* rwlock_init is a macro in linux/spinlock.h */
@@ -1376,16 +1270,13 @@ int inode_generic_drop(struct inode *inode);
 #define invalidate_inode_buffers(i)	do { } while (0)
 #define clear_inode(i)			do { } while (0)
 
-/* fsverity stubs (fscrypt macros are in ext4_fscrypt.h) */
-#define fsverity_cleanup_inode(i)	do { } while (0)
+/* fsverity_cleanup_inode is in linux/fsverity.h */
 
 /* NFS export helpers are now in linux/exportfs.h */
 
-/* Path operations */
-#define path_put(p)			do { } while (0)
+/* Path operations - path_put, d_path are in linux/path.h */
 
-/* I/O priority - declaration for stub.c */
-int IOPRIO_PRIO_VALUE(int class, int data);
+/* I/O priority stubs are in linux/ioprio.h */
 
 /* kmemdup_nul is in linux/slab.h */
 /* fscrypt declarations are in ext4_fscrypt.h */
@@ -1402,8 +1293,7 @@ void *kvzalloc(size_t size, gfp_t flags);
 #define sb_start_write(sb)		do { } while (0)
 #define sb_end_write(sb)		do { } while (0)
 
-/* Scheduler stubs */
-#define schedule_timeout_interruptible(t)	({ (void)(t); 0; })
+/* schedule_timeout_interruptible is in linux/sched.h */
 
 /* Page allocation - declarations for stub.c */
 unsigned long get_zeroed_page(gfp_t gfp);
@@ -1434,8 +1324,7 @@ unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 
 /* bgl_lock_init is now in linux/blockgroup_lock.h */
 
-/* Task I/O priority - declaration for stub.c */
-void set_task_ioprio(void *task, int ioprio);
+/* set_task_ioprio is in linux/ioprio.h */
 
 /* Superblock identity functions */
 static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
@@ -1455,19 +1344,12 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
 #define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
 
-/* Inode lock mutex classes */
-#define I_MUTEX_XATTR		5
-#define I_MUTEX_CHILD		4
-#define I_MUTEX_PARENT		3
-#define I_MUTEX_NORMAL		2
+/* I_MUTEX_* inode lock classes are in linux/fs.h */
 
 /* Nested inode locking stub */
 #define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
 
-/* Process flags */
-#ifndef PF_MEMALLOC_NOFS
-#define PF_MEMALLOC_NOFS	0x00040000
-#endif
+/* PF_MEMALLOC_NOFS is in linux/sched.h */
 
 /* generic_set_sb_d_ops, d_make_root are now in linux/dcache.h */
 
@@ -1483,12 +1365,7 @@ void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);
 
-/* Quota - declarations for stub.c */
-#define dquot_suspend(sb, type)		({ (void)(sb); (void)(type); 0; })
-int dquot_alloc_space_nodirty(struct inode *inode, loff_t size);
-void dquot_free_space_nodirty(struct inode *inode, loff_t size);
-int dquot_alloc_block(struct inode *inode, loff_t nr);
-void dquot_free_block(struct inode *inode, loff_t nr);
+/* Quota operations are in linux/quotaops.h */
 
 /* Block device file operations - stubs */
 #define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
@@ -1496,10 +1373,7 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 
 /* flush_workqueue is now in linux/workqueue.h */
 
-/* Quota stubs for super.c */
-#define dquot_writeback_dquots(sb, type) do { (void)(sb); (void)(type); } while (0)
-#define dquot_resume(sb, type)		do { (void)(sb); (void)(type); } while (0)
-#define sb_any_quota_suspended(sb)	({ (void)(sb); 0; })
+/* Quota stubs for super.c are in linux/quotaops.h */
 
 /*
  * Stubs for mballoc.c
@@ -1582,9 +1456,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
 
-/* Scheduler stubs */
-#define schedule_timeout_uninterruptible(t) do { } while (0)
-#define need_resched()			(0)
+/* schedule_timeout_uninterruptible, need_resched are in linux/sched.h */
 
 /* Block device operations */
 #define sb_find_get_block_nonatomic(sb, block) \
@@ -1636,11 +1508,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 
 /* fscrypt readpage stubs are in ext4_fscrypt.h */
 
-/* fsverity stubs */
-#define fsverity_verify_bio(bio)	do { (void)(bio); } while (0)
-#define fsverity_enqueue_verify_work(work) do { (void)(work); } while (0)
-#define fsverity_verify_folio(f)	({ (void)(f); 1; })
-#define IS_VERITY(inode)		(0)
+/* fsverity stubs are in linux/fsverity.h */
 
 /* readahead operations are in linux/pagemap.h */
 
@@ -1661,17 +1529,12 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* Dentry name snapshot operations are now in linux/dcache.h */
 
 /* lockdep_assert_not_held is in linux/lockdep.h */
-
-/* Request flags for block I/O */
-#define REQ_IDLE		0
-#define REQ_PREFLUSH		0
-
+/* REQ_IDLE, REQ_PREFLUSH are in linux/blk_types.h */
 /* wake_up_bit is now in linux/wait_bit.h */
 
 /* d_alloc, d_drop are now in linux/dcache.h */
 
-/* get_current_ioprio - I/O priority (not used in U-Boot) */
-#define get_current_ioprio()		(0)
+/* get_current_ioprio is in linux/ioprio.h */
 
 /* JBD2 checkpoint.c stubs */
 #define mutex_lock_io(m)		mutex_lock(m)
@@ -1744,9 +1607,7 @@ int bh_read(struct buffer_head *bh, int flags);
 	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
 #define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
 	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
-#ifndef SECTOR_SHIFT
-#define SECTOR_SHIFT	9
-#endif
+/* SECTOR_SHIFT, SECTOR_SIZE are in linux/blk_types.h */
 /* mapping_max_folio_order is in linux/pagemap.h */
 
 /* Memory allocation for journal.c */

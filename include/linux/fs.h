@@ -51,11 +51,8 @@ struct vfsmount {
 	struct dentry *mnt_root;
 };
 
-/* path - pathname components */
-struct path {
-	struct vfsmount *mnt;
-	struct dentry *dentry;
-};
+/* path - use linux/path.h */
+#include <linux/path.h>
 
 /* Buffer operations are in buffer_head.h */
 
@@ -262,5 +259,15 @@ static inline bool dir_emit(struct dir_context *ctx, const char *name, int len,
 }
 
 #define dir_relax_shared(i)	({ (void)(i); 1; })
+
+/* Inode mutex nesting classes */
+enum {
+	I_MUTEX_NORMAL,
+	I_MUTEX_PARENT,
+	I_MUTEX_CHILD,
+	I_MUTEX_XATTR,
+	I_MUTEX_NONDIR2,
+	I_MUTEX_PARENT2,
+};
 
 #endif /* _LINUX_FS_H */
