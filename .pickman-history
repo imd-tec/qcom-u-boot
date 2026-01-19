@@ -4467,3 +4467,167 @@ The branch was 19 commits behind ci/master and is now rebased on top of the late
 
 ---
 
+## 2026-01-18: us/next
+
+Branch: cherry-4cf712a3be8
+
+Commits:
+- 4cf712a3be8 net: miiphybb: configs: Drop CONFIG_BITBANGMII_MULTI
+- 25f19f4158b net: ravb: Staticize bb_miiphy functions
+- d624a3e9abc net: miiphybb: Fix short name length
+- 68abd1c3083 ARM: renesas: Rename board/renesas/rcar-common to board/renesas/common
+- 5a287cf07ae ARM: renesas: Drop R8A779A0 V3U Falcon SPL Makefile entry
+- c7d2d7f90a9 ARM: renesas: Simplify board Makefiles
+- 2e5e4e251a0 ARM: renesas: Rename common/common.c to common/rcar64-common.c
+- caae2d70258 arm64: renesas: Drop unused code and clean up headers on R-Car D3 Draak
+- b76268ad326 arm64: renesas: Drop unused code and clean up headers on Salvator-X boards
+- 4d12216904f arm64: renesas: Drop unused code and clean up headers on ULCB boards
+- a75792914fd arm64: renesas: Deduplicate board_early_init_f()
+- e0df073bc0d arm64: renesas: Deduplicate R-Car Gen3 and Gen4 SPL
+- 9f5d1863e99 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is in a clean state (only untracked files). Now let me create and checkout the new branch based on ci/master:
+
+Now let's start cherry-picking the commits. First commit:
+
+Cherry-pick succeeded. Let me verify the delta and run build test:
+
+The stats are identical. Now let me run the build test:
+
+Build passed. Now let's cherry-pick the second commit:
+
+Stats match. Let me run build test:
+
+Build passed. Third commit:
+
+Stats match, build passed. Fourth commit:
+
+Stats match, build passed. Fifth commit:
+
+Stats match, build passed. Sixth commit:
+
+Stats match, build passed. Seventh commit:
+
+Stats match, build passed. Eighth commit:
+
+Stats match, build passed. Ninth commit:
+
+Stats match, build passed. Tenth commit:
+
+Stats match, build passed. Eleventh commit:
+
+Stats match, build passed. Twelfth commit:
+
+We have a conflict. Let me check what's happening:
+
+I can see the conflict. The commit `e0df073bc0d` wants to remove the `jump_to_image` function (moving it elsewhere), but there might be slight differences. Let me check the original commit to understand the full change:
+
+The commit removes the `jump_to_image` function from both gen3-spl.c and gen4-spl.c, and creates a new rcar64-spl.c file. Let me see what's expected to be removed vs what's in HEAD:
+
+I see - the original commit removes `jump_to_image_no_args` but in our HEAD version the function is called `jump_to_image`. These are different function names. Let me check what our HEAD version looks like before the conflict:
+
+I see - in ci/master the function is named `jump_to_image` but in the upstream commit it was named `jump_to_image_no_args`. This is a function rename that happened in ci/master. The intent of this commit is the same - remove the `jump_to_image` function and move it to a shared file.
+
+Let me resolve this conflict by accepting the removal of the function and also removing the now-unnecessary includes. The conflict resolution should:
+1. Keep the simplified includes (as the patch wants)
+2. Remove the `jump_to_image` function (which is now named differently but has the same purpose)
+
+I can resolve this conflict. The intended change is to remove the `jump_to_image` function. Let me fix this:
+
+Let me try using git checkout to resolve this:
+
+Now let me check if there are other files to handle and complete the cherry-pick:
+
+Now let me check what the rcar64-spl.c file has. It should have the jump_to_image function. Let me verify it's properly set up for the function name used in ci/master:
+
+I see - the new rcar64-spl.c has `jump_to_image_no_args` but in ci/master the function is named `jump_to_image`. Let me check if this function name exists in ci/master's header/API:
+
+I see - in ci/master the API uses `jump_to_image` not `jump_to_image_no_args`. I need to update the rcar64-spl.c file to use the correct function name:
+
+Now let me also check gen4-spl.c to make sure it's using the correct function name too:
+
+Good, gen4-spl.c doesn't have the jump function anymore - it was removed by the patch. Let me also check what the original gen4-spl.c looked like to make sure the removal was correct:
+
+Interesting - so in gen4-spl.c at HEAD it's actually `jump_to_image_no_args`, not `jump_to_image`. But in gen3-spl.c at HEAD (which we saw earlier) it was `jump_to_image`. This is inconsistent in ci/master.
+
+Let me check what function name is expected by the SPL subsystem:
+
+In ci/master, the function is `jump_to_image`. So my fix for rcar64-spl.c is correct - it needs to use `jump_to_image` not `jump_to_image_no_args`.
+
+Now let me add the updated file and continue the cherry-pick:
+
+Now let me continue the cherry-pick and amend the commit message to note the fix:
+
+Now let me amend the commit to note the conflict resolution:
+
+Now let me verify the delta and run build test:
+
+Stats match. Now build test:
+
+Build passed. Now the last commit - it's a merge commit. First let me verify if it might already be applied:
+
+These are different merge commits (different subjects). Let me check if commit 76c48184e80 exists in ci/master:
+
+The merge commit 9f5d1863e99 merges a branch containing commits we've just cherry-picked. Let me search for commits with similar subjects in ci/master to see if this series was already applied:
+
+This is a different merge. Let me try cherry-picking the merge commit:
+
+There's a conflict with the merge commit. Let me check what's happening:
+
+The only conflict is in rcar64-spl.c which has the same content from both sides. Let me check the content:
+
+The conflict is just the function name difference. I need to keep our HEAD version with `jump_to_image` (the correct name for ci/master):
+
+The merge will result in an empty commit (since all the changes were already applied via the individual cherry-picks). Let me continue with --allow-empty:
+
+Now let me verify all commits are present and run the final build:
+
+All 13 commits are present. Now let's run the final build:
+
+All builds pass. Let me provide the final summary:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-4cf712a3be8` (based on `ci/master`)
+
+**Build Result:** ✅ OK (sandbox build passes)
+
+### Commits Applied (13 total):
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | 4cf712a3be8 | net: miiphybb: configs: Drop CONFIG_BITBANGMII_MULTI | ✅ Clean |
+| 2 | 25f19f4158b | net: ravb: Staticize bb_miiphy functions | ✅ Clean |
+| 3 | d624a3e9abc | net: miiphybb: Fix short name length | ✅ Clean |
+| 4 | 68abd1c3083 | ARM: renesas: Rename board/renesas/rcar-common to board/renesas/common | ✅ Clean |
+| 5 | 5a287cf07ae | ARM: renesas: Drop R8A779A0 V3U Falcon SPL Makefile entry | ✅ Clean |
+| 6 | c7d2d7f90a9 | ARM: renesas: Simplify board Makefiles | ✅ Clean |
+| 7 | 2e5e4e251a0 | ARM: renesas: Rename common/common.c to common/rcar64-common.c | ✅ Clean |
+| 8 | caae2d70258 | arm64: renesas: Drop unused code and clean up headers on R-Car D3 Draak | ✅ Clean |
+| 9 | b76268ad326 | arm64: renesas: Drop unused code and clean up headers on Salvator-X boards | ✅ Clean |
+| 10 | 4d12216904f | arm64: renesas: Drop unused code and clean up headers on ULCB boards | ✅ Clean |
+| 11 | a75792914fd | arm64: renesas: Deduplicate board_early_init_f() | ✅ Clean |
+| 12 | e0df073bc0d | arm64: renesas: Deduplicate R-Car Gen3 and Gen4 SPL | ⚠️ Fixup |
+| 13 | 9f5d1863e99 | Merge branch 'master' of u-boot-sh | ✅ Empty (expected) |
+
+### Fix-ups Made:
+
+1. **Commit e0df073bc0d** (arm64: renesas: Deduplicate R-Car Gen3 and Gen4 SPL):
+   - Conflict in `board/renesas/common/gen3-spl.c`
+   - Original used `jump_to_image_no_args()` but ci/master uses `jump_to_image()` 
+   - Adapted the new `rcar64-spl.c` file to use `jump_to_image()` to match ci/master's SPL API
+   - Commit message amended with: "Fixup: Adapted jump_to_image_no_args -> jump_to_image for ci/master API"
+
+2. **Commit 9f5d1863e99** (Merge commit):
+   - Empty merge since all commits were already applied individually
+   - Created with `--allow-empty` to preserve commit history
+   - Commit message notes: "Fixup: Empty merge - all commits already applied individually"
+
+### Concerning Deltas:
+None - all commit stats matched their originals.
+
+The branch `cherry-4cf712a3be8` is ready for pushing.
+
+---
+
