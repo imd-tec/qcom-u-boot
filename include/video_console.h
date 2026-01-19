@@ -240,6 +240,7 @@ struct vidconsole_ops {
 	 * putc_xy() - write a single character to a position
 	 *
 	 * @dev:	Device to write to
+	 * @ctx:	Vidconsole context to use (cannot be NULL)
 	 * @x_frac:	Fractional pixel X position (0=left-most pixel) which
 	 *		is the X position multipled by VID_FRAC_DIV.
 	 * @y:		Pixel Y position (0=top-most pixel)
@@ -248,7 +249,8 @@ struct vidconsole_ops {
 	 * if all is OK, -EAGAIN if we ran out of space on this line, other -ve
 	 * on error
 	 */
-	int (*putc_xy)(struct udevice *dev, uint x_frac, uint y, int cp);
+	int (*putc_xy)(struct udevice *dev, void *ctx, uint x_frac, uint y,
+		       int cp);
 
 	/**
 	 * move_rows() - Move text rows from one place to another
@@ -687,6 +689,7 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old);
  * vidconsole_putc_xy() - write a single character to a position
  *
  * @dev:	Device to write to
+ * @ctx:	Vidconsole context to use, or NULL to use default
  * @x_frac:	Fractional pixel X position (0=left-most pixel) which
  *		is the X position multipled by VID_FRAC_DIV.
  * @y:		Pixel Y position (0=top-most pixel)
@@ -695,7 +698,7 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old);
  * if all is OK, -EAGAIN if we ran out of space on this line, other -ve
  * on error
  */
-int vidconsole_putc_xy(struct udevice *dev, uint x, uint y, int cp);
+int vidconsole_putc_xy(struct udevice *dev, void *ctx, uint x, uint y, int cp);
 
 /**
  * vidconsole_move_rows() - Move text rows from one place to another

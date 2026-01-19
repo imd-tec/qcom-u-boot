@@ -395,11 +395,11 @@ static void clear_from(struct udevice *dev, int index)
 	}
 }
 
-static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
-				    int cp)
+static int console_truetype_putc_xy(struct udevice *dev, void *vctx, uint x,
+				    uint y, int cp)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_metrics *met = ctx->cur_met;

@@ -79,13 +79,12 @@ static int console_move_rows(struct udevice *dev, uint rowdst,
 	return 0;
 }
 
-int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
+int console_normal_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
+			   uint y, int cp)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
-	return console_fixed_putc_xy(dev, vidconsole_ctx_from_priv(vc_priv),
-				     x_frac, y, cp, priv->fontdata);
+	return console_fixed_putc_xy(dev, vctx, x_frac, y, cp, priv->fontdata);
 }
 
 static __maybe_unused int console_get_cursor_info(struct udevice *dev)
@@ -172,9 +171,10 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 	return 0;
 }
 
-static int console_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
+static int console_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
+			   uint y, int cp)
 {
-	return console_normal_putc_xy(dev, x_frac, y, cp);
+	return console_normal_putc_xy(dev, vctx, x_frac, y, cp);
 }
 
 static int console_simple_ctx_new(struct udevice *dev, void **ctxp)

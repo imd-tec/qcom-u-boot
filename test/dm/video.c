@@ -264,16 +264,16 @@ static int dm_test_video_text(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_putc_xy(con, 0, 0, 'a');
+	vidconsole_putc_xy(con, NULL, 0, 0, 'a');
 	ut_asserteq(79, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
-	vidconsole_putc_xy(con, 0, 0, ' ');
+	vidconsole_putc_xy(con, NULL, 0, 0, ' ');
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	for (i = 0; i < 20; i++)
-		vidconsole_putc_xy(con, VID_TO_POS(i * 8), 0, ' ' + i);
+		vidconsole_putc_xy(con, NULL, VID_TO_POS(i * 8), 0, ' ' + i);
 	ut_asserteq(273, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -282,7 +282,7 @@ static int dm_test_video_text(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	for (i = 0; i < 20; i++)
-		vidconsole_putc_xy(con, VID_TO_POS(i * 8), 0, ' ' + i);
+		vidconsole_putc_xy(con, NULL, VID_TO_POS(i * 8), 0, ' ' + i);
 	ut_asserteq(273, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -306,16 +306,16 @@ static int dm_test_video_text_12x22(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_putc_xy(con, 0, 0, 'a');
+	vidconsole_putc_xy(con, NULL, 0, 0, 'a');
 	ut_asserteq(89, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
-	vidconsole_putc_xy(con, 0, 0, ' ');
+	vidconsole_putc_xy(con, NULL, 0, 0, ' ');
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	for (i = 0; i < 20; i++)
-		vidconsole_putc_xy(con, VID_TO_POS(i * 8), 0, ' ' + i);
+		vidconsole_putc_xy(con, NULL, VID_TO_POS(i * 8), 0, ' ' + i);
 	ut_asserteq(363, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -324,7 +324,7 @@ static int dm_test_video_text_12x22(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	for (i = 0; i < 20; i++)
-		vidconsole_putc_xy(con, VID_TO_POS(i * 8), 0, ' ' + i);
+		vidconsole_putc_xy(con, NULL, VID_TO_POS(i * 8), 0, ' ' + i);
 	ut_asserteq(363, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -1442,7 +1442,7 @@ static int dm_test_video_sync_damage(struct unit_test_state *uts)
 	ut_assert(!vid_bbox_valid(&priv->damage));
 
 	/* Write a small piece of text at a specific position */
-	vidconsole_putc_xy(con, VID_TO_POS(400), 67, 'T');
+	vidconsole_putc_xy(con, NULL, VID_TO_POS(400), 67, 'T');
 
 	/* Check priv->damage before sync - should have text damage */
 	ut_assert(vid_bbox_valid(&priv->damage));

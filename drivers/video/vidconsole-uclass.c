@@ -22,13 +22,15 @@
 #include <video_font.h>		/* Bitmap font for code page 437 */
 #include <linux/ctype.h>
 
-int vidconsole_putc_xy(struct udevice *dev, uint x, uint y, int ch)
+int vidconsole_putc_xy(struct udevice *dev, void *vctx, uint x, uint y, int ch)
 {
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
 	if (!ops->putc_xy)
 		return -ENOSYS;
-	return ops->putc_xy(dev, x, y, ch);
+	return ops->putc_xy(dev, vctx ?: vidconsole_ctx_from_priv(priv), x, y,
+			    ch);
 }
 
 int vidconsole_move_rows(struct udevice *dev, uint rowdst, uint rowsrc,
@@ -468,10 +470,10 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	 * colour depth. Check this and return an error to help with
 	 * diagnosis.
 	 */
-	ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
+	ret = vidconsole_putc_xy(dev, ctx, ctx->xcur_frac, ctx->ycur, ch);
 	if (ret == -EAGAIN) {
 		vidconsole_newline(dev, ctx);
-		ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
+		ret = vidconsole_putc_xy(dev, ctx, ctx->xcur_frac, ctx->ycur, ch);
 	}
 	if (ret < 0)
 		return ret;

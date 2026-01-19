@@ -187,12 +187,14 @@ int console_simple_select_font(struct udevice *dev, const char *name, uint size)
  * Normal console putc_xy function that can be called by other console drivers
  *
  * @param dev		console device
+ * @param ctx		vidconsole context to use, or NULL for default
  * @param x_frac	fractional X position
  * @param y		Y position in pixels
  * @param cp		Unicode code point
  * @returns width in fractional pixels, or -ve on error
  */
-int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp);
+int console_normal_putc_xy(struct udevice *dev, void *ctx, uint x_frac,
+			   uint y, int cp);
 
 /**
  * Fixed font putc_xy function that can be called with explicit font data
