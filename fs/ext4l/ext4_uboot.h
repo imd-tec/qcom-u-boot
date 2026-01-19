@@ -174,11 +174,7 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 /* IS_ENCRYPTED and FSCRYPT_SET_CONTEXT_MAX_SIZE are in ext4_fscrypt.h */
 #define S_NOQUOTA		0
 
-/* User namespace - stub */
-struct user_namespace {
-	int dummy;
-};
-extern struct user_namespace init_user_ns;
+/* user_namespace and init_user_ns are in linux/cred.h */
 
 /*
  * BUG_ON / BUG - stubs (not using linux/bug.h which panics)

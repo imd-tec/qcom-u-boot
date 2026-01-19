@@ -50,4 +50,13 @@ struct cred {
 #define INVALID_UID		((kuid_t){-1})
 #define INVALID_GID		((kgid_t){-1})
 
+/*
+ * User namespace stub - U-Boot doesn't have namespaces.
+ */
+struct user_namespace {
+	int dummy;
+};
+
+extern struct user_namespace init_user_ns;
+
 #endif /* _LINUX_CRED_H */
