@@ -10,6 +10,7 @@
 
 #include <alist.h>
 #include <dm.h>
+#include <env.h>
 #include <expo.h>
 #include <malloc.h>
 #include <mapmem.h>
@@ -41,6 +42,37 @@ static const char *const scene_obj_type_names[] = {
 	"menu",
 	"textline",
 };
+
+bool scene_chklog(const char *name)
+{
+	const char *filter, *end, *p;
+	int len;
+
+	if (!CONFIG_IS_ENABLED(EXPO_LOG_FILTER))
+		return true;
+
+	filter = env_get("expo_log_filter");
+	if (!filter)
+		return true;
+
+	/* Check each comma-separated filter */
+	while (*filter) {
+		end = strchrnul(filter, ',');
+		len = end - filter;
+
+		/* Check if this filter segment appears in name */
+		for (p = name; *p; p++) {
+			if (!strncmp(p, filter, len))
+				return true;
+		}
+
+		if (!*end)
+			break;
+		filter = end + 1;
+	}
+
+	return false;
+}
 
 int scene_new(struct expo *exp, const char *name, uint id, struct scene **scnp)
 {

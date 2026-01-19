@@ -614,6 +614,18 @@ int scene_txt_generic_init(struct expo *exp, struct scene_txt_generic *gen,
 			   const char *name, uint str_id, const char *str);
 
 /**
+ * scene_chklog() - Check if logging is enabled for an object
+ *
+ * This checks the 'expo_log_filter' environment variable. If not set, all
+ * objects are logged. If set, it contains a comma-separated list of filters;
+ * only objects whose name contains one of the filter strings are logged.
+ *
+ * @name: Object name to check
+ * Return: true if logging should happen, false to skip
+ */
+bool scene_chklog(const char *name);
+
+/**
  * scene_flag_name() - Get the name of a scene flag
  *
  * @flag: Single-bit flag mask (e.g. BIT(7))
