@@ -509,12 +509,14 @@ struct scene_menitem {
  * @edit_id: ID of the editable text object (not string ID)
  * @line_chars: Nominal number of characters in a line
  * @buf: Text buffer containing current text
+ * @cls: CLI line state for text editing
  */
 struct scene_txtin {
 	uint label_id;
 	uint edit_id;
 	uint line_chars;
 	struct abuf buf;
+	struct cli_line_state cls;
 };
 
 /**
