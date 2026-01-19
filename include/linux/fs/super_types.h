@@ -20,6 +20,10 @@ struct file_system_type;
 struct super_operations;
 struct export_operations;
 struct xattr_handler;
+struct inode;
+struct writeback_control;
+struct kstatfs;
+struct seq_file;
 
 /* sb_writers stub */
 struct sb_writers {
@@ -52,6 +56,28 @@ struct super_block {
 
 	/* U-Boot: list of all inodes, for freeing on unmount */
 	struct list_head s_inodes;
+};
+
+/* super_operations - VFS superblock operations */
+struct super_operations {
+	struct inode *(*alloc_inode)(struct super_block *);
+	void (*free_inode)(struct inode *);
+	void (*destroy_inode)(struct inode *);
+	int (*write_inode)(struct inode *, struct writeback_control *);
+	void (*dirty_inode)(struct inode *, int);
+	int (*drop_inode)(struct inode *);
+	void (*evict_inode)(struct inode *);
+	void (*put_super)(struct super_block *);
+	int (*sync_fs)(struct super_block *, int);
+	int (*freeze_fs)(struct super_block *);
+	int (*unfreeze_fs)(struct super_block *);
+	int (*statfs)(struct dentry *, struct kstatfs *);
+	int (*show_options)(struct seq_file *, struct dentry *);
+	void (*shutdown)(struct super_block *);
+	ssize_t (*quota_read)(struct super_block *, int, char *, size_t, loff_t);
+	ssize_t (*quota_write)(struct super_block *, int, const char *, size_t,
+			       loff_t);
+	struct dentry *(*get_dquots)(struct inode *);
 };
 
 /* Superblock flags - also defined in linux/fs.h */

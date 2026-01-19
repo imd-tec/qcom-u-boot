@@ -954,26 +954,7 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 struct kstatfs;
 struct fid;
 
-/* super_operations - for VFS */
-struct super_operations {
-	struct inode *(*alloc_inode)(struct super_block *);
-	void (*free_inode)(struct inode *);
-	void (*destroy_inode)(struct inode *);
-	int (*write_inode)(struct inode *, struct writeback_control *);
-	void (*dirty_inode)(struct inode *, int);
-	int (*drop_inode)(struct inode *);
-	void (*evict_inode)(struct inode *);
-	void (*put_super)(struct super_block *);
-	int (*sync_fs)(struct super_block *, int);
-	int (*freeze_fs)(struct super_block *);
-	int (*unfreeze_fs)(struct super_block *);
-	int (*statfs)(struct dentry *, struct kstatfs *);
-	int (*show_options)(struct seq_file *, struct dentry *);
-	void (*shutdown)(struct super_block *);
-	ssize_t (*quota_read)(struct super_block *, int, char *, size_t, loff_t);
-	ssize_t (*quota_write)(struct super_block *, int, const char *, size_t, loff_t);
-	struct dentry *(*get_dquots)(struct inode *);
-};
+/* super_operations is in linux/fs/super_types.h */
 
 /* export_operations and fid - use linux/exportfs.h */
 #include <linux/exportfs.h>
