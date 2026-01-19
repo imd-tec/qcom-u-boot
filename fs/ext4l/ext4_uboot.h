@@ -204,15 +204,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
  * We implement them in interface.c for sandbox.
  */
 
-/* Little-endian bit operations - use arch-provided find_next_zero_bit */
-#define find_next_zero_bit_le(addr, size, offset) \
-	find_next_zero_bit((void *)addr, size, offset)
-#define __set_bit_le(nr, addr)		set_bit(nr, addr)
-#define test_bit_le(nr, addr)		test_bit(nr, addr)
-#define __test_and_clear_bit_le(nr, addr) \
-	({ int __old = test_bit(nr, addr); clear_bit(nr, addr); __old; })
-#define __test_and_set_bit_le(nr, addr) \
-	({ int __old = test_bit(nr, addr); set_bit(nr, addr); __old; })
+/* Little-endian bit operations - use asm-generic/bitops/le.h */
+#include <asm-generic/bitops/le.h>
 
 /* KUNIT stub - use kunit/static_stub.h */
 #include <kunit/static_stub.h>
@@ -1280,32 +1273,7 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 /* XArray is now in linux/xarray.h */
 /* Per-CPU stubs are in linux/percpu.h */
 
-/* Bit operations for little-endian bitmaps */
-#define __clear_bit_le(bit, addr)	clear_bit_le(bit, addr)
-
-static inline void clear_bit_le(int nr, void *addr)
-{
-	unsigned char *p = (unsigned char *)addr + (nr >> 3);
-
-	*p &= ~(1 << (nr & 7));
-}
-
-#define find_next_bit_le(addr, size, offset) \
-	ext4_find_next_bit_le(addr, size, offset)
-
-static inline unsigned long ext4_find_next_bit_le(const void *addr,
-						  unsigned long size,
-						  unsigned long offset)
-{
-	const unsigned char *p = addr;
-	unsigned long bit;
-
-	for (bit = offset; bit < size; bit++) {
-		if (p[bit >> 3] & (1 << (bit & 7)))
-			return bit;
-	}
-	return size;
-}
+/* Little-endian bit operations are in asm-generic/bitops/le.h */
 
 /* atomic64 operations are now in asm-generic/atomic.h */
 
