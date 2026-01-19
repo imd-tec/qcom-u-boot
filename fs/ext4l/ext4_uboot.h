@@ -194,8 +194,7 @@ extern struct user_namespace init_user_ns;
 /* might_sleep - stub */
 #define might_sleep()	do { } while (0)
 
-/* sb_rdonly - check if filesystem is mounted read-only */
-#define sb_rdonly(sb)	((sb)->s_flags & SB_RDONLY)
+/* sb_rdonly is in linux/super.h */
 
 /* Trace stubs are now in ext4_trace.h */
 
@@ -328,10 +327,7 @@ void iput(struct inode *inode);
 
 /* SB_FREEZE_* constants are in linux/fs.h */
 
-/* sb_writers stub */
-struct sb_writers {
-	int frozen;
-};
+/* sb_writers is in linux/super.h */
 
 /* mapping_large_folio_support is in linux/pagemap.h */
 
@@ -424,38 +420,7 @@ struct fstrim_range {
 
 /* uuid_t is now in linux/uuid.h */
 
-/* Forward declarations for super_block */
-struct super_operations;
-struct export_operations;
-struct xattr_handler;
-
-/* super_block - minimal stub */
-struct super_block {
-	void *s_fs_info;
-	unsigned long s_blocksize;
-	unsigned char s_blocksize_bits;
-	unsigned long s_magic;
-	loff_t s_maxbytes;
-	unsigned long s_flags;
-	unsigned long s_iflags;		/* Internal flags */
-	struct rw_semaphore s_umount;
-	struct sb_writers s_writers;
-	struct block_device *s_bdev;
-	char s_id[32];
-	struct dentry *s_root;
-	uuid_t s_uuid;
-	struct file_system_type *s_type;
-	s32 s_time_gran;		/* Time granularity (ns) */
-	time64_t s_time_min;		/* Min supported time */
-	time64_t s_time_max;		/* Max supported time */
-	const struct super_operations *s_op;
-	const struct export_operations *s_export_op;
-	const struct xattr_handler * const *s_xattr;
-	struct dentry *d_sb;		/* Parent dentry - stub */
-
-	/* U-Boot: list of all inodes, for freeing on unmount */
-	struct list_head s_inodes;
-};
+/* super_block is now in linux/super.h */
 
 /* Block device read-only check */
 static inline int bdev_read_only(struct block_device *bdev)

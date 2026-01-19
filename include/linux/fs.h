@@ -10,10 +10,10 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/fs/super_types.h>
 
 /* Forward declarations */
 struct inode;
-struct super_block;
 struct buffer_head;
 struct file;
 struct folio;
