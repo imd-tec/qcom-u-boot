@@ -1064,9 +1064,8 @@ void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 	ctx->xstart_frac = 0;
 }
 
-void vidconsole_idle(struct udevice *dev)
+static void vidconsole_idle_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
-	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_cursor *curs = &ctx->curs;
 
 	/* Only handle cursor if it's enabled */
@@ -1078,6 +1077,15 @@ void vidconsole_idle(struct udevice *dev)
 		 */
 		vidconsole_show_cursor(dev, ctx);
 	}
+}
+
+void vidconsole_idle(struct udevice *dev)
+{
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx **ctxp;
+
+	alist_for_each(ctxp, &priv->ctx_list)
+		vidconsole_idle_ctx(dev, *ctxp);
 }
 
 #ifdef CONFIG_CURSOR
