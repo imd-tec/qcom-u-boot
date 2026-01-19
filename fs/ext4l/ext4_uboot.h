@@ -1329,8 +1329,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* sb_end_intwrite defined earlier */
 
-/* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
-#define WARN_RATELIMIT(condition, ...) (condition)
+/* WARN_RATELIMIT is in linux/ratelimit.h */
 
 /* folio_get - now implemented in support.c */
 

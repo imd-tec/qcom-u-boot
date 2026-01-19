@@ -32,4 +32,13 @@ struct ratelimit_state {
 int ___ratelimit(struct ratelimit_state *rs, const char *func);
 void ratelimit_state_init(void *rs, int interval, int burst);
 
+/**
+ * WARN_RATELIMIT - conditionally emit warning with rate limiting
+ * @condition: condition to check
+ * @...: printf-style format and arguments
+ *
+ * In U-Boot (no rate limiting), just evaluates the condition.
+ */
+#define WARN_RATELIMIT(condition, ...)	(condition)
+
 #endif /* _LINUX_RATELIMIT_H */
