@@ -719,15 +719,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define bh_uptodate_or_lock(bh)		(1)
 /* ext4_read_bh is stubbed in interface.c */
 
-/* Inode locking */
-#define inode_lock(inode)		do { } while (0)
-#define inode_unlock(inode)		do { } while (0)
-#define inode_lock_shared(inode)	do { } while (0)
-#define inode_unlock_shared(inode)	do { } while (0)
-#define inode_trylock(inode)		(1)
-#define inode_trylock_shared(inode)	(1)
-#define inode_dio_wait(inode)		do { } while (0)
-
+/* Inode locking stubs are in linux/fs.h */
 /* Lock debugging stubs are in linux/lockdep.h */
 
 /* File operations */
@@ -1344,10 +1336,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
 #define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
 
-/* I_MUTEX_* inode lock classes are in linux/fs.h */
-
-/* Nested inode locking stub */
-#define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
+/* I_MUTEX_* constants and inode locking stubs are in linux/fs.h */
 
 /* PF_MEMALLOC_NOFS is in linux/sched.h */
 

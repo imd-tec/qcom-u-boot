@@ -270,4 +270,17 @@ enum {
 	I_MUTEX_PARENT2,
 };
 
+/*
+ * Inode locking stubs - U-Boot is single-threaded, no locking needed.
+ */
+#define inode_lock(inode)		do { (void)(inode); } while (0)
+#define inode_unlock(inode)		do { (void)(inode); } while (0)
+#define inode_lock_shared(inode)	do { (void)(inode); } while (0)
+#define inode_unlock_shared(inode)	do { (void)(inode); } while (0)
+#define inode_trylock(inode)		({ (void)(inode); 1; })
+#define inode_trylock_shared(inode)	({ (void)(inode); 1; })
+#define inode_dio_wait(inode)		do { (void)(inode); } while (0)
+#define inode_lock_nested(inode, subclass) \
+	do { (void)(inode); (void)(subclass); } while (0)
+
 #endif /* _LINUX_FS_H */
