@@ -37,6 +37,7 @@ struct cli_ch_state {
  * @buf: Buffer containing line
  * @prompt: Prompt for the line
  * @putch: Function to call to output a character (NULL to use putc())
+ * @priv: Private data for putch callback
  */
 struct cli_line_state {
 	uint num;
@@ -48,6 +49,7 @@ struct cli_line_state {
 	char *buf;
 	const char *prompt;
 	void (*putch)(struct cli_line_state *cls, int ch);
+	void *priv;
 };
 
 /**

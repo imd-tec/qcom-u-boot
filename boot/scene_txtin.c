@@ -63,6 +63,7 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 			    struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
 	const bool open = obj->flags & SCENEOF_OPEN;
 	struct udevice *cons = scn->expo->cons;
 	uint i;
@@ -77,7 +78,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 		scene_render_obj(scn, tin->edit_id);
 
 		/* move cursor back to the correct position */
-		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
+		for (i = cls->num; i < cls->eol_num; i++)
 			vidconsole_put_char(cons, '\b');
 		ret = vidconsole_entry_save(cons, &scn->entry_save);
 		if (ret)
@@ -100,7 +101,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
  */
 static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 {
-	struct scene *scn = container_of(cls, struct scene, cls);
+	struct scene *scn = cls->priv;
 
 	vidconsole_put_char(scn->expo->cons, ch);
 }
@@ -114,6 +115,7 @@ void scene_txtin_close(struct scene *scn)
 int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
 	struct udevice *cons = scn->expo->cons;
 	struct scene_obj_txt *txt;
 	int ret;
@@ -129,10 +131,11 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 
 	vidconsole_set_cursor_pos(cons, NULL, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons, NULL);
-	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
-	scn->cls.insert = true;
-	scn->cls.putch = scene_txtin_putch;
-	cli_cread_add_initial(&scn->cls);
+	cli_cread_init(cls, abuf_data(&tin->buf), tin->line_chars);
+	cls->insert = true;
+	cls->putch = scene_txtin_putch;
+	cls->priv = scn;
+	cli_cread_add_initial(cls);
 	ret = vidconsole_entry_save(cons, &scn->entry_save);
 	if (ret)
 		return log_msg_ret("sav", ret);
@@ -162,6 +165,7 @@ void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 			 int key, struct expo_action *event)
 {
+	struct cli_line_state *cls = &tin->cls;
 	const bool open = obj->flags & SCENEOF_OPEN;
 	struct scene *scn = obj->scene;
 
@@ -196,7 +200,7 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 		ret = vidconsole_entry_restore(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
-		ret = cread_line_process_ch(&scn->cls, key);
+		ret = cread_line_process_ch(cls, key);
 		ret = vidconsole_entry_save(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
