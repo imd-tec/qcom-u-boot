@@ -699,8 +699,7 @@ struct dx_hash_info {
 
 /* indirect.c stubs */
 
-/* umin - unsigned min (Linux 6.x) */
-#define umin(x, y)	((x) < (y) ? (x) : (y))
+/* umin is in linux/minmax.h */
 
 /* truncate_inode_pages is in linux/pagemap.h */
 
