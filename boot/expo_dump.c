@@ -13,6 +13,7 @@
 #include <mapmem.h>
 #include <membuf.h>
 #include <video.h>
+#include <video_console.h>
 #include "scene_internal.h"
 
 /**
@@ -111,6 +112,7 @@ static void dump_menu(struct dump_ctx *ctx, struct scene_obj_menu *menu)
 static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 {
 	const char *str = expo_get_str(ctx->scn->expo, txt->gen.str_id);
+	const struct vidconsole_mline *mline;
 
 	outf(ctx, "Text: str_id %x font_name '%s' font_size %x\n",
 	     txt->gen.str_id,
@@ -118,6 +120,12 @@ static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 	     txt->gen.font_size);
 	ctx->indent += 2;
 	outf(ctx, "str '%s'\n", str ? str : "(null)");
+	alist_for_each(mline, &txt->gen.lines) {
+		outf(ctx, "mline: start %x len %x bbox (%x,%x)-(%x,%x)\n",
+		     mline->start, mline->len,
+		     mline->bbox.x0, mline->bbox.y0,
+		     mline->bbox.x1, mline->bbox.y1);
+	}
 	ctx->indent -= 2;
 }
 
