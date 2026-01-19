@@ -118,11 +118,10 @@
 /* completion - use Linux header */
 #include <linux/completion.h>
 
-/* Cache alignment - stub */
-#define ____cacheline_aligned_in_smp
+/* Cache alignment - use linux/cache.h */
+#include <linux/cache.h>
 
-/* Pointer check macros */
-#define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
+/* ZERO_OR_NULL_PTR is in linux/slab.h */
 /* data_race is in linux/compiler.h */
 
 /* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
@@ -154,8 +153,7 @@
 /* kiocb, iov_iter - use linux/uio.h */
 #include <linux/uio.h>
 
-/* __counted_by attribute - not available in U-Boot */
-#define __counted_by(x)
+/* __counted_by is in linux/compiler_attributes.h */
 
 /* dir_context, filldir_t are in linux/fs.h */
 
