@@ -189,7 +189,7 @@ def check_funcgraph(ubman, fname, proftool, map_fname, trace_dat):
                'dump-ftrace', '-f', 'funcgraph'])
 
     # Check that the trace has what we expect
-    cmd = f'trace-cmd report -l {trace_dat} |head -n 70'
+    cmd = f'trace-cmd report -l {trace_dat} |head -n 100'
     out = utils.run_and_log(ubman, ['sh', '-c', cmd])
 
     # First look for this:
@@ -221,7 +221,7 @@ def check_funcgraph(ubman, fname, proftool, map_fname, trace_dat):
                 break
             elif func == 'initf_bootstage() ':
                 found_start = True
-                expected_indent = indent + '  '
+                expected_indent = indent
             elif found_start and indent == expected_indent and brace == '}':
                 found_end = True
 
