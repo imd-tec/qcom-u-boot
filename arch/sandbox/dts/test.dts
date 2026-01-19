@@ -1874,6 +1874,7 @@
 		#pinctrl-cells = <1>;
 		pinctrl-single,register-width = <32>;
 		pinctrl-single,function-mask = <0x7f>;
+		bootph-all;
 
 		pinmux_pwm_pins: pinmux_pwm_pins {
 			pinctrl-single,pins = < 0x48 0x06 >;
@@ -1893,6 +1894,7 @@
 				0x70 0x30
 				0x74 0x00
 			>;
+			bootph-all;
 		};
 	};
 

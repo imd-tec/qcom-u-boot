@@ -1002,6 +1002,16 @@ config EXPO_TEST
 	  variable is set to 1. This is useful for debugging and performance
 	  analysis.
 
+config EXPO_LOG_FILTER
+	bool "Enable expo log filter"
+	depends on EXPO
+	default y if SANDBOX
+	help
+	  Enable the expo log filter. When enabled, the 'expo_log_filter'
+	  environment variable can be set to filter log output by object name.
+	  Only objects whose name contains the filter string are logged. This
+	  is useful for debugging specific expo objects.
+
 config BOOTMETH_SANDBOX
 	def_bool y
 	depends on SANDBOX

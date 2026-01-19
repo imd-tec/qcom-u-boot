@@ -24,6 +24,12 @@ SIGNAL_SUCCESS = 'success'
 SIGNAL_APPLIED = 'already_applied'
 SIGNAL_CONFLICT = 'conflict'
 
+# Commits that need special handling (regenerate instead of cherry-pick)
+# These run savedefconfig on all boards and depend on target branch Kconfig state
+QCONFIG_SUBJECTS = [
+    'configs: Resync with savedefconfig',
+]
+
 # Check if claude_agent_sdk is available
 try:
     from claude_agent_sdk import query, ClaudeAgentOptions
@@ -43,6 +49,18 @@ def check_available():
         tout.error('Install with: pip install claude-agent-sdk')
         return False
     return True
+
+
+def is_qconfig_commit(subject):
+    """Check if a commit subject indicates a qconfig resync commit
+
+    Args:
+        subject (str): Commit subject line
+
+    Returns:
+        bool: True if this is a qconfig resync commit
+    """
+    return any(subject.startswith(pat) for pat in QCONFIG_SUBJECTS)
 
 
 async def run(commits, source, branch_name, repo_path=None):  # pylint: disable=too-many-locals
@@ -70,13 +88,18 @@ async def run(commits, source, branch_name, repo_path=None):  # pylint: disable=
         os.remove(signal_path)
 
     # Build commit list for the prompt, marking potentially applied commits
+    # and qconfig resync commits
     commit_entries = []
     has_applied = False
+    has_qconfig = False
     for commit in commits:
         entry = f'  - {commit.chash}: {commit.subject}'
         if commit.applied_as:
             entry += f' (maybe already applied as {commit.applied_as})'
             has_applied = True
+        if is_qconfig_commit(commit.subject):
+            entry += ' [QCONFIG RESYNC]'
+            has_qconfig = True
         commit_entries.append(entry)
 
     commit_list = '\n'.join(commit_entries)
@@ -86,7 +109,7 @@ async def run(commits, source, branch_name, repo_path=None):  # pylint: disable=
     if has_applied:
         applied_note = '''
 
-IMPORTANT: Some commits may already be applied. Before cherry-picking commits 
+IMPORTANT: Some commits may already be applied. Before cherry-picking commits
 marked as "maybe already applied as <hash>", verify they are truly the same commit:
 1. Compare the actual changes between the original and found commits:
    - Use: git show --no-ext-diff <original-hash> > /tmp/orig.patch
@@ -99,12 +122,29 @@ marked as "maybe already applied as <hash>", verify they are truly the same comm
    proceed with the cherry-pick as they are different commits.
 '''
 
+    # Add note about qconfig resync commits
+    qconfig_note = ''
+    if has_qconfig:
+        qconfig_note = '''
+
+IMPORTANT: Commits marked [QCONFIG RESYNC] need special handling. These commits
+run savedefconfig on all boards and cannot be cherry-picked directly because the
+defconfig state depends on the target branch's Kconfig options.
+
+For [QCONFIG RESYNC] commits, instead of cherry-picking:
+1. Skip the cherry-pick for this commit
+2. Run: ./tools/qconfig.py -s -Cy
+   This regenerates the savedefconfig changes based on the current Kconfig state
+3. The qconfig.py tool will create a commit automatically with the updated defconfigs
+4. Continue with the remaining commits after qconfig.py completes
+'''
+
     # Get full hash of last commit for signal file
     last_commit_hash = commits[-1].hash
 
     prompt = f"""Cherry-pick the following commits from {source} branch:
 
-{commit_list}{applied_note}
+{commit_list}{applied_note}{qconfig_note}
 
 Steps to follow:
 1. First run 'git status' to check the repository state is clean

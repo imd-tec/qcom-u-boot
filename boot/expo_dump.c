@@ -12,39 +12,69 @@
 #include <expo.h>
 #include <mapmem.h>
 #include <membuf.h>
+#include <os.h>
 #include <video.h>
+#include <video_console.h>
 #include "scene_internal.h"
+
+/**
+ * typedef dump_out_func - Function type for dump output
+ *
+ * @priv: Private data for the output function
+ * @buf: Buffer containing data to output
+ * @len: Length of data in buffer
+ */
+typedef void (*dump_out_func)(void *priv, const char *buf, int len);
 
 /**
  * struct dump_ctx - Context for dumping expo structures
  *
- * @mb: Membuf to write output to
+ * @out: Output function to call for each piece of output
+ * @priv: Private data to pass to output function
  * @scn: Current scene being dumped (or NULL if not in a scene)
  * @indent: Current indentation level (number of spaces)
  */
 struct dump_ctx {
-	struct membuf *mb;
+	dump_out_func out;
+	void *priv;
 	struct scene *scn;
 	int indent;
 };
 
 /**
+ * dump_out_membuf() - Output function that writes to a membuf
+ *
+ * @priv: Pointer to struct membuf
+ * @buf: Buffer containing data to output
+ * @len: Length of data in buffer
+ */
+static void dump_out_membuf(void *priv, const char *buf, int len)
+{
+	struct membuf *mb = priv;
+
+	membuf_put(mb, buf, len);
+}
+
+/**
  * outf() - Output a formatted string with indentation
  *
- * @ctx: Dump context containing membuf, scene, and indent level
+ * @ctx: Dump context containing output function, scene, and indent level
  * @fmt: Format string
  * @...: Arguments for format string
  */
 static void outf(struct dump_ctx *ctx, const char *fmt, ...)
 {
 	char buf[256];
+	char indent_buf[64];
 	va_list args;
 	int len;
 
+	len = snprintf(indent_buf, sizeof(indent_buf), "%*s", ctx->indent, "");
+	ctx->out(ctx->priv, indent_buf, len);
+
 	va_start(args, fmt);
-	membuf_printf(ctx->mb, "%*s", ctx->indent, "");
 	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	membuf_put(ctx->mb, buf, len);
+	ctx->out(ctx->priv, buf, len);
 	va_end(args);
 }
 
@@ -83,6 +113,7 @@ static void dump_menu(struct dump_ctx *ctx, struct scene_obj_menu *menu)
 static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 {
 	const char *str = expo_get_str(ctx->scn->expo, txt->gen.str_id);
+	const struct vidconsole_mline *mline;
 
 	outf(ctx, "Text: str_id %x font_name '%s' font_size %x\n",
 	     txt->gen.str_id,
@@ -90,6 +121,12 @@ static void dump_text(struct dump_ctx *ctx, struct scene_obj_txt *txt)
 	     txt->gen.font_size);
 	ctx->indent += 2;
 	outf(ctx, "str '%s'\n", str ? str : "(null)");
+	alist_for_each(mline, &txt->gen.lines) {
+		outf(ctx, "mline: start %x len %x bbox (%x,%x)-(%x,%x)\n",
+		     mline->start, mline->len,
+		     mline->bbox.x0, mline->bbox.y0,
+		     mline->bbox.x1, mline->bbox.y1);
+	}
 	ctx->indent -= 2;
 }
 
@@ -196,7 +233,8 @@ void scene_dump(struct membuf *mb, struct scene *scn, int indent)
 {
 	struct dump_ctx ctx;
 
-	ctx.mb = mb;
+	ctx.out = dump_out_membuf;
+	ctx.priv = mb;
 	ctx.scn = scn;
 	ctx.indent = indent;
 
@@ -262,9 +300,45 @@ void expo_dump(struct expo *exp, struct membuf *mb)
 {
 	struct dump_ctx ctx;
 
-	ctx.mb = mb;
+	ctx.out = dump_out_membuf;
+	ctx.priv = mb;
 	ctx.scn = NULL;
 	ctx.indent = 0;
 
 	expo_dump_(&ctx, exp);
+}
+
+/**
+ * dump_out_file() - Output function that writes to a file
+ *
+ * @priv: Pointer to file descriptor (int *)
+ * @buf: Buffer containing data to output
+ * @len: Length of data in buffer
+ */
+static void dump_out_file(void *priv, const char *buf, int len)
+{
+	int *fdp = priv;
+
+	os_write(*fdp, buf, len);
+}
+
+int expo_dump_file(struct expo *exp, const char *fname)
+{
+	struct dump_ctx ctx;
+	int fd;
+
+	fd = os_open(fname, OS_O_WRONLY | OS_O_CREAT | OS_O_TRUNC);
+	if (fd < 0)
+		return fd;
+
+	ctx.out = dump_out_file;
+	ctx.priv = &fd;
+	ctx.scn = NULL;
+	ctx.indent = 0;
+
+	expo_dump_(&ctx, exp);
+
+	os_close(fd);
+
+	return 0;
 }

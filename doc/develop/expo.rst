@@ -605,6 +605,33 @@ These metrics help identify performance bottlenecks and verify that expo is
 operating efficiently. The timing information is particularly useful when
 optimizing display drivers or debugging slow rendering issues.
 
+Log filter
+~~~~~~~~~~
+
+Expo supports filtering log output by object name, which is useful when
+debugging specific objects. Set the ``expo_log_filter`` environment variable
+to a substring that matches the object names you want to log.
+
+To enable log filtering::
+
+   => setenv expo_log_filter texted
+   => log filter-add -d console -A -c expo -l debug
+
+This shows debug logs only for objects whose name contains "texted".
+
+Multiple filters can be specified as a comma-separated list::
+
+   => setenv expo_log_filter menu,text
+
+This logs objects matching either "menu" or "text".
+
+Remove the filter to see all objects::
+
+   => setenv expo_log_filter
+
+This feature requires ``CONFIG_EXPO_LOG_FILTER`` which is enabled by default
+for sandbox.
+
 Writing expo tests
 ------------------
 
@@ -796,6 +823,10 @@ after failure), and ``-F`` (skip flat-tree tests). See
 For example, to watch an expo test render with a visible display::
 
     ./u-boot -T -l -V 500 --video_frames /tmp/good -c "ut bootstd expo_render_image"
+
+The :doc:`../usage/cmd/sb` ``grid`` subcommand can be used to overlay a grid on
+the display, to help with checking alignment of objects. The grid size defaults
+to 0x20 pixels but can be specified as a parameter.
 
 This will write each asserted expo frame to ``/tmp/good/frame0.bmp``,
 ``/tmp/good/frame1.bmp``, etc.

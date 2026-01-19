@@ -1435,6 +1435,21 @@ static int write_pages(struct twriter *tw, enum out_format_t out_format,
 			tw->ptr += tputq(fout,
 					 text_offset + caller_func->offset);
 		} else {
+			ulong func_duration = 0;
+
+			/*
+			 * For funcgraph, entry and exit of a function must
+			 * have the same depth. Decrement before writing the
+			 * exit record.
+			 */
+			if (!entry) {
+				depth--;
+				if (stack_ptr && stack_ptr <= MAX_STACK_DEPTH) {
+					ulong start = func_stack[--stack_ptr];
+
+					func_duration = timestamp - start;
+				}
+			}
 			tw->ptr += tputl(fout, rec_words | delta << 5);
 			tw->ptr += tputh(fout, entry ? TRACE_GRAPH_ENT
 						: TRACE_GRAPH_RET);
@@ -1449,14 +1464,6 @@ static int write_pages(struct twriter *tw, enum out_format_t out_format,
 					func_stack[stack_ptr] = timestamp;
 				stack_ptr++;
 			} else {
-				ulong func_duration = 0;
-
-				depth--;
-				if (stack_ptr && stack_ptr <= MAX_STACK_DEPTH) {
-					ulong start = func_stack[--stack_ptr];
-
-					func_duration = timestamp - start;
-				}
 				tw->ptr += tputl(fout, 0);	/* overrun */
 				tw->ptr += tputq(fout, 0);	/* calltime */
 				/* rettime (nanoseconds) */

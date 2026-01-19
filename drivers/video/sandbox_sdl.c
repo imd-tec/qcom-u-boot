@@ -131,6 +131,8 @@ static int sandbox_sdl_video_sync(struct udevice *vid, uint flags)
 {
 	struct sandbox_sdl_plat *plat = dev_get_plat(vid);
 	struct video_priv *uc_priv = dev_get_uclass_priv(vid);
+	struct sandbox_state *state = state_get_current();
+	struct sandbox_sdl_sync_opts opts;
 	const struct vid_bbox *damage = NULL;
 
 	if (!(flags & VIDSYNC_FLUSH))
@@ -146,7 +148,10 @@ static int sandbox_sdl_video_sync(struct udevice *vid, uint flags)
 		memset(&plat->last_sync_damage, '\0',
 		       sizeof(plat->last_sync_damage));
 
-	return sandbox_sdl_sync(uc_priv->fb, damage);
+	opts.draw_grid = state->show_grid;
+	opts.grid_size = state->grid_size;
+
+	return sandbox_sdl_sync(uc_priv->fb, damage, &opts);
 }
 
 static const struct video_ops sandbox_sdl_ops = {

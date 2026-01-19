@@ -1075,9 +1075,10 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 			mline.len = (s - text) - start;
 			if (lines && !alist_add(lines, mline))
 				return log_msg_ret("ttm", -ENOMEM);
-			log_debug("line x1 %d y0 %d y1 %d start %d len %d text '%.*s'\n",
-				  mline.bbox.x1, mline.bbox.y0, mline.bbox.y1,
-				  mline.start, mline.len, mline.len, text + mline.start);
+			log_content("line x1 %d y0 %d y1 %d start %d len %d text '%.*s'\n",
+				    mline.bbox.x1, mline.bbox.y0, mline.bbox.y1,
+				    mline.start, mline.len, mline.len,
+				    text + mline.start);
 
 			start = s - text;
 			start++;
@@ -1098,6 +1099,9 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	mline.len = (s - text) - start;
 	if (lines && !alist_add(lines, mline))
 		return log_msg_ret("ttM", -ENOMEM);
+	log_content("line x1 %d y0 %d y1 %d start %d len %d text '%.*s'\n",
+		    mline.bbox.x1, mline.bbox.y0, mline.bbox.y1,
+		    mline.start, mline.len, mline.len, text + mline.start);
 
 	bbox->valid = true;
 	bbox->x0 = 0;

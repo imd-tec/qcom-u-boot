@@ -13,6 +13,7 @@ Synopsis
 
     sb devoff <node>
     sb devon <node>
+    sb grid <0|1> [<size>]
     sb handoff
     sb map
     sb state
@@ -39,6 +40,14 @@ bound to the driver model, and probed (activated). This is useful for testing
 devices that are not automatically bound at startup, i.e. those marked as
 status = "disabled" in the device tree. The parameter is the name of a root
 devicetree node.
+
+sb grid
+~~~~~~~
+
+This enables or disables a grid overlay on the video display. When enabled,
+a grid is drawn over the display, which is useful for debugging UI layout and
+alignment. Use ``sb grid 1`` to enable and ``sb grid 0`` to disable. An
+optional second parameter specifies the grid size in pixels (default 0x20).
 
 sb handoff
 ~~~~~~~~~~

@@ -373,18 +373,6 @@ int scene_render_deps(struct scene *scn, uint id);
 int scene_menu_render_deps(struct scene *scn, struct scene_obj_menu *menu);
 
 /**
- * scene_textline_render_deps() - Render a textline and its dependencies
- *
- * Renders the textline and all of its attached objects
- *
- * @scn: Scene to render
- * @tline: textline to render
- * Returns: 0 if OK, -ve on error
- */
-int scene_textline_render_deps(struct scene *scn,
-			       struct scene_obj_textline *tline);
-
-/**
  * scene_iter_objs() - Iterate through all scene objects
  *
  * @scn: Scene to process
@@ -559,6 +547,19 @@ void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 			   struct vidconsole_bbox *edit_bbox);
 
 /**
+ * scene_txtin_render_deps() - Render dependencies for a text-input object
+ *
+ * Renders the edit text on top of the background if open
+ *
+ * @scn: Scene containing the object
+ * @obj: Object to render
+ * @tin: Text-input info
+ * Return: 0 if OK, -ve on error
+ */
+int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
+			    struct scene_txtin *tin);
+
+/**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object
  *
  * @obj: Object to process
@@ -568,26 +569,35 @@ void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox *bbox);
 
 /**
- * scene_textline_open() - Open a textline object
+ * scene_txtin_open() - Open a text-input object
  *
  * Set up the text editor ready for use
  *
- * @scn: Scene containing the textline
- * @tline: textline object
+ * @scn: Scene containing the object
+ * @obj: Object to open
+ * @tin: Text-input info
  * Return: 0 if OK, -ve on error
  */
-int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline);
+int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
+		     struct scene_txtin *tin);
 
 /**
- * scene_textline_close() - Close a textline object
+ * scene_txtin_close() - Close a text-input object
  *
  * Close out the text editor after use
  *
- * @scn: Scene containing the textline
- * @tline: textline object
+ * @scn: Scene containing the object
+ */
+void scene_txtin_close(struct scene *scn);
+
+/**
+ * scene_obj_calc_bbox() - Calculate bounding boxes for an object
+ *
+ * @obj: Object to process
+ * @bbox: Returns bounding boxes for object
  * Return: 0 if OK, -ve on error
  */
-int scene_textline_close(struct scene *scn, struct scene_obj_textline *tline);
+int scene_obj_calc_bbox(struct scene_obj *obj, struct vidconsole_bbox *bbox);
 
 /**
  * scene_calc_arrange() - Calculate sizes needed to arrange a scene
@@ -612,6 +622,18 @@ int scene_calc_arrange(struct scene *scn, struct expo_arrange_info *arr);
  */
 int scene_txt_generic_init(struct expo *exp, struct scene_txt_generic *gen,
 			   const char *name, uint str_id, const char *str);
+
+/**
+ * scene_chklog() - Check if logging is enabled for an object
+ *
+ * This checks the 'expo_log_filter' environment variable. If not set, all
+ * objects are logged. If set, it contains a comma-separated list of filters;
+ * only objects whose name contains one of the filter strings are logged.
+ *
+ * @name: Object name to check
+ * Return: true if logging should happen, false to skip
+ */
+bool scene_chklog(const char *name);
 
 /**
  * scene_flag_name() - Get the name of a scene flag

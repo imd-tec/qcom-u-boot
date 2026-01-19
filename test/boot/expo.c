@@ -1254,11 +1254,48 @@ static int expo_scene_obj_type_name(struct unit_test_state *uts)
 	ut_asserteq_str("textedit", scene_obj_type_name(SCENEOBJT_TEXTEDIT));
 
 	/* Test invalid type (out of range) */
-	ut_asserteq_str("unknown", scene_obj_type_name(SCENEOBJT_TEXTLINE + 1));
+	ut_asserteq_str("unknown", scene_obj_type_name(SCENEOBJT_TEXTEDIT + 1));
 
 	return 0;
 }
 BOOTSTD_TEST(expo_scene_obj_type_name, 0);
+
+/* Test scene_chklog() */
+static int expo_scene_chklog(struct unit_test_state *uts)
+{
+	/* Without filter, all objects should be logged */
+	env_set("expo_log_filter", NULL);
+	ut_assert(scene_chklog("my-menu"));
+	ut_assert(scene_chklog("textline"));
+
+	/* With a single filter, only matching objects should be logged */
+	env_set("expo_log_filter", "menu");
+	ut_assert(scene_chklog("my-menu"));
+	ut_assert(scene_chklog("menu-item"));
+	ut_assert(!scene_chklog("textline"));
+	ut_assert(!scene_chklog("other"));
+
+	/* With comma-separated filters, any match should pass */
+	env_set("expo_log_filter", "menu,text");
+	ut_assert(scene_chklog("my-menu"));
+	ut_assert(scene_chklog("textline"));
+	ut_assert(scene_chklog("textedit"));
+	ut_assert(!scene_chklog("other"));
+	ut_assert(!scene_chklog("image"));
+
+	/* Test with three filters */
+	env_set("expo_log_filter", "menu,text,img");
+	ut_assert(scene_chklog("my-menu"));
+	ut_assert(scene_chklog("textline"));
+	ut_assert(scene_chklog("img-logo"));
+	ut_assert(!scene_chklog("other"));
+
+	/* Clear the filter */
+	env_set("expo_log_filter", NULL);
+
+	return 0;
+}
+BOOTSTD_TEST(expo_scene_chklog, 0);
 
 /* Test scene_find_obj_within() */
 static int expo_find_obj_within(struct unit_test_state *uts)
@@ -1533,7 +1570,13 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	expo_set_scene_id(exp, SCENE1);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(19860, video_compress_fb(uts, dev, false));
+	ut_asserteq(19841, video_compress_fb(uts, dev, false));
+
+	/* highlight the textedit and re-render */
+	scene_set_highlight_id(scn, OBJ_TEXTED);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21662, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);

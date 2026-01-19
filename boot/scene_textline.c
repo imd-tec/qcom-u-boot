@@ -114,8 +114,7 @@ int scene_textline_send_key(struct scene *scn, struct scene_obj_textline *tline,
 			memcpy(abuf_data(&tline->tin.buf), abuf_data(&scn->buf),
 			       abuf_size(&scn->buf));
 
-			/* cursor is not needed now */
-			vidconsole_readline_end();
+			scene_txtin_close(scn);
 		} else {
 			event->type = EXPOACT_QUIT;
 			log_debug("menu quit\n");
@@ -152,77 +151,3 @@ bool scene_textline_within(const struct scene *scn,
 	return scene_within(scn, tline->tin.edit_id, x, y);
 }
 
-int scene_textline_render_deps(struct scene *scn,
-			       struct scene_obj_textline *tline)
-{
-	const bool open = tline->obj.flags & SCENEOF_OPEN;
-	struct udevice *cons = scn->expo->cons;
-	uint i;
-
-	/* if open, render the edit text on top of the background */
-	if (open) {
-		int ret;
-
-		ret = vidconsole_entry_restore(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-		scene_render_obj(scn, tline->tin.edit_id);
-
-		/* move cursor back to the correct position */
-		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
-			vidconsole_put_char(cons, '\b');
-		ret = vidconsole_entry_save(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-
-		vidconsole_show_cursor(cons);
-	}
-
-	return 0;
-}
-
-/**
- * scene_textline_putch() - Output a character to the vidconsole
- *
- * This is used as the putch callback for CLI line editing, so that characters
- * are sent to the correct vidconsole.
- *
- * @cls: CLI line state
- * @ch: Character to output
- */
-static void scene_textline_putch(struct cli_line_state *cls, int ch)
-{
-	struct scene *scn = container_of(cls, struct scene, cls);
-
-	vidconsole_put_char(scn->expo->cons, ch);
-}
-
-int scene_textline_open(struct scene *scn, struct scene_obj_textline *tline)
-{
-	struct udevice *cons = scn->expo->cons;
-	struct scene_obj_txt *txt;
-	int ret;
-
-	/* Copy the text into the scene buffer in case the edit is cancelled */
-	memcpy(abuf_data(&scn->buf), abuf_data(&tline->tin.buf),
-	       abuf_size(&scn->buf));
-
-	/* get the position of the editable */
-	txt = scene_obj_find(scn, tline->tin.edit_id, SCENEOBJT_NONE);
-	if (!txt)
-		return log_msg_ret("cur", -ENOENT);
-
-	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
-	vidconsole_entry_start(cons);
-	cli_cread_init(&scn->cls, abuf_data(&tline->tin.buf), tline->tin.line_chars);
-	scn->cls.insert = true;
-	scn->cls.putch = scene_textline_putch;
-	ret = vidconsole_entry_save(cons, &scn->entry_save);
-	if (ret)
-		return log_msg_ret("sav", ret);
-
-	/* make sure the cursor is visible */
-	vidconsole_readline_start(true);
-
-	return 0;
-}

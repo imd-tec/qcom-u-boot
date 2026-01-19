@@ -10,6 +10,7 @@
 
 #include <alist.h>
 #include <dm.h>
+#include <env.h>
 #include <expo.h>
 #include <malloc.h>
 #include <mapmem.h>
@@ -37,10 +38,41 @@ static const char *const scene_obj_type_names[] = {
 	"image",
 	"text",
 	"box",
-	"textedit",
 	"menu",
 	"textline",
+	"textedit",
 };
+
+bool scene_chklog(const char *name)
+{
+	const char *filter, *end, *p;
+	int len;
+
+	if (!CONFIG_IS_ENABLED(EXPO_LOG_FILTER))
+		return true;
+
+	filter = env_get("expo_log_filter");
+	if (!filter)
+		return true;
+
+	/* Check each comma-separated filter */
+	while (*filter) {
+		end = strchrnul(filter, ',');
+		len = end - filter;
+
+		/* Check if this filter segment appears in name */
+		for (p = name; *p; p++) {
+			if (!strncmp(p, filter, len))
+				return true;
+		}
+
+		if (!*end)
+			break;
+		filter = end + 1;
+	}
+
+	return false;
+}
 
 int scene_new(struct expo *exp, const char *name, uint id, struct scene **scnp)
 {
@@ -503,13 +535,27 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 
 		limit = obj->flags & SCENEOF_SIZE_VALID ?
 			obj->req_bbox.x1 - obj->req_bbox.x0 : -1;
-		log_debug("obj %s limit %d\n", obj->name, limit);
 
 		ret = vidconsole_measure(scn->expo->cons, gen->font_name,
 					 gen->font_size, str, limit, &bbox,
 					 &gen->lines);
 		if (ret)
 			return log_msg_ret("mea", ret);
+		if (scene_chklog(obj->name)) {
+			log_debug("obj %s limit %d: %d lines, width %d height %d\n",
+				  obj->name, limit, gen->lines.count,
+				  bbox.x1, bbox.y1);
+			for (int i = 0; i < gen->lines.count; i++) {
+				const struct vidconsole_mline *mline;
+
+				mline = alist_get(&gen->lines, i,
+						  struct vidconsole_mline);
+				log_content("line %d: %d,%d %d,%d '%.*s'\n", i,
+					    mline->bbox.x0, mline->bbox.y0,
+					    mline->bbox.x1, mline->bbox.y1,
+					    mline->len, str + mline->start);
+			}
+		}
 		if (widthp)
 			*widthp = bbox.x1;
 
@@ -740,6 +786,7 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 		break;
 	}
 	case SCENEOBJT_TEXTLINE:
+	case SCENEOBJT_TEXTEDIT:
 		if (obj->flags & SCENEOF_OPEN)
 			scene_render_background(obj, true, false);
 		break;
@@ -750,10 +797,6 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 			       obj->bbox.y1, box->width, vid_priv->colour_fg, box->fill);
 		break;
 	}
-	case SCENEOBJT_TEXTEDIT:
-		if (obj->flags & SCENEOF_OPEN)
-			scene_render_background(obj, true, false);
-		break;
 	}
 
 	return 0;
@@ -940,15 +983,14 @@ int scene_render_deps(struct scene *scn, uint id)
 		case SCENEOBJT_IMAGE:
 		case SCENEOBJT_TEXT:
 		case SCENEOBJT_BOX:
-		case SCENEOBJT_TEXTEDIT:
 			break;
 		case SCENEOBJT_MENU:
 			scene_menu_render_deps(scn,
 					       (struct scene_obj_menu *)obj);
 			break;
 		case SCENEOBJT_TEXTLINE:
-			scene_textline_render_deps(scn,
-					(struct scene_obj_textline *)obj);
+		case SCENEOBJT_TEXTEDIT:
+			scene_txtin_render_deps(scn, obj, scene_obj_txtin(obj));
 			break;
 		}
 	}
@@ -1576,10 +1618,7 @@ int scene_apply_theme(struct scene *scn, struct expo_theme *theme)
 		case SCENEOBJT_MENU:
 		case SCENEOBJT_BOX:
 		case SCENEOBJT_TEXTLINE:
-			break;
 		case SCENEOBJT_TEXTEDIT:
-			scene_txted_set_font(scn, obj->id, NULL,
-					     theme->font_size);
 			break;
 		case SCENEOBJT_TEXT:
 			scene_txt_set_font(scn, obj->id, NULL,
@@ -1631,11 +1670,10 @@ static int scene_obj_open(struct scene *scn, struct scene_obj *obj)
 	case SCENEOBJT_MENU:
 	case SCENEOBJT_TEXT:
 	case SCENEOBJT_BOX:
-	case SCENEOBJT_TEXTEDIT:
 		break;
 	case SCENEOBJT_TEXTLINE:
-		ret = scene_textline_open(scn,
-					  (struct scene_obj_textline *)obj);
+	case SCENEOBJT_TEXTEDIT:
+		ret = scene_txtin_open(scn, obj, scene_obj_txtin(obj));
 		if (ret)
 			return log_msg_ret("op", ret);
 		break;

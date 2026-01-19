@@ -10,8 +10,10 @@
 
 #include <expo.h>
 #include <log.h>
+#include <menu.h>
 #include <video_console.h>
 #include <linux/errno.h>
+#include <linux/string.h>
 #include "scene_internal.h"
 
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
@@ -42,6 +44,10 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 		if (ret < 0)
 			return log_msg_ret("lab", ret);
 
+		if (scene_chklog(obj->name))
+			log_debug("arr->label_width %d margin %d\n",
+				  arr->label_width,
+				  theme->textline_label_margin_x);
 		x += arr->label_width + theme->textline_label_margin_x;
 	}
 
@@ -51,6 +57,88 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 			      point ? SCENEOF_POINT : 0);
 
 	return x;
+}
+
+int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
+			    struct scene_txtin *tin)
+{
+	const bool open = obj->flags & SCENEOF_OPEN;
+	struct udevice *cons = scn->expo->cons;
+	uint i;
+
+	/* if open, render the edit text on top of the background */
+	if (open) {
+		int ret;
+
+		ret = vidconsole_entry_restore(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		scene_render_obj(scn, tin->edit_id);
+
+		/* move cursor back to the correct position */
+		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
+			vidconsole_put_char(cons, '\b');
+		ret = vidconsole_entry_save(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+
+		vidconsole_show_cursor(cons);
+	}
+
+	return 0;
+}
+
+/**
+ * scene_txtin_putch() - Output a character to the vidconsole
+ *
+ * This is used as the putch callback for CLI line editing, so that characters
+ * are sent to the correct vidconsole.
+ *
+ * @cls: CLI line state
+ * @ch: Character to output
+ */
+static void scene_txtin_putch(struct cli_line_state *cls, int ch)
+{
+	struct scene *scn = container_of(cls, struct scene, cls);
+
+	vidconsole_put_char(scn->expo->cons, ch);
+}
+
+void scene_txtin_close(struct scene *scn)
+{
+	/* cursor is not needed now */
+	vidconsole_readline_end();
+}
+
+int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
+		     struct scene_txtin *tin)
+{
+	struct udevice *cons = scn->expo->cons;
+	struct scene_obj_txt *txt;
+	int ret;
+
+	/* Copy the text into the scene buffer in case the edit is cancelled */
+	memcpy(abuf_data(&scn->buf), abuf_data(&tin->buf),
+	       abuf_size(&scn->buf));
+
+	/* get the position of the editable */
+	txt = scene_obj_find(scn, tin->edit_id, SCENEOBJT_NONE);
+	if (!txt)
+		return log_msg_ret("cur", -ENOENT);
+
+	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
+	vidconsole_entry_start(cons);
+	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
+	scn->cls.insert = true;
+	scn->cls.putch = scene_txtin_putch;
+	ret = vidconsole_entry_save(cons, &scn->entry_save);
+	if (ret)
+		return log_msg_ret("sav", ret);
+
+	/* make sure the cursor is visible */
+	vidconsole_readline_start(true);
+
+	return 0;
 }
 
 void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,

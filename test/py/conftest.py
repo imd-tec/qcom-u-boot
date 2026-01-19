@@ -239,6 +239,10 @@ def pytest_configure(config):
     Returns:
         Nothing.
     """
+    # Skip full configuration when just showing help
+    if config.option.help:
+        return
+
     def parse_config(conf_file):
         """Parse a config file, loading it into the ubconfig container
 
