@@ -50,13 +50,15 @@ int vidconsole_set_row(struct udevice *dev, uint row, int clr)
 	return ops->set_row(dev, row, clr);
 }
 
-int vidconsole_entry_start(struct udevice *dev)
+int vidconsole_entry_start(struct udevice *dev, void *ctx)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
+	if (!ctx)
+		ctx = vidconsole_ctx_from_priv(dev_get_uclass_priv(dev));
 	if (!ops->entry_start)
 		return -ENOSYS;
-	return ops->entry_start(dev);
+	return ops->entry_start(dev, ctx);
 }
 
 /* Move backwards one space */
@@ -130,10 +132,10 @@ static char *parsenum(char *s, int *num)
 	return end;
 }
 
-void vidconsole_set_cursor_pos(struct udevice *dev, void *ctxp, int x, int y)
+void vidconsole_set_cursor_pos(struct udevice *dev, void *vctx, int x, int y)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = ctxp ? ctxp : vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ? vctx : vidconsole_ctx_from_priv(priv);
 
 	/* Hide cursor at old position if it's visible */
 	vidconsole_hide_cursor(dev);
@@ -144,7 +146,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, void *ctxp, int x, int y)
 
 	/* make sure not to kern against the previous character */
 	ctx->last_ch = 0;
-	vidconsole_entry_start(dev);
+	vidconsole_entry_start(dev, NULL);
 }
 
 /**
@@ -511,7 +513,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		break;
 	case '\n':
 		vidconsole_newline(dev);
-		vidconsole_entry_start(dev);
+		vidconsole_entry_start(dev, NULL);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
 		ctx->xcur_frac = ((ctx->xcur_frac / ctx->tab_width_frac)

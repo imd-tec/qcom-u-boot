@@ -697,9 +697,9 @@ static int console_truetype_backspace(struct udevice *dev)
 	return 0;
 }
 
-static int console_truetype_entry_start(struct udevice *dev)
+static int console_truetype_entry_start(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 
 	/* A new input line has start, so clear our history */

@@ -278,6 +278,7 @@ struct vidconsole_ops {
 	 * entry_start() - Indicate that text entry is starting afresh
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Vidconsole context to use
 	 * Returns: 0 on success, -ve on error
 	 *
 	 * Consoles which use proportional fonts need to track the position of
@@ -287,7 +288,7 @@ struct vidconsole_ops {
 	 * command). The driver can use this signal to empty its list of
 	 * positions.
 	 */
-	int (*entry_start)(struct udevice *dev);
+	int (*entry_start)(struct udevice *dev, void *ctx);
 
 	/**
 	 * backspace() - Handle erasing the last character
@@ -695,8 +696,9 @@ int vidconsole_set_row(struct udevice *dev, uint row, int clr);
  * Marks the current cursor position as the start of a line
  *
  * @dev:	Device to adjust
+ * @ctx:	vidconsole context to use, or NULL to use the default
  */
-int vidconsole_entry_start(struct udevice *dev);
+int vidconsole_entry_start(struct udevice *dev, void *ctx);
 
 /**
  * vidconsole_put_char() - Output a character to the current console position
