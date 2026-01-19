@@ -198,14 +198,15 @@ int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp);
  * Fixed font putc_xy function that can be called with explicit font data
  *
  * @param dev		console device
+ * @param vctx		vidconsole context to use (cannot be NULL)
  * @param x_frac	fractional X position
  * @param y		Y position in pixels
  * @param cp		Unicode code point
  * @param fontdata	font data to use for rendering
  * @returns width in fractional pixels, or -ve on error
  */
-int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
-			  struct video_fontdata *fontdata);
+int console_fixed_putc_xy(struct udevice *dev, void *vctx, uint x_frac, uint y,
+			  int cp, struct video_fontdata *fontdata);
 
 /**
  * Internal function to convert Unicode code points to code page 437.

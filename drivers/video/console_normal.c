@@ -81,9 +81,11 @@ static int console_move_rows(struct udevice *dev, uint rowdst,
 
 int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
 {
+	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
-	return console_fixed_putc_xy(dev, x_frac, y, cp, priv->fontdata);
+	return console_fixed_putc_xy(dev, vidconsole_ctx_from_priv(vc_priv),
+				     x_frac, y, cp, priv->fontdata);
 }
 
 static __maybe_unused int console_get_cursor_info(struct udevice *dev)

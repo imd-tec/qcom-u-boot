@@ -417,7 +417,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 
 	/* Use fixed font if selected */
 	if (ctx->cur_fontdata)
-		return console_fixed_putc_xy(dev, x, y, cp, ctx->cur_fontdata);
+		return console_fixed_putc_xy(dev, &ctx->com, x, y, cp,
+					     ctx->cur_fontdata);
 
 	/* Reset scratch buffer for this character */
 	stbtt_scratch_reset(&priv->scratch);
