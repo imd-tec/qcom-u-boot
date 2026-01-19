@@ -174,4 +174,18 @@ struct timespec64 {
 	long tv_nsec;
 };
 
+/*
+ * time_before32 - check if 32-bit time @b is before time @a
+ *
+ * U-Boot stub - time comparison not supported, always returns false.
+ */
+#define time_before32(b, a)	(0)
+
+/*
+ * ktime_get_real_seconds - get current wall-clock time in seconds
+ *
+ * U-Boot implementation uses get_timer() to return boot-relative time.
+ */
+#define ktime_get_real_seconds()	(get_timer(0) / 1000)
+
 #endif

@@ -229,9 +229,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
 #define sync_dirty_buffer(bh)			submit_bh(REQ_OP_WRITE, bh)
 
-/* Time functions - use boot-relative time for timestamps */
-#define ktime_get_real_seconds()		(get_timer(0) / 1000)
-#define time_before32(a, b)			(0)
+/* Time functions - ktime_get_real_seconds, time_before32 are in linux/time.h */
 
 /* Inode operations - iget_locked and new_inode are in interface.c */
 extern struct inode *new_inode(struct super_block *sb);
