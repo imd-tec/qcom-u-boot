@@ -4621,3 +4621,131 @@ https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/410
 
 ---
 
+## 2026-01-19: us/next
+
+Branch: cherry-881f0b77dc8
+
+Commits:
+- 881f0b77dc8 image: apply FDTOs on FDT image node without a load property
+- 1df9cbd70f5 examples/api: improve determination of LOAD_ADDR
+- 72bbb645b36 examples: eliminate CONFIG_STANDALONE_LOAD_ADDR
+- adeea8568d6 API: system info adds FLASH and clk fetches
+- 5cf9e61f0fa examples: fix building on arm32
+- a20a1e31bad GitLab: Run sandbox on fast amd64 and fast arm64 hosts
+- 97c125e6bb4 Gitlab: Add results.xml to the list of artifacts as well.
+- 5392ad2fd9e remoteproc: renesas: Synchronize caches across cores
+- 8a2ffd5a852 arm64: renesas: Add R-Car S4 Starter Kit support
+- b1001835f17 net: miiphybb: Convert ifdef DEBUG to debug()
+- 30a8c830e92 net: miiphybb: Update debug() print
+- e335f1e3bea Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+Now let me start cherry-picking the commits one by one. First commit:
+
+Build passed. Let me continue with the second commit:
+
+Build passed. Third commit:
+
+I can see the conflict. The HEAD already has STANDALONE_LOAD_ADDR and EXAMPLES config in a different arrangement. Let me check what the original commit is trying to do:
+
+The original commit removes STANDALONE_LOAD_ADDR. Let me check what the current HEAD file looks like without the conflict markers:
+
+I see - the file has been renamed from `api/Kconfig` to `legacy_api/Kconfig`. The commit wants to remove STANDALONE_LOAD_ADDR but adds the EXAMPLES config. Looking at this, let me check if EXAMPLES config already exists somewhere else:
+
+OK, so EXAMPLES config is already in `examples/Kconfig`. The resolution is simple - remove the STANDALONE_LOAD_ADDR from legacy_api/Kconfig without adding the EXAMPLES config (which is not needed here). Let me resolve the conflict:
+
+The diff is equivalent - same number of lines changed (5+, 22-), just with the renamed file path (api/Kconfig -> legacy_api/Kconfig). Let me amend the commit message to note the conflict resolution:
+
+Build passed. Fourth commit:
+
+File is renamed from api/ to legacy_api/, but the change is identical. 
+
+Build passed. Fifth commit:
+
+Build passed. Sixth commit:
+
+I see. The conflict is that HEAD has nothing (empty) before the variables, while the incoming commit wants to add the `parallel` and `tags` sections. Let me look at the original commit to understand what it does:
+
+I see - the original commit was adding `parallel` and `tags` sections and changing the tags from `${DEFAULT_AMD64_TAG}` to `${HOST}`. In the HEAD version, there are no tags at all (they've been removed or restructured). The resolution should add the parallel and tags sections. Let me look at the current HEAD version of the file:
+
+The HEAD version has no tags (relying on the default from the template). I need to accept the incoming changes which add the parallel matrix and tags. Let me fix the conflicts:
+
+It seems checkout --theirs completely rewrote the file. Let me restore and manually resolve:
+
+The conflict markers are still there with "ours" and "theirs". Let me properly fix this:
+
+The conflicts are resolved. Now let me continue the cherry-pick:
+
+The original had 20+/4- and ours is 24+/0-. This is because in our base there were no tags to remove, so we only add the parallel/tags sections. This is acceptable - the intent of the commit is preserved (adding parallel matrix and tags). Let me amend the commit message to note the resolution:
+
+Build passed. Seventh commit:
+
+The commit results in empty (likely already applied). Let me check if this change is already in the base:
+
+The `results.xml` is already in the artifacts paths (line 149). So this commit is already applied. Let me continue with --allow-empty to preserve the history:
+
+Build passed. Eighth commit:
+
+Build passed. Ninth commit:
+
+Build passed. Tenth commit:
+
+Build passed. Eleventh commit:
+
+Build passed. Twelfth commit (merge commit - marked as "maybe already applied"):
+
+Let me check if they're the same merge content-wise:
+
+The found merge (d16b0c2acd1) contains different/more commits than the original (e335f1e3bea). The original merge only included 4 commits but we've already cherry-picked most of them. Let me check if commits 5392ad2fd9e, 8a2ffd5a852, b1001835f17, 30a8c830e92 are already in ci/master:
+
+So the commits merged by the original merge are not in ci/master yet (we just cherry-picked them). Since this is a merge commit and the commits we just cherry-picked are the ones from the merge, cherry-picking the merge commit should result in an empty commit. Let me proceed:
+
+Now let me verify all 12 commits are present:
+
+All 12 commits are present. Let me run the final build test:
+
+All builds pass. Let me provide the final summary:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+Successfully cherry-picked all **12 commits** from `us/next` to a new branch `cherry-881f0b77dc8` based on `ci/master`.
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 881f0b77dc8 | image: apply FDTOs on FDT image node without a load property | ✅ OK |
+| 2 | 1df9cbd70f5 | examples/api: improve determination of LOAD_ADDR | ✅ OK |
+| 3 | 72bbb645b36 | examples: eliminate CONFIG_STANDALONE_LOAD_ADDR | ✅ Conflict resolved |
+| 4 | adeea8568d6 | API: system info adds FLASH and clk fetches | ✅ OK |
+| 5 | 5cf9e61f0fa | examples: fix building on arm32 | ✅ OK |
+| 6 | a20a1e31bad | GitLab: Run sandbox on fast amd64 and fast arm64 hosts | ✅ Conflict resolved |
+| 7 | 97c125e6bb4 | Gitlab: Add results.xml to the list of artifacts as well. | ✅ Empty (already applied) |
+| 8 | 5392ad2fd9e | remoteproc: renesas: Synchronize caches across cores | ✅ OK |
+| 9 | 8a2ffd5a852 | arm64: renesas: Add R-Car S4 Starter Kit support | ✅ OK |
+| 10 | b1001835f17 | net: miiphybb: Convert ifdef DEBUG to debug() | ✅ OK |
+| 11 | 30a8c830e92 | net: miiphybb: Update debug() print | ✅ OK |
+| 12 | e335f1e3bea | Merge branch 'master' of u-boot-sh | ✅ Empty (merged commits already cherry-picked) |
+
+### Build Result
+**OK** - All builds passed successfully
+
+### Fix-ups Made
+
+1. **Commit 3 (72bbb645b36)**: Kconfig file was renamed to `legacy_api/Kconfig`. Resolved conflict by removing STANDALONE_LOAD_ADDR config (EXAMPLES config already exists in `examples/Kconfig`).
+
+2. **Commit 6 (a20a1e31bad)**: Base had no tags to replace. Resolved by adding only the parallel/tags sections.
+
+3. **Commit 7 (97c125e6bb4)**: Empty commit - `results.xml` was already in the artifacts list in `ci/master`.
+
+4. **Commit 12 (e335f1e3bea)**: Empty merge commit - all commits from the merge were already cherry-picked individually.
+
+### Commits with Deltas
+- All commits with changes applied cleanly with expected deltas
+- Some file paths changed due to renames (`api/` → `legacy_api/`) but content changes match originals
+
+### Branch Ready
+The branch `cherry-881f0b77dc8` is ready for pushing.
+
+---
+
