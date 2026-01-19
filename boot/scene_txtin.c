@@ -126,7 +126,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	if (!txt)
 		return log_msg_ret("cur", -ENOENT);
 
-	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
+	vidconsole_set_cursor_pos(cons, NULL, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons);
 	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
 	scn->cls.insert = true;

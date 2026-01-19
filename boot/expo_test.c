@@ -180,14 +180,14 @@ int expo_test_render(struct expo *exp)
 	snprintf(buf, sizeof(buf), "frame  %6d", test->render_count);
 	x = vid_priv->xsize - 18 * ctx->x_charsize;
 	y = 10;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
 	/* Display FPS on next line (only if non-zero) */
 	if (test->fps_last > 0) {
 		snprintf(buf, sizeof(buf), "fps    %6d", test->fps_last);
 		y += ctx->y_charsize;
-		vidconsole_set_cursor_pos(exp->cons, x, y);
+		vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
 		vidconsole_put_string(exp->cons, buf);
 	}
 
@@ -196,7 +196,7 @@ int expo_test_render(struct expo *exp)
 		 test->render_avg_us / 1000,
 		 (test->render_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
 	/* Display average sync time in milliseconds on next line */
@@ -204,7 +204,7 @@ int expo_test_render(struct expo *exp)
 		 test->sync_avg_us / 1000,
 		 (test->sync_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
 	/* Display average poll time in milliseconds on next line */
@@ -212,7 +212,7 @@ int expo_test_render(struct expo *exp)
 		 test->poll_avg_us / 1000,
 		 (test->poll_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
 	vidconsole_put_string(exp->cons, buf);
 
 	return 0;

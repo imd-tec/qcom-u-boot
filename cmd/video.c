@@ -85,7 +85,7 @@ static int do_video_write(struct cmd_tbl *cmdtp, int flag, int argc,
 		row = hextoul(colon + 1, NULL);
 
 		if (use_pixels)
-			vidconsole_set_cursor_pos(dev, col, row);
+			vidconsole_set_cursor_pos(dev, NULL, col, row);
 		else
 			vidconsole_position_cursor(dev, col, row);
 

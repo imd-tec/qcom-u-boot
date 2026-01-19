@@ -774,10 +774,11 @@ int vidconsole_clear_and_reset(struct udevice *dev);
  * updated to the same position, so that a newline will return to @x
  *
  * @dev:	video console device to update
+ * @ctx:	vidconsole context to use, or NULL to use the default
  * @x:		x position from left in pixels
  * @y:		y position from top in pixels
  */
-void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y);
+void vidconsole_set_cursor_pos(struct udevice *dev, void *ctx, int x, int y);
 
 /**
  * vidconsole_list_fonts() - List the available fonts

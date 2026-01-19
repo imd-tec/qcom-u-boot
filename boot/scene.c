@@ -685,7 +685,7 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 	bbox.y1 = obj->bbox.y1;
 
 	if (!mline) {
-		vidconsole_set_cursor_pos(cons, x, y);
+		vidconsole_set_cursor_pos(cons, NULL, x, y);
 		draw_string(cons, str, strlen(str),
 			    obj->flags & SCENEOF_PASSWORD);
 	}
@@ -704,7 +704,7 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		y = obj->bbox.y0 + offset.yofs + mline->bbox.y0;
 		if (y > bbox.y1)
 			break;	/* clip this line and any following */
-		vidconsole_set_cursor_pos(cons, x, y);
+		vidconsole_set_cursor_pos(cons, NULL, x, y);
 		draw_string(cons, str + mline->start, mline->len,
 			    obj->flags & SCENEOF_PASSWORD);
 	}

@@ -130,10 +130,10 @@ static char *parsenum(char *s, int *num)
 	return end;
 }
 
-void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y)
+void vidconsole_set_cursor_pos(struct udevice *dev, void *ctxp, int x, int y)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = ctxp ? ctxp : vidconsole_ctx_from_priv(priv);
 
 	/* Hide cursor at old position if it's visible */
 	vidconsole_hide_cursor(dev);
@@ -964,7 +964,7 @@ void vidconsole_position_cursor(struct udevice *dev, unsigned col, unsigned row)
 
 	x = min_t(short, col * ctx->x_charsize, vid_priv->xsize - 1);
 	y = min_t(short, row * ctx->y_charsize, vid_priv->ysize - 1);
-	vidconsole_set_cursor_pos(dev, x, y);
+	vidconsole_set_cursor_pos(dev, NULL, x, y);
 }
 
 void vidconsole_set_quiet(struct udevice *dev, bool quiet)
