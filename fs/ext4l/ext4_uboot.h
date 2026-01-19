@@ -1322,8 +1322,8 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* atomic64 operations are now in asm-generic/atomic.h */
 
-/* CPU cycle counter stub */
-#define get_cycles()			(0ULL)
+/* get_cycles is in asm-generic/timex.h */
+#include <asm-generic/timex.h>
 
 /* folio_address is in linux/pagemap.h */
 
