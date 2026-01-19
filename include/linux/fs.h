@@ -305,6 +305,12 @@ enum {
 #define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
 #define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
 
+/* inode_needs_sync - check if inode needs synchronous writes (always false) */
+#define inode_needs_sync(inode)	(0)
+
+/* is_bad_inode - check if inode is marked bad (always false in U-Boot) */
+#define is_bad_inode(inode)	(0)
+
 /**
  * struct fstrim_range - fstrim ioctl argument
  * @start: first byte to trim

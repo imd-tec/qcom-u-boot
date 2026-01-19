@@ -197,8 +197,7 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 /* wait_on_bit_io is now in linux/wait_bit.h */
 
-/* inode_needs_sync - stub */
-#define inode_needs_sync(inode)		(0)
+/* inode_needs_sync is in linux/fs.h */
 
 /* Memory barriers are now in linux/smp.h */
 
@@ -222,8 +221,7 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 
 /* percpu_counter operations are in linux/percpu_counter.h */
 
-/* Group permission - stub */
-#define in_group_p(gid)			(0)
+/* in_group_p is in linux/cred.h */
 
 /* Quota operations - use linux/quotaops.h */
 #include <linux/quotaops.h>
@@ -270,8 +268,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #endif
 /* ext4_init_security is provided by xattr.h */
 
-/* inode state stubs */
-#define is_bad_inode(inode)			(0)
+/* is_bad_inode is in linux/fs.h */
 
 /* Block device operations - stubs */
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })

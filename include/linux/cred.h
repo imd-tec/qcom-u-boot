@@ -59,4 +59,7 @@ struct user_namespace {
 
 extern struct user_namespace init_user_ns;
 
+/* in_group_p - check if current process is in group (always false in U-Boot) */
+#define in_group_p(gid)		(0)
+
 #endif /* _LINUX_CRED_H */
