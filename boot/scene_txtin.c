@@ -84,7 +84,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 		if (ret)
 			return log_msg_ret("sav", ret);
 
-		vidconsole_show_cursor(cons);
+		vidconsole_show_cursor(cons, NULL);
 	}
 
 	return 0;

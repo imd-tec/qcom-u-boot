@@ -1198,7 +1198,7 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 	with_a = video_compress_fb(uts, dev, false);
 
 	/* Show cursor at current position (after 'a') */
-	ut_assertok(vidconsole_show_cursor(con));
+	ut_assertok(vidconsole_show_cursor(con, NULL));
 	ut_assert(curs->visible);
 	ut_assert(curs->saved);
 	ut_asserteq(exp_height, curs->height);
@@ -1223,7 +1223,7 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 	ut_assert(after_idle != with_a);
 
 	/* Hide the cursor */
-	ut_assertok(vidconsole_hide_cursor(con));
+	ut_assertok(vidconsole_hide_cursor(con, NULL));
 	ut_assert(curs->enabled);
 	ut_assert(!curs->visible);
 	ut_assert(!curs->saved);

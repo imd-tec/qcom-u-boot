@@ -76,7 +76,7 @@ static int vidconsole_back(struct udevice *dev, struct vidconsole_ctx *ctx)
 	}
 
 	/* Hide cursor at old position if it's visible */
-	vidconsole_hide_cursor(dev);
+	vidconsole_hide_cursor(dev, ctx);
 
 	ctx->xcur_frac -= VID_TO_POS(ctx->x_charsize);
 	if (ctx->xcur_frac < ctx->xstart_frac) {
@@ -136,10 +136,10 @@ static char *parsenum(char *s, int *num)
 void vidconsole_set_cursor_pos(struct udevice *dev, void *vctx, int x, int y)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vctx ? vctx : vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ?: vidconsole_ctx_from_priv(priv);
 
 	/* Hide cursor at old position if it's visible */
-	vidconsole_hide_cursor(dev);
+	vidconsole_hide_cursor(dev, ctx);
 
 	ctx->xcur_frac = VID_TO_POS(x);
 	ctx->xstart_frac = ctx->xcur_frac;
@@ -147,7 +147,7 @@ void vidconsole_set_cursor_pos(struct udevice *dev, void *vctx, int x, int y)
 
 	/* make sure not to kern against the previous character */
 	ctx->last_ch = 0;
-	vidconsole_entry_start(dev, NULL);
+	vidconsole_entry_start(dev, ctx);
 }
 
 /**
@@ -494,7 +494,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 	int cp, ret;
 
 	/* Hide cursor to avoid artifacts */
-	vidconsole_hide_cursor(dev);
+	vidconsole_hide_cursor(dev, ctx);
 
 	if (ansi->escape) {
 		vidconsole_escape_char(dev, ctx, ch);
@@ -767,10 +767,10 @@ int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf)
 }
 
 #ifdef CONFIG_CURSOR
-int vidconsole_show_cursor(struct udevice *dev)
+int vidconsole_show_cursor(struct udevice *dev, void *vctx)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ?: vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 	struct vidconsole_cursor *curs = &ctx->curs;
 	int ret;
@@ -808,10 +808,10 @@ int vidconsole_show_cursor(struct udevice *dev)
 	return 0;
 }
 
-int vidconsole_hide_cursor(struct udevice *dev)
+int vidconsole_hide_cursor(struct udevice *dev, void *vctx)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ?: vidconsole_ctx_from_priv(priv);
 	struct vidconsole_cursor *curs = &ctx->curs;
 	int ret;
 
@@ -1015,7 +1015,7 @@ void vidconsole_idle(struct udevice *dev)
 		 * but vidconsole_show_cursor() calls get_cursor_info() to
 		 * recalc the position anyway.
 		 */
-		vidconsole_show_cursor(dev);
+		vidconsole_show_cursor(dev, ctx);
 	}
 }
 

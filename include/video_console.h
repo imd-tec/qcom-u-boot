@@ -580,9 +580,10 @@ int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf);
  * Shows a cursor at the current position.
  *
  * @dev: Console device to use
+ * @vctx: Vidconsole context to use, or NULL to use default
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_show_cursor(struct udevice *dev);
+int vidconsole_show_cursor(struct udevice *dev, void *vctx);
 
 /**
  * vidconsole_hide_cursor() - Hide the cursor
@@ -590,9 +591,10 @@ int vidconsole_show_cursor(struct udevice *dev);
  * Hides the cursor if it's currently visible
  *
  * @dev: Console device to use
+ * @vctx: Vidconsole context to use, or NULL to use default
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_hide_cursor(struct udevice *dev);
+int vidconsole_hide_cursor(struct udevice *dev, void *vctx);
 
 /**
  * vidconsole_readline_start() - Enable cursor for a video console
@@ -633,12 +635,12 @@ void vidconsole_readline_start_all(bool indent);
  */
 void vidconsole_readline_end_all(void);
 #else
-static inline int vidconsole_show_cursor(struct udevice *dev)
+static inline int vidconsole_show_cursor(struct udevice *dev, void *vctx)
 {
 	return 0;
 }
 
-static inline int vidconsole_hide_cursor(struct udevice *dev)
+static inline int vidconsole_hide_cursor(struct udevice *dev, void *vctx)
 {
 	return 0;
 }
