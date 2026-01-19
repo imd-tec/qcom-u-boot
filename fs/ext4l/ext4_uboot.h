@@ -284,10 +284,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
 #define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
 
-/* Inode locking - stubs */
-#define inode_is_locked(i)	(1)
-#define i_size_write(i, s)	do { (i)->i_size = (s); } while (0)
-#define i_size_read(i)		((i)->i_size)
+/* inode_is_locked, i_size_write, i_size_read are in linux/fs.h */
 
 /* spin_trylock is defined in linux/spinlock.h */
 
@@ -707,14 +704,9 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* DAX device mapping check - always false in U-Boot */
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
-/* Inode time/size operations */
-#define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
+/* Inode time/size operations - inode_newsize_ok, i_blocksize, IS_SYNC are in linux/fs.h */
 #define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
 #define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
-#define i_blocksize(i)			(1U << (i)->i_blkbits)
-
-/* IS_SYNC macro */
-#define IS_SYNC(inode)			(0)
 
 /* Case-folding stubs - not supported in U-Boot */
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
@@ -925,9 +917,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define generic_fillattr(m, req, i, s)	do { } while (0)
 #define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
 
-/* Inode flag macros */
-#define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
-#define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
+/* IS_APPEND, IS_IMMUTABLE are in linux/fs.h */
 
 /* File operations */
 #define file_update_time(f)		do { } while (0)
