@@ -318,6 +318,9 @@ enum {
 #define I_DIRTY_DATASYNC	(1 << 2)
 #define I_DIRTY_TIME		(1 << 3)
 
+/* Maximum file size for large files */
+#define MAX_LFS_FILESIZE	((loff_t)LLONG_MAX)
+
 /**
  * struct fstrim_range - fstrim ioctl argument
  * @start: first byte to trim

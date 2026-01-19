@@ -213,4 +213,18 @@ static inline bool noop_dirty_folio(struct address_space *mapping,
 	return false;
 }
 
+/*
+ * end_buffer_read_sync - completion handler for synchronous buffer reads
+ * @bh: buffer head that completed
+ * @uptodate: whether the read was successful
+ */
+static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
+
 #endif /* _LINUX_BUFFER_HEAD_H */

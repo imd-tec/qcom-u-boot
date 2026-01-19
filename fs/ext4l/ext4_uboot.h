@@ -979,15 +979,7 @@ static inline const char *simple_get_link(struct dentry *dentry,
 
 /* QFMT_VFS_* quota format constants are in linux/quotaops.h */
 
-/* Buffer read sync */
-static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
-{
-	if (uptodate)
-		set_buffer_uptodate(bh);
-	else
-		clear_buffer_uptodate(bh);
-	unlock_buffer(bh);
-}
+/* end_buffer_read_sync is in linux/buffer_head.h */
 
 /* REQ_OP_READ is in linux/blk_types.h */
 /* SB_ACTIVE is in linux/fs.h */
@@ -1103,8 +1095,7 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* EXT4 magic number */
 #define EXT4_SUPER_MAGIC		0xEF53
 
-/* Max file size for large files */
-#define MAX_LFS_FILESIZE		((loff_t)LLONG_MAX)
+/* MAX_LFS_FILESIZE is in linux/fs.h */
 
 /* blockgroup_lock - use linux/blockgroup_lock.h */
 #include <linux/blockgroup_lock.h>
