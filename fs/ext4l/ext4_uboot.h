@@ -864,11 +864,8 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 /* Device encoding helpers are now in linux/kdev_t.h */
 #include <linux/kdev_t.h>
 
-/* UID/GID bit helpers */
-#define low_16_bits(x)		((x) & 0xFFFF)
-#define high_16_bits(x)		(((x) >> 16) & 0xFFFF)
-#define fs_high2lowuid(uid)	((uid) & 0xFFFF)
-#define fs_high2lowgid(gid)	((gid) & 0xFFFF)
+/* UID/GID bit helpers - use linux/highuid.h */
+#include <linux/highuid.h>
 
 /* Inode allocation/state operations */
 extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
