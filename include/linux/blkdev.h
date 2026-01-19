@@ -50,4 +50,9 @@ struct blk_plug {
  */
 #define blk_finish_plug(plug)	do { (void)(plug); } while (0)
 
+/* Block device atomic write support - not supported in U-Boot */
+#define bdev_can_atomic_write(bdev)		({ (void)(bdev); 0; })
+#define bdev_atomic_write_unit_max_bytes(bdev)	({ (void)(bdev); (unsigned int)0; })
+#define bdev_atomic_write_unit_min_bytes(bdev)	({ (void)(bdev); 0UL; })
+
 #endif /* _LINUX_BLKDEV_H */

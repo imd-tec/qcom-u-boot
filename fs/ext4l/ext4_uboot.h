@@ -1181,10 +1181,7 @@ void free_page(unsigned long addr);
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
-/* Block device atomic write stubs */
-#define bdev_can_atomic_write(bdev)		({ (void)(bdev); 0; })
-#define bdev_atomic_write_unit_max_bytes(bdev)	({ (void)(bdev); (unsigned int)0; })
-#define bdev_atomic_write_unit_min_bytes(bdev)	({ (void)(bdev); 0UL; })
+/* Block device atomic write stubs are in linux/blkdev.h */
 
 /* Superblock blocksize - declaration for stub.c */
 int sb_set_blocksize(struct super_block *sb, int size);
