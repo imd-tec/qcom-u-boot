@@ -1019,30 +1019,38 @@ void vidconsole_idle(struct udevice *dev)
 }
 
 #ifdef CONFIG_CURSOR
-void vidconsole_readline_start(bool indent)
+void vidconsole_readline_start(struct udevice *dev, bool indent)
 {
-	struct uclass *uc;
-	struct udevice *dev;
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 
-	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc) {
-		struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
-
-		ctx->curs.indent = indent;
-		ctx->curs.enabled = true;
-		vidconsole_mark_start(dev);
-	}
+	ctx->curs.indent = indent;
+	ctx->curs.enabled = true;
+	vidconsole_mark_start(dev);
 }
 
-void vidconsole_readline_end(void)
+void vidconsole_readline_end(struct udevice *dev)
+{
+	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
+
+	ctx->curs.enabled = false;
+}
+
+void vidconsole_readline_start_all(bool indent)
 {
 	struct uclass *uc;
 	struct udevice *dev;
 
-	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc) {
-		struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
+	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc)
+		vidconsole_readline_start(dev, indent);
+}
 
-		ctx->curs.enabled = false;
-	}
+void vidconsole_readline_end_all(void)
+{
+	struct uclass *uc;
+	struct udevice *dev;
+
+	uclass_id_foreach_dev(UCLASS_VIDEO_CONSOLE, dev, uc)
+		vidconsole_readline_end(dev);
 }
 #endif /* CURSOR */
 

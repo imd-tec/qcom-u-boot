@@ -107,7 +107,7 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 void scene_txtin_close(struct scene *scn)
 {
 	/* cursor is not needed now */
-	vidconsole_readline_end();
+	vidconsole_readline_end(scn->expo->cons);
 }
 
 int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
@@ -137,7 +137,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		return log_msg_ret("sav", ret);
 
 	/* make sure the cursor is visible */
-	vidconsole_readline_start(true);
+	vidconsole_readline_start(cons, true);
 
 	return 0;
 }

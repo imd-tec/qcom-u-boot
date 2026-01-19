@@ -710,7 +710,7 @@ int cli_readline_into_buffer(const char *const prompt, char *buffer,
 			puts(prompt);
 
 		/* tell the vidconsole the cursor is at its start position */
-		vidconsole_readline_start(false);
+		vidconsole_readline_start_all(false);
 		rc = cread_line(prompt, p, &len, timeout);
 		rc = rc < 0 ? rc : len;
 
@@ -721,7 +721,7 @@ int cli_readline_into_buffer(const char *const prompt, char *buffer,
 	pager_set_bypass(gd_pager(), old_bypass);
 	pager_reset(gd_pager());
 
-	vidconsole_readline_end();
+	vidconsole_readline_end_all();
 
 	return rc;
 }

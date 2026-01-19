@@ -591,22 +591,41 @@ int vidconsole_show_cursor(struct udevice *dev);
 int vidconsole_hide_cursor(struct udevice *dev);
 
 /**
- * vidconsole_readline_start() - Enable cursor for all video consoles
+ * vidconsole_readline_start() - Enable cursor for a video console
+ *
+ * Called at the start of command line input to show the cursor
+ *
+ * @dev: vidconsole device
+ * @indent: indent subsequent lines to the same position as the first line
+ */
+void vidconsole_readline_start(struct udevice *dev, bool indent);
+
+/**
+ * vidconsole_readline_end() - Disable cursor for a video console
+ *
+ * Called at the end of command line input to hide the cursor
+ *
+ * @dev: vidconsole device
+ */
+void vidconsole_readline_end(struct udevice *dev);
+
+/**
+ * vidconsole_readline_start_all() - Enable cursor for all video consoles
  *
  * Called at the start of command line input to show cursors on all
  * active video consoles
  *
  * @indent: indent subsequent lines to the same position as the first line
  */
-void vidconsole_readline_start(bool indent);
+void vidconsole_readline_start_all(bool indent);
 
 /**
- * vidconsole_readline_end() - Disable cursor for all video consoles
+ * vidconsole_readline_end_all() - Disable cursor for all video consoles
  *
  * Called at the end of command line input to hide cursors on all
  * active video consoles
  */
-void vidconsole_readline_end(void);
+void vidconsole_readline_end_all(void);
 #else
 static inline int vidconsole_show_cursor(struct udevice *dev)
 {
@@ -618,11 +637,19 @@ static inline int vidconsole_hide_cursor(struct udevice *dev)
 	return 0;
 }
 
-static inline void vidconsole_readline_start(bool indent)
+static inline void vidconsole_readline_start(struct udevice *dev, bool indent)
 {
 }
 
-static inline void vidconsole_readline_end(void)
+static inline void vidconsole_readline_end(struct udevice *dev)
+{
+}
+
+static inline void vidconsole_readline_start_all(bool indent)
+{
+}
+
+static inline void vidconsole_readline_end_all(void)
 {
 }
 #endif /* CONFIG_CURSOR */
