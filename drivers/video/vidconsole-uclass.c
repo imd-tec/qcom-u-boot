@@ -90,11 +90,12 @@ static int vidconsole_back(struct udevice *dev, struct vidconsole_ctx *ctx)
 	return video_sync(dev->parent, false);
 }
 
-/* Move to a newline, scrolling the display if necessary */
-static void vidconsole_newline(struct udevice *dev)
+/*
+ * Move to a newline, scrolling the display if necessary.
+ * ctx must be non-NULL
+ */
+static void vidconsole_newline(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
 	const int rows = CONFIG_VAL(CONSOLE_SCROLL_LINES);
@@ -469,7 +470,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	 */
 	ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
 	if (ret == -EAGAIN) {
-		vidconsole_newline(dev);
+		vidconsole_newline(dev, ctx);
 		ret = vidconsole_putc_xy(dev, ctx->xcur_frac, ctx->ycur, ch);
 	}
 	if (ret < 0)
@@ -477,7 +478,7 @@ static int vidconsole_output_glyph(struct udevice *dev, int ch)
 	ctx->xcur_frac += ret;
 	ctx->last_ch = ch;
 	if (ctx->xcur_frac >= ctx->xsize_frac)
-		vidconsole_newline(dev);
+		vidconsole_newline(dev, ctx);
 	cli_index_adjust(ctx, 1);
 
 	return 0;
@@ -510,7 +511,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		ctx->xcur_frac = ctx->xstart_frac;
 		break;
 	case '\n':
-		vidconsole_newline(dev);
+		vidconsole_newline(dev, ctx);
 		vidconsole_entry_start(dev, NULL);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
@@ -518,7 +519,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 				+ 1) * ctx->tab_width_frac;
 
 		if (ctx->xcur_frac >= ctx->xsize_frac)
-			vidconsole_newline(dev);
+			vidconsole_newline(dev, ctx);
 		break;
 	case '\b':
 		vidconsole_back(dev, ctx);
