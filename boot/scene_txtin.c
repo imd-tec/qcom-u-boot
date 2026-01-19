@@ -79,7 +79,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 
 		/* move cursor back to the correct position */
 		for (i = cls->num; i < cls->eol_num; i++)
-			vidconsole_put_char(cons, '\b');
+			vidconsole_put_char(cons, NULL, '\b');
 		ret = vidconsole_entry_save(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
@@ -103,7 +103,7 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 {
 	struct scene *scn = cls->priv;
 
-	vidconsole_put_char(scn->expo->cons, ch);
+	vidconsole_put_char(scn->expo->cons, NULL, ch);
 }
 
 void scene_txtin_close(struct scene *scn)

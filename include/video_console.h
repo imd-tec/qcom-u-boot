@@ -748,10 +748,11 @@ int vidconsole_entry_start(struct udevice *dev, void *ctx);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @vctx:	Vidconsole context to use, or NULL to use default
  * @ch:		Character to write
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_char(struct udevice *dev, char ch);
+int vidconsole_put_char(struct udevice *dev, void *vctx, char ch);
 
 /**
  * vidconsole_put_stringn() - Output part of a string to the current console pos

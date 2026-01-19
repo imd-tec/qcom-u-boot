@@ -623,7 +623,7 @@ static void draw_string(struct udevice *cons, const char *str, int len,
 		int i;
 
 		for (i = 0; i < len; i++)
-			vidconsole_put_char(cons, '*');
+			vidconsole_put_char(cons, NULL, '*');
 	} else {
 		vidconsole_put_stringn(cons, str, len);
 	}

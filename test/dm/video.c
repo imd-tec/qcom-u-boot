@@ -420,21 +420,21 @@ static int check_vidconsole_output(struct unit_test_state *uts, int rot,
 
 	/* Check display wrap */
 	for (i = 0; i < 120; i++)
-		vidconsole_put_char(con, 'A' + i % 50);
+		vidconsole_put_char(con, NULL, 'A' + i % 50);
 	ut_asserteq(wrap_size, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* Check display scrolling */
 	for (i = 0; i < SCROLL_LINES; i++) {
-		vidconsole_put_char(con, 'A' + i % 50);
-		vidconsole_put_char(con, '\n');
+		vidconsole_put_char(con, NULL, 'A' + i % 50);
+		vidconsole_put_char(con, NULL, '\n');
 	}
 	ut_asserteq(scroll_size, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* If we scroll enough, the screen becomes blank again */
 	for (i = 0; i < SCROLL_LINES; i++)
-		vidconsole_put_char(con, '\n');
+		vidconsole_put_char(con, NULL, '\n');
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -1193,8 +1193,8 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 	ut_assert(!curs->enabled);
 	ut_assert(!curs->saved);
 	ut_assert(!curs->height);
-	ut_assertok(vidconsole_put_char(con, ' '));
-	ut_assertok(vidconsole_put_char(con, 'a'));
+	ut_assertok(vidconsole_put_char(con, NULL, ' '));
+	ut_assertok(vidconsole_put_char(con, NULL, 'a'));
 	with_a = video_compress_fb(uts, dev, false);
 
 	/* Show cursor at current position (after 'a') */
@@ -1208,7 +1208,7 @@ static int check_cursor_backspace(struct unit_test_state *uts,
 	curs->enabled = true;
 
 	/* Do backspace - the cursor will be hidden */
-	ut_assertok(vidconsole_put_char(con, '\b'));
+	ut_assertok(vidconsole_put_char(con, NULL, '\b'));
 	ut_assert(!curs->visible);
 	ut_assert(!curs->saved);
 	after_backspace = video_compress_fb(uts, dev, false);

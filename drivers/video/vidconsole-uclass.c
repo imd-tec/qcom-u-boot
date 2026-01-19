@@ -486,10 +486,10 @@ static int vidconsole_output_glyph(struct udevice *dev,
 	return 0;
 }
 
-int vidconsole_put_char(struct udevice *dev, char ch)
+int vidconsole_put_char(struct udevice *dev, void *vctx, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ?: vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ansi *ansi = &ctx->ansi;
 	int cp, ret;
 
@@ -514,7 +514,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 		break;
 	case '\n':
 		vidconsole_newline(dev, ctx);
-		vidconsole_entry_start(dev, NULL);
+		vidconsole_entry_start(dev, ctx);
 		break;
 	case '\t':	/* Tab (8 chars alignment) */
 		ctx->xcur_frac = ((ctx->xcur_frac / ctx->tab_width_frac)
@@ -552,7 +552,7 @@ int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen)
 	if (maxlen != -1)
 		end = str + maxlen;
 	for (s = str; *s && (maxlen == -1 || s < end); s++) {
-		ret = vidconsole_put_char(dev, *s);
+		ret = vidconsole_put_char(dev, NULL, *s);
 		if (ret)
 			return ret;
 	}
@@ -573,7 +573,7 @@ static void vidconsole_putc(struct stdio_dev *sdev, const char ch)
 
 	if (priv->quiet)
 		return;
-	ret = vidconsole_put_char(dev, ch);
+	ret = vidconsole_put_char(dev, NULL, ch);
 	if (ret) {
 #ifdef DEBUG
 		console_puts_select_stderr(true, "[vc err: putc]");

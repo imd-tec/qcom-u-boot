@@ -71,7 +71,7 @@ int at91_video_show_board_info(void)
 				   priv->ctx->y_charsize - 1) /
 				   priv->ctx->y_charsize);
 	for (s = buf, i = 0; i < len; s++, i++)
-		vidconsole_put_char(con, *s);
+		vidconsole_put_char(con, NULL, *s);
 
 	return 0;
 }
