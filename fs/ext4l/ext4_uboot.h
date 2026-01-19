@@ -214,9 +214,7 @@
 /* Quota operations - use linux/quotaops.h */
 #include <linux/quotaops.h>
 
-/* icount - inode reference count */
-#define icount_read(inode)			(1)
-
+/* icount_read is in linux/fs.h */
 /* d_inode is now in linux/dcache.h */
 
 /* Random number functions - use linux/random.h */
@@ -228,13 +226,8 @@
 
 /* Inode operations - iget_locked and new_inode are in interface.c */
 extern struct inode *new_inode(struct super_block *sb);
-#define i_uid_write(inode, uid)			do { } while (0)
-#define i_gid_write(inode, gid)			do { } while (0)
-#define inode_fsuid_set(inode, idmap)		do { } while (0)
-#define inode_init_owner(idmap, i, dir, mode)	do { (i)->i_mode = (mode); } while (0)
-#define insert_inode_locked(inode)		(0)
-#define unlock_new_inode(inode)			do { } while (0)
-#define clear_nlink(inode)			do { } while (0)
+/* i_uid_write, i_gid_write, inode_fsuid_set, inode_init_owner are in linux/fs.h */
+/* insert_inode_locked, unlock_new_inode, clear_nlink are in linux/fs.h */
 /* IS_DIRSYNC is in linux/fs.h */
 
 /* fscrypt_prepare_new_inode, fscrypt_set_context are in ext4_fscrypt.h */
@@ -335,9 +328,7 @@ BUFFER_FNS(Cached, cached)
 /* errseq_t is defined in linux/fs.h */
 /* time64_t is now in linux/time.h */
 
-/* IS_NOQUOTA - stub */
-#define IS_NOQUOTA(inode)	(0)
-
+/* IS_NOQUOTA is in linux/fs.h */
 /* dentry, name_snapshot are now in linux/dcache.h */
 
 /* VM types - use linux/mm_types.h */
@@ -640,8 +631,7 @@ struct dx_hash_info {
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
 /* Inode time/size operations - inode_newsize_ok, i_blocksize, IS_SYNC are in linux/fs.h */
-#define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
-#define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
+/* inode_set_ctime_current, inode_set_mtime_to_ts are in linux/fs.h */
 
 /* Case-folding stubs - not supported in U-Boot */
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
@@ -754,10 +744,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* dquot_file_open is in linux/quotaops.h */
 
-/* Inode I/O list management */
-#define inode_io_list_del(inode)		do { } while (0)
-#define inode_is_open_for_write(i)		(0)
-#define inode_is_dirtytime_only(i)		(0)
+/* inode_io_list_del is in linux/writeback.h */
+/* inode_is_open_for_write, inode_is_dirtytime_only are in linux/fs.h */
 
 /* Folio operations and writeback stubs are in linux/pagemap.h */
 #define folio_batch_release(fb)			do { } while (0)
@@ -805,9 +793,9 @@ static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
 
 /* Inode version operations - use linux/iversion.h */
 #include <linux/iversion.h>
-#define inode_set_flags(i, f, m)		do { } while (0)
+/* inode_set_flags is in linux/fs.h */
 
-/* Inode credential helpers */
+/* Inode credential helpers - i_uid_read, i_gid_read need struct inode */
 static inline unsigned int i_uid_read(const struct inode *inode)
 {
 	return inode->i_uid.val;
@@ -818,10 +806,7 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 	return inode->i_gid.val;
 }
 
-#define i_uid_needs_update(m, a, i)		({ (void)(m); (void)(a); (void)(i); 0; })
-#define i_gid_needs_update(m, a, i)		({ (void)(m); (void)(a); (void)(i); 0; })
-#define i_uid_update(m, a, i)			do { } while (0)
-#define i_gid_update(m, a, i)			do { } while (0)
+/* i_uid_needs_update, i_gid_needs_update, i_uid_update, i_gid_update are in linux/fs.h */
 
 /* Device encoding helpers are now in linux/kdev_t.h */
 #include <linux/kdev_t.h>
@@ -831,15 +816,9 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 
 /* Inode allocation/state operations */
 extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
-#define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
-#define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
-#define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
-#define inode_set_cached_link(i, l, len) do { } while (0)
-#define init_special_inode(i, m, d)	do { } while (0)
-#define make_bad_inode(i)		do { } while (0)
-#define iget_failed(i)			do { } while (0)
-#define find_inode_by_ino_rcu(sb, ino)	((struct inode *)NULL)
-#define mark_inode_dirty(i)		do { } while (0)
+/* set_nlink, inc_nlink, drop_nlink are in linux/fs.h */
+/* inode_set_cached_link, init_special_inode, make_bad_inode are in linux/fs.h */
+/* iget_failed, find_inode_by_ino_rcu, mark_inode_dirty are in linux/fs.h */
 
 /* Attribute operations */
 #define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
@@ -1118,11 +1097,8 @@ void fs_put_dax(void *dax, void *holder);
 
 /* fscrypt declarations are in ext4_fscrypt.h */
 
-/* Inode allocation - declaration for stub.c */
-void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
-		     gfp_t gfp);
+/* alloc_inode_sb, inode_generic_drop are in linux/fs.h */
 /* inode_set_iversion is in linux/iversion.h */
-int inode_generic_drop(struct inode *inode);
 
 /* rwlock_init is a macro in linux/spinlock.h */
 
@@ -1130,10 +1106,7 @@ int inode_generic_drop(struct inode *inode);
 #define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
 	kmem_cache_create(n, sz, al, fl, c)
 
-/* Inode buffer operations */
-#define invalidate_inode_buffers(i)	do { } while (0)
-#define clear_inode(i)			do { } while (0)
-
+/* invalidate_inode_buffers, clear_inode are in linux/fs.h */
 /* fsverity_cleanup_inode is in linux/fsverity.h */
 
 /* NFS export helpers are now in linux/exportfs.h */
@@ -1458,19 +1431,14 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* filemap_release_folio is in linux/pagemap.h */
 
-/* IS_SWAPFILE - check if inode is a swap file */
-#define IS_SWAPFILE(inode)	({ (void)(inode); 0; })
+/* IS_SWAPFILE is in linux/fs.h */
 
 /* PAGE_MASK - mask for page alignment */
 #ifndef PAGE_MASK
 #define PAGE_MASK	(~(PAGE_SIZE - 1))
 #endif
 
-/* lock_two_nondirectories - lock two inodes in order */
-#define lock_two_nondirectories(i1, i2) \
-	do { (void)(i1); (void)(i2); } while (0)
-#define unlock_two_nondirectories(i1, i2) \
-	do { (void)(i1); (void)(i2); } while (0)
+/* lock_two_nondirectories, unlock_two_nondirectories are in linux/fs.h */
 
 /*
  * Stubs for resize.c
