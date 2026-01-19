@@ -42,6 +42,10 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 		if (ret < 0)
 			return log_msg_ret("lab", ret);
 
+		if (scene_chklog(obj->name))
+			log_debug("arr->label_width %d margin %d\n",
+				  arr->label_width,
+				  theme->textline_label_margin_x);
 		x += arr->label_width + theme->textline_label_margin_x;
 	}
 
