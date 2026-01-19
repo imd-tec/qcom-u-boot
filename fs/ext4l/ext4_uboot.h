@@ -1003,8 +1003,13 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 
 /* system_state, SYSTEM_HALT, etc. are in linux/kernel.h */
 
-/* Hex dump */
-#define DUMP_PREFIX_ADDRESS	0
+/*
+ * Hex dump - DUMP_PREFIX_* types are in hexdump.h.
+ * However, the Linux kernel print_hex_dump has a different signature
+ * (includes log level) than U-Boot's, so we stub it out here.
+ */
+#include <hexdump.h>
+#undef print_hex_dump
 #define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
 /* SLAB_RECLAIM_ACCOUNT, SLAB_ACCOUNT are in linux/slab.h */
@@ -1037,17 +1042,7 @@ struct super_operations {
 /* export_operations and fid - use linux/exportfs.h */
 #include <linux/exportfs.h>
 
-/* uuid_to_fsid - convert UUID to fsid */
-static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
-{
-	__kernel_fsid_t fsid;
-
-	fsid.val[0] = (uuid[0] << 24) | (uuid[1] << 16) |
-		      (uuid[2] << 8) | uuid[3];
-	fsid.val[1] = (uuid[4] << 24) | (uuid[5] << 16) |
-		      (uuid[6] << 8) | uuid[7];
-	return fsid;
-}
+/* uuid_to_fsid is in linux/statfs.h */
 
 /* kstatfs - use linux/statfs.h */
 #include <linux/statfs.h>
