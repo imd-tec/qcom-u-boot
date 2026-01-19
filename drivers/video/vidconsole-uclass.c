@@ -194,10 +194,10 @@ static void get_cursor_position(struct vidconsole_priv *priv,
  * accumulated into escape_buf until the end of escape sequence is
  * found, at which point the sequence is parsed and processed.
  */
-static void vidconsole_escape_char(struct udevice *dev, char ch)
+static void vidconsole_escape_char(struct udevice *dev,
+				   struct vidconsole_ctx *ctx, char ch)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ansi *ansi = &ctx->ansi;
 
 	if (!IS_ENABLED(CONFIG_VIDEO_ANSI))
@@ -497,7 +497,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 	vidconsole_hide_cursor(dev);
 
 	if (ansi->escape) {
-		vidconsole_escape_char(dev, ch);
+		vidconsole_escape_char(dev, ctx, ch);
 		return 0;
 	}
 
