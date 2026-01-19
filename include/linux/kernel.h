@@ -321,4 +321,13 @@ enum system_states {
 #define might_sleep()		do { } while (0)
 #define might_sleep_if(cond)	do { } while (0)
 
+/*
+ * _RET_IP_ and _THIS_IP_ - instruction pointer macros
+ *
+ * _RET_IP_: return address of current function
+ * _THIS_IP_: current instruction pointer (stub - lockdep not used in U-Boot)
+ */
+#define _RET_IP_	((unsigned long)__builtin_return_address(0))
+#define _THIS_IP_	((unsigned long)0)
+
 #endif

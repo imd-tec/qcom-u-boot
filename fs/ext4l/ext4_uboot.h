@@ -113,7 +113,7 @@
 
 /* lockdep stubs - needed before jbd2.h is included */
 #include <linux/lockdep.h>
-#define _THIS_IP_			((unsigned long)0)
+/* _THIS_IP_ is in linux/kernel.h */
 
 /* completion - use Linux header */
 #include <linux/completion.h>
@@ -318,8 +318,7 @@ void iput(struct inode *inode);
 /* current task - from linux/sched.h */
 #include <linux/sched.h>
 
-/* _RET_IP_ - return instruction pointer */
-#define _RET_IP_	((unsigned long)__builtin_return_address(0))
+/* _RET_IP_ is in linux/kernel.h */
 
 /* SB_FREEZE_* constants are in linux/fs.h */
 
@@ -663,10 +662,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 	return ret;
 }
 
-/* BITS_PER_BYTE */
-#ifndef BITS_PER_BYTE
-#define BITS_PER_BYTE 8
-#endif
+/* BITS_PER_BYTE is in linux/bitops.h */
 
 /* extents.c stubs */
 
