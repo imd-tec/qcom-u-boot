@@ -311,6 +311,12 @@ enum {
 /* is_bad_inode - check if inode is marked bad (always false in U-Boot) */
 #define is_bad_inode(inode)	(0)
 
+/* Inode state bits for i_state field */
+#define I_NEW			(1 << 0)
+#define I_FREEING		(1 << 1)
+#define I_DIRTY_DATASYNC	(1 << 2)
+#define I_DIRTY_TIME		(1 << 3)
+
 /**
  * struct fstrim_range - fstrim ioctl argument
  * @start: first byte to trim

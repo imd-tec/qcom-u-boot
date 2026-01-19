@@ -410,11 +410,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 /* kuid_t and kgid_t - from linux/cred.h */
 #include <linux/cred.h>
 
-/* Inode state bits */
-#define I_NEW			(1 << 0)
-#define I_FREEING		(1 << 1)
-#define I_DIRTY_DATASYNC	(1 << 2)
-
+/* Inode state bits (I_NEW, I_FREEING, etc.) are in linux/fs.h */
 /* S_SYNC, S_NOATIME, etc. inode flags are in linux/fs.h */
 /* S_IRWXUGO is in linux/fs.h */
 
@@ -423,9 +419,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define WHITEOUT_MODE	0
 
 /* RENAME_* flags are in linux/fs.h */
-
-/* Inode dirty state flags */
-#define I_DIRTY_TIME		(1 << 3)
+/* I_DIRTY_TIME is in linux/fs.h */
 
 /* SB_LAZYTIME is in linux/fs.h */
 /* ATTR_* iattr valid flags are in linux/fs.h */
