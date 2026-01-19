@@ -313,4 +313,12 @@ enum system_states {
 
 #define system_state	SYSTEM_RUNNING
 
+/*
+ * might_sleep - indicate that a function may sleep
+ *
+ * U-Boot is single-threaded and doesn't have a scheduler, so this is a no-op.
+ */
+#define might_sleep()		do { } while (0)
+#define might_sleep_if(cond)	do { } while (0)
+
 #endif

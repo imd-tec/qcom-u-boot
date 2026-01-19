@@ -123,7 +123,7 @@
 
 /* Pointer check macros */
 #define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
-#define data_race(expr)			(expr)
+/* data_race is in linux/compiler.h */
 
 /* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
 /* __GFP_MOVABLE, __GFP_FS are in linux/slab.h */
@@ -191,8 +191,7 @@ extern struct user_namespace init_user_ns;
 #define BUG_ON(cond)	do { (void)(cond); } while (0)
 #define BUG()		do { } while (0)
 
-/* might_sleep - stub */
-#define might_sleep()	do { } while (0)
+/* might_sleep is in linux/kernel.h */
 
 /* sb_rdonly is in linux/super.h */
 
@@ -642,10 +641,7 @@ struct dx_hash_info {
 	do { } while (0)
 #endif
 
-/* fallthrough annotation */
-#ifndef fallthrough
-#define fallthrough __attribute__((__fallthrough__))
-#endif
+/* fallthrough is in linux/compiler_attributes.h */
 
 /* BUILD_BUG_ON is in linux/build_bug.h */
 /* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */

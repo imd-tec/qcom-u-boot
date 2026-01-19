@@ -352,4 +352,12 @@ static inline void *offset_to_ptr(const int *off)
 /* &a[0] degrades to a pointer: a different type from an array */
 #define __must_be_array(a)	BUILD_BUG_ON_ZERO(__same_type((a), &(a)[0]))
 
+/*
+ * data_race - mark data race intentional
+ *
+ * In U-Boot (single-threaded), no actual data races are possible,
+ * so just evaluate the expression.
+ */
+#define data_race(expr)		(expr)
+
 #endif /* __LINUX_COMPILER_H */
