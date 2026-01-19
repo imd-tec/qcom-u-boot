@@ -166,11 +166,13 @@ struct vidconsole_uc_plat {
  *
  * @sdev:		stdio device, acting as an output sink
  * @ctx:		Per-client context (allocated by the uclass)
+ * @ctx_list:		List of additional contexts allocated by clients
  * @quiet:		Suppress all output from stdio
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
 	struct vidconsole_ctx *ctx;
+	struct alist ctx_list;
 	bool quiet;
 };
 

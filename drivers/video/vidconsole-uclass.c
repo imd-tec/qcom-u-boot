@@ -712,32 +712,64 @@ int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 
 int vidconsole_ctx_new(struct udevice *dev, void **ctxp)
 {
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	void *ctx;
+	void **ptr;
 	int ret;
 
 	if (!ops->ctx_new)
 		return -ENOSYS;
 
-	ret = ops->ctx_new(dev, &ctx);
-	if (ret)
+	/* reserve space first so ctx_new failure doesn't need cleanup */
+	ptr = alist_add_placeholder(&priv->ctx_list);
+	if (!ptr)
+		return -ENOMEM;
+
+	ret = ops->ctx_new(dev, ptr);
+	if (ret) {
+		priv->ctx_list.count--;
 		return ret;
-	*ctxp = ctx;
+	}
+	*ctxp = *ptr;
 
 	return 0;
 }
 
-int vidconsole_ctx_dispose(struct udevice *dev, void *ctx)
+/**
+ * vidconsole_free_ctx() - Free a context without removing it from the list
+ *
+ * This calls the driver's ctx_dispose method and frees the save_data, but
+ * does not remove the context from the alist.
+ *
+ * @dev: Vidconsole device
+ * @ctx: Context to free
+ */
+static void vidconsole_free_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	int ret;
 
-	if (!ops->ctx_dispose)
-		return -ENOSYS;
+	if (ops->ctx_dispose)
+		ops->ctx_dispose(dev, ctx);
+	free(ctx->curs.save_data);
+}
 
-	ret = ops->ctx_dispose(dev, ctx);
-	if (ret)
-		return ret;
+int vidconsole_ctx_dispose(struct udevice *dev, void *vctx)
+{
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = vctx;
+	void **ptr, **from;
+
+	if (!ctx)
+		return 0;
+
+	/* remove the context from the list */
+	alist_for_each_filter(ptr, from, &priv->ctx_list) {
+		if (*ptr != ctx)
+			*from++ = *ptr;
+	}
+	alist_update_end(&priv->ctx_list, from);
+
+	vidconsole_free_ctx(dev, ctx);
 
 	return 0;
 }
@@ -903,6 +935,9 @@ static int vidconsole_pre_probe(struct udevice *dev)
 
 	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 
+	alist_init_struct(&priv->ctx_list, void *);
+	alist_add(&priv->ctx_list, ctx);
+
 	return 0;
 }
 
@@ -934,10 +969,12 @@ static int vidconsole_post_probe(struct udevice *dev)
 static int vidconsole_pre_remove(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = priv->ctx;
+	void **ptr;
 
-	free(ctx->curs.save_data);
-	free(ctx);
+	/* free all contexts in the list, including the default ctx */
+	alist_for_each(ptr, &priv->ctx_list)
+		vidconsole_free_ctx(dev, *ptr);
+	alist_uninit(&priv->ctx_list);
 	priv->ctx = NULL;
 
 	return 0;
