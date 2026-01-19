@@ -91,4 +91,11 @@ static inline bool sb_rdonly(const struct super_block *sb)
 	return sb->s_flags & SB_RDONLY;
 }
 
+/*
+ * Superblock write operations - U-Boot is single-threaded, no locking needed
+ */
+#define sb_start_write(sb)		do { (void)(sb); } while (0)
+#define sb_end_write(sb)		do { (void)(sb); } while (0)
+#define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
+
 #endif /* _LINUX_FS_SUPER_TYPES_H */

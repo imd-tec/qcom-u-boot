@@ -1086,10 +1086,7 @@ void *kvzalloc(size_t size, gfp_t flags);
 /* Time operations - ktime_get_ns is in linux/ktime.h */
 /* nsecs_to_jiffies is in linux/jiffies.h */
 
-/* Superblock write operations */
-#define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
-#define sb_start_write(sb)		do { } while (0)
-#define sb_end_write(sb)		do { } while (0)
+/* sb_start_write, sb_end_write are in linux/fs/super_types.h */
 
 /* schedule_timeout_interruptible is in linux/sched.h */
 
