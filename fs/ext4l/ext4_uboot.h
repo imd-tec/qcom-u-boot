@@ -923,8 +923,8 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
 			 loff_t *ppos);
 
-/* struct_size helper */
-#define struct_size(p, member, count)		(sizeof(*(p)) + sizeof((p)->member[0]) * (count))
+/* struct_size - use linux/overflow.h */
+#include <linux/overflow.h>
 
 /* file_operations - extended for dir.c */
 struct file_operations {
