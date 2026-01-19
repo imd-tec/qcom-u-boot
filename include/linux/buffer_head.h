@@ -268,4 +268,23 @@ static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
 #define __find_get_block_nonatomic(bdev, block, size) \
 	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
 
+/*
+ * Block/buffer folio operations - U-Boot stubs
+ */
+#define create_empty_buffers(f, s, flags) \
+	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
+/* bh_offset returns offset of b_data within the folio */
+#define bh_offset(bh)			((bh)->b_folio ? \
+	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
+#define block_invalidate_folio(f, o, l)	do { } while (0)
+#define block_write_end(pos, len, copied, folio) \
+	({ (void)(pos); (void)(len); (void)(folio); (copied); })
+#define block_dirty_folio(m, f)		({ (void)(m); (void)(f); false; })
+#define try_to_free_buffers(f)		({ (void)(f); true; })
+#define block_commit_write(f, f2, t)	do { } while (0)
+#define block_page_mkwrite(v, f, g)	((vm_fault_t)0)
+#define map_bh(bh, sb, block)		do { } while (0)
+#define block_read_full_folio(folio, get_block) \
+	({ (void)(folio); (void)(get_block); 0; })
+
 #endif /* _LINUX_BUFFER_HEAD_H */

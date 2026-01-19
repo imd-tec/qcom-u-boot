@@ -690,14 +690,7 @@ struct dx_hash_info {
 /* address_space_operations is in linux/fs.h */
 /* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
 /* readahead_control, FGP_*, kmap/kunmap, folio stubs are in linux/pagemap.h */
-
-/* Folio operations - implemented in support.c */
-struct folio *__filemap_get_folio(struct address_space *mapping,
-				  pgoff_t index, unsigned int fgp_flags,
-				  gfp_t gfp);
-void folio_put(struct folio *folio);
-void folio_get(struct folio *folio);
-void mapping_clear_folio_cache(struct address_space *mapping);
+/* __filemap_get_folio, folio_put, folio_get, mapping_clear_folio_cache are in linux/pagemap.h */
 
 /* projid_t is now in linux/projid.h */
 
@@ -748,7 +741,7 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* inode_is_open_for_write, inode_is_dirtytime_only are in linux/fs.h */
 
 /* Folio operations and writeback stubs are in linux/pagemap.h */
-#define folio_batch_release(fb)			do { } while (0)
+/* folio_batch_release is in linux/pagevec.h */
 
 /* Quota stubs are in linux/quotaops.h */
 
@@ -757,20 +750,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* Filemap operations are in linux/pagemap.h */
 /* try_to_writeback_inodes_sb is in linux/writeback.h */
 
-/* Buffer operations - additional */
-/* getblk_unmovable is in linux/buffer_head.h */
-#define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
-/* bh_offset returns offset of b_data within the folio */
-#define bh_offset(bh)				((bh)->b_folio ? \
-	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
-#define block_invalidate_folio(f, o, l)		do { } while (0)
-#define block_write_end(pos, len, copied, folio) ({ (void)(pos); (void)(len); (void)(folio); (copied); })
-#define block_dirty_folio(m, f)			({ (void)(m); (void)(f); false; })
-#define try_to_free_buffers(f)			({ (void)(f); true; })
-#define block_commit_write(f, f2, t)		do { } while (0)
-#define block_page_mkwrite(v, f, g)		((vm_fault_t)0)
-#define map_bh(bh, sb, block)			do { } while (0)
-#define write_begin_get_folio(iocb, m, idx, l)	({ (void)(iocb); (void)(m); (void)(idx); (void)(l); (struct folio *)NULL; })
+/* Buffer/block folio operations are in linux/buffer_head.h */
+/* write_begin_get_folio is in linux/pagemap.h */
 
 /* fscrypt_name, fscrypt_match_name, and fscrypt stubs are in ext4_fscrypt.h */
 
@@ -1283,17 +1264,8 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 
 /* fscrypt page-io stubs are in ext4_fscrypt.h */
 
-/* folio writeback operations */
-#define folio_end_writeback(f)		do { (void)(f); } while (0)
-#define folio_start_writeback(f)	do { (void)(f); } while (0)
-#define folio_start_writeback_keepwrite(f) do { (void)(f); } while (0)
-bool __folio_start_writeback(struct folio *folio, bool keep_write);
-
-/* writeback control stubs */
-#define wbc_init_bio(wbc, bio)		do { (void)(wbc); (void)(bio); } while (0)
-#define wbc_account_cgroup_owner(wbc, folio, bytes) \
-	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
-
+/* folio writeback operations are in linux/pagemap.h */
+/* writeback control stubs are in linux/pagemap.h */
 /* bio_add_folio is in linux/bio.h */
 
 /*
@@ -1303,10 +1275,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* mempool is now in linux/mempool.h */
 #include <linux/mempool.h>
 
-/* folio read operations */
-#define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
-#define folio_set_mappedtodisk(f)	do { (void)(f); } while (0)
-
+/* folio read operations are in linux/pagemap.h */
 /* fscrypt readpage stubs are in ext4_fscrypt.h */
 
 /* fsverity stubs are in linux/fsverity.h */
@@ -1316,9 +1285,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* prefetch operations */
 #define prefetchw(addr)			do { (void)(addr); } while (0)
 
-/* block read operations */
-#define block_read_full_folio(folio, get_block) \
-	({ (void)(folio); (void)(get_block); 0; })
+/* block_read_full_folio is in linux/buffer_head.h */
 
 /*
  * Stubs for fast_commit.c

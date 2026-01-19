@@ -43,4 +43,15 @@ static inline unsigned int folio_batch_add(struct folio_batch *fbatch,
 	return PAGEVEC_SIZE - fbatch->nr;
 }
 
+/**
+ * folio_batch_release() - release a batch of folios
+ * @fbatch: batch to release
+ *
+ * U-Boot stub - no-op.
+ */
+static inline void folio_batch_release(struct folio_batch *fbatch)
+{
+	(void)fbatch;
+}
+
 #endif /* _LINUX_PAGEVEC_H */
