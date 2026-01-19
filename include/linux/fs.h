@@ -300,10 +300,11 @@ enum {
 /* inode_newsize_ok - check if new size is valid (always ok in U-Boot) */
 #define inode_newsize_ok(i, s)	({ (void)(i); (void)(s); 0; })
 
-/* IS_SYNC, IS_APPEND, IS_IMMUTABLE - inode flag checks */
+/* IS_SYNC, IS_APPEND, IS_IMMUTABLE, IS_CASEFOLDED - inode flag checks */
 #define IS_SYNC(inode)		(0)
 #define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
 #define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
+#define IS_CASEFOLDED(inode)	(0)	/* Case-folding not supported */
 
 /* inode_needs_sync - check if inode needs synchronous writes (always false) */
 #define inode_needs_sync(inode)	(0)

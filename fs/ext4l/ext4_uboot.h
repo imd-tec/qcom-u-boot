@@ -163,12 +163,10 @@
 
 /* percpu rw semaphore is in linux/percpu.h */
 
-/* Memory allocation context - stubs */
-static inline unsigned int memalloc_nofs_save(void) { return 0; }
-static inline void memalloc_nofs_restore(unsigned int flags) { }
+/* Memory allocation context - use linux/sched/mm.h */
+#include <linux/sched/mm.h>
 
-/* Inode flags - stubs */
-#define IS_CASEFOLDED(inode)	(0)
+/* IS_CASEFOLDED is in linux/fs.h */
 /* IS_ENCRYPTED and FSCRYPT_SET_CONTEXT_MAX_SIZE are in ext4_fscrypt.h */
 #define S_NOQUOTA		0
 
@@ -216,8 +214,8 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
 #define __test_and_set_bit_le(nr, addr) \
 	({ int __old = test_bit(nr, addr); set_bit(nr, addr); __old; })
 
-/* KUNIT stub */
-#define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
+/* KUNIT stub - use kunit/static_stub.h */
+#include <kunit/static_stub.h>
 
 /* percpu_counter operations are in linux/percpu_counter.h */
 
