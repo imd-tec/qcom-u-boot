@@ -305,6 +305,8 @@ enum {
 #define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
 #define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
 #define IS_CASEFOLDED(inode)	(0)	/* Case-folding not supported */
+#define IS_DIRSYNC(inode)	({ (void)(inode); 0; })
+#define IS_NOSEC(inode)		(1)	/* No security checks in U-Boot */
 
 /* inode_needs_sync - check if inode needs synchronous writes (always false) */
 #define inode_needs_sync(inode)	(0)

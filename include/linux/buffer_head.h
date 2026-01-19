@@ -187,6 +187,37 @@ void __brelse(struct buffer_head *bh);
 #define unlock_buffer(bh)		clear_buffer_locked(bh)
 #define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
 
+/* Buffer I/O submission - implemented in ext4l/stub.c */
+int submit_bh(int op_flags, struct buffer_head *bh);
+
+/* Buffer read functions - implemented in ext4l/support.c */
+int bh_read(struct buffer_head *bh, int flags);
+#define bh_read_nowait(bh, flags)	bh_read(bh, flags)
+#define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
+
+/*
+ * Buffer dirty operations.
+ * In U-Boot we write buffers synchronously, so marking dirty writes immediately.
+ */
+#define sync_dirty_buffer(bh)		submit_bh(REQ_OP_WRITE, (bh))
+#define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
+#define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
+#define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
+
+/* Buffer uptodate check - always returns true (buffer assumed uptodate) */
+#define bh_uptodate_or_lock(bh)		(1)
+
+/* Buffer allocation functions - implemented in ext4l */
+struct super_block;
+struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
+void free_buffer_head(struct buffer_head *bh);
+struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size);
+#define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
+#define getblk_unmovable(bdev, block, size) \
+	sb_getblk((bdev)->bd_super, (block))
+
 /*
  * Folio migration stubs - U-Boot doesn't support memory migration
  */
@@ -226,5 +257,15 @@ static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
 		clear_buffer_uptodate(bh);
 	unlock_buffer(bh);
 }
+
+/*
+ * Buffer cache lookup stubs - U-Boot doesn't maintain a buffer cache
+ */
+#define sb_find_get_block(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define sb_find_get_block_nonatomic(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define __find_get_block_nonatomic(bdev, block, size) \
+	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
 
 #endif /* _LINUX_BUFFER_HEAD_H */
