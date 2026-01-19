@@ -8,6 +8,7 @@
 
 #define LOG_CATEGORY	LOGC_EXPO
 
+#include <cli.h>
 #include <expo.h>
 #include <log.h>
 #include <menu.h>
@@ -156,4 +157,52 @@ void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 
 	edit_bbox->valid = false;
 	scene_bbox_union(scn, tin->edit_id, inset, edit_bbox);
+}
+
+int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
+			 int key, struct expo_action *event)
+{
+	const bool open = obj->flags & SCENEOF_OPEN;
+	struct scene *scn = obj->scene;
+
+	log_debug("key=%d\n", key);
+	switch (key) {
+	case BKEY_QUIT:
+		if (open) {
+			event->type = EXPOACT_CLOSE;
+			event->select.id = obj->id;
+
+			/* Copy the backup text from the scene buffer */
+			memcpy(abuf_data(&tin->buf), abuf_data(&scn->buf),
+			       abuf_size(&scn->buf));
+
+			scene_txtin_close(scn);
+		} else {
+			event->type = EXPOACT_QUIT;
+			log_debug("menu quit\n");
+		}
+		break;
+	case BKEY_SELECT:
+		if (!open)
+			break;
+		event->type = EXPOACT_CLOSE;
+		event->select.id = obj->id;
+		key = '\n';
+		fallthrough;
+	default: {
+		struct udevice *cons = scn->expo->cons;
+		int ret;
+
+		ret = vidconsole_entry_restore(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		ret = cread_line_process_ch(&scn->cls, key);
+		ret = vidconsole_entry_save(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		break;
+	}
+	}
+
+	return 0;
 }

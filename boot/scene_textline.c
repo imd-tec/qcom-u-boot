@@ -98,53 +98,6 @@ int scene_textline_arrange(struct scene *scn, struct expo_arrange_info *arr,
 	return 0;
 }
 
-int scene_textline_send_key(struct scene *scn, struct scene_obj_textline *tline,
-			    int key, struct expo_action *event)
-{
-	const bool open = tline->obj.flags & SCENEOF_OPEN;
-
-	log_debug("key=%d\n", key);
-	switch (key) {
-	case BKEY_QUIT:
-		if (open) {
-			event->type = EXPOACT_CLOSE;
-			event->select.id = tline->obj.id;
-
-			/* Copy the backup text from the scene buffer */
-			memcpy(abuf_data(&tline->tin.buf), abuf_data(&scn->buf),
-			       abuf_size(&scn->buf));
-
-			scene_txtin_close(scn);
-		} else {
-			event->type = EXPOACT_QUIT;
-			log_debug("menu quit\n");
-		}
-		break;
-	case BKEY_SELECT:
-		if (!open)
-			break;
-		event->type = EXPOACT_CLOSE;
-		event->select.id = tline->obj.id;
-		key = '\n';
-		fallthrough;
-	default: {
-		struct udevice *cons = scn->expo->cons;
-		int ret;
-
-		ret = vidconsole_entry_restore(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-		ret = cread_line_process_ch(&scn->cls, key);
-		ret = vidconsole_entry_save(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-		break;
-	}
-	}
-
-	return 0;
-}
-
 bool scene_textline_within(const struct scene *scn,
 			   struct scene_obj_textline *tline, int x, int y)
 {

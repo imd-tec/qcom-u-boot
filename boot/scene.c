@@ -1176,27 +1176,21 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 				return log_msg_ret("key", ret);
 			break;
 		}
-		case SCENEOBJT_TEXTLINE: {
-			struct scene_obj_textline *tline;
-
-			tline = (struct scene_obj_textline *)cur,
-			ret = scene_textline_send_key(scn, tline, key, event);
+		case SCENEOBJT_TEXTLINE:
+		case SCENEOBJT_TEXTEDIT:
+			ret = scene_txtin_send_key(cur, scene_obj_txtin(cur),
+						   key, event);
 			if (ret)
 				return log_msg_ret("key", ret);
-			break;
-		}
-		case SCENEOBJT_TEXTEDIT:
-			/* TODO(sjg@chromium.org): Implement this */
 			break;
 		}
 		return 0;
 	}
 
-	if (cur && cur->type == SCENEOBJT_TEXTLINE) {
-		struct scene_obj_textline *tline;
-
-		tline = (struct scene_obj_textline *)cur;
-		ret = scene_textline_send_key(scn, tline, key, event);
+	if (cur && (cur->type == SCENEOBJT_TEXTLINE ||
+		    cur->type == SCENEOBJT_TEXTEDIT)) {
+		ret = scene_txtin_send_key(cur, scene_obj_txtin(cur),
+					   key, event);
 		if (ret)
 			return log_msg_ret("key", ret);
 		return 0;
