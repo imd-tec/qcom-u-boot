@@ -1334,8 +1334,8 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* folio_get - now implemented in support.c */
 
-/* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
-#define array_index_nospec(index, size) (index)
+/* array_index_nospec is in linux/nospec.h */
+#include <linux/nospec.h>
 
 /* atomic_inc_return and atomic_add_return are now in asm-generic/atomic.h */
 
