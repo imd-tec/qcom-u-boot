@@ -327,13 +327,7 @@ BUFFER_FNS(OwnsData, ownsdata)
 #define BH_Cached		(BH_JBDPrivateStart + 2)
 BUFFER_FNS(Cached, cached)
 
-/* Forward declare for get_block_t */
-struct inode;
-struct buffer_head;
-
-/* get_block_t - block mapping callback */
-typedef int (get_block_t)(struct inode *inode, sector_t iblock,
-			  struct buffer_head *bh_result, int create);
+/* get_block_t is in linux/fs.h */
 
 /* crc32c - from linux/crc32c.h */
 #include <linux/crc32c.h>

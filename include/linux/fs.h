@@ -322,6 +322,18 @@ enum {
 #define MAX_LFS_FILESIZE	((loff_t)LLONG_MAX)
 
 /**
+ * get_block_t - block mapping callback type
+ * @inode: inode to map blocks for
+ * @iblock: logical block number
+ * @bh_result: buffer head to fill with mapping
+ * @create: whether to create new blocks
+ *
+ * Callback function type for filesystem block mapping.
+ */
+typedef int (get_block_t)(struct inode *inode, sector_t iblock,
+			  struct buffer_head *bh_result, int create);
+
+/**
  * struct fstrim_range - fstrim ioctl argument
  * @start: first byte to trim
  * @len: number of bytes to trim
