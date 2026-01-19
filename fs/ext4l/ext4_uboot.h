@@ -297,8 +297,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Memory allocation - use linux/slab.h which is already available */
 #include <linux/slab.h>
 
-/* KMEM_CACHE macro - use kmem_cache_create */
-#define KMEM_CACHE(s, flags)		kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
+/* KMEM_CACHE macro is in linux/slab.h */
 
 /*
  * RB tree operations - use real rbtree implementation from lib/rbtree.c
