@@ -65,6 +65,8 @@ def collect_trace(ubman):
     out = ubman.run_command(f'trace calls {addr:x} {size:x}')
     print(out)
     fname = os.path.join(TMPDIR, 'trace')
+    if os.path.exists(fname):
+        os.unlink(fname)
     out = ubman.run_command(
         'host save hostfs - %x %s ${profoffset}' % (addr, fname))
     return fname, int(dm_f_time[0])
