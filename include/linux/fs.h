@@ -10,10 +10,10 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/fs/super_types.h>
 
 /* Forward declarations */
 struct inode;
-struct super_block;
 struct buffer_head;
 struct file;
 struct folio;
@@ -268,6 +268,55 @@ enum {
 	I_MUTEX_XATTR,
 	I_MUTEX_NONDIR2,
 	I_MUTEX_PARENT2,
+};
+
+/*
+ * Inode locking stubs - U-Boot is single-threaded, no locking needed.
+ */
+#define inode_lock(inode)		do { (void)(inode); } while (0)
+#define inode_unlock(inode)		do { (void)(inode); } while (0)
+#define inode_lock_shared(inode)	do { (void)(inode); } while (0)
+#define inode_unlock_shared(inode)	do { (void)(inode); } while (0)
+#define inode_trylock(inode)		({ (void)(inode); 1; })
+#define inode_trylock_shared(inode)	({ (void)(inode); 1; })
+#define inode_dio_wait(inode)		do { (void)(inode); } while (0)
+#define inode_lock_nested(inode, subclass) \
+	do { (void)(inode); (void)(subclass); } while (0)
+
+/*
+ * Inode helper functions
+ */
+
+/* inode_is_locked - check if inode lock is held (always true in U-Boot) */
+#define inode_is_locked(i)	(1)
+
+/* i_size accessors */
+#define i_size_write(i, s)	do { (i)->i_size = (s); } while (0)
+#define i_size_read(i)		((i)->i_size)
+
+/* i_blocksize - get block size from inode */
+#define i_blocksize(i)		(1U << (i)->i_blkbits)
+
+/* inode_newsize_ok - check if new size is valid (always ok in U-Boot) */
+#define inode_newsize_ok(i, s)	({ (void)(i); (void)(s); 0; })
+
+/* IS_SYNC, IS_APPEND, IS_IMMUTABLE - inode flag checks */
+#define IS_SYNC(inode)		(0)
+#define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
+#define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
+
+/**
+ * struct fstrim_range - fstrim ioctl argument
+ * @start: first byte to trim
+ * @len: number of bytes to trim
+ * @minlen: minimum extent length
+ *
+ * Used for FITRIM ioctl to trim unused blocks.
+ */
+struct fstrim_range {
+	u64 start;
+	u64 len;
+	u64 minlen;
 };
 
 #endif /* _LINUX_FS_H */

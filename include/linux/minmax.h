@@ -49,4 +49,22 @@ static inline bool in_range32(u32 val, u32 start, u32 len)
 	return (val - start) < len;
 }
 
+/**
+ * umin - Return the minimum of two unsigned values
+ * @x: First value
+ * @y: Second value
+ *
+ * Return: The smaller of @x and @y
+ */
+#define umin(x, y)	((x) < (y) ? (x) : (y))
+
+/**
+ * umax - Return the maximum of two unsigned values
+ * @x: First value
+ * @y: Second value
+ *
+ * Return: The larger of @x and @y
+ */
+#define umax(x, y)	((x) > (y) ? (x) : (y))
+
 #endif /* _LINUX_MINMAX_H */

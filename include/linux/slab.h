@@ -117,6 +117,16 @@ struct kmem_cache {
 
 struct kmem_cache *get_mem(int element_sz);
 #define kmem_cache_create(a, sz, c, d, e)	({ (void)(a); (void)(e); get_mem(sz); })
+
+/**
+ * KMEM_CACHE - shorthand for creating a named kmem_cache
+ * @s: struct type name
+ * @flags: cache creation flags
+ *
+ * Creates a cache for objects of type struct @s with the specified flags.
+ */
+#define KMEM_CACHE(s, flags)	kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
+
 void *kmem_cache_alloc(struct kmem_cache *obj, gfp_t flag);
 
 static inline void *kmem_cache_zalloc(struct kmem_cache *obj, gfp_t flags)

@@ -13,6 +13,9 @@
 
 #include <linux/types.h>
 
+/* qsize_t - quota size type for tracking disk space usage */
+typedef long long qsize_t;
+
 struct inode;
 struct dentry;
 struct kqid;

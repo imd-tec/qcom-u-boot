@@ -113,7 +113,7 @@
 
 /* lockdep stubs - needed before jbd2.h is included */
 #include <linux/lockdep.h>
-#define _THIS_IP_			((unsigned long)0)
+/* _THIS_IP_ is in linux/kernel.h */
 
 /* completion - use Linux header */
 #include <linux/completion.h>
@@ -123,7 +123,7 @@
 
 /* Pointer check macros */
 #define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
-#define data_race(expr)			(expr)
+/* data_race is in linux/compiler.h */
 
 /* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
 /* __GFP_MOVABLE, __GFP_FS are in linux/slab.h */
@@ -174,11 +174,7 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 /* IS_ENCRYPTED and FSCRYPT_SET_CONTEXT_MAX_SIZE are in ext4_fscrypt.h */
 #define S_NOQUOTA		0
 
-/* User namespace - stub */
-struct user_namespace {
-	int dummy;
-};
-extern struct user_namespace init_user_ns;
+/* user_namespace and init_user_ns are in linux/cred.h */
 
 /*
  * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
@@ -191,11 +187,9 @@ extern struct user_namespace init_user_ns;
 #define BUG_ON(cond)	do { (void)(cond); } while (0)
 #define BUG()		do { } while (0)
 
-/* might_sleep - stub */
-#define might_sleep()	do { } while (0)
+/* might_sleep is in linux/kernel.h */
 
-/* sb_rdonly - check if filesystem is mounted read-only */
-#define sb_rdonly(sb)	((sb)->s_flags & SB_RDONLY)
+/* sb_rdonly is in linux/super.h */
 
 /* Trace stubs are now in ext4_trace.h */
 
@@ -285,10 +279,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
 #define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
 
-/* Inode locking - stubs */
-#define inode_is_locked(i)	(1)
-#define i_size_write(i, s)	do { (i)->i_size = (s); } while (0)
-#define i_size_read(i)		((i)->i_size)
+/* inode_is_locked, i_size_write, i_size_read are in linux/fs.h */
 
 /* spin_trylock is defined in linux/spinlock.h */
 
@@ -306,8 +297,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 /* Memory allocation - use linux/slab.h which is already available */
 #include <linux/slab.h>
 
-/* KMEM_CACHE macro - use kmem_cache_create */
-#define KMEM_CACHE(s, flags)		kmem_cache_create(#s, sizeof(struct s), 0, flags, NULL)
+/* KMEM_CACHE macro is in linux/slab.h */
 
 /*
  * RB tree operations - use real rbtree implementation from lib/rbtree.c
@@ -323,15 +313,11 @@ void iput(struct inode *inode);
 /* current task - from linux/sched.h */
 #include <linux/sched.h>
 
-/* _RET_IP_ - return instruction pointer */
-#define _RET_IP_	((unsigned long)__builtin_return_address(0))
+/* _RET_IP_ is in linux/kernel.h */
 
 /* SB_FREEZE_* constants are in linux/fs.h */
 
-/* sb_writers stub */
-struct sb_writers {
-	int frozen;
-};
+/* sb_writers is in linux/super.h */
 
 /* mapping_large_folio_support is in linux/pagemap.h */
 
@@ -396,8 +382,7 @@ struct readahead_control;
 struct fiemap_extent_info;
 struct folio;
 
-/* qsize_t - quota size type */
-typedef long long qsize_t;
+/* qsize_t is in linux/quotaops.h */
 
 /* blk_opf_t is in linux/blk_types.h */
 
@@ -408,12 +393,7 @@ typedef long long qsize_t;
 /* mnt_idmap - use linux/mnt_idmapping.h */
 #include <linux/mnt_idmapping.h>
 
-/* fstrim_range - stub */
-struct fstrim_range {
-	u64 start;
-	u64 len;
-	u64 minlen;
-};
+/* fstrim_range is in linux/fs.h */
 
 /* rw_semaphore - defined in linux/rwsem.h, include it */
 #include <linux/rwsem.h>
@@ -424,38 +404,7 @@ struct fstrim_range {
 
 /* uuid_t is now in linux/uuid.h */
 
-/* Forward declarations for super_block */
-struct super_operations;
-struct export_operations;
-struct xattr_handler;
-
-/* super_block - minimal stub */
-struct super_block {
-	void *s_fs_info;
-	unsigned long s_blocksize;
-	unsigned char s_blocksize_bits;
-	unsigned long s_magic;
-	loff_t s_maxbytes;
-	unsigned long s_flags;
-	unsigned long s_iflags;		/* Internal flags */
-	struct rw_semaphore s_umount;
-	struct sb_writers s_writers;
-	struct block_device *s_bdev;
-	char s_id[32];
-	struct dentry *s_root;
-	uuid_t s_uuid;
-	struct file_system_type *s_type;
-	s32 s_time_gran;		/* Time granularity (ns) */
-	time64_t s_time_min;		/* Min supported time */
-	time64_t s_time_max;		/* Max supported time */
-	const struct super_operations *s_op;
-	const struct export_operations *s_export_op;
-	const struct xattr_handler * const *s_xattr;
-	struct dentry *d_sb;		/* Parent dentry - stub */
-
-	/* U-Boot: list of all inodes, for freeing on unmount */
-	struct list_head s_inodes;
-};
+/* super_block is now in linux/super.h */
 
 /* Block device read-only check */
 static inline int bdev_read_only(struct block_device *bdev)
@@ -680,10 +629,7 @@ struct dx_hash_info {
 	do { } while (0)
 #endif
 
-/* fallthrough annotation */
-#ifndef fallthrough
-#define fallthrough __attribute__((__fallthrough__))
-#endif
+/* fallthrough is in linux/compiler_attributes.h */
 
 /* BUILD_BUG_ON is in linux/build_bug.h */
 /* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */
@@ -693,22 +639,9 @@ struct dx_hash_info {
 /* strtomem_pad is in linux/string.h */
 /* strscpy_pad is in linux/string.h */
 
-/* Memory weight - count set bits */
-static inline unsigned long memweight(const void *ptr, size_t bytes)
-{
-	unsigned long ret = 0;
-	const unsigned char *p = ptr;
-	size_t i;
+/* memweight is in linux/string.h */
 
-	for (i = 0; i < bytes; i++)
-		ret += hweight8(p[i]);
-	return ret;
-}
-
-/* BITS_PER_BYTE */
-#ifndef BITS_PER_BYTE
-#define BITS_PER_BYTE 8
-#endif
+/* BITS_PER_BYTE is in linux/bitops.h */
 
 /* extents.c stubs */
 
@@ -719,15 +652,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 #define bh_uptodate_or_lock(bh)		(1)
 /* ext4_read_bh is stubbed in interface.c */
 
-/* Inode locking */
-#define inode_lock(inode)		do { } while (0)
-#define inode_unlock(inode)		do { } while (0)
-#define inode_lock_shared(inode)	do { } while (0)
-#define inode_unlock_shared(inode)	do { } while (0)
-#define inode_trylock(inode)		(1)
-#define inode_trylock_shared(inode)	(1)
-#define inode_dio_wait(inode)		do { } while (0)
-
+/* Inode locking stubs are in linux/fs.h */
 /* Lock debugging stubs are in linux/lockdep.h */
 
 /* File operations */
@@ -750,14 +675,9 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 /* DAX device mapping check - always false in U-Boot */
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
-/* Inode time/size operations */
-#define inode_newsize_ok(i, s)		({ (void)(i); (void)(s); 0; })
+/* Inode time/size operations - inode_newsize_ok, i_blocksize, IS_SYNC are in linux/fs.h */
 #define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
 #define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
-#define i_blocksize(i)			(1U << (i)->i_blkbits)
-
-/* IS_SYNC macro */
-#define IS_SYNC(inode)			(0)
 
 /* Case-folding stubs - not supported in U-Boot */
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
@@ -778,8 +698,7 @@ static inline unsigned long memweight(const void *ptr, size_t bytes)
 
 /* indirect.c stubs */
 
-/* umin - unsigned min (Linux 6.x) */
-#define umin(x, y)	((x) < (y) ? (x) : (y))
+/* umin is in linux/minmax.h */
 
 /* truncate_inode_pages is in linux/pagemap.h */
 
@@ -943,11 +862,8 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 /* Device encoding helpers are now in linux/kdev_t.h */
 #include <linux/kdev_t.h>
 
-/* UID/GID bit helpers */
-#define low_16_bits(x)		((x) & 0xFFFF)
-#define high_16_bits(x)		(((x) >> 16) & 0xFFFF)
-#define fs_high2lowuid(uid)	((uid) & 0xFFFF)
-#define fs_high2lowgid(gid)	((gid) & 0xFFFF)
+/* UID/GID bit helpers - use linux/highuid.h */
+#include <linux/highuid.h>
 
 /* Inode allocation/state operations */
 extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
@@ -968,9 +884,7 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define generic_fillattr(m, req, i, s)	do { } while (0)
 #define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
 
-/* Inode flag macros */
-#define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
-#define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
+/* IS_APPEND, IS_IMMUTABLE are in linux/fs.h */
 
 /* File operations */
 #define file_update_time(f)		do { } while (0)
@@ -1007,8 +921,8 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
 			 loff_t *ppos);
 
-/* struct_size helper */
-#define struct_size(p, member, count)		(sizeof(*(p)) + sizeof((p)->member[0]) * (count))
+/* struct_size - use linux/overflow.h */
+#include <linux/overflow.h>
 
 /* file_operations - extended for dir.c */
 struct file_operations {
@@ -1344,10 +1258,7 @@ static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
 #define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
 
-/* I_MUTEX_* inode lock classes are in linux/fs.h */
-
-/* Nested inode locking stub */
-#define inode_lock_nested(i, c)			do { (void)(i); (void)(c); } while (0)
+/* I_MUTEX_* constants and inode locking stubs are in linux/fs.h */
 
 /* PF_MEMALLOC_NOFS is in linux/sched.h */
 
@@ -1411,20 +1322,19 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* atomic64 operations are now in asm-generic/atomic.h */
 
-/* CPU cycle counter stub */
-#define get_cycles()			(0ULL)
+/* get_cycles is in asm-generic/timex.h */
+#include <asm-generic/timex.h>
 
 /* folio_address is in linux/pagemap.h */
 
 /* sb_end_intwrite defined earlier */
 
-/* WARN_RATELIMIT - just evaluate condition, no warning in U-Boot */
-#define WARN_RATELIMIT(condition, ...) (condition)
+/* WARN_RATELIMIT is in linux/ratelimit.h */
 
 /* folio_get - now implemented in support.c */
 
-/* array_index_nospec - bounds checking without speculation (no-op in U-Boot) */
-#define array_index_nospec(index, size) (index)
+/* array_index_nospec is in linux/nospec.h */
+#include <linux/nospec.h>
 
 /* atomic_inc_return and atomic_add_return are now in asm-generic/atomic.h */
 
