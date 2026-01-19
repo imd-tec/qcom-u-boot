@@ -383,8 +383,7 @@ struct readahead_control;
 struct fiemap_extent_info;
 struct folio;
 
-/* qsize_t - quota size type */
-typedef long long qsize_t;
+/* qsize_t is in linux/quotaops.h */
 
 /* blk_opf_t is in linux/blk_types.h */
 
