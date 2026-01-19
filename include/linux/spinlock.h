@@ -101,5 +101,6 @@ typedef int rwlock_t;
 #define read_unlock_irqrestore(lock, flags)	do { (void)(flags); } while (0)
 #define write_lock_irqsave(lock, flags)		do { (void)(flags); } while (0)
 #define write_unlock_irqrestore(lock, flags)	do { (void)(flags); } while (0)
+#define write_trylock(lock)			({ (void)(lock); 1; })
 
 #endif /* __LINUX_SPINLOCK_H */

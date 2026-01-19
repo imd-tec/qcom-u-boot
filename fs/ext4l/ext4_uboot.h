@@ -669,8 +669,7 @@ struct dx_hash_info {
 /* hrtimer - use linux/hrtimer.h */
 #include <linux/hrtimer.h>
 
-/* write lock variants */
-#define write_trylock(lock)		({ (void)(lock); 1; })
+/* write_trylock is in linux/spinlock.h */
 
 /* percpu_counter_init/destroy are in linux/percpu_counter.h */
 
@@ -1291,7 +1290,8 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 /* spin_needbreak is in linux/spinlock.h */
 
 /* JBD2 commit.c stubs (folio_trylock is in linux/pagemap.h) */
-#define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
+/* clear_bit_unlock is in asm-generic/bitops/lock.h */
+#include <asm-generic/bitops/lock.h>
 /* smp_mb__after_atomic is now in linux/smp.h */
 #define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
@@ -1391,8 +1391,7 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
  * Stubs for resize.c
  */
 
-/* test_and_set_bit_lock - test and set a bit atomically */
-#define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
+/* test_and_set_bit_lock is in asm-generic/bitops/lock.h */
 
 /* time_is_before_jiffies - check if time is before current jiffies */
 #define time_is_before_jiffies(a)	({ (void)(a); 0; })
