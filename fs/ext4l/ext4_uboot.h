@@ -640,17 +640,7 @@ struct dx_hash_info {
 /* strtomem_pad is in linux/string.h */
 /* strscpy_pad is in linux/string.h */
 
-/* Memory weight - count set bits */
-static inline unsigned long memweight(const void *ptr, size_t bytes)
-{
-	unsigned long ret = 0;
-	const unsigned char *p = ptr;
-	size_t i;
-
-	for (i = 0; i < bytes; i++)
-		ret += hweight8(p[i]);
-	return ret;
-}
+/* memweight is in linux/string.h */
 
 /* BITS_PER_BYTE is in linux/bitops.h */
 

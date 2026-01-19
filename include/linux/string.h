@@ -188,6 +188,30 @@ char *strreplace(char *str, char old, char new);
  */
 #define strscpy_pad(dest, src)	strncpy(dest, src, sizeof(dest))
 
+/**
+ * memweight - Count total number of bits set in a memory region
+ * @ptr: Pointer to memory region
+ * @bytes: Number of bytes to examine
+ *
+ * Return: Number of set bits in the memory region
+ */
+static inline unsigned long memweight(const void *ptr, size_t bytes)
+{
+	unsigned long ret = 0;
+	const unsigned char *p = ptr;
+	size_t i;
+
+	for (i = 0; i < bytes; i++) {
+		/* Inline popcount for byte */
+		unsigned char v = p[i];
+
+		v = v - ((v >> 1) & 0x55);
+		v = (v & 0x33) + ((v >> 2) & 0x33);
+		ret += (v + (v >> 4)) & 0x0f;
+	}
+	return ret;
+}
+
 #ifdef __cplusplus
 }
 #endif
