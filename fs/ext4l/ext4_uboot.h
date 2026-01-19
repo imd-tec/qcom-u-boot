@@ -1320,8 +1320,7 @@ struct disk_partition *ext4l_get_partition(void);
 /* DEFINE_WAIT stub - creates a wait queue entry */
 #define DEFINE_WAIT(name)		int name = 0
 
-/* cond_resched_lock - conditionally reschedule while holding a lock */
-#define cond_resched_lock(lock)		do { (void)(lock); } while (0)
+/* cond_resched_lock is in linux/sched.h */
 
 /* JBD2 journal.c stubs */
 /* alloc_buffer_head, __getblk are in linux/buffer_head.h */

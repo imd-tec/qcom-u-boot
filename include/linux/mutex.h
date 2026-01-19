@@ -25,6 +25,7 @@ struct mutex {
 #define mutex_trylock(lock)	({ 1; })
 #define mutex_is_locked(lock)	({ 0; })
 #define mutex_destroy(lock)	do { } while (0)
+#define mutex_lock_io(lock)	mutex_lock(lock)
 
 #define __MUTEX_INITIALIZER(lockname)	{ .locked = 0 }
 
