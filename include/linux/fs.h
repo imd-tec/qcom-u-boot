@@ -305,4 +305,18 @@ enum {
 #define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
 #define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
 
+/**
+ * struct fstrim_range - fstrim ioctl argument
+ * @start: first byte to trim
+ * @len: number of bytes to trim
+ * @minlen: minimum extent length
+ *
+ * Used for FITRIM ioctl to trim unused blocks.
+ */
+struct fstrim_range {
+	u64 start;
+	u64 len;
+	u64 minlen;
+};
+
 #endif /* _LINUX_FS_H */

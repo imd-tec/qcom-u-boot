@@ -395,12 +395,7 @@ typedef long long qsize_t;
 /* mnt_idmap - use linux/mnt_idmapping.h */
 #include <linux/mnt_idmapping.h>
 
-/* fstrim_range - stub */
-struct fstrim_range {
-	u64 start;
-	u64 len;
-	u64 minlen;
-};
+/* fstrim_range is in linux/fs.h */
 
 /* rw_semaphore - defined in linux/rwsem.h, include it */
 #include <linux/rwsem.h>
