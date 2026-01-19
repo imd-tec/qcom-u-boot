@@ -279,6 +279,16 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar);
  */
 void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size);
 
+/**
+ * cli_cread_add_initial() - Output initial buffer contents
+ *
+ * Called after cli_cread_init() to output the initial text in the buffer and
+ * set up the line state accordingly
+ *
+ * @cls: CLI line state
+ */
+void cli_cread_add_initial(struct cli_line_state *cls);
+
 /** cread_print_hist_list() - Print the command-line history list */
 void cread_print_hist_list(void);
 

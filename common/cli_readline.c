@@ -470,16 +470,19 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 
 void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size)
 {
-	int init_len = strlen(buf);
-
 	memset(cls, '\0', sizeof(struct cli_line_state));
 	cls->insert = true;
 	cls->buf = buf;
 	cls->len = buf_size;
+}
+
+void cli_cread_add_initial(struct cli_line_state *cls)
+{
+	int init_len = strlen(cls->buf);
 
 	if (init_len)
-		cread_add_str(cls, buf, init_len, 0, &cls->num, &cls->eol_num,
-			      buf, buf_size);
+		cread_add_str(cls, cls->buf, init_len, 0, &cls->num,
+			      &cls->eol_num, cls->buf, cls->len);
 }
 
 static int cread_line(const char *const prompt, char *buf, unsigned int *len,
@@ -492,6 +495,7 @@ static int cread_line(const char *const prompt, char *buf, unsigned int *len,
 
 	cli_ch_init(cch);
 	cli_cread_init(cls, buf, *len);
+	cli_cread_add_initial(cls);
 	cls->prompt = prompt;
 	cls->history = true;
 	cls->cmd_complete = true;

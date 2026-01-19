@@ -131,6 +131,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
 	scn->cls.insert = true;
 	scn->cls.putch = scene_txtin_putch;
+	cli_cread_add_initial(&scn->cls);
 	ret = vidconsole_entry_save(cons, &scn->entry_save);
 	if (ret)
 		return log_msg_ret("sav", ret);
