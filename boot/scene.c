@@ -638,8 +638,23 @@ static void draw_string(struct udevice *cons, void *ctx, const char *str,
 	}
 }
 
+/**
+ * scene_txt_render() - Render text to the vidconsole
+ *
+ * @exp: Expo to use
+ * @dev: Video device
+ * @cons: Vidconsole device
+ * @ctx: Vidconsole context, or NULL to use default
+ * @obj: Object to render
+ * @gen: Generic text info
+ * @x: X position in pixels
+ * @y: Y position in pixels
+ * @menu_inset: Inset for menu items
+ * Return: 0 if OK, -ve on error
+ */
 static int scene_txt_render(struct expo *exp, struct udevice *dev,
-			    struct udevice *cons, struct scene_obj *obj,
+			    struct udevice *cons, void *ctx,
+			    struct scene_obj *obj,
 			    struct scene_txt_generic *gen, int x, int y,
 			    int menu_inset)
 {
@@ -656,10 +671,10 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		return -ENOTSUPP;
 
 	if (gen->font_name || gen->font_size) {
-		ret = vidconsole_select_font(cons, NULL, gen->font_name,
+		ret = vidconsole_select_font(cons, ctx, gen->font_name,
 					     gen->font_size);
 	} else {
-		ret = vidconsole_select_font(cons, NULL, NULL, 0);
+		ret = vidconsole_select_font(cons, ctx, NULL, 0);
 	}
 	if (ret && ret != -ENOSYS)
 		return log_msg_ret("font", ret);
@@ -694,8 +709,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 	bbox.y1 = obj->bbox.y1;
 
 	if (!mline) {
-		vidconsole_set_cursor_pos(cons, NULL, x, y);
-		draw_string(cons, NULL, str, strlen(str),
+		vidconsole_set_cursor_pos(cons, ctx, x, y);
+		draw_string(cons, ctx, str, strlen(str),
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 
@@ -713,8 +728,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		y = obj->bbox.y0 + offset.yofs + mline->bbox.y0;
 		if (y > bbox.y1)
 			break;	/* clip this line and any following */
-		vidconsole_set_cursor_pos(cons, NULL, x, y);
-		draw_string(cons, NULL, str + mline->start, mline->len,
+		vidconsole_set_cursor_pos(cons, ctx, x, y);
+		draw_string(cons, ctx, str + mline->start, mline->len,
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 	if (obj->flags & SCENEOF_POINT)
@@ -761,8 +776,8 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 	case SCENEOBJT_TEXT: {
 		struct scene_obj_txt *txt = (struct scene_obj_txt *)obj;
 
-		ret = scene_txt_render(exp, dev, cons, obj, &txt->gen, x, y,
-				       theme->menu_inset);
+		ret = scene_txt_render(exp, dev, cons, NULL, obj, &txt->gen,
+				       x, y, theme->menu_inset);
 		break;
 	}
 	case SCENEOBJT_MENU: {
