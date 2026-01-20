@@ -321,6 +321,17 @@ static inline struct inode *file_inode(struct file *f)
 	return f->f_inode;
 }
 
+/* File modification tracking - stubs for U-Boot */
+#define file_modified(file)		({ (void)(file); 0; })
+#define file_accessed(file)		do { (void)(file); } while (0)
+#define file_update_time(f)		do { } while (0)
+#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
+#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
+
+/* File path operations - implemented in ext4l/stub.c */
+char *file_path(struct file *file, char *buf, int buflen);
+struct block_device *file_bdev(struct file *file);
+
 /* iattr - inode attributes for setattr */
 struct iattr {
 	unsigned int ia_valid;

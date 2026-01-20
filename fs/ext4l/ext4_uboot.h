@@ -166,11 +166,6 @@ BUFFER_FNS(Cached, cached)
 struct pipe_inode_info;
 struct kstat;
 struct path;
-struct file_kattr;
-struct dir_context;
-struct readahead_control;
-struct fiemap_extent_info;
-struct folio;
 
 #define WHITEOUT_DEV	0
 #define WHITEOUT_MODE	0
@@ -212,9 +207,6 @@ struct dx_hash_info {
 #define ext4_warning_inode(inode, fmt, ...) \
 	do { } while (0)
 #endif
-
-#define file_modified(file)		({ (void)(file); 0; })
-#define file_accessed(file)		do { (void)(file); } while (0)
 
 #define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
@@ -265,8 +257,6 @@ struct dx_hash_info {
 /* Sync operations - stubs */
 #define sync_mapping_buffers(m)			({ (void)(m); 0; })
 #define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
-#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
-#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
 
 /* DAX stubs - DAX not supported in U-Boot */
 #define IS_DAX(inode)				(0)
@@ -293,7 +283,6 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
 
 /* File operations */
-#define file_update_time(f)		do { } while (0)
 #define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 
 /* iomap stubs */
@@ -407,10 +396,6 @@ void trace_ext4_error(struct super_block *sb, const char *func, unsigned int lin
 
 /* Filesystem notification - declaration for stub.c */
 void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
-
-/* File path operations - declaration for stub.c */
-char *file_path(struct file *file, char *buf, int buflen);
-struct block_device *file_bdev(struct file *file);
 
 /* kobject_put is now in linux/kobject.h */
 /* wait_for_completion is now a macro in linux/completion.h */
