@@ -1192,9 +1192,9 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 	return 0;
 }
 
-static int truetype_get_cursor_info(struct udevice *dev)
+static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct vidconsole_cursor *curs = &com->curs;
 	int x, y, index;

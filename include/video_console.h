@@ -431,9 +431,10 @@ struct vidconsole_ops {
 	 * @xmark_frac, @ymark and @index
 	 *
 	 * @dev: Console device to use
+	 * @ctx: Vidconsole context to use (cannot be NULL)
 	 * Return: 0 if OK, -ve on error
 	 */
-	int (*get_cursor_info)(struct udevice *dev);
+	int (*get_cursor_info)(struct udevice *dev, void *ctx);
 
 	/**
 	 * mark_start() - Mark the current position as the state of CLI entry

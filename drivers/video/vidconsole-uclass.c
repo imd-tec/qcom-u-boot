@@ -779,7 +779,7 @@ int vidconsole_show_cursor(struct udevice *dev)
 	if (!ops->get_cursor_info)
 		return -ENOSYS;
 
-	ret = ops->get_cursor_info(dev);
+	ret = ops->get_cursor_info(dev, ctx);
 	if (ret)
 		return ret;
 
