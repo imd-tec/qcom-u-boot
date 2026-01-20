@@ -616,21 +616,45 @@ static void scene_render_background(struct scene_obj *obj, bool box_only,
 	}
 }
 
-static void draw_string(struct udevice *cons, const char *str, int len,
-			bool password)
+/**
+ * draw_string() - Draw a string to the vidconsole
+ *
+ * @cons: Vidconsole device to draw to
+ * @ctx: Vidconsole context, or NULL to use default
+ * @str: String to draw
+ * @len: Length of string to draw
+ * @password: true to draw asterisks instead of actual characters
+ */
+static void draw_string(struct udevice *cons, void *ctx, const char *str,
+			int len, bool password)
 {
 	if (password) {
 		int i;
 
 		for (i = 0; i < len; i++)
-			vidconsole_put_char(cons, '*');
+			vidconsole_put_char(cons, ctx, '*');
 	} else {
-		vidconsole_put_stringn(cons, str, len);
+		vidconsole_put_stringn(cons, ctx, str, len);
 	}
 }
 
+/**
+ * scene_txt_render() - Render text to the vidconsole
+ *
+ * @exp: Expo to use
+ * @dev: Video device
+ * @cons: Vidconsole device
+ * @ctx: Vidconsole context, or NULL to use default
+ * @obj: Object to render
+ * @gen: Generic text info
+ * @x: X position in pixels
+ * @y: Y position in pixels
+ * @menu_inset: Inset for menu items
+ * Return: 0 if OK, -ve on error
+ */
 static int scene_txt_render(struct expo *exp, struct udevice *dev,
-			    struct udevice *cons, struct scene_obj *obj,
+			    struct udevice *cons, void *ctx,
+			    struct scene_obj *obj,
 			    struct scene_txt_generic *gen, int x, int y,
 			    int menu_inset)
 {
@@ -647,10 +671,10 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		return -ENOTSUPP;
 
 	if (gen->font_name || gen->font_size) {
-		ret = vidconsole_select_font(cons, gen->font_name,
+		ret = vidconsole_select_font(cons, ctx, gen->font_name,
 					     gen->font_size);
 	} else {
-		ret = vidconsole_select_font(cons, NULL, 0);
+		ret = vidconsole_select_font(cons, ctx, NULL, 0);
 	}
 	if (ret && ret != -ENOSYS)
 		return log_msg_ret("font", ret);
@@ -685,8 +709,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 	bbox.y1 = obj->bbox.y1;
 
 	if (!mline) {
-		vidconsole_set_cursor_pos(cons, x, y);
-		draw_string(cons, str, strlen(str),
+		vidconsole_set_cursor_pos(cons, ctx, x, y);
+		draw_string(cons, ctx, str, strlen(str),
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 
@@ -704,8 +728,8 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		y = obj->bbox.y0 + offset.yofs + mline->bbox.y0;
 		if (y > bbox.y1)
 			break;	/* clip this line and any following */
-		vidconsole_set_cursor_pos(cons, x, y);
-		draw_string(cons, str + mline->start, mline->len,
+		vidconsole_set_cursor_pos(cons, ctx, x, y);
+		draw_string(cons, ctx, str + mline->start, mline->len,
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 	if (obj->flags & SCENEOF_POINT)
@@ -718,10 +742,11 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
  * scene_obj_render() - Render an object
  *
  * @obj: Object to render
+ * @ctx: Vidconsole context, or NULL to use default
  * @text_mode: true to use text mode
  * Return: 0 if OK, -ve on error
  */
-static int scene_obj_render(struct scene_obj *obj, bool text_mode)
+static int scene_obj_render(struct scene_obj *obj, void *ctx, bool text_mode)
 {
 	struct scene *scn = obj->scene;
 	struct expo *exp = scn->expo;
@@ -752,8 +777,8 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 	case SCENEOBJT_TEXT: {
 		struct scene_obj_txt *txt = (struct scene_obj_txt *)obj;
 
-		ret = scene_txt_render(exp, dev, cons, obj, &txt->gen, x, y,
-				       theme->menu_inset);
+		ret = scene_txt_render(exp, dev, cons, ctx, obj, &txt->gen,
+				       x, y, theme->menu_inset);
 		break;
 	}
 	case SCENEOBJT_MENU: {
@@ -944,7 +969,7 @@ int scene_arrange(struct scene *scn)
 	return 0;
 }
 
-int scene_render_obj(struct scene *scn, uint id)
+int scene_render_obj(struct scene *scn, uint id, void *ctx)
 {
 	struct scene_obj *obj;
 	int ret;
@@ -954,7 +979,7 @@ int scene_render_obj(struct scene *scn, uint id)
 		return log_msg_ret("obj", -ENOENT);
 
 	if (!(obj->flags & SCENEOF_HIDE)) {
-		ret = scene_obj_render(obj, false);
+		ret = scene_obj_render(obj, ctx, false);
 		if (ret && ret != -ENOTSUPP)
 			return log_msg_ret("ren", ret);
 	}
@@ -974,7 +999,7 @@ int scene_render_deps(struct scene *scn, uint id)
 		return log_msg_ret("obj", -ENOENT);
 
 	if (!(obj->flags & SCENEOF_HIDE)) {
-		ret = scene_obj_render(obj, false);
+		ret = scene_obj_render(obj, NULL, false);
 		if (ret && ret != -ENOTSUPP)
 			return log_msg_ret("ren", ret);
 
@@ -1070,7 +1095,7 @@ int scene_render(struct scene *scn, bool dirty_only)
 			render = bbox_intersects(&obj->bbox, &dirty_bbox);
 
 		if (render) {
-			ret = scene_obj_render(obj, exp->text_mode);
+			ret = scene_obj_render(obj, NULL, exp->text_mode);
 			if (ret && ret != -ENOTSUPP)
 				return log_msg_ret("ren", ret);
 		}
@@ -1176,27 +1201,21 @@ int scene_send_key(struct scene *scn, int key, struct expo_action *event)
 				return log_msg_ret("key", ret);
 			break;
 		}
-		case SCENEOBJT_TEXTLINE: {
-			struct scene_obj_textline *tline;
-
-			tline = (struct scene_obj_textline *)cur,
-			ret = scene_textline_send_key(scn, tline, key, event);
+		case SCENEOBJT_TEXTLINE:
+		case SCENEOBJT_TEXTEDIT:
+			ret = scene_txtin_send_key(cur, scene_obj_txtin(cur),
+						   key, event);
 			if (ret)
 				return log_msg_ret("key", ret);
-			break;
-		}
-		case SCENEOBJT_TEXTEDIT:
-			/* TODO(sjg@chromium.org): Implement this */
 			break;
 		}
 		return 0;
 	}
 
-	if (cur && cur->type == SCENEOBJT_TEXTLINE) {
-		struct scene_obj_textline *tline;
-
-		tline = (struct scene_obj_textline *)cur;
-		ret = scene_textline_send_key(scn, tline, key, event);
+	if (cur && (cur->type == SCENEOBJT_TEXTLINE ||
+		    cur->type == SCENEOBJT_TEXTEDIT)) {
+		ret = scene_txtin_send_key(cur, scene_obj_txtin(cur),
+					   key, event);
 		if (ret)
 			return log_msg_ret("key", ret);
 		return 0;

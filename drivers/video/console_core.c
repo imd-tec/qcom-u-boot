@@ -18,14 +18,16 @@
  * console_set_font() - prepare vidconsole for chosen font.
  *
  * @dev		vidconsole device
+ * @ctx		vidconsole context
  * @fontdata	pointer to font data struct
  */
-static int console_set_font(struct udevice *dev, struct video_fontdata *fontdata)
+static int console_set_font(struct udevice *dev, struct vidconsole_ctx *ctx,
+			    struct video_fontdata *fontdata)
 {
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
 	priv->fontdata = fontdata;
-	vidconsole_set_bitmap_font(dev, fontdata);
+	vidconsole_set_bitmap_font(dev, ctx, fontdata);
 
 	return 0;
 }
@@ -278,21 +280,16 @@ int cursor_hide(struct vidconsole_cursor *curs, struct video_priv *vid_priv,
 	return 0;
 }
 
-int console_alloc_cursor(struct udevice *dev)
+int console_alloc_cursor(struct udevice *dev, struct vidconsole_cursor *curs)
 {
-	struct vidconsole_ctx *ctx;
-	struct vidconsole_cursor *curs;
 	struct video_priv *vid_priv;
 	struct udevice *vid;
 	int save_count;
 
 	if (!CONFIG_IS_ENABLED(CURSOR) || xpl_phase() < PHASE_BOARD_R)
 		return 0;
-
-	ctx = vidconsole_ctx(dev);
 	vid = dev_get_parent(dev);
 	vid_priv = dev_get_uclass_priv(vid);
-	curs = &ctx->curs;
 
 	/* Allocate cursor save buffer for maximum possible cursor height */
 	save_count = vid_priv->ysize * VIDCONSOLE_CURSOR_WIDTH;
@@ -303,24 +300,25 @@ int console_alloc_cursor(struct udevice *dev)
 	return 0;
 }
 
-int console_probe(struct udevice *dev)
+void console_free_cursor(struct vidconsole_cursor *curs)
 {
+	free(curs->save_data);
+}
+
+int console_simple_ctx_new(struct udevice *dev, void *vctx)
+{
+	struct console_ctx *ctx = vctx;
 	int ret;
 
-	ret = console_set_font(dev, fonts);
+	ret = console_set_font(dev, &ctx->com, fonts);
 	if (ret)
 		return ret;
-
-	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
-		ret = console_alloc_cursor(dev);
-		if (ret)
-			return ret;
-	}
 
 	return 0;
 }
 
-const char *console_simple_get_font_size(struct udevice *dev, uint *sizep)
+const char *console_simple_get_font_size(struct udevice *dev, void *ctx,
+					 uint *sizep)
 {
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
@@ -336,11 +334,10 @@ int console_simple_get_font(struct udevice *dev, int seq, struct vidfont_info *i
 	return info->name ? 0 : -ENOENT;
 }
 
-int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
-			   struct video_fontdata *fontdata)
+int console_fixed_putc_xy(struct udevice *dev, void *vctx, uint x_frac, uint y,
+			  int cp, struct video_fontdata *fontdata)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_ctx *ctx = vctx;
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	int pbytes = VNBYTES(vid_priv->bpix);
@@ -370,19 +367,20 @@ int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
 	return VID_TO_POS(fontdata->width);
 }
 
-int console_simple_select_font(struct udevice *dev, const char *name, uint size)
+int console_simple_select_font(struct udevice *dev, void *ctx, const char *name,
+			       uint size)
 {
 	struct video_fontdata *font;
 
 	if (!name) {
 		if (fonts->name)
-			console_set_font(dev, fonts);
+			console_set_font(dev, ctx, fonts);
 		return 0;
 	}
 
 	for (font = fonts; font->name; font++) {
 		if (!strcmp(name, font->name)) {
-			console_set_font(dev, font);
+			console_set_font(dev, ctx, font);
 			return 0;
 		}
 	};

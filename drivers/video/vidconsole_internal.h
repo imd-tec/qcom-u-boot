@@ -8,6 +8,7 @@
 
 #include <charset.h>
 #include <config.h>
+#include <video_console.h>
 
 struct udevice;
 struct vidconsole_cursor;
@@ -23,6 +24,15 @@ struct video_priv;
  */
 struct console_simple_priv {
 	struct video_fontdata *fontdata;
+};
+
+/**
+ * struct console_ctx - context for the normal console
+ *
+ * @com:	Common fields from the vidconsole uclass
+ */
+struct console_ctx {
+	struct vidconsole_ctx com;
 };
 
 /**
@@ -152,9 +162,19 @@ int cursor_hide(struct vidconsole_cursor *curs, struct video_priv *vid_priv,
  * Allocates memory for saving pixels under the cursor
  *
  * @dev: vidconsole device
+ * @curs: cursor to set up
  * Return: 0 if success, -ENOMEM if allocation fails
  */
-int console_alloc_cursor(struct udevice *dev);
+int console_alloc_cursor(struct udevice *dev, struct vidconsole_cursor *curs);
+
+/**
+ * console_free_cursor() - Free cursor memory
+ *
+ * Free the memory used by a cursor
+ *
+ * @curs: cursor to set up
+ */
+void console_free_cursor(struct vidconsole_cursor *curs);
 
 /**
  * console probe function.
@@ -169,7 +189,8 @@ int console_probe(struct udevice *dev);
  * Internal function to be used in as ops.
  * See details in video_console.h get_font_size function
  **/
-const char *console_simple_get_font_size(struct udevice *dev, uint *sizep);
+const char *console_simple_get_font_size(struct udevice *dev, void *ctx,
+					 uint *sizep);
 
 /**
  * Internal function to be used in as ops.
@@ -181,31 +202,35 @@ int console_simple_get_font(struct udevice *dev, int seq, struct vidfont_info *i
  * Internal function to be used in as ops.
  * See details in video_console.h select_font function
  **/
-int console_simple_select_font(struct udevice *dev, const char *name, uint size);
+int console_simple_select_font(struct udevice *dev, void *ctx, const char *name,
+			       uint size);
 
 /**
  * Normal console putc_xy function that can be called by other console drivers
  *
  * @param dev		console device
+ * @param ctx		vidconsole context to use, or NULL for default
  * @param x_frac	fractional X position
  * @param y		Y position in pixels
  * @param cp		Unicode code point
  * @returns width in fractional pixels, or -ve on error
  */
-int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp);
+int console_normal_putc_xy(struct udevice *dev, void *ctx, uint x_frac,
+			   uint y, int cp);
 
 /**
  * Fixed font putc_xy function that can be called with explicit font data
  *
  * @param dev		console device
+ * @param vctx		vidconsole context to use (cannot be NULL)
  * @param x_frac	fractional X position
  * @param y		Y position in pixels
  * @param cp		Unicode code point
  * @param fontdata	font data to use for rendering
  * @returns width in fractional pixels, or -ve on error
  */
-int console_fixed_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp,
-			  struct video_fontdata *fontdata);
+int console_fixed_putc_xy(struct udevice *dev, void *vctx, uint x_frac, uint y,
+			  int cp, struct video_fontdata *fontdata);
 
 /**
  * Internal function to convert Unicode code points to code page 437.
@@ -222,3 +247,15 @@ static inline u8 console_utf_to_cp437(int codepoint)
 	}
 	return codepoint;
 }
+
+/**
+ * console_simple_ctx_new() - Set up a new context for bitmap-font consoles
+ *
+ * Initialises the context with the default bitmap font. This is the ctx_new()
+ * method for bitmap-font console drivers.
+ *
+ * @dev: Vidconsole device
+ * @ctx: Context to initialise (allocated by the uclass)
+ * Return: 0 on success, -ve on error
+ */
+int console_simple_ctx_new(struct udevice *dev, void *ctx);

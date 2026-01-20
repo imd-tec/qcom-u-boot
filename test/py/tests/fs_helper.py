@@ -11,6 +11,7 @@ import shutil
 from subprocess import call, check_call, check_output, CalledProcessError, run
 from subprocess import DEVNULL
 import tempfile
+import time
 
 
 class FsHelper:
@@ -269,9 +270,11 @@ class FsHelper:
                     'kernel module is loaded and you have permission to use '
                     'device-mapper. This is required for LUKS encryption tests.')
 
-        device_name = f'luks_test_{os.getpid()}'
+        # Use PID and timestamp for uniqueness in CI environments where PIDs
+        # get reused
+        device_name = f'luks_test_{os.getpid()}_{int(time.time() * 1000) % 100000}'
 
-        # Clean up any stale device with the same name
+        # Clean up any stale device with the same name (unlikely with timestamp)
         run(['sudo', 'cryptsetup', 'close', device_name],
             stdout=DEVNULL, stderr=DEVNULL, check=False)
 

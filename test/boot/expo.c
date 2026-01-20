@@ -1481,8 +1481,8 @@ static int expo_render_textline(struct unit_test_state *uts)
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
 
 	/* check cursor moved back one position, before 'a' */
-	ut_asserteq(14, scn->cls.num);
-	ut_asserteq(15, scn->cls.eol_num);
+	ut_asserteq(14, tline->tin.cls.num);
+	ut_asserteq(15, tline->tin.cls.eol_num);
 	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
@@ -1493,8 +1493,8 @@ static int expo_render_textline(struct unit_test_state *uts)
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
 
 	/* check cursor moved back three more positions, before 'i' */
-	ut_asserteq(11, scn->cls.num);
-	ut_asserteq(15, scn->cls.eol_num);
+	ut_asserteq(11, tline->tin.cls.num);
+	ut_asserteq(15, tline->tin.cls.eol_num);
 	ut_asserteq_str("sample hopwinda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
@@ -1504,8 +1504,8 @@ static int expo_render_textline(struct unit_test_state *uts)
 	ut_assertok(expo_send_key(exp, CTL_CH('d')));
 
 	/* check character deleted at cursor position */
-	ut_asserteq(11, scn->cls.num);
-	ut_asserteq(14, scn->cls.eol_num);
+	ut_asserteq(11, tline->tin.cls.num);
+	ut_asserteq(14, tline->tin.cls.eol_num);
 	ut_asserteq_str("sample hopwnda", abuf_data(&tline->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));

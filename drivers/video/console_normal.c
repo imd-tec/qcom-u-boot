@@ -15,14 +15,6 @@
 #include <video_font.h>		/* Get font data, width and height */
 #include "vidconsole_internal.h"
 
-/**
- * struct console_ctx - context for the normal console
- *
- * @com:	Common fields from the vidconsole uclass
- */
-struct console_ctx {
-	struct vidconsole_ctx com;
-};
 
 static int console_set_row(struct udevice *dev, uint row, int clr)
 {
@@ -79,17 +71,18 @@ static int console_move_rows(struct udevice *dev, uint rowdst,
 	return 0;
 }
 
-int console_normal_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
+int console_normal_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
+			   uint y, int cp)
 {
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
-	return console_fixed_putc_xy(dev, x_frac, y, cp, priv->fontdata);
+	return console_fixed_putc_xy(dev, vctx, x_frac, y, cp, priv->fontdata);
 }
 
-static __maybe_unused int console_get_cursor_info(struct udevice *dev)
+static __maybe_unused int console_get_cursor_info(struct udevice *dev,
+						  void *vctx)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_ctx *ctx = vctx;
 	struct console_simple_priv *priv = dev_get_priv(dev);
 	struct video_fontdata *fontdata = priv->fontdata;
 	struct vidconsole_cursor *curs = &ctx->curs;
@@ -170,30 +163,10 @@ static __maybe_unused int normal_entry_restore(struct udevice *dev,
 	return 0;
 }
 
-static int console_putc_xy(struct udevice *dev, uint x_frac, uint y, int cp)
+static int console_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
+			   uint y, int cp)
 {
-	return console_normal_putc_xy(dev, x_frac, y, cp);
-}
-
-static int console_simple_ctx_new(struct udevice *dev, void **ctxp)
-{
-	struct console_ctx *ctx;
-
-	ctx = malloc(sizeof(*ctx));
-	if (!ctx)
-		return -ENOMEM;
-
-	memset(ctx, '\0', sizeof(*ctx));
-	*ctxp = ctx;
-
-	return 0;
-}
-
-static int console_simple_ctx_dispose(struct udevice *dev, void *ctx)
-{
-	free(ctx);
-
-	return 0;
+	return console_normal_putc_xy(dev, vctx, x_frac, y, cp);
 }
 
 struct vidconsole_ops console_ops = {
@@ -204,7 +177,6 @@ struct vidconsole_ops console_ops = {
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
 	.ctx_new	= console_simple_ctx_new,
-	.ctx_dispose	= console_simple_ctx_dispose,
 #ifdef CONFIG_CURSOR
 	.get_cursor_info	= console_get_cursor_info,
 	.entry_save	= normal_entry_save,
@@ -216,6 +188,5 @@ U_BOOT_DRIVER(vidconsole_normal) = {
 	.name		= "vidconsole0",
 	.id		= UCLASS_VIDEO_CONSOLE,
 	.ops		= &console_ops,
-	.probe		= console_probe,
 	.priv_auto	= sizeof(struct console_simple_priv),
 };

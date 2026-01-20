@@ -166,11 +166,13 @@ struct vidconsole_uc_plat {
  *
  * @sdev:		stdio device, acting as an output sink
  * @ctx:		Per-client context (allocated by the uclass)
+ * @ctx_list:		List of additional contexts allocated by clients
  * @quiet:		Suppress all output from stdio
  */
 struct vidconsole_priv {
 	struct stdio_dev sdev;
 	struct vidconsole_ctx *ctx;
+	struct alist ctx_list;
 	bool quiet;
 };
 
@@ -240,6 +242,7 @@ struct vidconsole_ops {
 	 * putc_xy() - write a single character to a position
 	 *
 	 * @dev:	Device to write to
+	 * @ctx:	Vidconsole context to use (cannot be NULL)
 	 * @x_frac:	Fractional pixel X position (0=left-most pixel) which
 	 *		is the X position multipled by VID_FRAC_DIV.
 	 * @y:		Pixel Y position (0=top-most pixel)
@@ -248,7 +251,8 @@ struct vidconsole_ops {
 	 * if all is OK, -EAGAIN if we ran out of space on this line, other -ve
 	 * on error
 	 */
-	int (*putc_xy)(struct udevice *dev, uint x_frac, uint y, int cp);
+	int (*putc_xy)(struct udevice *dev, void *ctx, uint x_frac, uint y,
+		       int cp);
 
 	/**
 	 * move_rows() - Move text rows from one place to another
@@ -278,6 +282,7 @@ struct vidconsole_ops {
 	 * entry_start() - Indicate that text entry is starting afresh
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Vidconsole context to use (cannot be NULL)
 	 * Returns: 0 on success, -ve on error
 	 *
 	 * Consoles which use proportional fonts need to track the position of
@@ -287,12 +292,13 @@ struct vidconsole_ops {
 	 * command). The driver can use this signal to empty its list of
 	 * positions.
 	 */
-	int (*entry_start)(struct udevice *dev);
+	int (*entry_start)(struct udevice *dev, void *ctx);
 
 	/**
 	 * backspace() - Handle erasing the last character
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Vidconsole context to use
 	 * Returns: 0 on success, -ve on error
 	 *
 	 * With proportional fonts the vidconsole uclass cannot itself erase
@@ -304,7 +310,7 @@ struct vidconsole_ops {
 	 * If not implement, default behaviour will work for fixed-width
 	 * characters.
 	 */
-	int (*backspace)(struct udevice *dev);
+	int (*backspace)(struct udevice *dev, void *ctx);
 
 	/**
 	 * get_font() - Obtain information about a font (optional)
@@ -321,20 +327,24 @@ struct vidconsole_ops {
 	 * get_font_size() - get the current font name and size
 	 *
 	 * @dev: vidconsole device
+	 * @ctx: vidconsole context to use (cannot be NULL)
 	 * @sizep: Place to put the font size (nominal height in pixels)
 	 * Returns: Current font name
 	 */
-	const char *(*get_font_size)(struct udevice *dev, uint *sizep);
+	const char *(*get_font_size)(struct udevice *dev, void *ctx,
+				     uint *sizep);
 
 	/**
 	 * select_font() - Select a particular font by name / size
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Context to use
 	 * @name:	Font name to use (NULL to use default)
 	 * @size:	Font size to use (0 to use default)
 	 * Returns: 0 on success, -ENOENT if no such font
 	 */
-	int (*select_font)(struct udevice *dev, const char *name, uint size);
+	int (*select_font)(struct udevice *dev, void *ctx, const char *name,
+			   uint size);
 
 	/**
 	 * measure() - Measure the bounding box of some text
@@ -374,16 +384,16 @@ struct vidconsole_ops {
 		       uint num_chars, struct vidconsole_bbox *bbox);
 
 	/**
-	 * ctx_new() - Create a new context for a client
+	 * ctx_new() - Initialise a new context for a client
 	 *
-	 * Allocates and initialises a context for a client of the vidconsole.
-	 * The driver determines what information is stored in the context.
+	 * Initialises driver-specific fields of a pre-allocated context. The
+	 * base vidconsole_ctx fields are already initialised by the uclass.
 	 *
 	 * @dev: Console device to use
-	 * @ctxp: Returns new context, on success
-	 * Return: 0 on success, -ENOMEM if out of memory
+	 * @ctx: Pre-allocated context to initialise
+	 * Return: 0 on success, -ve on error
 	 */
-	int (*ctx_new)(struct udevice *dev, void **ctxp);
+	int (*ctx_new)(struct udevice *dev, void *ctx);
 
 	/**
 	 * ctx_dispose() - Dispose of a context
@@ -427,9 +437,10 @@ struct vidconsole_ops {
 	 * @xmark_frac, @ymark and @index
 	 *
 	 * @dev: Console device to use
+	 * @ctx: Vidconsole context to use (cannot be NULL)
 	 * Return: 0 if OK, -ve on error
 	 */
-	int (*get_cursor_info)(struct udevice *dev);
+	int (*get_cursor_info)(struct udevice *dev, void *ctx);
 
 	/**
 	 * mark_start() - Mark the current position as the state of CLI entry
@@ -439,8 +450,9 @@ struct vidconsole_ops {
 	 * the beginning point for the cursor.
 	 *
 	 * @dev: Console device to use
+	 * @ctx: Vidconsole context to use (cannot be NULL)
 	 */
-	int (*mark_start)(struct udevice *dev);
+	int (*mark_start)(struct udevice *dev, void *ctx);
 };
 
 /* Get a pointer to the driver operations for a video console device */
@@ -481,10 +493,12 @@ int vidconsole_get_font(struct udevice *dev, int seq,
  * vidconsole_select_font() - Select a particular font by name / size
  *
  * @dev:	Device to adjust
+ * @ctx:	Context to use (NULL to use default)
  * @name:	Font name to use (NULL to use default)
  * @size:	Font size to use (0 to use default)
  */
-int vidconsole_select_font(struct udevice *dev, const char *name, uint size);
+int vidconsole_select_font(struct udevice *dev, void *ctx, const char *name,
+			   uint size);
 
 /**
  * vidconsole_measure() - Measure the bounding box of some text
@@ -575,9 +589,10 @@ int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf);
  * Shows a cursor at the current position.
  *
  * @dev: Console device to use
+ * @vctx: Vidconsole context to use, or NULL to use default
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_show_cursor(struct udevice *dev);
+int vidconsole_show_cursor(struct udevice *dev, void *vctx);
 
 /**
  * vidconsole_hide_cursor() - Hide the cursor
@@ -585,43 +600,74 @@ int vidconsole_show_cursor(struct udevice *dev);
  * Hides the cursor if it's currently visible
  *
  * @dev: Console device to use
+ * @vctx: Vidconsole context to use, or NULL to use default
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_hide_cursor(struct udevice *dev);
+int vidconsole_hide_cursor(struct udevice *dev, void *vctx);
 
 /**
- * vidconsole_readline_start() - Enable cursor for all video consoles
+ * vidconsole_readline_start() - Enable cursor for a video console
+ *
+ * Called at the start of command line input to show the cursor
+ *
+ * @dev: vidconsole device
+ * @vctx: vidconsole context to use, or NULL to use the default
+ * @indent: indent subsequent lines to the same position as the first line
+ */
+void vidconsole_readline_start(struct udevice *dev, void *vctx, bool indent);
+
+/**
+ * vidconsole_readline_end() - Disable cursor for a video console
+ *
+ * Called at the end of command line input to hide the cursor
+ *
+ * @dev: vidconsole device
+ * @vctx: vidconsole context to use, or NULL to use the default
+ */
+void vidconsole_readline_end(struct udevice *dev, void *vctx);
+
+/**
+ * vidconsole_readline_start_all() - Enable cursor for all video consoles
  *
  * Called at the start of command line input to show cursors on all
  * active video consoles
  *
  * @indent: indent subsequent lines to the same position as the first line
  */
-void vidconsole_readline_start(bool indent);
+void vidconsole_readline_start_all(bool indent);
 
 /**
- * vidconsole_readline_end() - Disable cursor for all video consoles
+ * vidconsole_readline_end_all() - Disable cursor for all video consoles
  *
  * Called at the end of command line input to hide cursors on all
  * active video consoles
  */
-void vidconsole_readline_end(void);
+void vidconsole_readline_end_all(void);
 #else
-static inline int vidconsole_show_cursor(struct udevice *dev)
+static inline int vidconsole_show_cursor(struct udevice *dev, void *vctx)
 {
 	return 0;
 }
 
-static inline int vidconsole_hide_cursor(struct udevice *dev)
+static inline int vidconsole_hide_cursor(struct udevice *dev, void *vctx)
 {
 	return 0;
 }
 
-static inline void vidconsole_readline_start(bool indent)
+static inline void vidconsole_readline_start(struct udevice *dev, void *vctx,
+					     bool indent)
 {
 }
 
-static inline void vidconsole_readline_end(void)
+static inline void vidconsole_readline_end(struct udevice *dev, void *vctx)
+{
+}
+
+static inline void vidconsole_readline_start_all(bool indent)
+{
+}
+
+static inline void vidconsole_readline_end_all(void)
 {
 }
 #endif /* CONFIG_CURSOR */
@@ -655,6 +701,7 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old);
  * vidconsole_putc_xy() - write a single character to a position
  *
  * @dev:	Device to write to
+ * @ctx:	Vidconsole context to use, or NULL to use default
  * @x_frac:	Fractional pixel X position (0=left-most pixel) which
  *		is the X position multipled by VID_FRAC_DIV.
  * @y:		Pixel Y position (0=top-most pixel)
@@ -663,7 +710,7 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old);
  * if all is OK, -EAGAIN if we ran out of space on this line, other -ve
  * on error
  */
-int vidconsole_putc_xy(struct udevice *dev, uint x, uint y, int cp);
+int vidconsole_putc_xy(struct udevice *dev, void *ctx, uint x, uint y, int cp);
 
 /**
  * vidconsole_move_rows() - Move text rows from one place to another
@@ -695,8 +742,9 @@ int vidconsole_set_row(struct udevice *dev, uint row, int clr);
  * Marks the current cursor position as the start of a line
  *
  * @dev:	Device to adjust
+ * @ctx:	vidconsole context to use, or NULL to use the default
  */
-int vidconsole_entry_start(struct udevice *dev);
+int vidconsole_entry_start(struct udevice *dev, void *ctx);
 
 /**
  * vidconsole_put_char() - Output a character to the current console position
@@ -709,10 +757,11 @@ int vidconsole_entry_start(struct udevice *dev);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @vctx:	Vidconsole context to use, or NULL to use default
  * @ch:		Character to write
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_char(struct udevice *dev, char ch);
+int vidconsole_put_char(struct udevice *dev, void *vctx, char ch);
 
 /**
  * vidconsole_put_stringn() - Output part of a string to the current console pos
@@ -725,11 +774,13 @@ int vidconsole_put_char(struct udevice *dev, char ch);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @ctx:	Vidconsole context, or NULL to use default
  * @str:	String to write
  * @maxlen:	Maximum chars to output, or -1 for all
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen);
+int vidconsole_put_stringn(struct udevice *dev, void *ctx, const char *str,
+			   int maxlen);
 
 /**
  * vidconsole_put_string() - Output a string to the current console position
@@ -742,10 +793,11 @@ int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @ctx:	Vidconsole context, or NULL to use default
  * @str:	String to write
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_string(struct udevice *dev, const char *str);
+int vidconsole_put_string(struct udevice *dev, void *ctx, const char *str);
 
 /**
  * vidconsole_position_cursor() - Move the text cursor
@@ -774,10 +826,11 @@ int vidconsole_clear_and_reset(struct udevice *dev);
  * updated to the same position, so that a newline will return to @x
  *
  * @dev:	video console device to update
+ * @ctx:	vidconsole context to use, or NULL to use the default
  * @x:		x position from left in pixels
  * @y:		y position from top in pixels
  */
-void vidconsole_set_cursor_pos(struct udevice *dev, int x, int y);
+void vidconsole_set_cursor_pos(struct udevice *dev, void *ctx, int x, int y);
 
 /**
  * vidconsole_list_fonts() - List the available fonts
@@ -793,11 +846,13 @@ void vidconsole_list_fonts(struct udevice *dev);
  * vidconsole_get_font_size() - get the current font name and size
  *
  * @dev: vidconsole device
+ * @ctx: vidconsole context to use (NULL to use default)
  * @sizep: Place to put the font size (nominal height in pixels)
  * @name: pointer to font name, a placeholder for result
  * Return: 0 if OK, -ENOSYS if not implemented in driver
  */
-int vidconsole_get_font_size(struct udevice *dev, const char **name, uint *sizep);
+int vidconsole_get_font_size(struct udevice *dev, void *ctx, const char **name,
+			     uint *sizep);
 
 /**
  * vidconsole_set_quiet() - Select whether the console should output stdio
@@ -811,9 +866,10 @@ void vidconsole_set_quiet(struct udevice *dev, bool quiet);
  * vidconsole_set_bitmap_font() - prepare vidconsole for chosen bitmap font
  *
  * @dev		vidconsole device
+ * @ctx		vidconsole context
  * @fontdata	pointer to font data struct
  */
-void vidconsole_set_bitmap_font(struct udevice *dev,
+void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 				struct video_fontdata *fontdata);
 
 /*

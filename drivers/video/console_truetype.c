@@ -395,11 +395,11 @@ static void clear_from(struct udevice *dev, int index)
 	}
 }
 
-static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
-				    int cp)
+static int console_truetype_putc_xy(struct udevice *dev, void *vctx, uint x,
+				    uint y, int cp)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct console_tt_metrics *met = ctx->cur_met;
@@ -417,7 +417,8 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
 
 	/* Use fixed font if selected */
 	if (ctx->cur_fontdata)
-		return console_fixed_putc_xy(dev, x, y, cp, ctx->cur_fontdata);
+		return console_fixed_putc_xy(dev, &ctx->com, x, y, cp,
+					     ctx->cur_fontdata);
 
 	/* Reset scratch buffer for this character */
 	stbtt_scratch_reset(&priv->scratch);
@@ -660,12 +661,13 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
  * not been entered.
  *
  * @dev:	Device to update
+ * @vctx:	Vidconsole context to use
  * Return: 0 if OK, -ENOSYS if not supported
  */
-static int console_truetype_backspace(struct udevice *dev)
+static int console_truetype_backspace(struct udevice *dev, void *vctx)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct pos_info *pos;
 	int xend;
@@ -697,9 +699,9 @@ static int console_truetype_backspace(struct udevice *dev)
 	return 0;
 }
 
-static int console_truetype_entry_start(struct udevice *dev)
+static int console_truetype_entry_start(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 
 	/* A new input line has start, so clear our history */
@@ -894,26 +896,26 @@ static struct console_tt_metrics *find_metrics(struct udevice *dev,
  * set_bitmap_font() - Set up console to use a fixed font
  *
  * @dev:	Console device
+ * @ctx:	Console context
  * @fontdata:	Fixed font data to use
  * Return: 0 if OK, -ve on error
  */
-static void set_bitmap_font(struct udevice *dev,
+static void set_bitmap_font(struct udevice *dev, struct console_tt_ctx *ctx,
 			    struct video_fontdata *fontdata)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
 
 	ctx->cur_fontdata = fontdata;
 	ctx->cur_met = NULL;
 
-	vidconsole_set_bitmap_font(dev, fontdata);
+	vidconsole_set_bitmap_font(dev, com, fontdata);
 
 	com->tab_width_frac = VID_TO_POS(fontdata->width) * 8 / 2;
 }
 
-static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
+static void select_metrics(struct udevice *dev, struct console_tt_ctx *ctx,
+			   struct console_tt_metrics *met)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
 	struct udevice *vid_dev = dev_get_parent(dev);
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -971,10 +973,10 @@ static int get_metrics(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
-static int truetype_select_font(struct udevice *dev, const char *name,
-				uint size)
+static int truetype_select_font(struct udevice *dev, void *vctx,
+				const char *name, uint size)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct console_tt_metrics *met;
 	struct video_fontdata *fontdata;
 	int ret;
@@ -984,7 +986,7 @@ static int truetype_select_font(struct udevice *dev, const char *name,
 		for (fontdata = fonts; fontdata->name; fontdata++) {
 			if (!strcmp(name, fontdata->name)) {
 				/* Switch to fixed-font mode */
-				set_bitmap_font(dev, fontdata);
+				set_bitmap_font(dev, ctx, fontdata);
 				return 0;
 			}
 		}
@@ -996,7 +998,7 @@ static int truetype_select_font(struct udevice *dev, const char *name,
 	if (ret)
 		return log_msg_ret("sel", ret);
 
-	select_metrics(dev, met);
+	select_metrics(dev, ctx, met);
 
 	return 0;
 }
@@ -1141,23 +1143,15 @@ static int truetype_nominal(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
-static int truetype_ctx_new(struct udevice *dev, void **ctxp)
+static int truetype_ctx_new(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx;
+	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = vctx;
 
-	ctx = malloc(sizeof(*ctx));
-	if (!ctx)
-		return -ENOMEM;
+	/* use the first set of metrics by default */
+	ctx->cur_met = &priv->metrics[0];
 
-	memset(ctx, '\0', sizeof(*ctx));
-	*ctxp = ctx;
-
-	return 0;
-}
-
-static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
-{
-	free(ctx);
+	select_metrics(dev, ctx, ctx->cur_met);
 
 	return 0;
 }
@@ -1190,9 +1184,9 @@ static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
 	return 0;
 }
 
-static int truetype_get_cursor_info(struct udevice *dev)
+static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct vidconsole_cursor *curs = &com->curs;
 	int x, y, index;
@@ -1232,9 +1226,10 @@ static int truetype_get_cursor_info(struct udevice *dev)
 	return 0;
 }
 
-const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
+const char *console_truetype_get_font_size(struct udevice *dev, void *vctx,
+					   uint *sizep)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 
 	if (ctx->cur_fontdata) {
 		/* Using fixed font */
@@ -1249,9 +1244,9 @@ const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 	}
 }
 
-static int truetype_mark_start(struct udevice *dev)
+static int truetype_mark_start(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 
 	ctx->pos_start = ctx->pos_ptr;
 
@@ -1260,7 +1255,6 @@ static int truetype_mark_start(struct udevice *dev)
 
 static int console_truetype_probe(struct udevice *dev)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -1293,15 +1287,8 @@ static int console_truetype_probe(struct udevice *dev)
 	ret = truetype_add_metrics(dev, tab->name, font_size, tab->begin);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
-	ctx->cur_met = &priv->metrics[ret];
-
-	select_metrics(dev, &priv->metrics[ret]);
 
 	debug("%s: ready\n", __func__);
-
-	ret = console_alloc_cursor(dev);
-	if (ret)
-		return ret;
 
 	return 0;
 }
@@ -1328,7 +1315,6 @@ struct vidconsole_ops console_truetype_ops = {
 	.measure	= truetype_measure,
 	.nominal	= truetype_nominal,
 	.ctx_new	= truetype_ctx_new,
-	.ctx_dispose	= truetype_ctx_dispose,
 	.entry_save	= truetype_entry_save,
 	.entry_restore	= truetype_entry_restore,
 	.get_cursor_info	= truetype_get_cursor_info,

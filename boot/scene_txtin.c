@@ -8,6 +8,7 @@
 
 #define LOG_CATEGORY	LOGC_EXPO
 
+#include <cli.h>
 #include <expo.h>
 #include <log.h>
 #include <menu.h>
@@ -62,6 +63,7 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 			    struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
 	const bool open = obj->flags & SCENEOF_OPEN;
 	struct udevice *cons = scn->expo->cons;
 	uint i;
@@ -73,16 +75,16 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 		ret = vidconsole_entry_restore(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
-		scene_render_obj(scn, tin->edit_id);
+		scene_render_obj(scn, tin->edit_id, NULL);
 
 		/* move cursor back to the correct position */
-		for (i = scn->cls.num; i < scn->cls.eol_num; i++)
-			vidconsole_put_char(cons, '\b');
+		for (i = cls->num; i < cls->eol_num; i++)
+			vidconsole_put_char(cons, NULL, '\b');
 		ret = vidconsole_entry_save(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
 
-		vidconsole_show_cursor(cons);
+		vidconsole_show_cursor(cons, NULL);
 	}
 
 	return 0;
@@ -99,20 +101,21 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
  */
 static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 {
-	struct scene *scn = container_of(cls, struct scene, cls);
+	struct scene *scn = cls->priv;
 
-	vidconsole_put_char(scn->expo->cons, ch);
+	vidconsole_put_char(scn->expo->cons, NULL, ch);
 }
 
 void scene_txtin_close(struct scene *scn)
 {
 	/* cursor is not needed now */
-	vidconsole_readline_end();
+	vidconsole_readline_end(scn->expo->cons, NULL);
 }
 
 int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
 	struct udevice *cons = scn->expo->cons;
 	struct scene_obj_txt *txt;
 	int ret;
@@ -126,17 +129,19 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	if (!txt)
 		return log_msg_ret("cur", -ENOENT);
 
-	vidconsole_set_cursor_pos(cons, txt->obj.bbox.x0, txt->obj.bbox.y0);
-	vidconsole_entry_start(cons);
-	cli_cread_init(&scn->cls, abuf_data(&tin->buf), tin->line_chars);
-	scn->cls.insert = true;
-	scn->cls.putch = scene_txtin_putch;
+	vidconsole_set_cursor_pos(cons, NULL, txt->obj.bbox.x0, txt->obj.bbox.y0);
+	vidconsole_entry_start(cons, NULL);
+	cli_cread_init(cls, abuf_data(&tin->buf), tin->line_chars);
+	cls->insert = true;
+	cls->putch = scene_txtin_putch;
+	cls->priv = scn;
+	cli_cread_add_initial(cls);
 	ret = vidconsole_entry_save(cons, &scn->entry_save);
 	if (ret)
 		return log_msg_ret("sav", ret);
 
 	/* make sure the cursor is visible */
-	vidconsole_readline_start(true);
+	vidconsole_readline_start(cons, NULL, true);
 
 	return 0;
 }
@@ -155,4 +160,53 @@ void scene_txtin_calc_bbox(struct scene_obj *obj, struct scene_txtin *tin,
 
 	edit_bbox->valid = false;
 	scene_bbox_union(scn, tin->edit_id, inset, edit_bbox);
+}
+
+int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
+			 int key, struct expo_action *event)
+{
+	struct cli_line_state *cls = &tin->cls;
+	const bool open = obj->flags & SCENEOF_OPEN;
+	struct scene *scn = obj->scene;
+
+	log_debug("key=%d\n", key);
+	switch (key) {
+	case BKEY_QUIT:
+		if (open) {
+			event->type = EXPOACT_CLOSE;
+			event->select.id = obj->id;
+
+			/* Copy the backup text from the scene buffer */
+			memcpy(abuf_data(&tin->buf), abuf_data(&scn->buf),
+			       abuf_size(&scn->buf));
+
+			scene_txtin_close(scn);
+		} else {
+			event->type = EXPOACT_QUIT;
+			log_debug("menu quit\n");
+		}
+		break;
+	case BKEY_SELECT:
+		if (!open)
+			break;
+		event->type = EXPOACT_CLOSE;
+		event->select.id = obj->id;
+		key = '\n';
+		fallthrough;
+	default: {
+		struct udevice *cons = scn->expo->cons;
+		int ret;
+
+		ret = vidconsole_entry_restore(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		ret = cread_line_process_ch(cls, key);
+		ret = vidconsole_entry_save(cons, &scn->entry_save);
+		if (ret)
+			return log_msg_ret("sav", ret);
+		break;
+	}
+	}
+
+	return 0;
 }

@@ -135,7 +135,7 @@ int expo_test_render(struct expo *exp)
 		test->render_delta_us = get_timer_us(test->base_time_us);
 
 	/* Select 8x16 font for test display */
-	ret = vidconsole_select_font(exp->cons, "8x16", 0);
+	ret = vidconsole_select_font(exp->cons, NULL, "8x16", 0);
 	if (ret && ret != -ENOSYS)
 		return log_msg_ret("font", ret);
 
@@ -180,15 +180,15 @@ int expo_test_render(struct expo *exp)
 	snprintf(buf, sizeof(buf), "frame  %6d", test->render_count);
 	x = vid_priv->xsize - 18 * ctx->x_charsize;
 	y = 10;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
-	vidconsole_put_string(exp->cons, buf);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
+	vidconsole_put_string(exp->cons, NULL, buf);
 
 	/* Display FPS on next line (only if non-zero) */
 	if (test->fps_last > 0) {
 		snprintf(buf, sizeof(buf), "fps    %6d", test->fps_last);
 		y += ctx->y_charsize;
-		vidconsole_set_cursor_pos(exp->cons, x, y);
-		vidconsole_put_string(exp->cons, buf);
+		vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
+		vidconsole_put_string(exp->cons, NULL, buf);
 	}
 
 	/* Display average render time in milliseconds on next line */
@@ -196,24 +196,24 @@ int expo_test_render(struct expo *exp)
 		 test->render_avg_us / 1000,
 		 (test->render_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
-	vidconsole_put_string(exp->cons, buf);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
+	vidconsole_put_string(exp->cons, NULL, buf);
 
 	/* Display average sync time in milliseconds on next line */
 	snprintf(buf, sizeof(buf), "sync   %6lu.%01lums",
 		 test->sync_avg_us / 1000,
 		 (test->sync_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
-	vidconsole_put_string(exp->cons, buf);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
+	vidconsole_put_string(exp->cons, NULL, buf);
 
 	/* Display average poll time in milliseconds on next line */
 	snprintf(buf, sizeof(buf), "poll   %6lu.%01lums",
 		 test->poll_avg_us / 1000,
 		 (test->poll_avg_us % 1000) / 100);
 	y += ctx->y_charsize;
-	vidconsole_set_cursor_pos(exp->cons, x, y);
-	vidconsole_put_string(exp->cons, buf);
+	vidconsole_set_cursor_pos(exp->cons, NULL, x, y);
+	vidconsole_put_string(exp->cons, NULL, buf);
 
 	return 0;
 }

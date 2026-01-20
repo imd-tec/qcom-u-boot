@@ -72,10 +72,10 @@ static int console_move_rows_1(struct udevice *dev, uint rowdst, uint rowsrc,
 	return 0;
 }
 
-static int console_putc_xy_1(struct udevice *dev, uint x_frac, uint y, int cp)
+static int console_putc_xy_1(struct udevice *dev, void *vctx, uint x_frac,
+			     uint y, int cp)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_ctx *ctx = vctx;
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	struct console_simple_priv *priv = dev_get_priv(dev);
@@ -161,10 +161,10 @@ static int console_move_rows_2(struct udevice *dev, uint rowdst, uint rowsrc,
 	return 0;
 }
 
-static int console_putc_xy_2(struct udevice *dev, uint x_frac, uint y, int cp)
+static int console_putc_xy_2(struct udevice *dev, void *vctx, uint x_frac,
+			     uint y, int cp)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_ctx *ctx = vctx;
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	struct console_simple_priv *priv = dev_get_priv(dev);
@@ -252,10 +252,10 @@ static int console_move_rows_3(struct udevice *dev, uint rowdst, uint rowsrc,
 	return 0;
 }
 
-static int console_putc_xy_3(struct udevice *dev, uint x_frac, uint y, int cp)
+static int console_putc_xy_3(struct udevice *dev, void *vctx, uint x_frac,
+			     uint y, int cp)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
+	struct vidconsole_ctx *ctx = vctx;
 	struct udevice *vid = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
 	struct console_simple_priv *priv = dev_get_priv(dev);
@@ -294,6 +294,7 @@ struct vidconsole_ops console_ops_1 = {
 	.get_font_size	= console_simple_get_font_size,
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
+	.ctx_new	= console_simple_ctx_new,
 };
 
 struct vidconsole_ops console_ops_2 = {
@@ -303,6 +304,7 @@ struct vidconsole_ops console_ops_2 = {
 	.get_font_size	= console_simple_get_font_size,
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
+	.ctx_new	= console_simple_ctx_new,
 };
 
 struct vidconsole_ops console_ops_3 = {
@@ -312,13 +314,13 @@ struct vidconsole_ops console_ops_3 = {
 	.get_font_size	= console_simple_get_font_size,
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
+	.ctx_new	= console_simple_ctx_new,
 };
 
 U_BOOT_DRIVER(vidconsole_1) = {
 	.name	= "vidconsole1",
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_ops_1,
-	.probe	= console_probe,
 	.priv_auto	= sizeof(struct console_simple_priv),
 };
 
@@ -326,7 +328,6 @@ U_BOOT_DRIVER(vidconsole_2) = {
 	.name	= "vidconsole2",
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_ops_2,
-	.probe	= console_probe,
 	.priv_auto	= sizeof(struct console_simple_priv),
 };
 
@@ -334,6 +335,5 @@ U_BOOT_DRIVER(vidconsole_3) = {
 	.name	= "vidconsole3",
 	.id	= UCLASS_VIDEO_CONSOLE,
 	.ops	= &console_ops_3,
-	.probe	= console_probe,
 	.priv_auto	= sizeof(struct console_simple_priv),
 };
