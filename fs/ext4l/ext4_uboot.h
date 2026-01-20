@@ -172,40 +172,6 @@ struct path;
 
 /* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
-/*
- * Hash info structure and constants - defined in ext4.h.
- * Only defined here for files that don't include ext4.h (like hash.c).
- * This is wrapped in EXT4_UBOOT_NO_EXT4_H which hash.c defines.
- */
-#ifdef EXT4_UBOOT_NO_EXT4_H
-struct dx_hash_info {
-	u32 hash;
-	u32 minor_hash;
-	int hash_version;
-	u32 *seed;
-};
-
-/* Hash algorithm types */
-#define DX_HASH_LEGACY			0
-#define DX_HASH_HALF_MD4		1
-#define DX_HASH_TEA			2
-#define DX_HASH_LEGACY_UNSIGNED		3
-#define DX_HASH_HALF_MD4_UNSIGNED	4
-#define DX_HASH_TEA_UNSIGNED		5
-#define DX_HASH_SIPHASH			6
-#define DX_HASH_LAST			DX_HASH_SIPHASH
-
-/* EOF markers for htree */
-#define EXT4_HTREE_EOF_32BIT   ((1UL  << (32 - 1)) - 1)
-#define EXT4_HTREE_EOF_64BIT   ((1ULL << (64 - 1)) - 1)
-
-#define ext4_warning(sb, fmt, ...) \
-	do { } while (0)
-
-#define ext4_warning_inode(inode, fmt, ...) \
-	do { } while (0)
-#endif
-
 #define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
 #include <linux/minmax.h>
