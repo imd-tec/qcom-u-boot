@@ -132,7 +132,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #endif
 
 /* Block device operations - stubs */
-#define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
 #define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
 
 #include <linux/rcupdate.h>
@@ -281,7 +280,6 @@ struct dx_hash_info {
 
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
-#define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
 #define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
 #include <linux/minmax.h>
@@ -343,14 +341,6 @@ struct dx_hash_info {
 #define dax_zero_range(i, p, l, d, op)		({ (void)(i); (void)(p); (void)(l); (void)(d); (void)(op); -EOPNOTSUPP; })
 #define dax_break_layout_inode(i, m)		({ (void)(i); (void)(m); 0; })
 
-/* Superblock freezing stubs */
-#define sb_start_intwrite(sb)			do { (void)(sb); } while (0)
-#define sb_end_intwrite(sb)			do { (void)(sb); } while (0)
-#define sb_start_intwrite_trylock(sb)		({ (void)(sb); 1; })
-#define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
-#define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
-
-/* d_path, path_put - use linux/path.h */
 #include <linux/path.h>
 
 #include <linux/fsverity.h>
@@ -465,9 +455,6 @@ void ext4_unregister_li_request(struct super_block *sb);
 /* I/O priority classes - use linux/ioprio.h */
 #include <linux/ioprio.h>
 
-#define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
-#define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
-
 /* blk_holder_ops for block device */
 struct blk_holder_ops {
 	void (*mark_dead)(struct block_device *, bool);
@@ -531,32 +518,9 @@ void free_page(unsigned long addr);
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
-/* Superblock blocksize - declaration for stub.c */
-int sb_set_blocksize(struct super_block *sb, int size);
-
-/* Superblock min blocksize - stub */
-static inline int sb_min_blocksize(struct super_block *sb, int size)
-{
-	return sb_set_blocksize(sb, size);
-}
-
 /* Block device size - declarations for stub.c */
 int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
-u64 sb_bdev_nr_blocks(struct super_block *sb);
 unsigned int bdev_max_discard_sectors(struct block_device *bdev);
-
-/* Superblock identity functions */
-static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
-				  unsigned len)
-{
-	if (len > sizeof(sb->s_uuid.b))
-		len = sizeof(sb->s_uuid.b);
-	memcpy(sb->s_uuid.b, uuid, len);
-}
-
-/* super_set_sysfs_name_bdev is now in linux/kobject.h */
-
-/* mb_cache - use linux/mbcache.h */
 #include <linux/mbcache.h>
 
 /* xattr helper stubs for xattr.c */
@@ -594,10 +558,6 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 
 /* Block device properties */
 #define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
-
-/* sb_issue_discard - issue discard request (no-op in U-Boot) */
-#define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
-	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
 
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
@@ -649,8 +609,6 @@ void ext4l_print_msgs(void);
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
-
-#define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
 
 /* DEFINE_WAIT stub - creates a wait queue entry */
 #define DEFINE_WAIT(name)		int name = 0
