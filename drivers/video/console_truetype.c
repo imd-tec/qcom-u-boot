@@ -896,13 +896,13 @@ static struct console_tt_metrics *find_metrics(struct udevice *dev,
  * set_bitmap_font() - Set up console to use a fixed font
  *
  * @dev:	Console device
+ * @ctx:	Console context
  * @fontdata:	Fixed font data to use
  * Return: 0 if OK, -ve on error
  */
-static void set_bitmap_font(struct udevice *dev,
+static void set_bitmap_font(struct udevice *dev, struct console_tt_ctx *ctx,
 			    struct video_fontdata *fontdata)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
 
 	ctx->cur_fontdata = fontdata;
@@ -986,7 +986,7 @@ static int truetype_select_font(struct udevice *dev, void *vctx,
 		for (fontdata = fonts; fontdata->name; fontdata++) {
 			if (!strcmp(name, fontdata->name)) {
 				/* Switch to fixed-font mode */
-				set_bitmap_font(dev, fontdata);
+				set_bitmap_font(dev, ctx, fontdata);
 				return 0;
 			}
 		}
