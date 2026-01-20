@@ -11,9 +11,12 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/fs/super_types.h>
+#include <linux/cred.h>
+#include <linux/rwsem.h>
+#include <linux/time.h>
+#include <asm-generic/atomic.h>
 
 /* Forward declarations */
-struct inode;
 struct buffer_head;
 struct file;
 struct folio;
@@ -99,6 +102,130 @@ struct address_space_operations {
 	int (*swap_activate)(struct swap_info_struct *, struct file *,
 			     sector_t *);
 };
+
+/* Forward declarations for inode */
+struct inode_operations;
+struct file_operations;
+
+/**
+ * struct inode - filesystem inode
+ *
+ * Core filesystem object representing a file, directory, or other entity.
+ */
+struct inode {
+	struct super_block *i_sb;
+	unsigned long i_ino;
+	umode_t i_mode;
+	unsigned int i_nlink;
+	loff_t i_size;
+	struct address_space *i_mapping;
+	struct address_space i_data;
+	kuid_t i_uid;
+	kgid_t i_gid;
+	unsigned long i_blocks;
+	unsigned int i_generation;
+	unsigned int i_flags;
+	unsigned int i_blkbits;
+	unsigned long i_state;
+	struct timespec64 i_atime;
+	struct timespec64 i_mtime;
+	struct timespec64 i_ctime;
+	struct list_head i_io_list;
+	dev_t i_rdev;
+	const struct inode_operations *i_op;
+	const struct file_operations *i_fop;
+	atomic_t i_writecount;		/* Count of writers */
+	atomic_t i_count;		/* Reference count */
+	struct rw_semaphore i_rwsem;	/* inode lock */
+	const char *i_link;		/* Symlink target for fast symlinks */
+	unsigned short i_write_hint;	/* Write life time hint */
+#ifdef __UBOOT__
+	struct list_head i_sb_list;	/* Linkage into super_block s_inodes */
+#endif
+};
+
+/* Inode time accessors */
+static inline struct timespec64 inode_get_atime(const struct inode *inode)
+{
+	return inode->i_atime;
+}
+
+static inline struct timespec64 inode_get_mtime(const struct inode *inode)
+{
+	return inode->i_mtime;
+}
+
+static inline struct timespec64 inode_get_ctime(const struct inode *inode)
+{
+	return inode->i_ctime;
+}
+
+static inline time_t inode_get_atime_sec(const struct inode *inode)
+{
+	return inode->i_atime.tv_sec;
+}
+
+static inline time_t inode_get_ctime_sec(const struct inode *inode)
+{
+	return inode->i_ctime.tv_sec;
+}
+
+static inline time_t inode_get_mtime_sec(const struct inode *inode)
+{
+	return inode->i_mtime.tv_sec;
+}
+
+static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_ctime.tv_sec = sec;
+	inode->i_ctime.tv_nsec = nsec;
+}
+
+static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_atime.tv_sec = sec;
+	inode->i_atime.tv_nsec = nsec;
+}
+
+static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_mtime.tv_sec = sec;
+	inode->i_mtime.tv_nsec = nsec;
+}
+
+static inline void simple_inode_init_ts(struct inode *inode)
+{
+	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
+
+	inode->i_atime = ts;
+	inode->i_mtime = ts;
+	inode->i_ctime = ts;
+}
+
+static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
+						      struct timespec64 ts)
+{
+	inode->i_atime = ts;
+	return ts;
+}
+
+static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
+						      struct timespec64 ts)
+{
+	inode->i_ctime = ts;
+	return ts;
+}
+
+/* Inode credential helpers */
+static inline unsigned int i_uid_read(const struct inode *inode)
+{
+	return inode->i_uid.val;
+}
+
+static inline unsigned int i_gid_read(const struct inode *inode)
+{
+	return inode->i_gid.val;
+}
 
 /* block_device - minimal stub */
 struct block_device {

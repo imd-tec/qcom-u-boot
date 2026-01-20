@@ -181,104 +181,8 @@ static inline int bdev_read_only(struct block_device *bdev)
 	return bdev ? bdev->read_only : 0;
 }
 
-#include <linux/cred.h>
-
 #define WHITEOUT_DEV	0
 #define WHITEOUT_MODE	0
-
-struct swap_info_struct;
-struct inode_operations;
-struct file_operations;
-
-struct inode {
-	struct super_block *i_sb;
-	unsigned long i_ino;
-	umode_t i_mode;
-	unsigned int i_nlink;
-	loff_t i_size;
-	struct address_space *i_mapping;
-	struct address_space i_data;
-	kuid_t i_uid;
-	kgid_t i_gid;
-	unsigned long i_blocks;
-	unsigned int i_generation;
-	unsigned int i_flags;
-	unsigned int i_blkbits;
-	unsigned long i_state;
-	struct timespec64 i_atime;
-	struct timespec64 i_mtime;
-	struct timespec64 i_ctime;
-	struct list_head i_io_list;
-	dev_t i_rdev;
-	const struct inode_operations *i_op;
-	const struct file_operations *i_fop;
-	atomic_t i_writecount;		/* Count of writers */
-	atomic_t i_count;		/* Reference count */
-	struct rw_semaphore i_rwsem;	/* inode lock */
-	const char *i_link;		/* Symlink target for fast symlinks */
-	unsigned short i_write_hint;	/* Write life time hint */
-
-	/* U-Boot: linkage into super_block s_inodes list */
-	struct list_head i_sb_list;
-};
-
-/* Inode time accessors */
-static inline struct timespec64 inode_get_atime(const struct inode *inode)
-{
-	return inode->i_atime;
-}
-
-static inline struct timespec64 inode_get_mtime(const struct inode *inode)
-{
-	return inode->i_mtime;
-}
-
-static inline struct timespec64 inode_get_ctime(const struct inode *inode)
-{
-	return inode->i_ctime;
-}
-
-static inline time_t inode_get_atime_sec(const struct inode *inode)
-{
-	return inode->i_atime.tv_sec;
-}
-
-static inline time_t inode_get_ctime_sec(const struct inode *inode)
-{
-	return inode->i_ctime.tv_sec;
-}
-
-static inline time_t inode_get_mtime_sec(const struct inode *inode)
-{
-	return inode->i_mtime.tv_sec;
-}
-
-static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_ctime.tv_sec = sec;
-	inode->i_ctime.tv_nsec = nsec;
-}
-
-static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_atime.tv_sec = sec;
-	inode->i_atime.tv_nsec = nsec;
-}
-
-static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_mtime.tv_sec = sec;
-	inode->i_mtime.tv_nsec = nsec;
-}
-
-static inline void simple_inode_init_ts(struct inode *inode)
-{
-	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
-
-	inode->i_atime = ts;
-	inode->i_mtime = ts;
-	inode->i_ctime = ts;
-}
 
 /*
  * Inode state accessors - simplified for single-threaded U-Boot.
@@ -450,37 +354,7 @@ struct dx_hash_info {
 #include <linux/path.h>
 
 #include <linux/fsverity.h>
-
-/* Inode time setters - needed for ext4.h */
-static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
-						      struct timespec64 ts)
-{
-	inode->i_atime = ts;
-	return ts;
-}
-
-static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
-						      struct timespec64 ts)
-{
-	inode->i_ctime = ts;
-	return ts;
-}
-
-/* Inode version operations - use linux/iversion.h */
 #include <linux/iversion.h>
-
-/* Inode credential helpers - i_uid_read, i_gid_read need struct inode */
-static inline unsigned int i_uid_read(const struct inode *inode)
-{
-	return inode->i_uid.val;
-}
-
-static inline unsigned int i_gid_read(const struct inode *inode)
-{
-	return inode->i_gid.val;
-}
-
-/* Device encoding helpers are now in linux/kdev_t.h */
 #include <linux/kdev_t.h>
 
 /* UID/GID bit helpers - use linux/highuid.h */
