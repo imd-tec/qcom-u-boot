@@ -183,52 +183,6 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define WHITEOUT_DEV	0
 #define WHITEOUT_MODE	0
 
-/*
- * Inode state accessors - simplified for single-threaded U-Boot.
- * Linux uses READ_ONCE/WRITE_ONCE and lockdep assertions; we use direct access.
- */
-static inline unsigned long inode_state_read_once(struct inode *inode)
-{
-	return inode->i_state;
-}
-
-static inline unsigned long inode_state_read(struct inode *inode)
-{
-	return inode->i_state;
-}
-
-static inline void inode_state_set_raw(struct inode *inode, unsigned long flags)
-{
-	inode->i_state |= flags;
-}
-
-static inline void inode_state_set(struct inode *inode, unsigned long flags)
-{
-	inode->i_state |= flags;
-}
-
-static inline void inode_state_clear_raw(struct inode *inode,
-					 unsigned long flags)
-{
-	inode->i_state &= ~flags;
-}
-
-static inline void inode_state_clear(struct inode *inode, unsigned long flags)
-{
-	inode->i_state &= ~flags;
-}
-
-static inline void inode_state_assign_raw(struct inode *inode,
-					  unsigned long flags)
-{
-	inode->i_state = flags;
-}
-
-static inline void inode_state_assign(struct inode *inode, unsigned long flags)
-{
-	inode->i_state = flags;
-}
-
 /* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
 /*
