@@ -969,7 +969,7 @@ int scene_arrange(struct scene *scn)
 	return 0;
 }
 
-int scene_render_obj(struct scene *scn, uint id)
+int scene_render_obj(struct scene *scn, uint id, void *ctx)
 {
 	struct scene_obj *obj;
 	int ret;
@@ -979,7 +979,7 @@ int scene_render_obj(struct scene *scn, uint id)
 		return log_msg_ret("obj", -ENOENT);
 
 	if (!(obj->flags & SCENEOF_HIDE)) {
-		ret = scene_obj_render(obj, NULL, false);
+		ret = scene_obj_render(obj, ctx, false);
 		if (ret && ret != -ENOTSUPP)
 			return log_msg_ret("ren", ret);
 	}

@@ -75,7 +75,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 		ret = vidconsole_entry_restore(cons, &scn->entry_save);
 		if (ret)
 			return log_msg_ret("sav", ret);
-		scene_render_obj(scn, tin->edit_id);
+		scene_render_obj(scn, tin->edit_id, NULL);
 
 		/* move cursor back to the correct position */
 		for (i = cls->num; i < cls->eol_num; i++)

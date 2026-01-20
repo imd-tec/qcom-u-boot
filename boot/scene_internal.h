@@ -348,9 +348,10 @@ int scene_send_click(struct scene *scn, int x, int y, struct expo_action *event)
  *
  * @scn: Scene containing the object
  * @id: Object ID to render
+ * @ctx: Vidconsole context, or NULL to use default
  * Returns: 0 if OK, -ENOENT if object not found, -ve on other error
  */
-int scene_render_obj(struct scene *scn, uint id);
+int scene_render_obj(struct scene *scn, uint id, void *ctx);
 
 /**
  * scene_render_deps() - Render an object and its dependencies
