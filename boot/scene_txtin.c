@@ -106,7 +106,7 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 	vidconsole_put_char(scn->expo->cons, NULL, ch);
 }
 
-void scene_txtin_close(struct scene *scn)
+void scene_txtin_close(struct scene *scn, struct scene_txtin *tin)
 {
 	/* cursor is not needed now */
 	vidconsole_readline_end(scn->expo->cons, NULL);
@@ -180,7 +180,7 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 			memcpy(abuf_data(&tin->buf), abuf_data(&scn->buf),
 			       abuf_size(&scn->buf));
 
-			scene_txtin_close(scn);
+			scene_txtin_close(scn, NULL);
 		} else {
 			event->type = EXPOACT_QUIT;
 			log_debug("menu quit\n");

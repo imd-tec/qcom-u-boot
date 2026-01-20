@@ -588,8 +588,9 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
  * Close out the text editor after use
  *
  * @scn: Scene containing the object
+ * @tin: Text-input info
  */
-void scene_txtin_close(struct scene *scn);
+void scene_txtin_close(struct scene *scn, struct scene_txtin *tin);
 
 /**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object
