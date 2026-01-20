@@ -350,10 +350,7 @@ void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
 #include <linux/mbcache.h>
-
-/* xattr helper stubs for xattr.c */
-#define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
-#define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
+#include <linux/xattr.h>
 
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);

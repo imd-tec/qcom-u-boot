@@ -57,4 +57,8 @@ struct xattr_handler {
 #define XATTR_CREATE	0x1
 #define XATTR_REPLACE	0x2
 
+/* xattr handler helpers - stubs for U-Boot */
+#define xattr_handler_can_list(h, d)	({ (void)(h); (void)(d); 0; })
+#define xattr_prefix(h)			({ (void)(h); (const char *)NULL; })
+
 #endif /* _LINUX_XATTR_H */
