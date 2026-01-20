@@ -402,4 +402,67 @@ struct fstrim_range {
 	u64 minlen;
 };
 
+/* Forward declarations for file/inode operations */
+struct delayed_call;
+struct fiemap_extent_info;
+struct file_kattr;
+struct posix_acl;
+struct mnt_idmap;
+struct kstat;
+
+/**
+ * struct file_operations - filesystem file operations
+ *
+ * Methods for file I/O and directory iteration.
+ */
+struct file_operations {
+	int (*open)(struct inode *, struct file *);
+	loff_t (*llseek)(struct file *, loff_t, int);
+	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
+	int (*iterate_shared)(struct file *, struct dir_context *);
+	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
+	int (*fsync)(struct file *, loff_t, loff_t, int);
+	int (*release)(struct inode *, struct file *);
+};
+
+/**
+ * struct inode_operations - filesystem inode operations
+ *
+ * Methods for inode manipulation, including symlinks and directories.
+ */
+struct inode_operations {
+	/* Symlink operations */
+	const char *(*get_link)(struct dentry *, struct inode *,
+				struct delayed_call *);
+	/* Common operations */
+	int (*getattr)(struct mnt_idmap *, const struct path *,
+		       struct kstat *, u32, unsigned int);
+	ssize_t (*listxattr)(struct dentry *, char *, size_t);
+	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
+	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
+	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
+	int (*set_acl)(struct mnt_idmap *, struct dentry *,
+		       struct posix_acl *, int);
+	int (*fileattr_get)(struct dentry *, struct file_kattr *);
+	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
+			    struct file_kattr *);
+	/* Directory operations */
+	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
+	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      umode_t, bool);
+	int (*link)(struct dentry *, struct inode *, struct dentry *);
+	int (*unlink)(struct inode *, struct dentry *);
+	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
+		       const char *);
+	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
+				struct dentry *, umode_t);
+	int (*rmdir)(struct inode *, struct dentry *);
+	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
+		     umode_t, dev_t);
+	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      struct inode *, struct dentry *, unsigned int);
+	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
+		       umode_t);
+};
+
 #endif /* _LINUX_FS_H */

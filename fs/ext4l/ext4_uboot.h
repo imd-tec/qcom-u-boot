@@ -524,18 +524,6 @@ ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
 /* struct_size - use linux/overflow.h */
 #include <linux/overflow.h>
 
-/* file_operations - extended for dir.c */
-struct file_operations {
-	int (*open)(struct inode *, struct file *);
-	loff_t (*llseek)(struct file *, loff_t, int);
-	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
-	int (*iterate_shared)(struct file *, struct dir_context *);
-	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
-	int (*fsync)(struct file *, loff_t, loff_t, int);
-	int (*release)(struct inode *, struct file *);
-};
-
-/* delayed_call - use linux/delayed_call.h */
 #include <linux/delayed_call.h>
 
 #define kfree_link		kfree
@@ -545,42 +533,6 @@ static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
 {
 	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
 }
-
-/* inode_operations - for file and directory operations */
-struct inode_operations {
-	/* Symlink operations */
-	const char *(*get_link)(struct dentry *, struct inode *,
-				struct delayed_call *);
-	/* Common operations */
-	int (*getattr)(struct mnt_idmap *, const struct path *,
-		       struct kstat *, u32, unsigned int);
-	ssize_t (*listxattr)(struct dentry *, char *, size_t);
-	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
-	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
-	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
-	int (*set_acl)(struct mnt_idmap *, struct dentry *,
-		       struct posix_acl *, int);
-	int (*fileattr_get)(struct dentry *, struct file_kattr *);
-	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
-			    struct file_kattr *);
-	/* Directory operations */
-	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
-	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
-		      umode_t, bool);
-	int (*link)(struct dentry *, struct inode *, struct dentry *);
-	int (*unlink)(struct inode *, struct dentry *);
-	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
-		       const char *);
-	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
-				struct dentry *, umode_t);
-	int (*rmdir)(struct inode *, struct dentry *);
-	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
-		     umode_t, dev_t);
-	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
-		      struct inode *, struct dentry *, unsigned int);
-	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
-		       umode_t);
-};
 
 /* file open helper */
 #define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
