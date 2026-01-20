@@ -749,7 +749,7 @@ static void vidconsole_free_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
-	free(ctx->curs.save_data);
+	console_free_cursor(&ctx->curs);
 	if (ops->ctx_dispose)
 		ops->ctx_dispose(dev, ctx);
 }
@@ -951,7 +951,7 @@ static int vidconsole_post_probe(struct udevice *dev)
 	int ret;
 
 	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
-		ret = console_alloc_cursor(dev, ctx);
+		ret = console_alloc_cursor(dev, &ctx->curs);
 		if (ret)
 			return ret;
 	}
