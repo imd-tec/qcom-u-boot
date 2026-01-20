@@ -13,9 +13,10 @@
 #include <charset.h>
 #include <command.h>
 #include <console.h>
+#include <dm.h>
 #include <log.h>
 #include <malloc.h>
-#include <dm.h>
+#include <spl.h>
 #include <video.h>
 #include <video_console.h>
 #include "vidconsole_internal.h"
@@ -748,9 +749,9 @@ static void vidconsole_free_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
+	free(ctx->curs.save_data);
 	if (ops->ctx_dispose)
 		ops->ctx_dispose(dev, ctx);
-	free(ctx->curs.save_data);
 }
 
 int vidconsole_ctx_dispose(struct udevice *dev, void *vctx)
@@ -947,6 +948,13 @@ static int vidconsole_post_probe(struct udevice *dev)
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct stdio_dev *sdev = &priv->sdev;
+	int ret;
+
+	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
+		ret = console_alloc_cursor(dev, ctx);
+		if (ret)
+			return ret;
+	}
 
 	if (!ctx->tab_width_frac)
 		ctx->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;

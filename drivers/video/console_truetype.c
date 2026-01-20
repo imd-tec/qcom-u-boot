@@ -1302,10 +1302,6 @@ static int console_truetype_probe(struct udevice *dev)
 
 	debug("%s: ready\n", __func__);
 
-	ret = console_alloc_cursor(dev, &ctx->com);
-	if (ret)
-		return ret;
-
 	return 0;
 }
 

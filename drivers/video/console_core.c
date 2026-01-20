@@ -310,12 +310,6 @@ int console_probe(struct udevice *dev)
 	if (ret)
 		return ret;
 
-	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
-		ret = console_alloc_cursor(dev, vidconsole_ctx(dev));
-		if (ret)
-			return ret;
-	}
-
 	return 0;
 }
 
