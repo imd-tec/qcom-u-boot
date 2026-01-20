@@ -18,14 +18,16 @@
  * console_set_font() - prepare vidconsole for chosen font.
  *
  * @dev		vidconsole device
+ * @ctx		vidconsole context
  * @fontdata	pointer to font data struct
  */
-static int console_set_font(struct udevice *dev, struct video_fontdata *fontdata)
+static int console_set_font(struct udevice *dev, struct vidconsole_ctx *ctx,
+			    struct video_fontdata *fontdata)
 {
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
 	priv->fontdata = fontdata;
-	vidconsole_set_bitmap_font(dev, vidconsole_ctx(dev), fontdata);
+	vidconsole_set_bitmap_font(dev, ctx, fontdata);
 
 	return 0;
 }
@@ -304,7 +306,7 @@ int console_probe(struct udevice *dev)
 {
 	int ret;
 
-	ret = console_set_font(dev, fonts);
+	ret = console_set_font(dev, vidconsole_ctx(dev), fonts);
 	if (ret)
 		return ret;
 
@@ -373,13 +375,13 @@ int console_simple_select_font(struct udevice *dev, void *ctx, const char *name,
 
 	if (!name) {
 		if (fonts->name)
-			console_set_font(dev, fonts);
+			console_set_font(dev, ctx, fonts);
 		return 0;
 	}
 
 	for (font = fonts; font->name; font++) {
 		if (!strcmp(name, font->name)) {
-			console_set_font(dev, font);
+			console_set_font(dev, ctx, font);
 			return 0;
 		}
 	};
