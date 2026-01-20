@@ -742,10 +742,11 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
  * scene_obj_render() - Render an object
  *
  * @obj: Object to render
+ * @ctx: Vidconsole context, or NULL to use default
  * @text_mode: true to use text mode
  * Return: 0 if OK, -ve on error
  */
-static int scene_obj_render(struct scene_obj *obj, bool text_mode)
+static int scene_obj_render(struct scene_obj *obj, void *ctx, bool text_mode)
 {
 	struct scene *scn = obj->scene;
 	struct expo *exp = scn->expo;
@@ -776,7 +777,7 @@ static int scene_obj_render(struct scene_obj *obj, bool text_mode)
 	case SCENEOBJT_TEXT: {
 		struct scene_obj_txt *txt = (struct scene_obj_txt *)obj;
 
-		ret = scene_txt_render(exp, dev, cons, NULL, obj, &txt->gen,
+		ret = scene_txt_render(exp, dev, cons, ctx, obj, &txt->gen,
 				       x, y, theme->menu_inset);
 		break;
 	}
@@ -978,7 +979,7 @@ int scene_render_obj(struct scene *scn, uint id)
 		return log_msg_ret("obj", -ENOENT);
 
 	if (!(obj->flags & SCENEOF_HIDE)) {
-		ret = scene_obj_render(obj, false);
+		ret = scene_obj_render(obj, NULL, false);
 		if (ret && ret != -ENOTSUPP)
 			return log_msg_ret("ren", ret);
 	}
@@ -998,7 +999,7 @@ int scene_render_deps(struct scene *scn, uint id)
 		return log_msg_ret("obj", -ENOENT);
 
 	if (!(obj->flags & SCENEOF_HIDE)) {
-		ret = scene_obj_render(obj, false);
+		ret = scene_obj_render(obj, NULL, false);
 		if (ret && ret != -ENOTSUPP)
 			return log_msg_ret("ren", ret);
 
@@ -1094,7 +1095,7 @@ int scene_render(struct scene *scn, bool dirty_only)
 			render = bbox_intersects(&obj->bbox, &dirty_bbox);
 
 		if (render) {
-			ret = scene_obj_render(obj, exp->text_mode);
+			ret = scene_obj_render(obj, NULL, exp->text_mode);
 			if (ret && ret != -ENOTSUPP)
 				return log_msg_ret("ren", ret);
 		}
