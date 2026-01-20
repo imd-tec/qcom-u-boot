@@ -334,11 +334,13 @@ struct vidconsole_ops {
 	 * select_font() - Select a particular font by name / size
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Context to use
 	 * @name:	Font name to use (NULL to use default)
 	 * @size:	Font size to use (0 to use default)
 	 * Returns: 0 on success, -ENOENT if no such font
 	 */
-	int (*select_font)(struct udevice *dev, const char *name, uint size);
+	int (*select_font)(struct udevice *dev, void *ctx, const char *name,
+			   uint size);
 
 	/**
 	 * measure() - Measure the bounding box of some text
@@ -487,10 +489,12 @@ int vidconsole_get_font(struct udevice *dev, int seq,
  * vidconsole_select_font() - Select a particular font by name / size
  *
  * @dev:	Device to adjust
+ * @ctx:	Context to use (NULL to use default)
  * @name:	Font name to use (NULL to use default)
  * @size:	Font size to use (0 to use default)
  */
-int vidconsole_select_font(struct udevice *dev, const char *name, uint size);
+int vidconsole_select_font(struct udevice *dev, void *ctx, const char *name,
+			   uint size);
 
 /**
  * vidconsole_measure() - Measure the bounding box of some text

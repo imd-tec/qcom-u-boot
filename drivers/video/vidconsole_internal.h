@@ -181,7 +181,8 @@ int console_simple_get_font(struct udevice *dev, int seq, struct vidfont_info *i
  * Internal function to be used in as ops.
  * See details in video_console.h select_font function
  **/
-int console_simple_select_font(struct udevice *dev, const char *name, uint size);
+int console_simple_select_font(struct udevice *dev, void *ctx, const char *name,
+			       uint size);
 
 /**
  * Normal console putc_xy function that can be called by other console drivers

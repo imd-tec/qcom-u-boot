@@ -647,14 +647,17 @@ int vidconsole_get_font_size(struct udevice *dev, const char **name, uint *sizep
 	return 0;
 }
 
-int vidconsole_select_font(struct udevice *dev, const char *name, uint size)
+int vidconsole_select_font(struct udevice *dev, void *ctx, const char *name,
+			   uint size)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
+	if (!ctx)
+		ctx = vidconsole_ctx(dev);
 	if (!ops->select_font)
 		return -ENOSYS;
 
-	return ops->select_font(dev, name, size);
+	return ops->select_font(dev, ctx, name, size);
 }
 
 int vidconsole_measure(struct udevice *dev, const char *name, uint size,

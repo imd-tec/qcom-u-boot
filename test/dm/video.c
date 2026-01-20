@@ -259,7 +259,7 @@ static int dm_test_video_text(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -301,7 +301,7 @@ static int dm_test_video_text_12x22(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "12x22", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "12x22", 0));
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -342,7 +342,7 @@ static int dm_test_video_chars(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	vidconsole_put_string(con, NULL, test_string);
 	ut_asserteq(466, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
@@ -361,7 +361,7 @@ static int dm_test_video_ansi(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 
 	/* reference clear: */
 	video_clear(con->parent);
@@ -414,7 +414,7 @@ static int check_vidconsole_output(struct unit_test_state *uts, int rot,
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -1165,11 +1165,11 @@ static int dm_test_video_font_switch(struct unit_test_state *uts)
 	vidconsole_put_string(con, NULL, truetype_text);
 
 	/* Switch to bitmap font */
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	vidconsole_put_string(con, NULL, bitmap_text);
 
 	/* Switch back to TrueType font */
-	ut_assertok(vidconsole_select_font(con, NULL, 0));
+	ut_assertok(vidconsole_select_font(con, NULL, NULL, 0));
 	vidconsole_put_string(con, NULL, final_truetype_text);
 
 	ut_asserteq(14892, video_compress_fb(uts, dev, false));
@@ -1242,7 +1242,7 @@ static int dm_test_video_backspace_normal(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	ut_assertok(check_cursor_backspace(uts, dev, con, 16));
 
 	return 0;
@@ -1256,7 +1256,7 @@ static int dm_test_video_backspace_truetype(struct unit_test_state *uts)
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, NULL, 30));
+	ut_assertok(vidconsole_select_font(con, NULL, NULL, 30));
 	ut_assertok(check_cursor_backspace(uts, dev, con, 30));
 
 	return 0;
@@ -1271,7 +1271,7 @@ static int dm_test_video_cmd(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 
 	ut_assertok(run_command("setcurs 10 5", 0));
 
@@ -1412,7 +1412,7 @@ static int dm_test_video_sync_damage(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 	priv = dev_get_uclass_priv(dev);
 
 	/* Use manual sync to prevent interference with the test */
@@ -1561,7 +1561,7 @@ static int dm_test_video_entry_save(struct unit_test_state *uts)
 	ut_assertok(select_vidconsole(uts, "vidconsole0"));
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, "8x16", 0));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
 
 	ut_assertok(check_entry_save(uts, con));
 
@@ -1576,7 +1576,7 @@ static int dm_test_video_entry_save_tt(struct unit_test_state *uts)
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	ut_assertok(vidconsole_select_font(con, NULL, 30));
+	ut_assertok(vidconsole_select_font(con, NULL, NULL, 30));
 
 	ut_assertok(check_entry_save(uts, con));
 

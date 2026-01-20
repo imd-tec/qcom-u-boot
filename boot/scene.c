@@ -647,10 +647,10 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		return -ENOTSUPP;
 
 	if (gen->font_name || gen->font_size) {
-		ret = vidconsole_select_font(cons, gen->font_name,
+		ret = vidconsole_select_font(cons, NULL, gen->font_name,
 					     gen->font_size);
 	} else {
-		ret = vidconsole_select_font(cons, NULL, 0);
+		ret = vidconsole_select_font(cons, NULL, NULL, 0);
 	}
 	if (ret && ret != -ENOSYS)
 		return log_msg_ret("font", ret);

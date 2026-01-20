@@ -973,10 +973,10 @@ static int get_metrics(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
-static int truetype_select_font(struct udevice *dev, const char *name,
-				uint size)
+static int truetype_select_font(struct udevice *dev, void *vctx,
+				const char *name, uint size)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct console_tt_metrics *met;
 	struct video_fontdata *fontdata;
 	int ret;

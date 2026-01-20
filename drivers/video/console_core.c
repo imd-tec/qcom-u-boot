@@ -369,7 +369,8 @@ int console_fixed_putc_xy(struct udevice *dev, void *vctx, uint x_frac, uint y,
 	return VID_TO_POS(fontdata->width);
 }
 
-int console_simple_select_font(struct udevice *dev, const char *name, uint size)
+int console_simple_select_font(struct udevice *dev, void *ctx, const char *name,
+			       uint size)
 {
 	struct video_fontdata *font;
 

@@ -135,7 +135,7 @@ int expo_test_render(struct expo *exp)
 		test->render_delta_us = get_timer_us(test->base_time_us);
 
 	/* Select 8x16 font for test display */
-	ret = vidconsole_select_font(exp->cons, "8x16", 0);
+	ret = vidconsole_select_font(exp->cons, NULL, "8x16", 0);
 	if (ret && ret != -ENOSYS)
 		return log_msg_ret("font", ret);
 
