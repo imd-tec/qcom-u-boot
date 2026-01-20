@@ -384,16 +384,16 @@ struct vidconsole_ops {
 		       uint num_chars, struct vidconsole_bbox *bbox);
 
 	/**
-	 * ctx_new() - Create a new context for a client
+	 * ctx_new() - Initialise a new context for a client
 	 *
-	 * Allocates and initialises a context for a client of the vidconsole.
-	 * The driver determines what information is stored in the context.
+	 * Initialises driver-specific fields of a pre-allocated context. The
+	 * base vidconsole_ctx fields are already initialised by the uclass.
 	 *
 	 * @dev: Console device to use
-	 * @ctxp: Returns new context, on success
-	 * Return: 0 on success, -ENOMEM if out of memory
+	 * @ctx: Pre-allocated context to initialise
+	 * Return: 0 on success, -ve on error
 	 */
-	int (*ctx_new)(struct udevice *dev, void **ctxp);
+	int (*ctx_new)(struct udevice *dev, void *ctx);
 
 	/**
 	 * ctx_dispose() - Dispose of a context

@@ -15,14 +15,6 @@
 #include <video_font.h>		/* Get font data, width and height */
 #include "vidconsole_internal.h"
 
-/**
- * struct console_ctx - context for the normal console
- *
- * @com:	Common fields from the vidconsole uclass
- */
-struct console_ctx {
-	struct vidconsole_ctx com;
-};
 
 static int console_set_row(struct udevice *dev, uint row, int clr)
 {
@@ -175,20 +167,6 @@ static int console_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
 			   uint y, int cp)
 {
 	return console_normal_putc_xy(dev, vctx, x_frac, y, cp);
-}
-
-static int console_simple_ctx_new(struct udevice *dev, void **ctxp)
-{
-	struct console_ctx *ctx;
-
-	ctx = malloc(sizeof(*ctx));
-	if (!ctx)
-		return -ENOMEM;
-
-	memset(ctx, '\0', sizeof(*ctx));
-	*ctxp = ctx;
-
-	return 0;
 }
 
 struct vidconsole_ops console_ops = {

@@ -305,11 +305,12 @@ void console_free_cursor(struct vidconsole_cursor *curs)
 	free(curs->save_data);
 }
 
-int console_probe(struct udevice *dev)
+int console_simple_ctx_new(struct udevice *dev, void *vctx)
 {
+	struct console_ctx *ctx = vctx;
 	int ret;
 
-	ret = console_set_font(dev, vidconsole_ctx(dev), fonts);
+	ret = console_set_font(dev, &ctx->com, fonts);
 	if (ret)
 		return ret;
 

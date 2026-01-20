@@ -8,6 +8,7 @@
 
 #include <charset.h>
 #include <config.h>
+#include <video_console.h>
 
 struct udevice;
 struct vidconsole_cursor;
@@ -23,6 +24,15 @@ struct video_priv;
  */
 struct console_simple_priv {
 	struct video_fontdata *fontdata;
+};
+
+/**
+ * struct console_ctx - context for the normal console
+ *
+ * @com:	Common fields from the vidconsole uclass
+ */
+struct console_ctx {
+	struct vidconsole_ctx com;
 };
 
 /**
@@ -237,3 +247,15 @@ static inline u8 console_utf_to_cp437(int codepoint)
 	}
 	return codepoint;
 }
+
+/**
+ * console_simple_ctx_new() - Set up a new context for bitmap-font consoles
+ *
+ * Initialises the context with the default bitmap font. This is the ctx_new()
+ * method for bitmap-font console drivers.
+ *
+ * @dev: Vidconsole device
+ * @ctx: Context to initialise (allocated by the uclass)
+ * Return: 0 on success, -ve on error
+ */
+int console_simple_ctx_new(struct udevice *dev, void *ctx);

@@ -1143,16 +1143,15 @@ static int truetype_nominal(struct udevice *dev, const char *name, uint size,
 	return 0;
 }
 
-static int truetype_ctx_new(struct udevice *dev, void **ctxp)
+static int truetype_ctx_new(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx;
+	struct console_tt_priv *priv = dev_get_priv(dev);
+	struct console_tt_ctx *ctx = vctx;
 
-	ctx = malloc(sizeof(*ctx));
-	if (!ctx)
-		return -ENOMEM;
+	/* use the first set of metrics by default */
+	ctx->cur_met = &priv->metrics[0];
 
-	memset(ctx, '\0', sizeof(*ctx));
-	*ctxp = ctx;
+	select_metrics(dev, ctx, ctx->cur_met);
 
 	return 0;
 }
@@ -1256,7 +1255,6 @@ static int truetype_mark_start(struct udevice *dev, void *vctx)
 
 static int console_truetype_probe(struct udevice *dev)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct console_tt_priv *priv = dev_get_priv(dev);
 	struct udevice *vid_dev = dev->parent;
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -1289,9 +1287,6 @@ static int console_truetype_probe(struct udevice *dev)
 	ret = truetype_add_metrics(dev, tab->name, font_size, tab->begin);
 	if (ret < 0)
 		return log_msg_ret("add", ret);
-	ctx->cur_met = &priv->metrics[ret];
-
-	select_metrics(dev, ctx, &priv->metrics[ret]);
 
 	debug("%s: ready\n", __func__);
 

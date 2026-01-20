@@ -713,10 +713,14 @@ int vidconsole_nominal(struct udevice *dev, const char *name, uint size,
 
 int vidconsole_ctx_new(struct udevice *dev, void **ctxp)
 {
+	struct udevice *vid = dev->parent;
+	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
+	struct vidconsole_uc_plat *plat = dev_get_uclass_plat(dev);
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
+	struct vidconsole_ctx *ctx;
+	int ret = -ENOMEM, size;
 	void **ptr;
-	int ret;
 
 	if (!ops->ctx_new)
 		return -ENOSYS;
@@ -726,14 +730,35 @@ int vidconsole_ctx_new(struct udevice *dev, void **ctxp)
 	if (!ptr)
 		return -ENOMEM;
 
-	ret = ops->ctx_new(dev, ptr);
-	if (ret) {
-		priv->ctx_list.count--;
-		return ret;
+	size = plat->ctx_size ?: sizeof(struct vidconsole_ctx);
+	ctx = calloc(1, size);
+	if (!ctx)
+		goto err_alloc;
+	*ptr = ctx;
+
+	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
+		ret = console_alloc_cursor(dev, &ctx->curs);
+		if (ret)
+			goto err_curs;
 	}
-	*ctxp = *ptr;
+
+	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
+
+	ret = ops->ctx_new(dev, ctx);
+	if (ret)
+		goto err_new;
+	*ctxp = ctx;
 
 	return 0;
+
+err_new:
+	console_free_cursor(&ctx->curs);
+err_curs:
+err_alloc:
+	priv->ctx_list.count--;
+	free(ctx);
+
+	return ret;
 }
 
 /**
@@ -922,23 +947,9 @@ void vidconsole_pop_colour(struct udevice *dev, struct vidconsole_colour *old)
 /* Set up the number of rows and colours (rotated drivers override this) */
 static int vidconsole_pre_probe(struct udevice *dev)
 {
-	struct vidconsole_uc_plat *plat = dev_get_uclass_plat(dev);
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct udevice *vid = dev->parent;
-	struct video_priv *vid_priv = dev_get_uclass_priv(vid);
-	struct vidconsole_ctx *ctx;
-	uint size;
-
-	size = plat->ctx_size ?: sizeof(struct vidconsole_ctx);
-	ctx = calloc(1, size);
-	if (!ctx)
-		return -ENOMEM;
-	priv->ctx = ctx;
-
-	ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 
 	alist_init_struct(&priv->ctx_list, void *);
-	alist_add(&priv->ctx_list, ctx);
 
 	return 0;
 }
@@ -947,15 +958,14 @@ static int vidconsole_pre_probe(struct udevice *dev)
 static int vidconsole_post_probe(struct udevice *dev)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct stdio_dev *sdev = &priv->sdev;
+	struct vidconsole_ctx *ctx;
 	int ret;
 
-	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
-		ret = console_alloc_cursor(dev, &ctx->curs);
-		if (ret)
-			return ret;
-	}
+	ret = vidconsole_ctx_new(dev, (void **)&ctx);
+	if (ret)
+		return ret;
+	priv->ctx = ctx;
 
 	if (!ctx->tab_width_frac)
 		ctx->tab_width_frac = VID_TO_POS(ctx->x_charsize) * 8;
@@ -1049,7 +1059,7 @@ void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 	} else {
 		ctx->cols = vid_priv->xsize / fontdata->width;
 		ctx->rows = vid_priv->ysize / fontdata->height;
-		/* xsize_frac is set in vidconsole_pre_probe() */
+		ctx->xsize_frac = VID_TO_POS(vid_priv->xsize);
 	}
 	ctx->xstart_frac = 0;
 }
