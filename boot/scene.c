@@ -616,16 +616,25 @@ static void scene_render_background(struct scene_obj *obj, bool box_only,
 	}
 }
 
-static void draw_string(struct udevice *cons, const char *str, int len,
-			bool password)
+/**
+ * draw_string() - Draw a string to the vidconsole
+ *
+ * @cons: Vidconsole device to draw to
+ * @ctx: Vidconsole context, or NULL to use default
+ * @str: String to draw
+ * @len: Length of string to draw
+ * @password: true to draw asterisks instead of actual characters
+ */
+static void draw_string(struct udevice *cons, void *ctx, const char *str,
+			int len, bool password)
 {
 	if (password) {
 		int i;
 
 		for (i = 0; i < len; i++)
-			vidconsole_put_char(cons, NULL, '*');
+			vidconsole_put_char(cons, ctx, '*');
 	} else {
-		vidconsole_put_stringn(cons, NULL, str, len);
+		vidconsole_put_stringn(cons, ctx, str, len);
 	}
 }
 
@@ -686,7 +695,7 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 
 	if (!mline) {
 		vidconsole_set_cursor_pos(cons, NULL, x, y);
-		draw_string(cons, str, strlen(str),
+		draw_string(cons, NULL, str, strlen(str),
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 
@@ -705,7 +714,7 @@ static int scene_txt_render(struct expo *exp, struct udevice *dev,
 		if (y > bbox.y1)
 			break;	/* clip this line and any following */
 		vidconsole_set_cursor_pos(cons, NULL, x, y);
-		draw_string(cons, str + mline->start, mline->len,
+		draw_string(cons, NULL, str + mline->start, mline->len,
 			    obj->flags & SCENEOF_PASSWORD);
 	}
 	if (obj->flags & SCENEOF_POINT)
