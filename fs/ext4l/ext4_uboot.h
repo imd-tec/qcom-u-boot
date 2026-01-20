@@ -616,16 +616,7 @@ struct disk_partition *ext4l_get_partition(void);
 /* JBD2 journal.c stubs */
 int bmap(struct inode *inode, sector_t *block);
 
-/* seq_file operations for /proc - stubs */
-#define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
-#define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
-
-/* proc_ops - use linux/proc_fs.h */
 #include <linux/proc_fs.h>
-
-/* seq_read and seq_lseek declarations (defined in stub.c) */
-ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
-loff_t seq_lseek(struct file *f, loff_t o, int w);
 
 /* Block device operations for journal.c */
 #define truncate_inode_pages_range(m, s, e) \

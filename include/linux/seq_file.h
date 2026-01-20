@@ -29,4 +29,12 @@ struct seq_operations {
 #define seq_puts(m, s)			do { (void)(m); (void)(s); } while (0)
 #define seq_putc(m, c)			do { (void)(m); (void)(c); } while (0)
 
+/* seq_file operations - stubs */
+#define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
+#define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
+
+/* seq_read and seq_lseek - implemented in ext4l/stub.c */
+ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
+loff_t seq_lseek(struct file *f, loff_t o, int w);
+
 #endif /* _LINUX_SEQ_FILE_H */
