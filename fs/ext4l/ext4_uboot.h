@@ -173,8 +173,8 @@ struct path;
 /* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
 /*
- * Hash info structure - defined in ext4.h.
- * Only defined here for files that don't include ext4.h (like hash.c)
+ * Hash info structure and constants - defined in ext4.h.
+ * Only defined here for files that don't include ext4.h (like hash.c).
  * This is wrapped in EXT4_UBOOT_NO_EXT4_H which hash.c defines.
  */
 #ifdef EXT4_UBOOT_NO_EXT4_H
@@ -184,7 +184,6 @@ struct dx_hash_info {
 	int hash_version;
 	u32 *seed;
 };
-#endif
 
 /* Hash algorithm types */
 #define DX_HASH_LEGACY			0
@@ -200,7 +199,6 @@ struct dx_hash_info {
 #define EXT4_HTREE_EOF_32BIT   ((1UL  << (32 - 1)) - 1)
 #define EXT4_HTREE_EOF_64BIT   ((1ULL << (64 - 1)) - 1)
 
-#ifdef EXT4_UBOOT_NO_EXT4_H
 #define ext4_warning(sb, fmt, ...) \
 	do { } while (0)
 
