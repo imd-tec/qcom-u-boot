@@ -79,19 +79,11 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 
 	/* if open, render the edit text on top of the background */
 	if (open) {
-		int ret;
-
-		ret = vidconsole_entry_restore(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
 		scene_render_obj(scn, tin->edit_id, ctx);
 
 		/* move cursor back to the correct position */
 		for (i = cls->num; i < cls->eol_num; i++)
 			vidconsole_put_char(cons, ctx, '\b');
-		ret = vidconsole_entry_save(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
 
 		vidconsole_show_cursor(cons, ctx);
 	}
