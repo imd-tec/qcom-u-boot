@@ -210,8 +210,6 @@ struct dx_hash_info {
 
 #define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
-#define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
-
 #include <linux/minmax.h>
 
 /* Memory retry wait */
@@ -254,18 +252,8 @@ struct dx_hash_info {
 #define finish_open_simple(f, e)		(e)
 #define ihold(i)				do { (void)(i); } while (0)
 
-/* Sync operations - stubs */
-#define sync_mapping_buffers(m)			({ (void)(m); 0; })
-#define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
-
-/* DAX stubs - DAX not supported in U-Boot */
-#define IS_DAX(inode)				(0)
-#define dax_break_layout_final(inode)		do { } while (0)
-#define dax_writeback_mapping_range(m, bd, wb)	({ (void)(m); (void)(bd); (void)(wb); 0; })
-#define dax_zero_range(i, p, l, d, op)		({ (void)(i); (void)(p); (void)(l); (void)(d); (void)(op); -EOPNOTSUPP; })
-#define dax_break_layout_inode(i, m)		({ (void)(i); (void)(m); 0; })
-
 #include <linux/path.h>
+#include <linux/dax.h>
 
 #include <linux/fsverity.h>
 #include <linux/iversion.h>
@@ -466,7 +454,6 @@ int sync_filesystem(void *sb);
 /* JBD2 checkpoint.c and commit.c stubs */
 #include <asm-generic/bitops/lock.h>
 /* smp_mb__after_atomic is now in linux/smp.h */
-#define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
 
 /* ext4l support functions (support.c) */
@@ -489,10 +476,6 @@ struct disk_partition *ext4l_get_partition(void);
 int bmap(struct inode *inode, sector_t *block);
 
 #include <linux/proc_fs.h>
-
-/* Block device operations for journal.c */
-#define truncate_inode_pages_range(m, s, e) \
-	do { (void)(m); (void)(s); (void)(e); } while (0)
 
 /* Memory allocation for journal.c */
 #define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))

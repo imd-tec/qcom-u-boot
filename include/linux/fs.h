@@ -667,6 +667,10 @@ struct inode_operations {
 #define generic_buffers_fsync_noflush(f, s, e, d) \
 	({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
 
+/* Sync operations - stubs */
+#define sync_mapping_buffers(m)		({ (void)(m); 0; })
+#define sync_inode_metadata(i, w)	({ (void)(i); (void)(w); 0; })
+
 /* Generic attribute operations */
 #define generic_fillattr(m, req, i, s)	do { } while (0)
 #define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)

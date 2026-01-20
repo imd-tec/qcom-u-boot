@@ -67,4 +67,13 @@ static inline ktime_t ktime_add_ns(ktime_t kt, s64 ns)
  */
 #define ktime_get_ns()		(0ULL)
 
+/**
+ * ktime_get_coarse_real_ts64() - get coarse real time
+ * @ts: timespec64 to fill
+ *
+ * U-Boot stub - sets time to 0.
+ */
+#define ktime_get_coarse_real_ts64(ts) \
+	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
+
 #endif /* _LINUX_KTIME_H */
