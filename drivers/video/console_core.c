@@ -25,7 +25,7 @@ static int console_set_font(struct udevice *dev, struct video_fontdata *fontdata
 	struct console_simple_priv *priv = dev_get_priv(dev);
 
 	priv->fontdata = fontdata;
-	vidconsole_set_bitmap_font(dev, fontdata);
+	vidconsole_set_bitmap_font(dev, vidconsole_ctx(dev), fontdata);
 
 	return 0;
 }

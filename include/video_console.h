@@ -860,9 +860,10 @@ void vidconsole_set_quiet(struct udevice *dev, bool quiet);
  * vidconsole_set_bitmap_font() - prepare vidconsole for chosen bitmap font
  *
  * @dev		vidconsole device
+ * @ctx		vidconsole context
  * @fontdata	pointer to font data struct
  */
-void vidconsole_set_bitmap_font(struct udevice *dev,
+void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 				struct video_fontdata *fontdata);
 
 /*

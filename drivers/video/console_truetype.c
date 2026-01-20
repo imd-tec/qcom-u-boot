@@ -908,7 +908,7 @@ static void set_bitmap_font(struct udevice *dev,
 	ctx->cur_fontdata = fontdata;
 	ctx->cur_met = NULL;
 
-	vidconsole_set_bitmap_font(dev, fontdata);
+	vidconsole_set_bitmap_font(dev, com, fontdata);
 
 	com->tab_width_frac = VID_TO_POS(fontdata->width) * 8 / 2;
 }

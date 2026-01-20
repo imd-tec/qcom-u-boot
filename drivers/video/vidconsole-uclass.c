@@ -981,11 +981,9 @@ void vidconsole_set_quiet(struct udevice *dev, bool quiet)
 	priv->quiet = quiet;
 }
 
-void vidconsole_set_bitmap_font(struct udevice *dev,
+void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 				struct video_fontdata *fontdata)
 {
-	struct vidconsole_priv *vc_priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(vc_priv);
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
 
 	log_debug("console_simple: setting %s font\n", fontdata->name);
