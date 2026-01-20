@@ -319,7 +319,8 @@ int console_probe(struct udevice *dev)
 	return 0;
 }
 
-const char *console_simple_get_font_size(struct udevice *dev, uint *sizep)
+const char *console_simple_get_font_size(struct udevice *dev, void *ctx,
+					 uint *sizep)
 {
 	struct console_simple_priv *priv = dev_get_priv(dev);
 

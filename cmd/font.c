@@ -64,7 +64,7 @@ static int do_font_size(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev))
 		return CMD_RET_FAILURE;
-	ret = vidconsole_get_font_size(dev, &font_name, &size);
+	ret = vidconsole_get_font_size(dev, NULL, &font_name, &size);
 	if (ret) {
 		printf("Failed (error %d)\n", ret);
 		return CMD_RET_FAILURE;

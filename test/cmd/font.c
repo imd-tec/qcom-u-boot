@@ -43,7 +43,7 @@ static int font_test_base(struct unit_test_state *uts)
 
 	ut_assert_console_end();
 
-	ut_assertok(vidconsole_get_font_size(dev, &name, &size));
+	ut_assertok(vidconsole_get_font_size(dev, NULL, &name, &size));
 	if (IS_ENABLED(CONFIG_CONSOLE_TRUETYPE_ANKACODER))
 		ut_asserteq_str("ankacoder_c75_r", name);
 	else if (IS_ENABLED(CONFIG_CONSOLE_TRUETYPE_NIMBUS))
@@ -71,7 +71,7 @@ static int font_test_base(struct unit_test_state *uts)
 	ut_assertok(ret);
 	ut_assert_console_end();
 
-	ut_assertok(vidconsole_get_font_size(dev, &name, &size));
+	ut_assertok(vidconsole_get_font_size(dev, NULL, &name, &size));
 	ut_asserteq_str("cantoraone_regular", name);
 	ut_asserteq(40, size);
 	ut_assertok(ut_check_console_end(uts));
@@ -90,7 +90,7 @@ static int font_test_base(struct unit_test_state *uts)
 	ut_assertok(run_command("font select", 0));
 	ut_assertok(ut_check_console_end(uts));
 
-	ut_assertok(vidconsole_get_font_size(dev, &name, &size));
+	ut_assertok(vidconsole_get_font_size(dev, NULL, &name, &size));
 	ut_asserteq_str("nimbus_sans_l_regular", name);
 	ut_asserteq(CONFIG_CONSOLE_TRUETYPE_SIZE, size);
 

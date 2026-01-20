@@ -636,14 +636,17 @@ int vidconsole_get_font(struct udevice *dev, int seq,
 	return ops->get_font(dev, seq, info);
 }
 
-int vidconsole_get_font_size(struct udevice *dev, const char **name, uint *sizep)
+int vidconsole_get_font_size(struct udevice *dev, void *ctx, const char **name,
+			     uint *sizep)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
+	if (!ctx)
+		ctx = vidconsole_ctx(dev);
 	if (!ops->get_font_size)
 		return -ENOSYS;
 
-	*name = ops->get_font_size(dev, sizep);
+	*name = ops->get_font_size(dev, ctx, sizep);
 	return 0;
 }
 

@@ -1234,9 +1234,10 @@ static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 	return 0;
 }
 
-const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
+const char *console_truetype_get_font_size(struct udevice *dev, void *vctx,
+					   uint *sizep)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 
 	if (ctx->cur_fontdata) {
 		/* Using fixed font */

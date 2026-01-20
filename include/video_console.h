@@ -325,10 +325,12 @@ struct vidconsole_ops {
 	 * get_font_size() - get the current font name and size
 	 *
 	 * @dev: vidconsole device
+	 * @ctx: vidconsole context to use (cannot be NULL)
 	 * @sizep: Place to put the font size (nominal height in pixels)
 	 * Returns: Current font name
 	 */
-	const char *(*get_font_size)(struct udevice *dev, uint *sizep);
+	const char *(*get_font_size)(struct udevice *dev, void *ctx,
+				     uint *sizep);
 
 	/**
 	 * select_font() - Select a particular font by name / size
@@ -842,11 +844,13 @@ void vidconsole_list_fonts(struct udevice *dev);
  * vidconsole_get_font_size() - get the current font name and size
  *
  * @dev: vidconsole device
+ * @ctx: vidconsole context to use (NULL to use default)
  * @sizep: Place to put the font size (nominal height in pixels)
  * @name: pointer to font name, a placeholder for result
  * Return: 0 if OK, -ENOSYS if not implemented in driver
  */
-int vidconsole_get_font_size(struct udevice *dev, const char **name, uint *sizep);
+int vidconsole_get_font_size(struct udevice *dev, void *ctx, const char **name,
+			     uint *sizep);
 
 /**
  * vidconsole_set_quiet() - Select whether the console should output stdio
