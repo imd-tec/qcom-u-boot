@@ -839,10 +839,10 @@ int vidconsole_hide_cursor(struct udevice *dev, void *vctx)
 }
 #endif /* CONFIG_CURSOR */
 
-int vidconsole_mark_start(struct udevice *dev)
+int vidconsole_mark_start(struct udevice *dev, void *vctx)
 {
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
+	struct vidconsole_ctx *ctx = vctx ?: vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
 	ctx->xmark_frac = ctx->xcur_frac;
@@ -851,7 +851,7 @@ int vidconsole_mark_start(struct udevice *dev)
 	if (ops->mark_start) {
 		int ret;
 
-		ret = ops->mark_start(dev);
+		ret = ops->mark_start(dev, ctx);
 		if (ret != -ENOSYS)
 			return ret;
 	}
@@ -1027,7 +1027,7 @@ void vidconsole_readline_start(struct udevice *dev, void *vctx, bool indent)
 
 	ctx->curs.indent = indent;
 	ctx->curs.enabled = true;
-	vidconsole_mark_start(dev);
+	vidconsole_mark_start(dev, ctx);
 }
 
 void vidconsole_readline_end(struct udevice *dev, void *vctx)

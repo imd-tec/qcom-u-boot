@@ -1251,9 +1251,9 @@ const char *console_truetype_get_font_size(struct udevice *dev, uint *sizep)
 	}
 }
 
-static int truetype_mark_start(struct udevice *dev)
+static int truetype_mark_start(struct udevice *dev, void *vctx)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 
 	ctx->pos_start = ctx->pos_ptr;
 

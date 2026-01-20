@@ -444,8 +444,9 @@ struct vidconsole_ops {
 	 * the beginning point for the cursor.
 	 *
 	 * @dev: Console device to use
+	 * @ctx: Vidconsole context to use (cannot be NULL)
 	 */
-	int (*mark_start)(struct udevice *dev);
+	int (*mark_start)(struct udevice *dev, void *ctx);
 };
 
 /* Get a pointer to the driver operations for a video console device */
