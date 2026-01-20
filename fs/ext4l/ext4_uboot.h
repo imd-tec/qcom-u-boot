@@ -394,9 +394,6 @@ void trace_ext4_error(struct super_block *sb, const char *func, unsigned int lin
 
 /* ___ratelimit is now in linux/ratelimit.h */
 
-/* Filesystem notification - declaration for stub.c */
-void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
-
 /* kobject_put is now in linux/kobject.h */
 /* wait_for_completion is now a macro in linux/completion.h */
 

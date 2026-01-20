@@ -358,8 +358,11 @@ struct iattr {
 
 /* writeback_control - defined in linux/compat.h */
 
-/* fsnotify - stub */
+/* fsnotify - stubs */
 #define fsnotify_change(d, m)	do { } while (0)
+
+/* fsnotify_sb_error - implemented in ext4l/stub.c */
+void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
 
 /* inode_init_once - stub */
 static inline void inode_init_once(struct inode *inode)
