@@ -5279,3 +5279,90 @@ All commit deltas verified - no changes to functional content.
 
 ---
 
+### Review: 2026-01-20
+
+Branch: cherry-4f1dc6f1e1d
+
+Comments addressed:
+
+
+### Conversation log
+I can see the branch exists locally and on the remote. Let me check the current state and fetch the latest from ci/master to rebase onto.
+
+I can see the branch is currently based on 6ffc40c796b but ci/master has moved ahead to f900786595b. Let me check how many commits behind and save the commit stats before rebasing:
+
+The branch has 10 commits ahead and is 37 commits behind ci/master. Let me save the stats for each commit before rebasing:
+
+Good, I have the pre-rebase stats saved. Now let me perform the rebase:
+
+Rebase completed successfully without conflicts. Now let me verify the commits and check the deltas:
+
+Rebase was successful. Now let me verify the deltas for each commit match the pre-rebase stats:
+
+All deltas match exactly:
+- Commit 1: +2 ✓
+- Commit 2: +9 ✓
+- Commit 3: +8 ✓
+- Commit 4: +1/-3 ✓
+- Commit 5: +38/-7 ✓
+- Commit 6: +6/-1 ✓
+- Commit 7: +11/-26 ✓
+- Commit 8: empty (merge) ✓
+- Commit 9: +72/-1 ✓
+- Commit 10: +114 ✓
+
+Now let me run the build test:
+
+Build passed. Now let me check if there's already a v3 branch and create the appropriate versioned local branch:
+
+Now let me force push to the original remote branch to update the MR:
+
+The remote was updated after we fetched. Let me fetch and check what changed:
+
+The remote is behind our local branch (it doesn't have the latest pickman record commit). Let me force push properly:
+
+Push succeeded. Let me verify the final state:
+
+## Rebase Complete
+
+### Summary
+
+**Branch:** `cherry-4f1dc6f1e1d` successfully rebased onto `ci/master` (f900786595b)
+
+**Build result:** ✅ OK
+
+### Commits Rebased (10 total):
+
+| # | Old Hash | New Hash | Subject | Delta Match |
+|---|----------|----------|---------|-------------|
+| 1 | a1f168b3be0 | a2fe0a15f35 | configs: e850-96: Enable options for updated env | ✅ +2 |
+| 2 | 4e13264c3f0 | b81d7bb5915 | configs: e850-96: Enable U-Boot environment on eMMC | ✅ +9 |
+| 3 | 436d713d3c7 | a7748726812 | configs: e850-96: Enable more EFI features | ✅ +8 |
+| 4 | 48a4f9b37ed | 921fed570da | configs: e850-96: Enable Standard Boot | ✅ +1/-3 |
+| 5 | 04612542905 | 20118191076 | board: samsung: e850-96: Load LDFW from EFI partition | ✅ +38/-7 |
+| 6 | 2e0d2102ef1 | 8e384223d9d | board: samsung: e850-96: Report LDFW loading failures | ✅ +6/-1 |
+| 7 | 66711003f84 | cdd2557d870 | board: samsung: e850-96: Provide bootstd default env | ✅ +11/-26 |
+| 8 | c75bc7631b6 | 68cd65f1a84 | Merge https://source.denx.de/u-boot/custodians/u-boot-samsung | ✅ empty |
+| 9 | da8545f98a7 | 1863695d7e7 | pickman: Record cherry-pick of 8 commits from us/next | ✅ +72/-1 |
+| 10 | 761a2583161 | 7cf9b7e99ca | pickman: Record review handling for cherry-4f1dc6f1e1d | ✅ +114 |
+
+### Fix-ups Made
+- None required - rebase completed cleanly without conflicts
+
+### Status
+- Local branch: `cherry-4f1dc6f1e1d-v3` (backup)
+- Remote branch: `cherry-4f1dc6f1e1d` (force pushed)
+- MR: https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/420
+
+### Suggested MR Reply
+
+```
+Rebased onto latest ci/master (f900786595b).
+
+Build tested with `buildman -L --board sandbox -w` - OK.
+
+All commit deltas verified - no changes to functional content.
+```
+
+---
+
