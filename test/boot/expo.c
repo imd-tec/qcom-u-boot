@@ -1433,6 +1433,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 
 	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
 	dev = exp->display;
+	expo_enter_mode(exp);
 
 	id = scene_textline(scn, "textline", OBJ_TEXTLINE, 20, &tline);
 	ut_assert(id > 0);
@@ -1528,6 +1529,7 @@ static int expo_render_textline(struct unit_test_state *uts)
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
 
+	expo_exit_mode(exp);
 	expo_destroy(exp);
 
 	return 0;
