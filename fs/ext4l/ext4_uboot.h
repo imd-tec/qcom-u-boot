@@ -448,9 +448,6 @@ struct disk_partition *ext4l_get_partition(void);
  * Stubs for resize.c
  */
 
-/* time_is_before_jiffies - check if time is before current jiffies */
-#define time_is_before_jiffies(a)	({ (void)(a); 0; })
-
 /* ext4_update_overhead - declaration for stub.c */
 int ext4_update_overhead(struct super_block *sb, bool force);
 
