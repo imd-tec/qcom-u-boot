@@ -4980,3 +4980,117 @@ The branch `cherry-167bc2cd69f` is ready for pushing and contains all 3 cherry-p
 
 ---
 
+## 2026-01-20: us/next
+
+Branch: cherry-499386c5eb6
+
+Commits:
+- 499386c5eb6 Azure: Add missing "set -e" to docs job
+- d5d130dd12c pinctrl: mediatek: mt7988: remove _base from reg-names
+- a081512cbde pinctrl: mediatek: support reading register base address by name
+- 6331b8b0c89 mediatek: mt7986: rename pinctrl to pio in mt7986-u-boot.dtsi
+- 7764d7d6538 tools: mkenvimage: List -V parameter in help text
+- eaa51d0fda4 test/py: usb: Fix format string for fstype command
+- 7c652360c89 arch: arm: dts: phyboard-electra-uboot.dtsi: Add bootph props to i2c
+- a4287431ad9 board: phytec: phycore_am64x: Add support for 1 GB RAM variant and ECC
+- 72e26be3d7d configs: phycore_am64x_r5_defconfig: Enable PHYTEC_SOM_DETECTION
+- 738deb56b6f mediatek: mt7981: enable ethernet switch auto-detction
+- 8897f91a539 net: designware: support phy io micro voltage setting.
+- 5b280448bb4 rtc: emul_rtc: Make emul_rtc_probe() static
+- 29b66b008e4 configs: j721e_evm_a72_defconfig: Re-enable MUX_MMIO at U-Boot proper
+- d700d04dd29 configs: j7200_evm_a72_defconfig: Re-enable MUX_MMIO at U-Boot proper
+- 530fc5c9e56 Merge patch series "FIX: Re-enable MUX_MMIO on J721E/J7200"
+
+### Conversation log
+Good, the repository is clean (only untracked files). Let me create the new branch based on ci/master and start cherry-picking:
+
+Now let me cherry-pick each commit in order. Starting with the first one:
+
+Good, the first cherry-pick looks clean. Let me run a build test:
+
+Build passed. Now the second commit:
+
+Good. Third commit:
+
+Good. Fourth commit:
+
+Good. Now the fifth commit (marked as maybe already applied). Let me first verify if it's already applied:
+
+The commits are nearly identical (only the commit hash differs). Let me verify 695fc93d144 exists in ci/master:
+
+The commit 7764d7d6538 is already applied as 695fc93d144 in ci/master. Skipping this one.
+
+Now let's check the sixth commit (also marked as maybe already applied):
+
+The patches are essentially the same - the same fix (format string fix), just with minor context differences due to other changes (u_boot_console renamed to ubman). And the found patch already indicates it was cherry-picked from the original. Let me verify it's in ci/master:
+
+Good, this is also already applied. Skipping commit 6 (eaa51d0fda4).
+
+Now continuing with commit 7:
+
+Good. Commit 8:
+
+Good. Commit 9:
+
+Good. Commit 10:
+
+Good. Commit 11:
+
+Good. Commit 12:
+
+Good. Commit 13:
+
+This is a simple conflict - we need to add the `CONFIG_MUX_MMIO=y` line. Let me resolve it:
+
+The delta is slightly different (1 insertion vs 1 change) but that's expected due to the conflict resolution. The key change (adding CONFIG_MUX_MMIO=y) is applied. Let me run the build:
+
+Good. Commit 14:
+
+Good. Now the final commit (commit 15) which is a merge commit:
+
+The merge commit is empty (expected since we already cherry-picked the individual commits), but I need to create the commit to preserve history:
+
+Let me verify all commits are present:
+
+All 13 cherry-picked commits are present (15 original commits minus 2 that were already applied = 13 new commits). Let me provide a final summary:
+
+## Summary
+
+**Cherry-pick completed successfully on branch `cherry-499386c5eb6`**
+
+### Commits Applied (13 of 15 requested):
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 499386c5eb6 | Azure: Add missing "set -e" to docs job | ✅ Applied |
+| 2 | d5d130dd12c | pinctrl: mediatek: mt7988: remove _base from reg-names | ✅ Applied |
+| 3 | a081512cbde | pinctrl: mediatek: support reading register base address by name | ✅ Applied |
+| 4 | 6331b8b0c89 | mediatek: mt7986: rename pinctrl to pio in mt7986-u-boot.dtsi | ✅ Applied |
+| 5 | 7764d7d6538 | tools: mkenvimage: List -V parameter in help text | ⏭️ Skipped - Already applied as 695fc93d144 |
+| 6 | eaa51d0fda4 | test/py: usb: Fix format string for fstype command | ⏭️ Skipped - Already applied as b5d985ded1a |
+| 7 | 7c652360c89 | arch: arm: dts: phyboard-electra-uboot.dtsi: Add bootph props to i2c | ✅ Applied |
+| 8 | a4287431ad9 | board: phytec: phycore_am64x: Add support for 1 GB RAM variant and ECC | ✅ Applied |
+| 9 | 72e26be3d7d | configs: phycore_am64x_r5_defconfig: Enable PHYTEC_SOM_DETECTION | ✅ Applied |
+| 10 | 738deb56b6f | mediatek: mt7981: enable ethernet switch auto-detction | ✅ Applied |
+| 11 | 8897f91a539 | net: designware: support phy io micro voltage setting | ✅ Applied |
+| 12 | 5b280448bb4 | rtc: emul_rtc: Make emul_rtc_probe() static | ✅ Applied |
+| 13 | 29b66b008e4 | configs: j721e_evm_a72_defconfig: Re-enable MUX_MMIO at U-Boot proper | ✅ Applied (conflict resolved) |
+| 14 | d700d04dd29 | configs: j7200_evm_a72_defconfig: Re-enable MUX_MMIO at U-Boot proper | ✅ Applied |
+| 15 | 530fc5c9e56 | Merge patch series "FIX: Re-enable MUX_MMIO on J721E/J7200" | ✅ Applied (empty - expected for merge commit) |
+
+### Build Result: ✅ OK
+
+### Fix-ups Made:
+- **Commit 13 (29b66b008e4)**: Had a merge conflict in `configs/j721e_evm_a72_defconfig`. Resolved by keeping the new `CONFIG_MUX_MMIO=y` line after `CONFIG_MULTIPLEXER=y`. The delta differs slightly (1 insertion in our version vs "1 insertion, 1 deletion" in the original) because in ci/master the line simply didn't exist, whereas in us/next it was previously being modified.
+
+### Commits Skipped (already applied):
+- 7764d7d6538 → 695fc93d144 (identical patches)
+- eaa51d0fda4 → b5d985ded1a (same fix, minor context differences)
+
+### Concerning Deltas:
+- None - all applied commits match their originals in file changes and line counts.
+
+The branch `cherry-499386c5eb6` is ready for pushing.
+
+---
+
