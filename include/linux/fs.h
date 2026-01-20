@@ -638,4 +638,37 @@ struct inode_operations {
 		       umode_t);
 };
 
+/*
+ * Generic VFS operations - stubs for U-Boot
+ */
+
+/* Generic file I/O operations */
+#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
+#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
+#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+
+/* Generic fsync operation */
+#define generic_buffers_fsync_noflush(f, s, e, d) \
+	({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
+
+/* Generic attribute operations */
+#define generic_fillattr(m, req, i, s)	do { } while (0)
+#define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
+
+/* Generic seek operation */
+#define generic_file_llseek_size(f, o, w, m, e) \
+	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })
+
+/* Case-insensitive name validation - not supported */
+#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
+
+/* Generic directory read - implemented in ext4l/stub.c */
+ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
+			 loff_t *ppos);
+
+/* Block addressability check - implemented in ext4l/stub.c */
+int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
+
 #endif /* _LINUX_FS_H */

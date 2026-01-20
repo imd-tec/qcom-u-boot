@@ -224,17 +224,9 @@ struct dx_hash_info {
 #define file_modified(file)		({ (void)(file); 0; })
 #define file_accessed(file)		do { (void)(file); } while (0)
 
-/* Generic file operations - stubs for file.c */
-#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
-#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
-#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
-#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
-#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
 #define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
-
-#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
 
 #include <linux/minmax.h>
 
@@ -284,7 +276,6 @@ struct dx_hash_info {
 /* Sync operations - stubs */
 #define sync_mapping_buffers(m)			({ (void)(m); 0; })
 #define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
-#define generic_buffers_fsync_noflush(f, s, e, d) ({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
 #define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
 #define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
 
@@ -311,8 +302,6 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 #define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
 #define setattr_copy(m, i, a)		do { } while (0)
 #define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
-#define generic_fillattr(m, req, i, s)	do { } while (0)
-#define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
 
 /* File operations */
 #define file_update_time(f)		do { } while (0)
@@ -331,13 +320,6 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 
 /* FSTR_INIT - fscrypt_str initializer (fscrypt_str defined in ext4_fscrypt.h) */
 #define FSTR_INIT(n, l)		{ .name = (n), .len = (l) }
-
-/* File llseek */
-#define generic_file_llseek_size(f, o, w, m, e)	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })
-
-/* generic_read_dir - stub function (needs to be a real function for struct init) */
-ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
-			 loff_t *ppos);
 
 /* struct_size - use linux/overflow.h */
 #include <linux/overflow.h>
@@ -472,8 +454,7 @@ void free_page(unsigned long addr);
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
-/* Block device size - declarations for stub.c */
-int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
+/* Block device size - declaration for stub.c */
 unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 #include <linux/mbcache.h>
 
