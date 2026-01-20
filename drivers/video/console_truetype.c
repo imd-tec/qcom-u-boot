@@ -1157,13 +1157,6 @@ static int truetype_ctx_new(struct udevice *dev, void **ctxp)
 	return 0;
 }
 
-static int truetype_ctx_dispose(struct udevice *dev, void *ctx)
-{
-	free(ctx);
-
-	return 0;
-}
-
 static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
 {
 	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
@@ -1327,7 +1320,6 @@ struct vidconsole_ops console_truetype_ops = {
 	.measure	= truetype_measure,
 	.nominal	= truetype_nominal,
 	.ctx_new	= truetype_ctx_new,
-	.ctx_dispose	= truetype_ctx_dispose,
 	.entry_save	= truetype_entry_save,
 	.entry_restore	= truetype_entry_restore,
 	.get_cursor_info	= truetype_get_cursor_info,

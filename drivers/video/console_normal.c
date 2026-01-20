@@ -191,13 +191,6 @@ static int console_simple_ctx_new(struct udevice *dev, void **ctxp)
 	return 0;
 }
 
-static int console_simple_ctx_dispose(struct udevice *dev, void *ctx)
-{
-	free(ctx);
-
-	return 0;
-}
-
 struct vidconsole_ops console_ops = {
 	.putc_xy	= console_putc_xy,
 	.move_rows	= console_move_rows,
@@ -206,7 +199,6 @@ struct vidconsole_ops console_ops = {
 	.get_font	= console_simple_get_font,
 	.select_font	= console_simple_select_font,
 	.ctx_new	= console_simple_ctx_new,
-	.ctx_dispose	= console_simple_ctx_dispose,
 #ifdef CONFIG_CURSOR
 	.get_cursor_info	= console_get_cursor_info,
 	.entry_save	= normal_entry_save,
@@ -218,6 +210,5 @@ U_BOOT_DRIVER(vidconsole_normal) = {
 	.name		= "vidconsole0",
 	.id		= UCLASS_VIDEO_CONSOLE,
 	.ops		= &console_ops,
-	.probe		= console_probe,
 	.priv_auto	= sizeof(struct console_simple_priv),
 };

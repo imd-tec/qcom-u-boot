@@ -749,9 +749,10 @@ static void vidconsole_free_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 
-	console_free_cursor(&ctx->curs);
 	if (ops->ctx_dispose)
 		ops->ctx_dispose(dev, ctx);
+	console_free_cursor(&ctx->curs);
+	free(ctx);
 }
 
 int vidconsole_ctx_dispose(struct udevice *dev, void *vctx)
