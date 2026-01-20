@@ -294,6 +294,7 @@ struct vidconsole_ops {
 	 * backspace() - Handle erasing the last character
 	 *
 	 * @dev:	Device to adjust
+	 * @ctx:	Vidconsole context to use
 	 * Returns: 0 on success, -ve on error
 	 *
 	 * With proportional fonts the vidconsole uclass cannot itself erase
@@ -305,7 +306,7 @@ struct vidconsole_ops {
 	 * If not implement, default behaviour will work for fixed-width
 	 * characters.
 	 */
-	int (*backspace)(struct udevice *dev);
+	int (*backspace)(struct udevice *dev, void *ctx);
 
 	/**
 	 * get_font() - Obtain information about a font (optional)

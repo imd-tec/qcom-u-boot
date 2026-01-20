@@ -660,12 +660,13 @@ static int console_truetype_putc_xy(struct udevice *dev, uint x, uint y,
  * not been entered.
  *
  * @dev:	Device to update
+ * @vctx:	Vidconsole context to use
  * Return: 0 if OK, -ENOSYS if not supported
  */
-static int console_truetype_backspace(struct udevice *dev)
+static int console_truetype_backspace(struct udevice *dev, void *vctx)
 {
 	struct video_priv *vid_priv = dev_get_uclass_priv(dev->parent);
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
+	struct console_tt_ctx *ctx = vctx;
 	struct vidconsole_ctx *com = &ctx->com;
 	struct pos_info *pos;
 	int xend;

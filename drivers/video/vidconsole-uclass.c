@@ -61,16 +61,14 @@ int vidconsole_entry_start(struct udevice *dev, void *ctx)
 	return ops->entry_start(dev, ctx);
 }
 
-/* Move backwards one space */
-static int vidconsole_back(struct udevice *dev)
+/* Move backwards one space, ctx must be non-NULL */
+static int vidconsole_back(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
-	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
-	struct vidconsole_ctx *ctx = vidconsole_ctx_from_priv(priv);
 	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
 	int ret;
 
 	if (ops->backspace) {
-		ret = ops->backspace(dev);
+		ret = ops->backspace(dev, ctx);
 		if (ret != -ENOSYS)
 			return ret;
 	}
@@ -523,7 +521,7 @@ int vidconsole_put_char(struct udevice *dev, char ch)
 			vidconsole_newline(dev);
 		break;
 	case '\b':
-		vidconsole_back(dev);
+		vidconsole_back(dev, ctx);
 		ctx->last_ch = 0;
 		break;
 	default:
