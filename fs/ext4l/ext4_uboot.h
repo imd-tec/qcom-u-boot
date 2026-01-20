@@ -487,9 +487,6 @@ void ext4l_print_msgs(void);
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
 
-/* DEFINE_WAIT stub - creates a wait queue entry */
-#define DEFINE_WAIT(name)		int name = 0
-
 /* JBD2 journal.c stubs */
 int bmap(struct inode *inode, sector_t *block);
 
