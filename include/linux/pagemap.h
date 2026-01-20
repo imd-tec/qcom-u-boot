@@ -155,6 +155,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 #define filemap_fdatawrite_range(m, s, e) ({ (void)(m); (void)(s); (void)(e); 0; })
 #define filemap_flush(m)		({ (void)(m); 0; })
 #define filemap_write_and_wait(m)	({ (void)(m); 0; })
+#define filemap_fdatawait_range_keep_errors(m, s, e) \
+	({ (void)(m); (void)(s); (void)(e); 0; })
 #define filemap_release_folio(folio, gfp) ({ (void)(folio); (void)(gfp); 1; })
 #define mapping_tagged(m, t)		(0)
 #define tag_pages_for_writeback(m, s, e) do { } while (0)

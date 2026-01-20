@@ -467,8 +467,6 @@ int sync_filesystem(void *sb);
 #include <asm-generic/bitops/lock.h>
 /* smp_mb__after_atomic is now in linux/smp.h */
 #define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
-#define filemap_fdatawait_range_keep_errors(m, s, e) \
-	({ (void)(m); (void)(s); (void)(e); 0; })
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
 
 /* ext4l support functions (support.c) */
