@@ -913,9 +913,9 @@ static void set_bitmap_font(struct udevice *dev,
 	com->tab_width_frac = VID_TO_POS(fontdata->width) * 8 / 2;
 }
 
-static void select_metrics(struct udevice *dev, struct console_tt_metrics *met)
+static void select_metrics(struct udevice *dev, struct console_tt_ctx *ctx,
+			   struct console_tt_metrics *met)
 {
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_ctx *com = &ctx->com;
 	struct udevice *vid_dev = dev_get_parent(dev);
 	struct video_priv *vid_priv = dev_get_uclass_priv(vid_dev);
@@ -998,7 +998,7 @@ static int truetype_select_font(struct udevice *dev, void *vctx,
 	if (ret)
 		return log_msg_ret("sel", ret);
 
-	select_metrics(dev, met);
+	select_metrics(dev, ctx, met);
 
 	return 0;
 }
@@ -1297,7 +1297,7 @@ static int console_truetype_probe(struct udevice *dev)
 		return log_msg_ret("add", ret);
 	ctx->cur_met = &priv->metrics[ret];
 
-	select_metrics(dev, &priv->metrics[ret]);
+	select_metrics(dev, ctx, &priv->metrics[ret]);
 
 	debug("%s: ready\n", __func__);
 
