@@ -152,9 +152,10 @@ int cursor_hide(struct vidconsole_cursor *curs, struct video_priv *vid_priv,
  * Allocates memory for saving pixels under the cursor
  *
  * @dev: vidconsole device
+ * @ctx: vidconsole context
  * Return: 0 if success, -ENOMEM if allocation fails
  */
-int console_alloc_cursor(struct udevice *dev);
+int console_alloc_cursor(struct udevice *dev, struct vidconsole_ctx *ctx);
 
 /**
  * console probe function.

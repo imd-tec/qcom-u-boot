@@ -278,9 +278,8 @@ int cursor_hide(struct vidconsole_cursor *curs, struct video_priv *vid_priv,
 	return 0;
 }
 
-int console_alloc_cursor(struct udevice *dev)
+int console_alloc_cursor(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
-	struct vidconsole_ctx *ctx;
 	struct vidconsole_cursor *curs;
 	struct video_priv *vid_priv;
 	struct udevice *vid;
@@ -288,8 +287,6 @@ int console_alloc_cursor(struct udevice *dev)
 
 	if (!CONFIG_IS_ENABLED(CURSOR) || xpl_phase() < PHASE_BOARD_R)
 		return 0;
-
-	ctx = vidconsole_ctx(dev);
 	vid = dev_get_parent(dev);
 	vid_priv = dev_get_uclass_priv(vid);
 	curs = &ctx->curs;
@@ -312,7 +309,7 @@ int console_probe(struct udevice *dev)
 		return ret;
 
 	if (CONFIG_IS_ENABLED(CURSOR) && xpl_phase() == PHASE_BOARD_R) {
-		ret = console_alloc_cursor(dev);
+		ret = console_alloc_cursor(dev, vidconsole_ctx(dev));
 		if (ret)
 			return ret;
 	}
