@@ -343,7 +343,7 @@ static int dm_test_video_chars(struct unit_test_state *uts)
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
 	ut_assertok(vidconsole_select_font(con, "8x16", 0));
-	vidconsole_put_string(con, test_string);
+	vidconsole_put_string(con, NULL, test_string);
 	ut_asserteq(466, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -370,18 +370,18 @@ static int dm_test_video_ansi(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* test clear escape sequence: [2J */
-	vidconsole_put_string(con, "A\tB\tC"ANSI_ESC"[2J");
+	vidconsole_put_string(con, NULL, "A\tB\tC" ANSI_ESC "[2J");
 	ut_asserteq(46, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* test set-cursor: [%d;%df */
-	vidconsole_put_string(con, "abc"ANSI_ESC"[2;2fab"ANSI_ESC"[4;4fcd");
+	vidconsole_put_string(con, NULL, "abc" ANSI_ESC "[2;2fab" ANSI_ESC "[4;4fcd");
 	ut_asserteq(143, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* test colors (30-37 fg color, 40-47 bg color) */
-	vidconsole_put_string(con, ANSI_ESC"[30;41mfoo"); /* black on red */
-	vidconsole_put_string(con, ANSI_ESC"[33;44mbar"); /* yellow on blue */
+	vidconsole_put_string(con, NULL, ANSI_ESC "[30;41mfoo"); /* black on red */
+	vidconsole_put_string(con, NULL, ANSI_ESC "[33;44mbar"); /* yellow on blue */
 	ut_asserteq(272, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -770,8 +770,8 @@ static int dm_test_video_truetype(struct unit_test_state *uts)
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_put_string(con, test_string);
-	vidconsole_put_stringn(con, test_string, 30);
+	vidconsole_put_string(con, NULL, test_string);
+	vidconsole_put_stringn(con, NULL, test_string, 30);
 	ut_asserteq(13073, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -799,7 +799,7 @@ static int dm_test_video_truetype_scroll(struct unit_test_state *uts)
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_put_string(con, test_string);
+	vidconsole_put_string(con, NULL, test_string);
 	ut_asserteq(34248, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -825,7 +825,7 @@ static int dm_test_video_truetype_bs(struct unit_test_state *uts)
 
 	ut_assertok(video_get_nologo(uts, &dev));
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_put_string(con, test_string);
+	vidconsole_put_string(con, NULL, test_string);
 	ut_asserteq(29310, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
 
@@ -862,9 +862,9 @@ static int dm_test_video_copy(struct unit_test_state *uts)
 	ut_assertok(video_bmp_display(dev, addr, 0, 0, false));
 
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
-	vidconsole_put_string(con, "\n\n\n\n\n");
-	vidconsole_put_string(con, test_string);
-	vidconsole_put_string(con, test_string);
+	vidconsole_put_string(con, NULL, "\n\n\n\n\n");
+	vidconsole_put_string(con, NULL, test_string);
+	vidconsole_put_string(con, NULL, test_string);
 
 	ut_asserteq(6884, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
@@ -888,8 +888,8 @@ static int dm_test_video_copy(struct unit_test_state *uts)
 	 *   ./u-boot -Tl
 	 *   ut dm dm_test_video_copy
 	 */
-	vidconsole_put_string(con, test_string);
-	vidconsole_put_string(con, test_string);
+	vidconsole_put_string(con, NULL, test_string);
+	vidconsole_put_string(con, NULL, test_string);
 	video_sync(dev, true);
 	ut_asserteq(7621, video_compress_fb(uts, dev, false));
 	ut_asserteq(7741, video_compress_fb(uts, dev, true));
@@ -925,21 +925,21 @@ static int dm_test_video_damage(struct unit_test_state *uts)
 	damage = &priv->damage;
 
 	vidconsole_position_cursor(con, 14, 10);
-	vidconsole_put_string(con, test_string_2);
+	vidconsole_put_string(con, NULL, test_string_2);
 	ut_asserteq(449, damage->x0);
 	ut_asserteq(325, damage->y0);
 	ut_asserteq(661, damage->x1);
 	ut_asserteq(350, damage->y1);
 
 	vidconsole_position_cursor(con, 7, 5);
-	vidconsole_put_string(con, test_string_1);
+	vidconsole_put_string(con, NULL, test_string_1);
 	ut_asserteq(225, damage->x0);
 	ut_asserteq(164, damage->y0);
 	ut_asserteq(661, damage->x1);
 	ut_asserteq(350, damage->y1);
 
 	vidconsole_position_cursor(con, 21, 15);
-	vidconsole_put_string(con, test_string_3);
+	vidconsole_put_string(con, NULL, test_string_3);
 	ut_asserteq(225, damage->x0);
 	ut_asserteq(164, damage->y0);
 	ut_asserteq(1280, damage->x1);
@@ -1091,15 +1091,15 @@ static int dm_test_video_silence(struct unit_test_state *uts)
 	ut_unsilence_console(uts);
 
 	printf("message 1: console\n");
-	vidconsole_put_string(con, "message 1: video\n");
+	vidconsole_put_string(con, NULL, "message 1: video\n");
 
 	vidconsole_set_quiet(con, true);
 	printf("second message: console\n");
-	vidconsole_put_string(con, "second message: video\n");
+	vidconsole_put_string(con, NULL, "second message: video\n");
 
 	vidconsole_set_quiet(con, false);
 	printf("final message: console\n");
-	vidconsole_put_string(con, "final message: video\n");
+	vidconsole_put_string(con, NULL, "final message: video\n");
 
 	ut_asserteq(3944, video_compress_fb(uts, dev, false));
 	ut_assertok(video_check_copy_fb(uts, dev));
@@ -1162,15 +1162,15 @@ static int dm_test_video_font_switch(struct unit_test_state *uts)
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
 
 	/* Start with TrueType font and write multi-line text */
-	vidconsole_put_string(con, truetype_text);
+	vidconsole_put_string(con, NULL, truetype_text);
 
 	/* Switch to bitmap font */
 	ut_assertok(vidconsole_select_font(con, "8x16", 0));
-	vidconsole_put_string(con, bitmap_text);
+	vidconsole_put_string(con, NULL, bitmap_text);
 
 	/* Switch back to TrueType font */
 	ut_assertok(vidconsole_select_font(con, NULL, 0));
-	vidconsole_put_string(con, final_truetype_text);
+	vidconsole_put_string(con, NULL, final_truetype_text);
 
 	ut_asserteq(14892, video_compress_fb(uts, dev, false));
 
@@ -1332,7 +1332,7 @@ static int dm_test_video_manual_sync(struct unit_test_state *uts)
 	priv = dev_get_uclass_priv(dev);
 
 	/* Write some text and verify it appears in the framebuffer */
-	vidconsole_put_string(con, "Test");
+	vidconsole_put_string(con, NULL, "Test");
 	ut_asserteq(118, video_compress_fb(uts, dev, false));
 
 	/* Sync to copy buffer before enabling manual-sync mode */
@@ -1343,7 +1343,7 @@ static int dm_test_video_manual_sync(struct unit_test_state *uts)
 
 	/* Clear and write new text - auto-sync should not happen */
 	video_clear(dev);
-	vidconsole_put_string(con, "Manual Sync");
+	vidconsole_put_string(con, NULL, "Manual Sync");
 
 	/* should do nothing in manual-sync mode */
 	ut_assertok(video_sync(dev, false));
@@ -1377,7 +1377,7 @@ static int dm_test_video_manual_sync(struct unit_test_state *uts)
 	ut_assertok(video_check_copy_fb(uts, dev));
 
 	/* Write new text again */
-	vidconsole_put_string(con, "Test2");
+	vidconsole_put_string(con, NULL, "Test2");
 
 	/* without VIDSYNC_FLUSH or COPY - should do nothing */
 	ut_assertok(video_manual_sync(dev, 0));

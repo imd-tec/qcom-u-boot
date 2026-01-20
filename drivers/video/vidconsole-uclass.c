@@ -544,7 +544,8 @@ int vidconsole_put_char(struct udevice *dev, void *vctx, char ch)
 	return 0;
 }
 
-int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen)
+int vidconsole_put_stringn(struct udevice *dev, void *ctx, const char *str,
+			   int maxlen)
 {
 	const char *s, *end = NULL;
 	int ret;
@@ -552,7 +553,7 @@ int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen)
 	if (maxlen != -1)
 		end = str + maxlen;
 	for (s = str; *s && (maxlen == -1 || s < end); s++) {
-		ret = vidconsole_put_char(dev, NULL, *s);
+		ret = vidconsole_put_char(dev, ctx, *s);
 		if (ret)
 			return ret;
 	}
@@ -560,9 +561,9 @@ int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen)
 	return 0;
 }
 
-int vidconsole_put_string(struct udevice *dev, const char *str)
+int vidconsole_put_string(struct udevice *dev, void *ctx, const char *str)
 {
-	return vidconsole_put_stringn(dev, str, -1);
+	return vidconsole_put_stringn(dev, ctx, str, -1);
 }
 
 static void vidconsole_putc(struct stdio_dev *sdev, const char ch)
@@ -595,7 +596,7 @@ static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
 
 	if (priv->quiet)
 		return;
-	ret = vidconsole_put_string(dev, s);
+	ret = vidconsole_put_string(dev, NULL, s);
 	if (ret) {
 #ifdef DEBUG
 		char str[30];

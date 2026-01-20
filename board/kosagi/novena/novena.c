@@ -79,7 +79,7 @@ int board_late_init(void)
 
 	display_options_get_banner(false, buf, sizeof(buf));
 	vidconsole_position_cursor(con, 0, 0);
-	vidconsole_put_string(con, buf);
+	vidconsole_put_string(con, NULL, buf);
 #endif
 	return 0;
 }

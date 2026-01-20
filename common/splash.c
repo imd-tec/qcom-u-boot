@@ -149,7 +149,7 @@ void splash_display_banner(void)
 
 	display_options_get_banner(false, buf, sizeof(buf));
 	vidconsole_position_cursor(dev, col, 1);
-	vidconsole_put_string(dev, buf);
+	vidconsole_put_string(dev, NULL, buf);
 	vidconsole_position_cursor(dev, 0, row);
 }
 #endif /* CONFIG_VIDEO && !CONFIG_HIDE_LOGO_VERSION */

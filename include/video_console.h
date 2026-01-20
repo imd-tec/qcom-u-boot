@@ -765,11 +765,13 @@ int vidconsole_put_char(struct udevice *dev, void *vctx, char ch);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @ctx:	Vidconsole context, or NULL to use default
  * @str:	String to write
  * @maxlen:	Maximum chars to output, or -1 for all
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen);
+int vidconsole_put_stringn(struct udevice *dev, void *ctx, const char *str,
+			   int maxlen);
 
 /**
  * vidconsole_put_string() - Output a string to the current console position
@@ -782,10 +784,11 @@ int vidconsole_put_stringn(struct udevice *dev, const char *str, int maxlen);
  * can be adjusted manually using vidconsole_position_cursor().
  *
  * @dev:	Device to adjust
+ * @ctx:	Vidconsole context, or NULL to use default
  * @str:	String to write
  * Return: 0 if OK, -ve on error
  */
-int vidconsole_put_string(struct udevice *dev, const char *str);
+int vidconsole_put_string(struct udevice *dev, void *ctx, const char *str);
 
 /**
  * vidconsole_position_cursor() - Move the text cursor

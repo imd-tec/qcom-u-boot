@@ -41,7 +41,7 @@ static int do_video_puts(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev))
 		return CMD_RET_FAILURE;
-	ret = vidconsole_put_string(dev, argv[1]);
+	ret = vidconsole_put_string(dev, NULL, argv[1]);
 	if (!ret)
 		ret = video_sync(dev->parent, false);
 
@@ -89,7 +89,7 @@ static int do_video_write(struct cmd_tbl *cmdtp, int flag, int argc,
 		else
 			vidconsole_position_cursor(dev, col, row);
 
-		ret = vidconsole_put_string(dev, argv[i + 1]);
+		ret = vidconsole_put_string(dev, NULL, argv[i + 1]);
 		if (ret)
 			return CMD_RET_FAILURE;
 	}
