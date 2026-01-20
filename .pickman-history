@@ -4910,3 +4910,73 @@ The branch `cherry-7b18fe85640` is ready for pushing with 27 new commits on top 
 
 ---
 
+## 2026-01-20: us/next
+
+Branch: cherry-167bc2cd69f
+
+Commits:
+- 167bc2cd69f doc: remove redundant leds bindings
+- 592b6f394ae led: add function naming option from linux
+- 7a20c89bd05 Merge patch series "led: add function naming option from linux"
+
+### Conversation log
+The repository state is clean (only untracked files present, no staged or uncommitted changes). Let me proceed with creating the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (doc: remove redundant leds bindings):
+
+First cherry-pick succeeded. Let me verify the commit delta:
+
+The deltas match exactly (1 file, 23 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (led: add function naming option from linux):
+
+Second cherry-pick succeeded (with auto-merge). Let me verify the delta:
+
+The deltas match exactly (5 files, 130 insertions, 7 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit which is a merge commit. I'll use the `-m 1 --allow-empty` flags:
+
+The merge commit was cherry-picked. Let me check the deltas:
+
+I notice the deltas are different - this is expected for a merge commit. The original merge commit shows the combined changes of the merged branch (6 files, 132 insertions, 30 deletions), while the cherry-picked version shows only the actual additional changes made during the merge (1 file, 2 insertions) - which is the documentation Tom Rini added to led.h.
+
+Since the original commits (167bc2cd69f and 592b6f394ae) were already cherry-picked separately, this behavior is correct. The merge commit now only contains the additional fix-up that Tom made during the merge. Let me verify this by checking what the difference in led.h is:
+
+This is correct - the merge commit added documentation for the `name` field as noted by `[trini: Document name parameter in led.h]` in the commit message. Now let me run the build test:
+
+Build passed. Now let me verify all 3 commits are present with `git log`:
+
+All 3 commits are present in the correct order. Let me run the final build to confirm everything works together:
+
+## Final Status Report
+
+### Summary
+All 3 commits were successfully cherry-picked from `us/next` branch to the new branch `cherry-167bc2cd69f` (based on `ci/master`).
+
+### Commits Cherry-Picked:
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | `167bc2cd69f` | `53f4c8457b8` | doc: remove redundant leds bindings |
+| 2 | `592b6f394ae` | `1789f6badef` | led: add function naming option from linux |
+| 3 | `7a20c89bd05` | `7a178e238d7` | Merge patch series "led: add function naming option from linux" |
+
+### Build Result: ✅ OK
+- All builds passed without warnings or errors
+
+### Fix-ups Made: None
+- No conflicts requiring manual resolution
+- Auto-merging was sufficient for `arch/sandbox/dts/test.dts` and `include/led.h`
+
+### Delta Analysis:
+- **Commit 1**: Exact match (1 file, 23 deletions)
+- **Commit 2**: Exact match (5 files, 130 insertions, 7 deletions)
+- **Commit 3 (merge)**: Expected difference - original shows combined changes of merged branch (6 files), cherry-picked version shows only the additional fix-up added during merge (1 file, 2 insertions to `include/led.h` documenting the `name` parameter)
+
+### Commits with Concerning Deltas: None
+- All deltas are as expected
+
+### Branch Status:
+The branch `cherry-167bc2cd69f` is ready for pushing and contains all 3 cherry-picked commits.
+
+---
+
