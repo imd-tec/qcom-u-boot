@@ -117,17 +117,6 @@
 #include <linux/quotaops.h>
 #include <linux/random.h>
 
-/* Forward declarations for xattr functions */
-struct super_block;
-struct buffer_head;
-struct qstr;
-
-#ifdef CONFIG_EXT4_XATTR
-int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-			     struct buffer_head *block_bh, size_t value_len,
-			     bool is_create);
-#endif
-
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 
