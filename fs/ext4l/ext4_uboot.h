@@ -218,10 +218,6 @@ struct path;
 /* File operations */
 #define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 
-/* iomap stubs */
-#define iomap_bmap(m, b, o)		({ (void)(m); (void)(b); (void)(o); 0UL; })
-#define iomap_swapfile_activate(s, f, sp, o) ({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
-
 /*
  * Additional stubs for dir.c
  */
