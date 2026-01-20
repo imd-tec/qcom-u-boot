@@ -55,4 +55,43 @@ struct blk_plug {
 #define bdev_atomic_write_unit_max_bytes(bdev)	({ (void)(bdev); (unsigned int)0; })
 #define bdev_atomic_write_unit_min_bytes(bdev)	({ (void)(bdev); 0UL; })
 
+/* Block device read-only check - implemented in ext4l/stub.c */
+int bdev_read_only(struct block_device *bdev);
+
+/* Block device property stubs */
+#define bdev_write_zeroes_unmap_sectors(b)	({ (void)(b); 0; })
+#define bdev_dma_alignment(bd)			(0)
+#define bdev_nonrot(bdev)			({ (void)(bdev); 0; })
+#define bdev_discard_granularity(bdev)		({ (void)(bdev); 0U; })
+#define set_blocksize(f, size)			({ (void)(f); (void)(size); 0; })
+
+/* Block layer constants */
+#define BLK_MAX_SEGMENT_SIZE			65536
+
+/* Block device I/O operations - stubs */
+#define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
+#define blkdev_issue_discard(bdev, s, n, gfp) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
+#define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
+	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
+
+/* Block device sync - implemented in ext4l/stub.c */
+int sync_blockdev(struct block_device *bdev);
+void invalidate_bdev(struct block_device *bdev);
+
+/* Block device size - implemented in ext4l/stub.c */
+unsigned int bdev_max_discard_sectors(struct block_device *bdev);
+
+/* Block device file operations - implemented in ext4l/stub.c */
+struct blk_holder_ops;
+void bdev_fput(void *file);
+void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
+			    const struct blk_holder_ops *ops);
+
+/* Buffer operations on block devices - implemented in ext4l/stub.c */
+struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
+				unsigned int size, gfp_t gfp);
+struct buffer_head *__bread(struct block_device *bdev, sector_t block,
+			    unsigned int size);
+
 #endif /* _LINUX_BLKDEV_H */

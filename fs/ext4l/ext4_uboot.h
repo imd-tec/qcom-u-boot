@@ -131,9 +131,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 			     bool is_create);
 #endif
 
-/* Block device operations - stubs */
-#define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
-
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 
@@ -174,11 +171,6 @@ struct dir_context;
 struct readahead_control;
 struct fiemap_extent_info;
 struct folio;
-
-static inline int bdev_read_only(struct block_device *bdev)
-{
-	return bdev ? bdev->read_only : 0;
-}
 
 #define WHITEOUT_DEV	0
 #define WHITEOUT_MODE	0
@@ -232,9 +224,6 @@ struct dx_hash_info {
 
 /* Memory retry wait */
 #define memalloc_retry_wait(g)		do { } while (0)
-
-/* bdev operations */
-#define bdev_write_zeroes_unmap_sectors(b) ({ (void)(b); 0; })
 
 /* indirect.c stubs */
 
@@ -310,9 +299,6 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 /* iomap stubs */
 #define iomap_bmap(m, b, o)		({ (void)(m); (void)(b); (void)(o); 0UL; })
 #define iomap_swapfile_activate(s, f, sp, o) ({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
-
-/* Block device alignment */
-#define bdev_dma_alignment(bd)		(0)
 
 /*
  * Additional stubs for dir.c
@@ -411,9 +397,7 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* blockgroup_lock - use linux/blockgroup_lock.h */
 #include <linux/blockgroup_lock.h>
 
-/* Buffer submission stubs - declarations for stub.c implementations */
-struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
-				unsigned int size, gfp_t gfp);
+/* Buffer submission stubs - declaration for stub.c */
 int trylock_buffer(struct buffer_head *bh);
 
 /* Trace stubs for super.c - declaration for stub.c implementation */
@@ -427,10 +411,6 @@ void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
 /* File path operations - declaration for stub.c */
 char *file_path(struct file *file, char *buf, int buflen);
 struct block_device *file_bdev(struct file *file);
-
-/* Block device sync - declarations for stub.c */
-int sync_blockdev(struct block_device *bdev);
-void invalidate_bdev(struct block_device *bdev);
 
 /* kobject_put is now in linux/kobject.h */
 /* wait_for_completion is now a macro in linux/completion.h */
@@ -454,25 +434,14 @@ void free_page(unsigned long addr);
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
-/* Block device size - declaration for stub.c */
-unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 #include <linux/mbcache.h>
 
 /* xattr helper stubs for xattr.c */
 #define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
 #define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
 
-/* Block device operations - declarations for stub.c */
-void bdev_fput(void *file);
-void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
-			    const struct blk_holder_ops *ops);
-
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);
-
-/* Block device file operations - stubs */
-#define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
-struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
 
 /*
  * Stubs for mballoc.c
@@ -488,17 +457,8 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 #define DEFINE_RAW_FLEX(type, name, member, count) \
 	type *name = NULL
 
-/* Block layer constants */
-#define BLK_MAX_SEGMENT_SIZE		65536
-
-/* Block device properties */
-#define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
-
 /* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
 #define raw_cpu_ptr(ptr)		(ptr)
-
-#define bdev_discard_granularity(bdev) \
-	({ (void)(bdev); 0U; })
 
 /*
  * Stubs for page-io.c - bio types are in linux/bio.h
@@ -556,10 +516,6 @@ int bmap(struct inode *inode, sector_t *block);
 /* Block device operations for journal.c */
 #define truncate_inode_pages_range(m, s, e) \
 	do { (void)(m); (void)(s); (void)(e); } while (0)
-#define blkdev_issue_discard(bdev, s, n, gfp) \
-	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
-#define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
-	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
 
 /* Memory allocation for journal.c */
 #define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
