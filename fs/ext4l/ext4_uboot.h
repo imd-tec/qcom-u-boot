@@ -445,13 +445,6 @@ struct disk_partition *ext4l_get_partition(void);
 #endif
 
 /*
- * Stubs for resize.c
- */
-
-/* ext4_update_overhead - declaration for stub.c */
-int ext4_update_overhead(struct super_block *sb, bool force);
-
-/*
  * Stubs for fsmap.c
  */
 
