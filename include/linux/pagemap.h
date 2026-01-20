@@ -94,10 +94,28 @@ struct folio {
 #define folio_end_writeback(f)		do { (void)(f); } while (0)
 #define folio_start_writeback(f)	do { (void)(f); } while (0)
 #define folio_start_writeback_keepwrite(f) do { (void)(f); } while (0)
+bool __folio_start_writeback(struct folio *folio, bool keep_write);
 #define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
 #define folio_set_mappedtodisk(f)	do { (void)(f); } while (0)
 #define folio_redirty_for_writepage(wbc, folio) \
 	({ (void)(wbc); (void)(folio); false; })
+
+/* Folio operations - implemented in ext4l/support.c */
+struct folio *__filemap_get_folio(struct address_space *mapping,
+				  pgoff_t index, unsigned int fgp_flags,
+				  gfp_t gfp);
+void folio_put(struct folio *folio);
+void folio_get(struct folio *folio);
+void mapping_clear_folio_cache(struct address_space *mapping);
+
+/* Writeback control stubs */
+#define wbc_init_bio(wbc, bio)		do { (void)(wbc); (void)(bio); } while (0)
+#define wbc_account_cgroup_owner(wbc, folio, bytes) \
+	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
+
+/* Write begin helper */
+#define write_begin_get_folio(iocb, m, idx, l) \
+	({ (void)(iocb); (void)(m); (void)(idx); (void)(l); (struct folio *)NULL; })
 
 /*
  * offset_in_folio - calculate offset of pointer within folio's data

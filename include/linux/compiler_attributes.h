@@ -270,4 +270,14 @@
  */
 #define __weak                          __attribute__((__weak__))
 
+/*
+ * __counted_by(member) - flexible array bounds annotation
+ *
+ * Used to annotate flexible array members with the struct member that
+ * holds the count. Not available in all compilers, so stub it out.
+ */
+#ifndef __counted_by
+#define __counted_by(member)
+#endif
+
 #endif /* __LINUX_COMPILER_ATTRIBUTES_H */

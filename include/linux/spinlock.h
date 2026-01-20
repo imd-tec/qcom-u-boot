@@ -78,6 +78,9 @@ typedef struct {
 /* Assert variants */
 #define assert_spin_locked(lock)		do { } while (0)
 
+/* spin_needbreak - check if lock should be released (always false in U-Boot) */
+#define spin_needbreak(lock)			({ (void)(lock); 0; })
+
 /* Read-write lock type - just an int for U-Boot */
 typedef int rwlock_t;
 
@@ -98,5 +101,6 @@ typedef int rwlock_t;
 #define read_unlock_irqrestore(lock, flags)	do { (void)(flags); } while (0)
 #define write_lock_irqsave(lock, flags)		do { (void)(flags); } while (0)
 #define write_unlock_irqrestore(lock, flags)	do { (void)(flags); } while (0)
+#define write_trylock(lock)			({ (void)(lock); 1; })
 
 #endif /* __LINUX_SPINLOCK_H */

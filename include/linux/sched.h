@@ -35,6 +35,7 @@ extern struct task_struct *current;
 #define TASK_UNINTERRUPTIBLE	2
 
 #define cond_resched()		do { } while (0)
+#define cond_resched_lock(lock)	do { (void)(lock); } while (0)
 #define yield()			do { } while (0)
 /* Note: schedule() is implemented in common/cyclic.c */
 

@@ -46,4 +46,12 @@ static inline xa_mark_t wbc_to_tag(struct writeback_control *wbc)
 #define try_to_writeback_inodes_sb(sb, reason) \
 	do { (void)(sb); (void)(reason); } while (0)
 
+/**
+ * inode_io_list_del() - remove inode from I/O list
+ * @inode: inode to remove
+ *
+ * U-Boot stub - no I/O list management.
+ */
+#define inode_io_list_del(inode)	do { (void)(inode); } while (0)
+
 #endif /* WRITEBACK_H */

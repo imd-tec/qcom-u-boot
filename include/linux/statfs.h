@@ -39,4 +39,23 @@ struct kstatfs {
 	long f_spare[4];
 };
 
+/**
+ * uuid_to_fsid - convert UUID to filesystem ID
+ * @uuid: UUID to convert (at least 8 bytes)
+ *
+ * Converts the first 8 bytes of a UUID to a filesystem ID.
+ *
+ * Return: the filesystem ID
+ */
+static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
+{
+	__kernel_fsid_t fsid;
+
+	fsid.val[0] = (uuid[0] << 24) | (uuid[1] << 16) |
+		      (uuid[2] << 8) | uuid[3];
+	fsid.val[1] = (uuid[4] << 24) | (uuid[5] << 16) |
+		      (uuid[6] << 8) | uuid[7];
+	return fsid;
+}
+
 #endif /* _LINUX_STATFS_H */

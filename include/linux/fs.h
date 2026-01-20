@@ -300,10 +300,93 @@ enum {
 /* inode_newsize_ok - check if new size is valid (always ok in U-Boot) */
 #define inode_newsize_ok(i, s)	({ (void)(i); (void)(s); 0; })
 
-/* IS_SYNC, IS_APPEND, IS_IMMUTABLE - inode flag checks */
+/* IS_SYNC, IS_APPEND, IS_IMMUTABLE, IS_CASEFOLDED - inode flag checks */
 #define IS_SYNC(inode)		(0)
 #define IS_APPEND(inode)	((inode)->i_flags & S_APPEND)
 #define IS_IMMUTABLE(inode)	((inode)->i_flags & S_IMMUTABLE)
+#define IS_CASEFOLDED(inode)	(0)	/* Case-folding not supported */
+#define IS_DIRSYNC(inode)	({ (void)(inode); 0; })
+#define IS_NOSEC(inode)		(1)	/* No security checks in U-Boot */
+
+/* inode_needs_sync - check if inode needs synchronous writes (always false) */
+#define inode_needs_sync(inode)	(0)
+
+/* is_bad_inode - check if inode is marked bad (always false in U-Boot) */
+#define is_bad_inode(inode)	(0)
+
+/* inode_is_open_for_write - check if inode has open writers (always false) */
+#define inode_is_open_for_write(inode)	({ (void)(inode); 0; })
+
+/* inode_is_dirtytime_only - check if inode has only dirty time (always false) */
+#define inode_is_dirtytime_only(inode)	({ (void)(inode); 0; })
+
+/* Inode state bits for i_state field */
+#define I_NEW			(1 << 0)
+#define I_FREEING		(1 << 1)
+#define I_DIRTY_DATASYNC	(1 << 2)
+#define I_DIRTY_TIME		(1 << 3)
+
+/* Maximum file size for large files */
+#define MAX_LFS_FILESIZE	((loff_t)LLONG_MAX)
+
+/*
+ * Inode operation stubs - U-Boot has simplified inode handling
+ */
+#define icount_read(inode)		(1)
+#define i_uid_write(inode, uid)		do { } while (0)
+#define i_gid_write(inode, gid)		do { } while (0)
+#define inode_fsuid_set(inode, idmap)	do { } while (0)
+#define inode_init_owner(idmap, i, dir, mode) \
+	do { (i)->i_mode = (mode); } while (0)
+#define insert_inode_locked(inode)	(0)
+#define unlock_new_inode(inode)		do { } while (0)
+#define clear_nlink(inode)		do { } while (0)
+#define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
+#define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
+#define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
+#define IS_NOQUOTA(inode)		(0)
+#define IS_SWAPFILE(inode)		({ (void)(inode); 0; })
+#define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
+#define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
+#define inode_set_flags(i, f, m)	do { } while (0)
+#define inode_set_cached_link(i, l, len) do { } while (0)
+#define init_special_inode(i, m, d)	do { } while (0)
+#define make_bad_inode(i)		do { } while (0)
+#define iget_failed(i)			do { } while (0)
+#define find_inode_by_ino_rcu(sb, ino)	((struct inode *)NULL)
+#define mark_inode_dirty(i)		do { } while (0)
+#define invalidate_inode_buffers(i)	do { } while (0)
+#define clear_inode(i)			do { } while (0)
+
+/* Inode credential helpers */
+#define i_uid_needs_update(m, a, i)	({ (void)(m); (void)(a); (void)(i); 0; })
+#define i_gid_needs_update(m, a, i)	({ (void)(m); (void)(a); (void)(i); 0; })
+#define i_uid_update(m, a, i)		do { } while (0)
+#define i_gid_update(m, a, i)		do { } while (0)
+
+/* lock_two_nondirectories - lock two inodes in order */
+#define lock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+#define unlock_two_nondirectories(i1, i2) \
+	do { (void)(i1); (void)(i2); } while (0)
+
+/* Inode allocation - implemented in ext4l/stub.c */
+struct kmem_cache;
+void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
+		     gfp_t gfp);
+int inode_generic_drop(struct inode *inode);
+
+/**
+ * get_block_t - block mapping callback type
+ * @inode: inode to map blocks for
+ * @iblock: logical block number
+ * @bh_result: buffer head to fill with mapping
+ * @create: whether to create new blocks
+ *
+ * Callback function type for filesystem block mapping.
+ */
+typedef int (get_block_t)(struct inode *inode, sector_t iblock,
+			  struct buffer_head *bh_result, int create);
 
 /**
  * struct fstrim_range - fstrim ioctl argument

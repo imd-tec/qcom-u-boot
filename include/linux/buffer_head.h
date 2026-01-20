@@ -187,6 +187,37 @@ void __brelse(struct buffer_head *bh);
 #define unlock_buffer(bh)		clear_buffer_locked(bh)
 #define test_clear_buffer_dirty(bh)	({ (void)(bh); 0; })
 
+/* Buffer I/O submission - implemented in ext4l/stub.c */
+int submit_bh(int op_flags, struct buffer_head *bh);
+
+/* Buffer read functions - implemented in ext4l/support.c */
+int bh_read(struct buffer_head *bh, int flags);
+#define bh_read_nowait(bh, flags)	bh_read(bh, flags)
+#define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
+
+/*
+ * Buffer dirty operations.
+ * In U-Boot we write buffers synchronously, so marking dirty writes immediately.
+ */
+#define sync_dirty_buffer(bh)		submit_bh(REQ_OP_WRITE, (bh))
+#define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
+#define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
+#define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
+
+/* Buffer uptodate check - always returns true (buffer assumed uptodate) */
+#define bh_uptodate_or_lock(bh)		(1)
+
+/* Buffer allocation functions - implemented in ext4l */
+struct super_block;
+struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
+void free_buffer_head(struct buffer_head *bh);
+struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
+struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
+			     unsigned int size);
+#define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
+#define getblk_unmovable(bdev, block, size) \
+	sb_getblk((bdev)->bd_super, (block))
+
 /*
  * Folio migration stubs - U-Boot doesn't support memory migration
  */
@@ -212,5 +243,48 @@ static inline bool noop_dirty_folio(struct address_space *mapping,
 {
 	return false;
 }
+
+/*
+ * end_buffer_read_sync - completion handler for synchronous buffer reads
+ * @bh: buffer head that completed
+ * @uptodate: whether the read was successful
+ */
+static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
+{
+	if (uptodate)
+		set_buffer_uptodate(bh);
+	else
+		clear_buffer_uptodate(bh);
+	unlock_buffer(bh);
+}
+
+/*
+ * Buffer cache lookup stubs - U-Boot doesn't maintain a buffer cache
+ */
+#define sb_find_get_block(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define sb_find_get_block_nonatomic(sb, block) \
+	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
+#define __find_get_block_nonatomic(bdev, block, size) \
+	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+
+/*
+ * Block/buffer folio operations - U-Boot stubs
+ */
+#define create_empty_buffers(f, s, flags) \
+	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
+/* bh_offset returns offset of b_data within the folio */
+#define bh_offset(bh)			((bh)->b_folio ? \
+	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
+#define block_invalidate_folio(f, o, l)	do { } while (0)
+#define block_write_end(pos, len, copied, folio) \
+	({ (void)(pos); (void)(len); (void)(folio); (copied); })
+#define block_dirty_folio(m, f)		({ (void)(m); (void)(f); false; })
+#define try_to_free_buffers(f)		({ (void)(f); true; })
+#define block_commit_write(f, f2, t)	do { } while (0)
+#define block_page_mkwrite(v, f, g)	((vm_fault_t)0)
+#define map_bh(bh, sb, block)		do { } while (0)
+#define block_read_full_folio(folio, get_block) \
+	({ (void)(folio); (void)(get_block); 0; })
 
 #endif /* _LINUX_BUFFER_HEAD_H */

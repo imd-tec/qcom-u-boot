@@ -56,6 +56,15 @@
 #define SLAB_RECLAIM_ACCOUNT	0x00020000UL	/* Track pages reclaimed */
 #define SLAB_ACCOUNT		0x00000000UL	/* Account to memcg (no-op) */
 
+/*
+ * Check if pointer is zero or in the zero page (used by SLUB allocator).
+ * PAGE_SIZE fallback for when this header is included standalone.
+ */
+#ifndef PAGE_SIZE
+#define PAGE_SIZE	4096
+#endif
+#define ZERO_OR_NULL_PTR(x)	((unsigned long)(x) <= PAGE_SIZE)
+
 void *kmalloc(size_t size, gfp_t flags);
 
 static inline void *kzalloc(size_t size, gfp_t flags)

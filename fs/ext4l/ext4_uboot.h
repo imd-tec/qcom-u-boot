@@ -118,11 +118,10 @@
 /* completion - use Linux header */
 #include <linux/completion.h>
 
-/* Cache alignment - stub */
-#define ____cacheline_aligned_in_smp
+/* Cache alignment - use linux/cache.h */
+#include <linux/cache.h>
 
-/* Pointer check macros */
-#define ZERO_OR_NULL_PTR(x)		((unsigned long)(x) <= PAGE_SIZE)
+/* ZERO_OR_NULL_PTR is in linux/slab.h */
 /* data_race is in linux/compiler.h */
 
 /* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
@@ -154,8 +153,7 @@
 /* kiocb, iov_iter - use linux/uio.h */
 #include <linux/uio.h>
 
-/* __counted_by attribute - not available in U-Boot */
-#define __counted_by(x)
+/* __counted_by is in linux/compiler_attributes.h */
 
 /* dir_context, filldir_t are in linux/fs.h */
 
@@ -165,12 +163,10 @@
 
 /* percpu rw semaphore is in linux/percpu.h */
 
-/* Memory allocation context - stubs */
-static inline unsigned int memalloc_nofs_save(void) { return 0; }
-static inline void memalloc_nofs_restore(unsigned int flags) { }
+/* Memory allocation context - use linux/sched/mm.h */
+#include <linux/sched/mm.h>
 
-/* Inode flags - stubs */
-#define IS_CASEFOLDED(inode)	(0)
+/* IS_CASEFOLDED is in linux/fs.h */
 /* IS_ENCRYPTED and FSCRYPT_SET_CONTEXT_MAX_SIZE are in ext4_fscrypt.h */
 #define S_NOQUOTA		0
 
@@ -193,14 +189,10 @@ static inline void memalloc_nofs_restore(unsigned int flags) { }
 
 /* Trace stubs are now in ext4_trace.h */
 
-/* Buffer operations - wait_on_buffer, lock_buffer, unlock_buffer etc are in linux/buffer_head.h */
-#define mark_buffer_dirty_inode(bh, i)	sync_dirty_buffer(bh)
-#define mark_buffer_dirty(bh)		sync_dirty_buffer(bh)
-struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
+/* Buffer operations are in linux/buffer_head.h */
 /* wait_on_bit_io is now in linux/wait_bit.h */
 
-/* inode_needs_sync - stub */
-#define inode_needs_sync(inode)		(0)
+/* inode_needs_sync is in linux/fs.h */
 
 /* Memory barriers are now in linux/smp.h */
 
@@ -209,53 +201,34 @@ struct buffer_head *sb_getblk(struct super_block *sb, sector_t block);
  * We implement them in interface.c for sandbox.
  */
 
-/* Little-endian bit operations - use arch-provided find_next_zero_bit */
-#define find_next_zero_bit_le(addr, size, offset) \
-	find_next_zero_bit((void *)addr, size, offset)
-#define __set_bit_le(nr, addr)		set_bit(nr, addr)
-#define test_bit_le(nr, addr)		test_bit(nr, addr)
-#define __test_and_clear_bit_le(nr, addr) \
-	({ int __old = test_bit(nr, addr); clear_bit(nr, addr); __old; })
-#define __test_and_set_bit_le(nr, addr) \
-	({ int __old = test_bit(nr, addr); set_bit(nr, addr); __old; })
+/* Little-endian bit operations - use asm-generic/bitops/le.h */
+#include <asm-generic/bitops/le.h>
 
-/* KUNIT stub */
-#define KUNIT_STATIC_STUB_REDIRECT(...)	do { } while (0)
+/* KUNIT stub - use kunit/static_stub.h */
+#include <kunit/static_stub.h>
 
 /* percpu_counter operations are in linux/percpu_counter.h */
 
-/* Group permission - stub */
-#define in_group_p(gid)			(0)
+/* in_group_p is in linux/cred.h */
 
 /* Quota operations - use linux/quotaops.h */
 #include <linux/quotaops.h>
 
-/* icount - inode reference count */
-#define icount_read(inode)			(1)
-
+/* icount_read is in linux/fs.h */
 /* d_inode is now in linux/dcache.h */
 
 /* Random number functions - use linux/random.h */
 #include <linux/random.h>
 
-/* Buffer cache operations */
-#define sb_find_get_block(sb, block)		((struct buffer_head *)NULL)
-#define sync_dirty_buffer(bh)			submit_bh(REQ_OP_WRITE, bh)
+/* Buffer cache operations - sb_find_get_block, sync_dirty_buffer are in linux/buffer_head.h */
 
-/* Time functions - use boot-relative time for timestamps */
-#define ktime_get_real_seconds()		(get_timer(0) / 1000)
-#define time_before32(a, b)			(0)
+/* Time functions - ktime_get_real_seconds, time_before32 are in linux/time.h */
 
 /* Inode operations - iget_locked and new_inode are in interface.c */
 extern struct inode *new_inode(struct super_block *sb);
-#define i_uid_write(inode, uid)			do { } while (0)
-#define i_gid_write(inode, gid)			do { } while (0)
-#define inode_fsuid_set(inode, idmap)		do { } while (0)
-#define inode_init_owner(idmap, i, dir, mode)	do { (i)->i_mode = (mode); } while (0)
-#define insert_inode_locked(inode)		(0)
-#define unlock_new_inode(inode)			do { } while (0)
-#define clear_nlink(inode)			do { } while (0)
-#define IS_DIRSYNC(inode)			({ (void)(inode); 0; })
+/* i_uid_write, i_gid_write, inode_fsuid_set, inode_init_owner are in linux/fs.h */
+/* insert_inode_locked, unlock_new_inode, clear_nlink are in linux/fs.h */
+/* IS_DIRSYNC is in linux/fs.h */
 
 /* fscrypt_prepare_new_inode, fscrypt_set_context are in ext4_fscrypt.h */
 
@@ -272,8 +245,7 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 #endif
 /* ext4_init_security is provided by xattr.h */
 
-/* inode state stubs */
-#define is_bad_inode(inode)			(0)
+/* is_bad_inode is in linux/fs.h */
 
 /* Block device operations - stubs */
 #define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
@@ -343,13 +315,7 @@ BUFFER_FNS(OwnsData, ownsdata)
 #define BH_Cached		(BH_JBDPrivateStart + 2)
 BUFFER_FNS(Cached, cached)
 
-/* Forward declare for get_block_t */
-struct inode;
-struct buffer_head;
-
-/* get_block_t - block mapping callback */
-typedef int (get_block_t)(struct inode *inode, sector_t iblock,
-			  struct buffer_head *bh_result, int create);
+/* get_block_t is in linux/fs.h */
 
 /* crc32c - from linux/crc32c.h */
 #include <linux/crc32c.h>
@@ -362,9 +328,7 @@ typedef int (get_block_t)(struct inode *inode, sector_t iblock,
 /* errseq_t is defined in linux/fs.h */
 /* time64_t is now in linux/time.h */
 
-/* IS_NOQUOTA - stub */
-#define IS_NOQUOTA(inode)	(0)
-
+/* IS_NOQUOTA is in linux/fs.h */
 /* dentry, name_snapshot are now in linux/dcache.h */
 
 /* VM types - use linux/mm_types.h */
@@ -415,11 +379,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 /* kuid_t and kgid_t - from linux/cred.h */
 #include <linux/cred.h>
 
-/* Inode state bits */
-#define I_NEW			(1 << 0)
-#define I_FREEING		(1 << 1)
-#define I_DIRTY_DATASYNC	(1 << 2)
-
+/* Inode state bits (I_NEW, I_FREEING, etc.) are in linux/fs.h */
 /* S_SYNC, S_NOATIME, etc. inode flags are in linux/fs.h */
 /* S_IRWXUGO is in linux/fs.h */
 
@@ -428,9 +388,7 @@ static inline int bdev_read_only(struct block_device *bdev)
 #define WHITEOUT_MODE	0
 
 /* RENAME_* flags are in linux/fs.h */
-
-/* Inode dirty state flags */
-#define I_DIRTY_TIME		(1 << 3)
+/* I_DIRTY_TIME is in linux/fs.h */
 
 /* SB_LAZYTIME is in linux/fs.h */
 /* ATTR_* iattr valid flags are in linux/fs.h */
@@ -647,9 +605,7 @@ struct dx_hash_info {
 
 /* rwsem_is_locked is in linux/rwsem.h */
 
-/* Buffer operations */
-#define sb_getblk_gfp(sb, blk, gfp)	sb_getblk((sb), (blk))
-#define bh_uptodate_or_lock(bh)		(1)
+/* Buffer operations - sb_getblk_gfp, bh_uptodate_or_lock are in linux/buffer_head.h */
 /* ext4_read_bh is stubbed in interface.c */
 
 /* Inode locking stubs are in linux/fs.h */
@@ -667,8 +623,7 @@ struct dx_hash_info {
 #define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
 #define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
 
-/* Security checks - no security in U-Boot */
-#define IS_NOSEC(inode)			(1)
+/* IS_NOSEC is in linux/fs.h */
 
 /* Filemap operations and fault handlers are in linux/pagemap.h */
 
@@ -676,8 +631,7 @@ struct dx_hash_info {
 #define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
 
 /* Inode time/size operations - inode_newsize_ok, i_blocksize, IS_SYNC are in linux/fs.h */
-#define inode_set_ctime_current(i)	({ (void)(i); (struct timespec64){}; })
-#define inode_set_mtime_to_ts(i, ts)	({ (void)(i); (ts); })
+/* inode_set_ctime_current, inode_set_mtime_to_ts are in linux/fs.h */
 
 /* Case-folding stubs - not supported in U-Boot */
 #define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
@@ -715,8 +669,7 @@ struct dx_hash_info {
 /* hrtimer - use linux/hrtimer.h */
 #include <linux/hrtimer.h>
 
-/* write lock variants */
-#define write_trylock(lock)		({ (void)(lock); 1; })
+/* write_trylock is in linux/spinlock.h */
 
 /* percpu_counter_init/destroy are in linux/percpu_counter.h */
 
@@ -736,14 +689,7 @@ struct dx_hash_info {
 /* address_space_operations is in linux/fs.h */
 /* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
 /* readahead_control, FGP_*, kmap/kunmap, folio stubs are in linux/pagemap.h */
-
-/* Folio operations - implemented in support.c */
-struct folio *__filemap_get_folio(struct address_space *mapping,
-				  pgoff_t index, unsigned int fgp_flags,
-				  gfp_t gfp);
-void folio_put(struct folio *folio);
-void folio_get(struct folio *folio);
-void mapping_clear_folio_cache(struct address_space *mapping);
+/* __filemap_get_folio, folio_put, folio_get, mapping_clear_folio_cache are in linux/pagemap.h */
 
 /* projid_t is now in linux/projid.h */
 
@@ -790,13 +736,11 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 
 /* dquot_file_open is in linux/quotaops.h */
 
-/* Inode I/O list management */
-#define inode_io_list_del(inode)		do { } while (0)
-#define inode_is_open_for_write(i)		(0)
-#define inode_is_dirtytime_only(i)		(0)
+/* inode_io_list_del is in linux/writeback.h */
+/* inode_is_open_for_write, inode_is_dirtytime_only are in linux/fs.h */
 
 /* Folio operations and writeback stubs are in linux/pagemap.h */
-#define folio_batch_release(fb)			do { } while (0)
+/* folio_batch_release is in linux/pagevec.h */
 
 /* Quota stubs are in linux/quotaops.h */
 
@@ -805,20 +749,8 @@ void mapping_clear_folio_cache(struct address_space *mapping);
 /* Filemap operations are in linux/pagemap.h */
 /* try_to_writeback_inodes_sb is in linux/writeback.h */
 
-/* Buffer operations - additional */
-#define getblk_unmovable(bdev, block, size)	sb_getblk(bdev->bd_super, block)
-#define create_empty_buffers(f, s, flags)	({ (void)(f); (void)(s); (void)(flags); (struct buffer_head *)NULL; })
-/* bh_offset returns offset of b_data within the folio */
-#define bh_offset(bh)				((bh)->b_folio ? \
-	(unsigned long)((char *)(bh)->b_data - (char *)(bh)->b_folio->data) : 0UL)
-#define block_invalidate_folio(f, o, l)		do { } while (0)
-#define block_write_end(pos, len, copied, folio) ({ (void)(pos); (void)(len); (void)(folio); (copied); })
-#define block_dirty_folio(m, f)			({ (void)(m); (void)(f); false; })
-#define try_to_free_buffers(f)			({ (void)(f); true; })
-#define block_commit_write(f, f2, t)		do { } while (0)
-#define block_page_mkwrite(v, f, g)		((vm_fault_t)0)
-#define map_bh(bh, sb, block)			do { } while (0)
-#define write_begin_get_folio(iocb, m, idx, l)	({ (void)(iocb); (void)(m); (void)(idx); (void)(l); (struct folio *)NULL; })
+/* Buffer/block folio operations are in linux/buffer_head.h */
+/* write_begin_get_folio is in linux/pagemap.h */
 
 /* fscrypt_name, fscrypt_match_name, and fscrypt stubs are in ext4_fscrypt.h */
 
@@ -841,9 +773,9 @@ static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
 
 /* Inode version operations - use linux/iversion.h */
 #include <linux/iversion.h>
-#define inode_set_flags(i, f, m)		do { } while (0)
+/* inode_set_flags is in linux/fs.h */
 
-/* Inode credential helpers */
+/* Inode credential helpers - i_uid_read, i_gid_read need struct inode */
 static inline unsigned int i_uid_read(const struct inode *inode)
 {
 	return inode->i_uid.val;
@@ -854,10 +786,7 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 	return inode->i_gid.val;
 }
 
-#define i_uid_needs_update(m, a, i)		({ (void)(m); (void)(a); (void)(i); 0; })
-#define i_gid_needs_update(m, a, i)		({ (void)(m); (void)(a); (void)(i); 0; })
-#define i_uid_update(m, a, i)			do { } while (0)
-#define i_gid_update(m, a, i)			do { } while (0)
+/* i_uid_needs_update, i_gid_needs_update, i_uid_update, i_gid_update are in linux/fs.h */
 
 /* Device encoding helpers are now in linux/kdev_t.h */
 #include <linux/kdev_t.h>
@@ -867,15 +796,9 @@ static inline unsigned int i_gid_read(const struct inode *inode)
 
 /* Inode allocation/state operations */
 extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
-#define set_nlink(i, n)			do { (i)->i_nlink = (n); } while (0)
-#define inc_nlink(i)			do { (i)->i_nlink++; } while (0)
-#define drop_nlink(i)			do { (i)->i_nlink--; } while (0)
-#define inode_set_cached_link(i, l, len) do { } while (0)
-#define init_special_inode(i, m, d)	do { } while (0)
-#define make_bad_inode(i)		do { } while (0)
-#define iget_failed(i)			do { } while (0)
-#define find_inode_by_ino_rcu(sb, ino)	((struct inode *)NULL)
-#define mark_inode_dirty(i)		do { } while (0)
+/* set_nlink, inc_nlink, drop_nlink are in linux/fs.h */
+/* inode_set_cached_link, init_special_inode, make_bad_inode are in linux/fs.h */
+/* iget_failed, find_inode_by_ino_rcu, mark_inode_dirty are in linux/fs.h */
 
 /* Attribute operations */
 #define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
@@ -1001,15 +924,7 @@ static inline const char *simple_get_link(struct dentry *dentry,
 
 /* QFMT_VFS_* quota format constants are in linux/quotaops.h */
 
-/* Buffer read sync */
-static inline void end_buffer_read_sync(struct buffer_head *bh, int uptodate)
-{
-	if (uptodate)
-		set_buffer_uptodate(bh);
-	else
-		clear_buffer_uptodate(bh);
-	unlock_buffer(bh);
-}
+/* end_buffer_read_sync is in linux/buffer_head.h */
 
 /* REQ_OP_READ is in linux/blk_types.h */
 /* SB_ACTIVE is in linux/fs.h */
@@ -1023,8 +938,13 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 
 /* system_state, SYSTEM_HALT, etc. are in linux/kernel.h */
 
-/* Hex dump */
-#define DUMP_PREFIX_ADDRESS	0
+/*
+ * Hex dump - DUMP_PREFIX_* types are in hexdump.h.
+ * However, the Linux kernel print_hex_dump has a different signature
+ * (includes log level) than U-Boot's, so we stub it out here.
+ */
+#include <hexdump.h>
+#undef print_hex_dump
 #define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
 /* SLAB_RECLAIM_ACCOUNT, SLAB_ACCOUNT are in linux/slab.h */
@@ -1033,41 +953,12 @@ static u64 __attribute__((unused)) __ext4_sectors[2];
 struct kstatfs;
 struct fid;
 
-/* super_operations - for VFS */
-struct super_operations {
-	struct inode *(*alloc_inode)(struct super_block *);
-	void (*free_inode)(struct inode *);
-	void (*destroy_inode)(struct inode *);
-	int (*write_inode)(struct inode *, struct writeback_control *);
-	void (*dirty_inode)(struct inode *, int);
-	int (*drop_inode)(struct inode *);
-	void (*evict_inode)(struct inode *);
-	void (*put_super)(struct super_block *);
-	int (*sync_fs)(struct super_block *, int);
-	int (*freeze_fs)(struct super_block *);
-	int (*unfreeze_fs)(struct super_block *);
-	int (*statfs)(struct dentry *, struct kstatfs *);
-	int (*show_options)(struct seq_file *, struct dentry *);
-	void (*shutdown)(struct super_block *);
-	ssize_t (*quota_read)(struct super_block *, int, char *, size_t, loff_t);
-	ssize_t (*quota_write)(struct super_block *, int, const char *, size_t, loff_t);
-	struct dentry *(*get_dquots)(struct inode *);
-};
+/* super_operations is in linux/fs/super_types.h */
 
 /* export_operations and fid - use linux/exportfs.h */
 #include <linux/exportfs.h>
 
-/* uuid_to_fsid - convert UUID to fsid */
-static inline __kernel_fsid_t uuid_to_fsid(const u8 *uuid)
-{
-	__kernel_fsid_t fsid;
-
-	fsid.val[0] = (uuid[0] << 24) | (uuid[1] << 16) |
-		      (uuid[2] << 8) | uuid[3];
-	fsid.val[1] = (uuid[4] << 24) | (uuid[5] << 16) |
-		      (uuid[6] << 8) | uuid[7];
-	return fsid;
-}
+/* uuid_to_fsid is in linux/statfs.h */
 
 /* kstatfs - use linux/statfs.h */
 #include <linux/statfs.h>
@@ -1130,14 +1021,13 @@ void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 /* EXT4 magic number */
 #define EXT4_SUPER_MAGIC		0xEF53
 
-/* Max file size for large files */
-#define MAX_LFS_FILESIZE		((loff_t)LLONG_MAX)
+/* MAX_LFS_FILESIZE is in linux/fs.h */
 
 /* blockgroup_lock - use linux/blockgroup_lock.h */
 #include <linux/blockgroup_lock.h>
 
+/* submit_bh is in linux/buffer_head.h */
 /* Buffer submission stubs - declarations for stub.c implementations */
-int submit_bh(int op_flags, struct buffer_head *bh);
 struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
 				unsigned int size, gfp_t gfp);
 int trylock_buffer(struct buffer_head *bh);
@@ -1168,11 +1058,8 @@ void fs_put_dax(void *dax, void *holder);
 
 /* fscrypt declarations are in ext4_fscrypt.h */
 
-/* Inode allocation - declaration for stub.c */
-void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
-		     gfp_t gfp);
+/* alloc_inode_sb, inode_generic_drop are in linux/fs.h */
 /* inode_set_iversion is in linux/iversion.h */
-int inode_generic_drop(struct inode *inode);
 
 /* rwlock_init is a macro in linux/spinlock.h */
 
@@ -1180,10 +1067,7 @@ int inode_generic_drop(struct inode *inode);
 #define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
 	kmem_cache_create(n, sz, al, fl, c)
 
-/* Inode buffer operations */
-#define invalidate_inode_buffers(i)	do { } while (0)
-#define clear_inode(i)			do { } while (0)
-
+/* invalidate_inode_buffers, clear_inode are in linux/fs.h */
 /* fsverity_cleanup_inode is in linux/fsverity.h */
 
 /* NFS export helpers are now in linux/exportfs.h */
@@ -1202,10 +1086,7 @@ void *kvzalloc(size_t size, gfp_t flags);
 /* Time operations - ktime_get_ns is in linux/ktime.h */
 /* nsecs_to_jiffies is in linux/jiffies.h */
 
-/* Superblock write operations */
-#define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
-#define sb_start_write(sb)		do { } while (0)
-#define sb_end_write(sb)		do { } while (0)
+/* sb_start_write, sb_end_write are in linux/fs/super_types.h */
 
 /* schedule_timeout_interruptible is in linux/sched.h */
 
@@ -1217,10 +1098,7 @@ void free_page(unsigned long addr);
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
 
-/* Block device atomic write stubs */
-#define bdev_can_atomic_write(bdev)		({ (void)(bdev); 0; })
-#define bdev_atomic_write_unit_max_bytes(bdev)	({ (void)(bdev); (unsigned int)0; })
-#define bdev_atomic_write_unit_min_bytes(bdev)	({ (void)(bdev); 0UL; })
+/* Block device atomic write stubs are in linux/blkdev.h */
 
 /* Superblock blocksize - declaration for stub.c */
 int sb_set_blocksize(struct super_block *sb, int size);
@@ -1293,32 +1171,7 @@ struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned 
 /* XArray is now in linux/xarray.h */
 /* Per-CPU stubs are in linux/percpu.h */
 
-/* Bit operations for little-endian bitmaps */
-#define __clear_bit_le(bit, addr)	clear_bit_le(bit, addr)
-
-static inline void clear_bit_le(int nr, void *addr)
-{
-	unsigned char *p = (unsigned char *)addr + (nr >> 3);
-
-	*p &= ~(1 << (nr & 7));
-}
-
-#define find_next_bit_le(addr, size, offset) \
-	ext4_find_next_bit_le(addr, size, offset)
-
-static inline unsigned long ext4_find_next_bit_le(const void *addr,
-						  unsigned long size,
-						  unsigned long offset)
-{
-	const unsigned char *p = addr;
-	unsigned long bit;
-
-	for (bit = offset; bit < size; bit++) {
-		if (p[bit >> 3] & (1 << (bit & 7)))
-			return bit;
-	}
-	return size;
-}
+/* Little-endian bit operations are in asm-generic/bitops/le.h */
 
 /* atomic64 operations are now in asm-generic/atomic.h */
 
@@ -1368,11 +1221,7 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* schedule_timeout_uninterruptible, need_resched are in linux/sched.h */
 
-/* Block device operations */
-#define sb_find_get_block_nonatomic(sb, block) \
-	({ (void)(sb); (void)(block); (struct buffer_head *)NULL; })
-#define __find_get_block_nonatomic(bdev, block, size) \
-	({ (void)(bdev); (void)(block); (void)(size); (struct buffer_head *)NULL; })
+/* sb_find_get_block_nonatomic, __find_get_block_nonatomic are in linux/buffer_head.h */
 #define bdev_discard_granularity(bdev) \
 	({ (void)(bdev); 0U; })
 
@@ -1392,17 +1241,8 @@ static inline unsigned long ext4_find_next_bit_le(const void *addr,
 
 /* fscrypt page-io stubs are in ext4_fscrypt.h */
 
-/* folio writeback operations */
-#define folio_end_writeback(f)		do { (void)(f); } while (0)
-#define folio_start_writeback(f)	do { (void)(f); } while (0)
-#define folio_start_writeback_keepwrite(f) do { (void)(f); } while (0)
-bool __folio_start_writeback(struct folio *folio, bool keep_write);
-
-/* writeback control stubs */
-#define wbc_init_bio(wbc, bio)		do { (void)(wbc); (void)(bio); } while (0)
-#define wbc_account_cgroup_owner(wbc, folio, bytes) \
-	do { (void)(wbc); (void)(folio); (void)(bytes); } while (0)
-
+/* folio writeback operations are in linux/pagemap.h */
+/* writeback control stubs are in linux/pagemap.h */
 /* bio_add_folio is in linux/bio.h */
 
 /*
@@ -1412,10 +1252,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* mempool is now in linux/mempool.h */
 #include <linux/mempool.h>
 
-/* folio read operations */
-#define folio_end_read(f, success)	do { (void)(f); (void)(success); } while (0)
-#define folio_set_mappedtodisk(f)	do { (void)(f); } while (0)
-
+/* folio read operations are in linux/pagemap.h */
 /* fscrypt readpage stubs are in ext4_fscrypt.h */
 
 /* fsverity stubs are in linux/fsverity.h */
@@ -1425,9 +1262,7 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* prefetch operations */
 #define prefetchw(addr)			do { (void)(addr); } while (0)
 
-/* block read operations */
-#define block_read_full_folio(folio, get_block) \
-	({ (void)(folio); (void)(get_block); 0; })
+/* block_read_full_folio is in linux/buffer_head.h */
 
 /*
  * Stubs for fast_commit.c
@@ -1447,18 +1282,19 @@ bool __folio_start_writeback(struct folio *folio, bool keep_write);
 /* get_current_ioprio is in linux/ioprio.h */
 
 /* JBD2 checkpoint.c stubs */
-#define mutex_lock_io(m)		mutex_lock(m)
-#define write_dirty_buffer(bh, flags)	sync_dirty_buffer(bh)
-#define spin_needbreak(l)		({ (void)(l); 0; })
+/* mutex_lock_io is in linux/mutex.h */
+/* write_dirty_buffer is in linux/buffer_head.h */
+/* spin_needbreak is in linux/spinlock.h */
 
 /* JBD2 commit.c stubs (folio_trylock is in linux/pagemap.h) */
-#define clear_bit_unlock(nr, addr)	clear_bit(nr, addr)
+/* clear_bit_unlock is in asm-generic/bitops/lock.h */
+#include <asm-generic/bitops/lock.h>
 /* smp_mb__after_atomic is now in linux/smp.h */
 #define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
 #define filemap_fdatawait_range_keep_errors(m, s, e) \
 	({ (void)(m); (void)(s); (void)(e); 0; })
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
-void free_buffer_head(struct buffer_head *bh);
+/* free_buffer_head is in linux/buffer_head.h */
 
 /* ext4l support functions (support.c) */
 void ext4l_crc32c_init(void);
@@ -1481,13 +1317,10 @@ struct disk_partition *ext4l_get_partition(void);
 /* DEFINE_WAIT stub - creates a wait queue entry */
 #define DEFINE_WAIT(name)		int name = 0
 
-/* cond_resched_lock - conditionally reschedule while holding a lock */
-#define cond_resched_lock(lock)		do { (void)(lock); } while (0)
+/* cond_resched_lock is in linux/sched.h */
 
 /* JBD2 journal.c stubs */
-struct buffer_head *alloc_buffer_head(gfp_t gfp_mask);
-struct buffer_head *__getblk(struct block_device *bdev, sector_t block,
-			     unsigned int size);
+/* alloc_buffer_head, __getblk are in linux/buffer_head.h */
 int bmap(struct inode *inode, sector_t *block);
 
 /* seq_file operations for /proc - stubs */
@@ -1508,9 +1341,7 @@ loff_t seq_lseek(struct file *f, loff_t o, int w);
 /* lockdep_init_map and lock_class_key are in linux/lockdep.h */
 
 /* Block device operations for journal.c */
-int bh_read(struct buffer_head *bh, int flags);
-#define bh_read_nowait(bh, flags)	bh_read(bh, flags)
-#define bh_readahead_batch(n, bhs, f)	do { (void)(n); (void)(bhs); (void)(f); } while (0)
+/* bh_read, bh_read_nowait, bh_readahead_batch are in linux/buffer_head.h */
 #define truncate_inode_pages_range(m, s, e) \
 	do { (void)(m); (void)(s); (void)(e); } while (0)
 #define blkdev_issue_discard(bdev, s, n, gfp) \
@@ -1544,26 +1375,20 @@ int bh_read(struct buffer_head *bh, int flags);
 
 /* filemap_release_folio is in linux/pagemap.h */
 
-/* IS_SWAPFILE - check if inode is a swap file */
-#define IS_SWAPFILE(inode)	({ (void)(inode); 0; })
+/* IS_SWAPFILE is in linux/fs.h */
 
 /* PAGE_MASK - mask for page alignment */
 #ifndef PAGE_MASK
 #define PAGE_MASK	(~(PAGE_SIZE - 1))
 #endif
 
-/* lock_two_nondirectories - lock two inodes in order */
-#define lock_two_nondirectories(i1, i2) \
-	do { (void)(i1); (void)(i2); } while (0)
-#define unlock_two_nondirectories(i1, i2) \
-	do { (void)(i1); (void)(i2); } while (0)
+/* lock_two_nondirectories, unlock_two_nondirectories are in linux/fs.h */
 
 /*
  * Stubs for resize.c
  */
 
-/* test_and_set_bit_lock - test and set a bit atomically */
-#define test_and_set_bit_lock(nr, addr)	test_and_set_bit(nr, addr)
+/* test_and_set_bit_lock is in asm-generic/bitops/lock.h */
 
 /* time_is_before_jiffies - check if time is before current jiffies */
 #define time_is_before_jiffies(a)	({ (void)(a); 0; })
