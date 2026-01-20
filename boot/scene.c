@@ -108,6 +108,9 @@ void scene_obj_destroy(struct scene_obj *obj)
 {
 	if (obj->type == SCENEOBJT_MENU)
 		scene_menu_destroy((struct scene_obj_menu *)obj);
+	else if (obj->type == SCENEOBJT_TEXTLINE ||
+		 obj->type == SCENEOBJT_TEXTEDIT)
+		scene_txtin_destroy(obj->scene, scene_obj_txtin(obj));
 	free(obj->name);
 	free(obj);
 }
