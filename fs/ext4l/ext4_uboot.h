@@ -117,9 +117,6 @@
 #include <linux/quotaops.h>
 #include <linux/random.h>
 
-/* Inode operations - iget_locked and new_inode are in interface.c */
-extern struct inode *new_inode(struct super_block *sb);
-
 /* Forward declarations for xattr functions */
 struct super_block;
 struct buffer_head;
@@ -133,8 +130,6 @@ int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
 
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
-
-void iput(struct inode *inode);
 
 #include <linux/sched.h>
 #include <linux/buffer_head.h>
@@ -226,9 +221,6 @@ struct path;
 /* UID/GID bit helpers - use linux/highuid.h */
 #include <linux/highuid.h>
 
-/* Inode allocation/state operations */
-extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
-
 /* Attribute operations */
 #define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
 #define setattr_copy(m, i, a)		do { } while (0)
@@ -259,17 +251,6 @@ extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
 {
 	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
-}
-
-/* file open helper */
-#define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
-
-/* simple_get_link - for fast symlinks stored in inode */
-static inline const char *simple_get_link(struct dentry *dentry,
-					  struct inode *inode,
-					  struct delayed_call *callback)
-{
-	return inode->i_link;
 }
 
 /*
@@ -436,9 +417,6 @@ void ext4l_print_msgs(void);
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
 
-/* JBD2 journal.c stubs */
-int bmap(struct inode *inode, sector_t *block);
-
 #include <linux/proc_fs.h>
 
 /* Memory allocation for journal.c */
@@ -483,10 +461,8 @@ int ext4_update_overhead(struct super_block *sb, bool force);
 /* fsmap is now in linux/fsmap.h */
 #include <linux/fsmap.h>
 
-/* list_sort and sort stubs for fsmap.c - not used in U-Boot */
-#define list_sort(priv, head, cmp) \
-	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
-#define sort(base, num, size, cmp, swap) \
-	do { (void)(base); (void)(num); (void)(size); (void)(cmp); (void)(swap); } while (0)
+/* list_sort and sort for fsmap.c */
+#include <linux/list_sort.h>
+#include <linux/sort.h>
 
 #endif /* __EXT4_UBOOT_H__ */
