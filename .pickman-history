@@ -4275,7 +4275,6 @@ Final build passes. Let me provide the final status report:
 - **Commit #7**: +267 lines vs original +265 lines (difference due to mach-qemu Kconfig line already present in conflict resolution) - acceptable variance.
 
 The branch `cherry-5a42996c490` is ready for pushing.
->>>>>>> b1f3e2932da (pickman: Record cherry-pick of 9 commits from us/next)
 
 ---
 
@@ -5091,6 +5090,78 @@ All 13 cherry-picked commits are present (15 original commits minus 2 that were 
 - None - all applied commits match their originals in file changes and line counts.
 
 The branch `cherry-499386c5eb6` is ready for pushing.
+
+---
+
+## 2026-01-20: us/next
+
+Branch: cherry-4f1dc6f1e1d
+
+Commits:
+- 4f1dc6f1e1d configs: e850-96: Enable options for updated env
+- 5af19ede0d5 configs: e850-96: Enable U-Boot environment on eMMC
+- 922c68563a2 configs: e850-96: Enable more EFI features
+- 30404063281 configs: e850-96: Enable Standard Boot
+- 4d8ccb938d5 board: samsung: e850-96: Load LDFW from EFI partition
+- ccfd8de541a board: samsung: e850-96: Report LDFW loading failures
+- 16218681a54 board: samsung: e850-96: Provide bootstd default env
+- cfdf18b31b0 Merge https://source.denx.de/u-boot/custodians/u-boot-samsung
+
+### Conversation log
+The repository is clean (untracked files don't matter). Let me create the new branch based on ci/master.
+
+Now let me start cherry-picking the commits. First, let me check if the last commit (the merge) might already be applied by verifying the commit marked as "maybe already applied".
+
+These are different commits - different dates and different parent commits. Let me start cherry-picking the first commit.
+
+First commit applied successfully. Let me verify the delta and run a build test.
+
+Delta is identical. Now let me run the build test.
+
+Build passed. Let me continue with the second commit.
+
+Build passed. Let me continue with commit 3.
+
+Build passed. Commit 4:
+
+Build passed. Commit 5:
+
+Build passed. Commit 6:
+
+Build passed. Commit 7:
+
+Build passed. Now commit 8 - the merge commit:
+
+The merge commit results in an empty commit (all changes were already applied through the preceding cherry-picks). As instructed, I'll commit it anyway to preserve the history:
+
+All 8 commits are applied. Let me verify with git log and run the final build:
+
+All 8 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!** All 8 commits have been applied to branch `cherry-4f1dc6f1e1d`.
+
+### Summary
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 4f1dc6f1e1d | configs: e850-96: Enable options for updated env | ✅ Applied |
+| 2 | 5af19ede0d5 | configs: e850-96: Enable U-Boot environment on eMMC | ✅ Applied |
+| 3 | 922c68563a2 | configs: e850-96: Enable more EFI features | ✅ Applied |
+| 4 | 30404063281 | configs: e850-96: Enable Standard Boot | ✅ Applied |
+| 5 | 4d8ccb938d5 | board: samsung: e850-96: Load LDFW from EFI partition | ✅ Applied |
+| 6 | ccfd8de541a board: samsung: e850-96: Report LDFW loading failures | ✅ Applied |
+| 7 | 16218681a54 | board: samsung: e850-96: Provide bootstd default env | ✅ Applied |
+| 8 | cfdf18b31b0 | Merge https://source.denx.de/u-boot/custodians/u-boot-samsung | ✅ Applied (empty - all changes in preceding commits) |
+
+### Results
+- **Build result**: OK (no warnings or errors)
+- **Fix-ups made**: None
+- **Commits with concerning deltas**: None (all deltas matched exactly)
+- **Notes**: The merge commit (cfdf18b31b0) resulted in an empty commit since all actual changes were already applied through the preceding 7 commits. The empty commit was preserved using `--allow-empty` to maintain the history record.
+
+The branch `cherry-4f1dc6f1e1d` is ready for pushing.
 
 ---
 
