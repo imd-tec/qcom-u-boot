@@ -5681,3 +5681,77 @@ The branch `cherry-3da1864b1f2` is ready for pushing.
 
 ---
 
+## 2026-01-21: us/next
+
+Branch: cherry-c125ef543c1
+
+Commits:
+- c125ef543c1 Revert "drivers: gpio-uclass: support PMIC GPIO children"
+- 1ca8ec80f29 pmic: max77663: bind children to parent node
+- aab837d7fc7 pmic: palmas: bind sysreset to parent node
+- efb7964cc16 pinctrl: tegra20: adjust pin type detection
+- b93e25dc73a board: asus: convert SPL to XPL
+- e4f5741c6dc ARM: tegra124: clock: implement PLLD2 support
+- c3d8c206dc6 ARM: tegra210: clock: implement PLLD2 support
+- f47a02825aa ARM: tegra30: dts: complete DSI nodes
+- dedc0468b2e ARM: tegra124: dts: add missing DSI nodes
+- 279289e0cfb ARM: tegra124: dts: mark HOST1X and DC with pre-relocation flag
+- 9095fb12110 doc: board: tegra: update device information
+- df48a95588f board: transformer-t30: fix model detection
+- f9edd081b11 mbedtls/external: remove broken git submodule
+- 89d33336d26 Merge branch 'misc' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+Now let's cherry-pick the first commit:
+
+Build passed. Let's continue with commit 2:
+
+Now for commit 13, this was marked as "maybe already applied as c4c7d9d71e4". Let me verify if it's already applied:
+
+The patches are identical (only the commit hash differs). This means the commit is already applied. Let me verify which branch c4c7d9d71e4 is on:
+
+The commit is already in ci/master with a different hash. Let me skip commit 13 and proceed to commit 14 (the merge commit):
+
+The merge commit is empty (because it was a merge and the content is already present via the previous cherry-picks). Let me commit it as empty to preserve the history:
+
+Now let me verify all commits are present:
+
+Now let me run the final build test:
+
+## Final Status Report
+
+**Branch:** `cherry-c125ef543c1` (based on `ci/master`)
+
+**Build result:** ✅ OK - Build passed successfully
+
+**Cherry-pick summary:** 13 of 14 commits applied
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | c125ef543c1 | Revert "drivers: gpio-uclass: support PMIC GPIO children" | ✅ Applied |
+| 2 | 1ca8ec80f29 | pmic: max77663: bind children to parent node | ✅ Applied |
+| 3 | aab837d7fc7 | pmic: palmas: bind sysreset to parent node | ✅ Applied |
+| 4 | efb7964cc16 | pinctrl: tegra20: adjust pin type detection | ✅ Applied |
+| 5 | b93e25dc73a | board: asus: convert SPL to XPL | ✅ Applied |
+| 6 | e4f5741c6dc | ARM: tegra124: clock: implement PLLD2 support | ✅ Applied |
+| 7 | c3d8c206dc6 | ARM: tegra210: clock: implement PLLD2 support | ✅ Applied |
+| 8 | f47a02825aa | ARM: tegra30: dts: complete DSI nodes | ✅ Applied |
+| 9 | dedc0468b2e | ARM: tegra124: dts: add missing DSI nodes | ✅ Applied |
+| 10 | 279289e0cfb | ARM: tegra124: dts: mark HOST1X and DC with pre-relocation flag | ✅ Applied |
+| 11 | 9095fb12110 | doc: board: tegra: update device information | ✅ Applied |
+| 12 | df48a95588f | board: transformer-t30: fix model detection | ✅ Applied |
+| 13 | f9edd081b11 | mbedtls/external: remove broken git submodule | ⏭️ Skipped (already in ci/master as c4c7d9d71e4) |
+| 14 | 89d33336d26 | Merge branch 'misc' | ✅ Applied (empty) |
+
+**Fix-ups made:** None
+
+**Concerning deltas:** None - all cherry-picks matched their original commits exactly.
+
+**Notes:**
+- Commit 13 (f9edd081b11) was verified to be identical to c4c7d9d71e4 which is already in ci/master, so it was skipped.
+- The merge commit (14) was applied as empty since its content was already incorporated via the individual cherry-picks.
+
+The branch `cherry-c125ef543c1` is ready for pushing.
+
+---
+
