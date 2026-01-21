@@ -164,6 +164,98 @@ void scene_txtin_close(struct scene *scn, struct scene_txtin *tin)
 	vidconsole_readline_end(scn->expo->cons, tin->ctx);
 }
 
+/**
+ * scene_txtin_line_nav() - Navigate to previous/next line in multi-line input
+ *
+ * Moves the cursor to the previous or next line, trying to maintain the same
+ * horizontal pixel position. Uses the text measurement info attached to the
+ * edit text object.
+ *
+ * @cls: CLI line state
+ * @up: true to move to previous line, false for next line
+ * Return: New cursor position, or -ve if at boundary
+ */
+static int scene_txtin_line_nav(struct cli_line_state *cls, bool up)
+{
+	struct scene_txtin *tin = container_of(cls, struct scene_txtin, cls);
+	struct scene *scn = cls->priv;
+	struct scene_obj_txt *txt;
+	const struct vidconsole_mline *mline;
+	const struct vidconsole_mline *target;
+	struct vidconsole_bbox bbox;
+	uint pos = cls->num;
+	int cur_line, target_line;
+	int target_x, best_pos, best_diff;
+	int i, ret;
+
+	txt = scene_obj_find(scn, tin->edit_id, SCENEOBJT_NONE);
+	if (!txt || !txt->gen.lines.count)
+		return -ENOENT;
+
+	/* find which line the cursor is on */
+	cur_line = -1;
+	for (i = 0; i < txt->gen.lines.count; i++) {
+		mline = alist_get(&txt->gen.lines, i, struct vidconsole_mline);
+		if (pos >= mline->start && pos <= mline->start + mline->len) {
+			cur_line = i;
+			break;
+		}
+	}
+	if (cur_line < 0)
+		return -EINVAL;
+
+	/* find target line */
+	target_line = up ? cur_line - 1 : cur_line + 1;
+	if (target_line < 0 || target_line >= txt->gen.lines.count)
+		return -EINVAL;
+
+	/* measure text from line start to cursor to get x position */
+	ret = vidconsole_measure(scn->expo->cons, txt->gen.font_name,
+				 txt->gen.font_size, cls->buf + mline->start,
+				 pos - mline->start, -1, &bbox, NULL);
+	if (ret)
+		return ret;
+	target_x = bbox.x1;
+
+	/* find character position on target line closest to target_x */
+	target = alist_get(&txt->gen.lines, target_line, struct vidconsole_mline);
+	best_pos = target->start;
+	best_diff = target_x;  /* diff from position 0 */
+
+	for (i = 1; i <= target->len; i++) {
+		int diff;
+
+		ret = vidconsole_measure(scn->expo->cons, txt->gen.font_name,
+					 txt->gen.font_size,
+					 cls->buf + target->start, i, -1,
+					 &bbox, NULL);
+		if (ret)
+			break;
+		diff = abs(bbox.x1 - target_x);
+		if (diff < best_diff) {
+			best_diff = diff;
+			best_pos = target->start + i;
+		}
+		/* stop if we've gone past the target */
+		if (bbox.x1 > target_x)
+			break;
+	}
+
+	/* measure text to best_pos to get x coordinate for cursor */
+	ret = vidconsole_measure(scn->expo->cons, txt->gen.font_name,
+				 txt->gen.font_size, cls->buf + target->start,
+				 best_pos - target->start, -1, &bbox, NULL);
+	if (ret)
+		return ret;
+
+	/* set cursor position: text object position + line offset + char offset */
+	vidconsole_set_cursor_pos(scn->expo->cons, tin->ctx,
+				  txt->obj.bbox.x0 + bbox.x1,
+				  txt->obj.bbox.y0 + target->bbox.y0);
+
+	return best_pos;
+}
+
 int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
@@ -196,6 +288,10 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	cls->insert = true;
 	cls->putch = scene_txtin_putch;
 	cls->priv = scn;
+	if (obj->type == SCENEOBJT_TEXTEDIT) {
+		cls->multiline = true;
+		cls->line_nav = scene_txtin_line_nav;
+	}
 	cli_cread_add_initial(cls);
 
 	/* make sure the cursor is visible */

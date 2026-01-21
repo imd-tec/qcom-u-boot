@@ -11,6 +11,7 @@
 #include <membuf.h>
 #include <menu.h>
 #include <video.h>
+#include <video_console.h>
 #include <linux/input.h>
 #include <test/cedit-test.h>
 #include <test/ut.h>
@@ -1541,6 +1542,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 {
 	struct scene_obj_txtedit *ted;
 	struct scene_obj_menu *menu;
+	struct vidconsole_ctx *ctx;
 	struct abuf buf, logo_copy;
 	struct expo_action act;
 	struct scene *scn;
@@ -1590,15 +1592,20 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	/* the cursor should be at the end */
 	ut_asserteq(100, ted->tin.cls.num);
 	ut_asserteq(100, ted->tin.cls.eol_num);
+	ctx = ted->tin.ctx;
+	ut_asserteq(343, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(260, ctx->ycur);
 	ut_asserteq(21526, video_compress_fb(uts, dev, false));
 
 	/* send a keypress to add a character */
 	ut_assertok(expo_send_key(exp, 'X'));
 	ut_asserteq(101, ted->tin.cls.num);
 	ut_asserteq(101, ted->tin.cls.eol_num);
+	ut_asserteq(353, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(260, ctx->ycur);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(21607, video_compress_fb(uts, dev, false));
+	ut_asserteq(21612, video_compress_fb(uts, dev, false));
 
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
 	ut_assertok(expo_send_key(exp, CTL_CH('b')));
@@ -1609,6 +1616,9 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(101, ted->tin.cls.eol_num);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
+	/* check cursor position after render (render_deps corrects it) */
+	ut_asserteq(329, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(260, ctx->ycur);
 	ut_asserteq(21623, video_compress_fb(uts, dev, false));
 
 	/* delete a character at the cursor (removes 'e') */
@@ -1619,7 +1629,22 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(100, ted->tin.cls.eol_num);
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
+	/* check cursor position after render (render_deps corrects it) */
+	ut_asserteq(329, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(260, ctx->ycur);
 	ut_asserteq(21541, video_compress_fb(uts, dev, false));
+
+	/* move cursor to previous visual line at same x position */
+	ut_assertok(expo_send_key(exp, CTL_CH('p')));
+	ut_asserteq(67, ted->tin.cls.num);
+	ut_asserteq(100, ted->tin.cls.eol_num);
+	ut_asserteq(328, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(240, ctx->ycur);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(327, VID_TO_PIXEL(ctx->xcur_frac));
+	ut_asserteq(240, ctx->ycur);
+	ut_asserteq(21538, video_compress_fb(uts, dev, false));
 
 	/* close the textedit with Enter (BKEY_SELECT) */
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
