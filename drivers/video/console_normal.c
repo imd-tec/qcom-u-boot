@@ -133,36 +133,6 @@ static __maybe_unused int console_get_cursor_info(struct udevice *dev,
 	return 0;
 }
 
-static __maybe_unused int normal_entry_save(struct udevice *dev,
-					    struct abuf *buf)
-{
-	struct console_ctx *ctx = vidconsole_ctx(dev);
-	const uint size = sizeof(*ctx);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	if (!abuf_realloc(buf, size))
-		return log_msg_ret("sav", -ENOMEM);
-
-	memcpy(abuf_data(buf), ctx, size);
-
-	return 0;
-}
-
-static __maybe_unused int normal_entry_restore(struct udevice *dev,
-					       struct abuf *buf)
-{
-	struct console_ctx *ctx = vidconsole_ctx(dev);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	memcpy(ctx, abuf_data(buf), sizeof(*ctx));
-
-	return 0;
-}
-
 static int console_putc_xy(struct udevice *dev, void *vctx, uint x_frac,
 			   uint y, int cp)
 {
@@ -179,8 +149,6 @@ struct vidconsole_ops console_ops = {
 	.ctx_new	= console_simple_ctx_new,
 #ifdef CONFIG_CURSOR
 	.get_cursor_info	= console_get_cursor_info,
-	.entry_save	= normal_entry_save,
-	.entry_restore	= normal_entry_restore,
 #endif
 };
 

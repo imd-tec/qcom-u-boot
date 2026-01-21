@@ -801,37 +801,6 @@ int vidconsole_ctx_dispose(struct udevice *dev, void *vctx)
 	return 0;
 }
 
-int vidconsole_entry_save(struct udevice *dev, struct abuf *buf)
-{
-	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	int ret;
-
-	if (ops->entry_save) {
-		ret = ops->entry_save(dev, buf);
-		if (ret != -ENOSYS)
-			return ret;
-	}
-
-	/* no data so make sure the buffer is empty */
-	abuf_realloc(buf, 0);
-
-	return 0;
-}
-
-int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf)
-{
-	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	int ret;
-
-	if (ops->entry_restore) {
-		ret = ops->entry_restore(dev, buf);
-		if (ret != -ENOSYS)
-			return ret;
-	}
-
-	return 0;
-}
-
 #ifdef CONFIG_CURSOR
 int vidconsole_show_cursor(struct udevice *dev, void *vctx)
 {

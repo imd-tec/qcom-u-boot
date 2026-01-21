@@ -406,30 +406,6 @@ struct vidconsole_ops {
 	int (*ctx_dispose)(struct udevice *dev, void *ctx);
 
 	/**
-	 * entry_save() - Save any text-entry information for later use
-	 *
-	 * Saves text-entry context such as a list of positions for each
-	 * character in the string.
-	 *
-	 * @dev: Console device to use
-	 * @buf: Buffer to hold saved data
-	 * Return: 0 if OK, -ENOMEM if out of memory
-	 */
-	int (*entry_save)(struct udevice *dev, struct abuf *buf);
-
-	/**
-	 * entry_restore() - Restore text-entry information for current use
-	 *
-	 * Restores text-entry context such as a list of positions for each
-	 * character in the string.
-	 *
-	 * @dev: Console device to use
-	 * @buf: Buffer containing data to restore
-	 * Return: 0 if OK, -ve on error
-	 */
-	int (*entry_restore)(struct udevice *dev, struct abuf *buf);
-
-	/**
 	 * get_cursor_info() - Get cursor position info
 	 *
 	 * Calculates and stores cursor position information. This must fill in
@@ -557,30 +533,6 @@ int vidconsole_ctx_new(struct udevice *dev, void **ctxp);
  * @ctx: Context to dispose of
  */
 int vidconsole_ctx_dispose(struct udevice *dev, void *ctx);
-
-/**
- * vidconsole_entry_save() - Save any text-entry information for later use
- *
- * Saves text-entry context such as a list of positions for each
- * character in the string.
- *
- * @dev: Console device to use
- * @buf: Buffer to hold saved data
- * Return: 0 if OK, -ENOMEM if out of memory
- */
-int vidconsole_entry_save(struct udevice *dev, struct abuf *buf);
-
-/**
- * entry_restore() - Restore text-entry information for current use
- *
- * Restores text-entry context such as a list of positions for each
- * character in the string.
- *
- * @dev: Console device to use
- * @buf: Buffer containing data to restore
- * Return: 0 if OK, -ve on error
- */
-int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf);
 
 #ifdef CONFIG_CURSOR
 /**

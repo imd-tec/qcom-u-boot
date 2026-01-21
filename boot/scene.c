@@ -92,7 +92,6 @@ int scene_new(struct expo *exp, const char *name, uint id, struct scene **scnp)
 		free(scn);
 		return log_msg_ret("buf", -ENOMEM);
 	}
-	abuf_init(&scn->entry_save);
 
 	INIT_LIST_HEAD(&scn->obj_head);
 	scn->id = resolve_id(exp, id);
@@ -122,7 +121,6 @@ void scene_destroy(struct scene *scn)
 	list_for_each_entry_safe(obj, next, &scn->obj_head, sibling)
 		scene_obj_destroy(obj);
 
-	abuf_uninit(&scn->entry_save);
 	abuf_uninit(&scn->buf);
 	free(scn->name);
 	free(scn);

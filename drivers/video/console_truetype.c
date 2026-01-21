@@ -1156,34 +1156,6 @@ static int truetype_ctx_new(struct udevice *dev, void *vctx)
 	return 0;
 }
 
-static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
-{
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	const uint size = sizeof(*ctx);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	if (!abuf_realloc(buf, size))
-		return log_msg_ret("sav", -ENOMEM);
-
-	memcpy(abuf_data(buf), ctx, size);
-
-	return 0;
-}
-
-static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
-{
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	memcpy(ctx, abuf_data(buf), sizeof(*ctx));
-
-	return 0;
-}
-
 static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 {
 	struct console_tt_ctx *ctx = vctx;
@@ -1196,9 +1168,7 @@ static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 		return -ENOSYS;
 
 	/*
-	 * figure out where to place the cursor. This driver ignores the
-	 * passed-in values, since an entry_restore() must have been done before
-	 * calling this function.
+	 * Figure out where to place the cursor.
 	 *
 	 * A current quirk is that the cursor is always at xcur_frac, since we
 	 * output characters directly to the console as they are typed by the
@@ -1315,8 +1285,6 @@ struct vidconsole_ops console_truetype_ops = {
 	.measure	= truetype_measure,
 	.nominal	= truetype_nominal,
 	.ctx_new	= truetype_ctx_new,
-	.entry_save	= truetype_entry_save,
-	.entry_restore	= truetype_entry_restore,
 	.get_cursor_info	= truetype_get_cursor_info,
 	.mark_start	= truetype_mark_start,
 };

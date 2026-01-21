@@ -147,9 +147,6 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	cls->putch = scene_txtin_putch;
 	cls->priv = scn;
 	cli_cread_add_initial(cls);
-	ret = vidconsole_entry_save(cons, &scn->entry_save);
-	if (ret)
-		return log_msg_ret("sav", ret);
 
 	/* make sure the cursor is visible */
 	vidconsole_readline_start(cons, ctx, true);
@@ -204,19 +201,9 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 		event->select.id = obj->id;
 		key = '\n';
 		fallthrough;
-	default: {
-		struct udevice *cons = scn->expo->cons;
-		int ret;
-
-		ret = vidconsole_entry_restore(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
-		ret = cread_line_process_ch(cls, key);
-		ret = vidconsole_entry_save(cons, &scn->entry_save);
-		if (ret)
-			return log_msg_ret("sav", ret);
+	default:
+		cread_line_process_ch(cls, key);
 		break;
-	}
 	}
 
 	return 0;
