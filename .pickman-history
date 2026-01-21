@@ -5579,3 +5579,105 @@ All commit deltas verified - no changes to functional content.
 
 ---
 
+## 2026-01-21: us/next
+
+Branch: cherry-3da1864b1f2
+
+Commits:
+- 3da1864b1f2 configs: Resync with savedefconfig
+- 9f6b9f57fef net: lwip: move eth_init() out of new_netif()
+- 10917df17f2 net: lwip: tftp: fix find_option()
+- 7c7361b98d6 lib: implement strnstr()
+- 4fee75276d3 test: unit tests for strstr() and strnstr()
+- 331d75544fc net: use strnstr() for lwip_strnstr()
+- a091d173e32 net: Kconfig: depend on DM_RNG for WGET_HTTPS
+- 9b35357b95e Merge branch 'u-boot-net-20250212' of https://source.denx.de/u-boot/custodians/u-boot-net
+
+### Conversation log
+Now let me check if the commits marked "maybe already applied" are actually the same. I'll compare the patches for each pair.
+
+Now let me compare the patches to see if they are the same:
+
+Let me check more details about the comparisons, especially the last few commits that showed minimal differences, and also check the remaining commits that aren't marked as "maybe already applied":
+
+The last three commits (10917df17f2, 4fee75276d3, 331d75544fc) only differ by commit hash - the content is identical. Let me also check the remaining commits that aren't marked as "maybe already applied":
+
+The a091d173e32 and 9b35357b95e commits are not found in ci/master. Let me also verify if the 291ab4b0a3e (the found hash for strnstr) is actually a merge commit and different from 7c7361b98d6:
+
+So the strnstr commit (7c7361b98d6) is already present in ci/master as 1fe89ebebda. Based on my analysis:
+
+**Summary of "maybe already applied" commits:**
+1. **3da1864b1f2 vs 47afb3ffa58**: DIFFERENT - 47afb3ffa58 is a different commit about pickman (not defconfig resync). Need to handle with qconfig.py.
+2. **9f6b9f57fef vs b504d8bc1b3**: SAME - only commit hash and cherry-pick reference differ. **SKIP**
+3. **10917df17f2 vs 4d629510346**: SAME - only commit hash differs. **SKIP**
+4. **7c7361b98d6 vs 1fe89ebebda** (found the correct one): SAME - only commit hash and cherry-pick reference differ. **SKIP**
+5. **4fee75276d3 vs f9f560685b0**: SAME - only commit hash differs. **SKIP**
+6. **331d75544fc vs ddedf214131**: SAME - only commit hash differs. **SKIP**
+
+**Commits not in ci/master:**
+- a091d173e32: net: Kconfig: depend on DM_RNG for WGET_HTTPS - NOT FOUND, need to cherry-pick
+- 9b35357b95e: Merge branch 'u-boot-net-20250212' - NOT FOUND, need to cherry-pick
+
+Let me now proceed with the cherry-picks:
+
+The qconfig.py produced no output. Let me check if it made any changes:
+
+qconfig.py made no changes (likely because defconfigs are already in sync). Let me verify by checking the git log:
+
+No commit was created by qconfig.py because there were no changes needed. Now let me proceed with the remaining commits:
+
+**Commit 2 (9f6b9f57fef) - SKIP** - Already applied as b504d8bc1b3
+**Commit 3 (10917df17f2) - SKIP** - Already applied as 4d629510346
+**Commit 4 (7c7361b98d6) - SKIP** - Already applied as 1fe89ebebda
+**Commit 5 (4fee75276d3) - SKIP** - Already applied as f9f560685b0
+**Commit 6 (331d75544fc) - SKIP** - Already applied as ddedf214131
+
+Now let me cherry-pick commit 7 (a091d173e32):
+
+Let me verify the cherry-pick and run the build test:
+
+There's a small delta - original modified 2 files (cmd/Kconfig + net/lwip/wget.c) but cherry-pick only modified 1 file (net/lwip/wget.c). Let me check if the cmd/Kconfig change is already in the target branch:
+
+The cmd/Kconfig change is already present in the target branch (DM_RNG dependency is already there), so the auto-merge correctly didn't include it. The build passed, so let me proceed to the merge commit:
+
+There are conflicts with the merge commit. Since most of the content in this merge commit was already applied via the individual commits that are now in ci/master, these conflicts are expected. Let me examine the conflicts:
+
+The merge commit brings in all the changes from the series. Since most of these changes are already in ci/master (we confirmed commits 2-6 were already applied), the conflicts are because the code is already there. Let me examine one of the conflicts to understand the pattern:
+
+I can see the pattern - the merge commit is trying to add older code that has already been replaced with newer versions in ci/master. Since all the component commits have already been applied (just with different hashes), and the merge commit is only a container for those changes, the correct resolution is to keep HEAD's version (which already has the updated code).
+
+Let me resolve all conflicts by keeping the HEAD version (which already includes all the properly applied changes):
+
+Now let me verify the final state and run the build test:
+
+The build passes. Let me provide a final summary:
+
+## Final Status Report
+
+### Cherry-pick Results for branch `cherry-3da1864b1f2`
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 3da1864b1f2 | configs: Resync with savedefconfig [QCONFIG RESYNC] | **SKIPPED** - qconfig.py run but no changes needed (defconfigs already in sync) |
+| 2 | 9f6b9f57fef | net: lwip: move eth_init() out of new_netif() | **SKIPPED** - Already applied as b504d8bc1b3 |
+| 3 | 10917df17f2 | net: lwip: tftp: fix find_option() | **SKIPPED** - Already applied as 4d629510346 |
+| 4 | 7c7361b98d6 | lib: implement strnstr() | **SKIPPED** - Already applied as 1fe89ebebda |
+| 5 | 4fee75276d3 | test: unit tests for strstr() and strnstr() | **SKIPPED** - Already applied as f9f560685b0 |
+| 6 | 331d75544fc | net: use strnstr() for lwip_strnstr() | **SKIPPED** - Already applied as ddedf214131 |
+| 7 | a091d173e32 | net: Kconfig: depend on DM_RNG for WGET_HTTPS | **CHERRY-PICKED** as b0e1925b1ac (minor delta: cmd/Kconfig change already present) |
+| 8 | 9b35357b95e | Merge branch 'u-boot-net-20250212' | **CHERRY-PICKED** as 02925bc7f4a (empty commit - all content already applied) |
+
+### Summary
+- **Build result**: ✅ OK (sandbox builds successfully)
+- **Commits actually applied**: 2 (a091d173e32 + 9b35357b95e)
+- **Commits skipped**: 6 (already applied with different hashes)
+- **Fix-ups made**: 
+  - Merge commit 9b35357b95e created as empty commit since all component commits were already in ci/master
+  - Added note in merge commit message explaining this
+- **Concerning deltas**: 
+  - a091d173e32: Minor delta - cmd/Kconfig change (adding DM_RNG dependency) was already present in target branch, so only net/lwip/wget.c was modified
+
+The branch `cherry-3da1864b1f2` is ready for pushing.
+
+---
+
