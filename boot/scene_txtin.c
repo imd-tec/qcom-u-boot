@@ -142,7 +142,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 
 	vidconsole_set_cursor_pos(cons, ctx, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons, ctx);
-	cli_cread_init(cls, abuf_data(&tin->buf), tin->line_chars);
+	cli_cread_init(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
 	cls->insert = true;
 	cls->putch = scene_txtin_putch;
 	cls->priv = scn;
