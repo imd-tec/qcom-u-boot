@@ -570,12 +570,14 @@ int inode_generic_drop(struct inode *inode);
 struct inode *new_inode(struct super_block *sb);
 struct inode *iget_locked(struct super_block *sb, unsigned long ino);
 void iput(struct inode *inode);
+#define ihold(i)			do { (void)(i); } while (0)
 
 /* Block mapping - implemented in ext4l/stub.c */
 int bmap(struct inode *inode, sector_t *block);
 
 /* Simple filesystem helpers */
 #define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+#define finish_open_simple(f, e)	(e)
 
 /* simple_get_link - for fast symlinks stored in inode */
 struct delayed_call;

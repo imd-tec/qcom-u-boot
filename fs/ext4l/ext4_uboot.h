@@ -196,10 +196,6 @@ struct path;
 /* hash_64 - use linux/hash.h */
 #include <linux/hash.h>
 
-/* Dentry operations are now in linux/dcache.h */
-#define finish_open_simple(f, e)		(e)
-#define ihold(i)				do { (void)(i); } while (0)
-
 #include <linux/path.h>
 #include <linux/dax.h>
 
