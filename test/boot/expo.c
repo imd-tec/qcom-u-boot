@@ -1592,6 +1592,35 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(100, ted->tin.cls.eol_num);
 	ut_asserteq(21526, video_compress_fb(uts, dev, false));
 
+	/* send a keypress to add a character */
+	ut_assertok(expo_send_key(exp, 'X'));
+	ut_asserteq(101, ted->tin.cls.num);
+	ut_asserteq(101, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21607, video_compress_fb(uts, dev, false));
+
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+
+	/* check cursor moved back three positions, before 'e' */
+	ut_asserteq(98, ted->tin.cls.num);
+	ut_asserteq(101, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21623, video_compress_fb(uts, dev, false));
+
+	/* delete a character at the cursor (removes 'e') */
+	ut_assertok(expo_send_key(exp, CTL_CH('d')));
+
+	/* check character deleted at cursor position */
+	ut_asserteq(98, ted->tin.cls.num);
+	ut_asserteq(100, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21541, video_compress_fb(uts, dev, false));
+
 	/* close the textedit with Enter (BKEY_SELECT) */
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
 	ut_assertok(expo_action_get(exp, &act));
@@ -1599,11 +1628,14 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(OBJ_TEXTED, act.select.id);
 	ut_assertok(scene_set_open(scn, act.select.id, false));
 
-	/* check the textedit is closed */
+	/* check the textedit is closed and text is changed */
 	ut_asserteq(0, ted->obj.flags & SCENEOF_OPEN);
+	ut_asserteq_str("This\nis the initial contents of the text "
+		"editor but it is quite likely that more will be added latrX",
+		abuf_data(&ted->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(21662, video_compress_fb(uts, dev, false));
+	ut_asserteq(21659, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
