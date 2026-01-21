@@ -4275,7 +4275,6 @@ Final build passes. Let me provide the final status report:
 - **Commit #7**: +267 lines vs original +265 lines (difference due to mach-qemu Kconfig line already present in conflict resolution) - acceptable variance.
 
 The branch `cherry-5a42996c490` is ready for pushing.
->>>>>>> b1f3e2932da (pickman: Record cherry-pick of 9 commits from us/next)
 
 ---
 
@@ -5091,6 +5090,279 @@ All 13 cherry-picked commits are present (15 original commits minus 2 that were 
 - None - all applied commits match their originals in file changes and line counts.
 
 The branch `cherry-499386c5eb6` is ready for pushing.
+
+---
+
+## 2026-01-20: us/next
+
+Branch: cherry-4f1dc6f1e1d
+
+Commits:
+- 4f1dc6f1e1d configs: e850-96: Enable options for updated env
+- 5af19ede0d5 configs: e850-96: Enable U-Boot environment on eMMC
+- 922c68563a2 configs: e850-96: Enable more EFI features
+- 30404063281 configs: e850-96: Enable Standard Boot
+- 4d8ccb938d5 board: samsung: e850-96: Load LDFW from EFI partition
+- ccfd8de541a board: samsung: e850-96: Report LDFW loading failures
+- 16218681a54 board: samsung: e850-96: Provide bootstd default env
+- cfdf18b31b0 Merge https://source.denx.de/u-boot/custodians/u-boot-samsung
+
+### Conversation log
+The repository is clean (untracked files don't matter). Let me create the new branch based on ci/master.
+
+Now let me start cherry-picking the commits. First, let me check if the last commit (the merge) might already be applied by verifying the commit marked as "maybe already applied".
+
+These are different commits - different dates and different parent commits. Let me start cherry-picking the first commit.
+
+First commit applied successfully. Let me verify the delta and run a build test.
+
+Delta is identical. Now let me run the build test.
+
+Build passed. Let me continue with the second commit.
+
+Build passed. Let me continue with commit 3.
+
+Build passed. Commit 4:
+
+Build passed. Commit 5:
+
+Build passed. Commit 6:
+
+Build passed. Commit 7:
+
+Build passed. Now commit 8 - the merge commit:
+
+The merge commit results in an empty commit (all changes were already applied through the preceding cherry-picks). As instructed, I'll commit it anyway to preserve the history:
+
+All 8 commits are applied. Let me verify with git log and run the final build:
+
+All 8 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!** All 8 commits have been applied to branch `cherry-4f1dc6f1e1d`.
+
+### Summary
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 4f1dc6f1e1d | configs: e850-96: Enable options for updated env | ✅ Applied |
+| 2 | 5af19ede0d5 | configs: e850-96: Enable U-Boot environment on eMMC | ✅ Applied |
+| 3 | 922c68563a2 | configs: e850-96: Enable more EFI features | ✅ Applied |
+| 4 | 30404063281 | configs: e850-96: Enable Standard Boot | ✅ Applied |
+| 5 | 4d8ccb938d5 | board: samsung: e850-96: Load LDFW from EFI partition | ✅ Applied |
+| 6 | ccfd8de541a board: samsung: e850-96: Report LDFW loading failures | ✅ Applied |
+| 7 | 16218681a54 | board: samsung: e850-96: Provide bootstd default env | ✅ Applied |
+| 8 | cfdf18b31b0 | Merge https://source.denx.de/u-boot/custodians/u-boot-samsung | ✅ Applied (empty - all changes in preceding commits) |
+
+### Results
+- **Build result**: OK (no warnings or errors)
+- **Fix-ups made**: None
+- **Commits with concerning deltas**: None (all deltas matched exactly)
+- **Notes**: The merge commit (cfdf18b31b0) resulted in an empty commit since all actual changes were already applied through the preceding 7 commits. The empty commit was preserved using `--allow-empty` to maintain the history record.
+
+The branch `cherry-4f1dc6f1e1d` is ready for pushing.
+
+---
+
+### Review: 2026-01-20
+
+Branch: cherry-4f1dc6f1e1d
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository location:
+
+I'm already in the u-boot repository at `/scratch/sglass/u-boot`. Let me proceed with the rebase:
+
+Now let me check the merge base and save commit stats before rebasing:
+
+The branch has 9 commits ahead and is 5 commits behind ci/master. Let me save the commit hashes and stats before rebasing so I can compare after:
+
+Let me save the stats for each commit before rebasing:
+
+Good, I have the stats for all commits. Now let me perform the rebase:
+
+There's a conflict in `.pickman-history`. This is expected - it's just a tracking file. Let me resolve it by keeping both entries:
+
+I see the conflict in `.pickman-history`. Let me view the conflicting part:
+
+I see the conflict - there are two separate entries that were added at the same date. I need to keep both - the HEAD version (cherry-167bc2cd69f) and the incoming version (cherry-4f1dc6f1e1d). Let me resolve this by keeping both entries:
+
+There's also an earlier conflict marker. Let me get the full picture of the conflicted file:
+
+I see. The conflict at line 4278 is an earlier unresolved conflict that was left in the file before my change. Now I need to resolve the conflict at lines 4915-5049. The solution is to keep both entries in chronological order since they are different MRs. Let me resolve by keeping both entries:
+
+I need to keep both sections (HEAD's cherry-167bc2cd69f entry AND the incoming cherry-4f1dc6f1e1d entry). Let me edit the file to resolve the conflict by keeping both:
+
+Good, I resolved the main conflict. Now let me check if there's still the earlier conflict marker at line 4278 and add the file to continue:
+
+There's still an earlier stray conflict marker. Let me check the context and clean it up:
+
+This is a stray conflict marker that was left from a previous incomplete merge. I'll remove just this line:
+
+Now let me verify there are no more conflict markers and continue the rebase:
+
+Good, no more conflict markers. Now add the file and continue the rebase:
+
+Rebase completed successfully. Now let me update the todo and verify the commits and check deltas:
+
+The rebase was successful. Now let me verify the deltas for each commit to ensure they match the originals:
+
+All deltas match the pre-rebase stats:
+- Commit 1: configs/e850-96_defconfig: +2 ✓
+- Commit 2: configs/e850-96_defconfig: +9 ✓
+- Commit 3: configs/e850-96_defconfig: +8 ✓
+- Commit 4: configs/e850-96_defconfig: +1/-3 ✓
+- Commit 5: board/samsung/e850-96/fw.c: +38/-7 ✓
+- Commit 6: board/samsung/e850-96/e850-96.c: +6/-1 ✓
+- Commit 7: board/samsung/e850-96/e850-96.env: +11/-26 ✓
+- Commit 8 (merge): empty ✓
+- Commit 9 (pickman): .pickman-history: +72/-1 (expected - conflict resolution)
+
+Now let me run the build test:
+
+Build passed. Now let me create the versioned local branch and push:
+
+The remote was updated after we fetched. Let me check what happened:
+
+Interesting - the remote doesn't have the pickman commit (it ends at the merge commit). Let me compare:
+
+I see - the remote doesn't have the pickman record commit (b1050de4c14). My local version after rebase has da8545f98a7 as the pickman commit. The issue is `--force-with-lease` is rejecting because the remote ref has changed. The remote was never pushed with the pickman record commit.
+
+Let me try forcing the push properly:
+
+Push succeeded. Let me update the todo and create the final report:
+
+## Rebase Complete
+
+### Summary
+
+**Branch:** `cherry-4f1dc6f1e1d` successfully rebased onto `ci/master`
+
+**Build result:** ✅ OK
+
+### Commits Rebased (9 total):
+
+| # | Old Hash | New Hash | Subject | Delta Match |
+|---|----------|----------|---------|-------------|
+| 1 | db0f4da9790 | a1f168b3be0 | configs: e850-96: Enable options for updated env | ✅ +2 |
+| 2 | 5b5957c6916 | 4e13264c3f0 | configs: e850-96: Enable U-Boot environment on eMMC | ✅ +9 |
+| 3 | 758629b0883 | 436d713d3c7 | configs: e850-96: Enable more EFI features | ✅ +8 |
+| 4 | 708ba6e975e | 48a4f9b37ed | configs: e850-96: Enable Standard Boot | ✅ +1/-3 |
+| 5 | 397c500d1b4 | 04612542905 | board: samsung: e850-96: Load LDFW from EFI partition | ✅ +38/-7 |
+| 6 | 184600a0d39 | 2e0d2102ef1 | board: samsung: e850-96: Report LDFW loading failures | ✅ +6/-1 |
+| 7 | 0293ebd3238 | 66711003f84 | board: samsung: e850-96: Provide bootstd default env | ✅ +11/-26 |
+| 8 | efa846579b4 | c75bc7631b6 | Merge https://source.denx.de/u-boot/custodians/u-boot-samsung | ✅ empty |
+| 9 | b1050de4c14 | da8545f98a7 | pickman: Record cherry-pick of 8 commits from us/next | ✅ +72 |
+
+### Fix-ups Made
+- **Conflict in `.pickman-history`**: Resolved by keeping both entries (cherry-167bc2cd69f and cherry-4f1dc6f1e1d records)
+- Also cleaned up a stray conflict marker from a previous incomplete merge
+
+### Status
+- Local branch: `cherry-4f1dc6f1e1d-v2` (backup)
+- Remote branch: `cherry-4f1dc6f1e1d` (force pushed)
+- MR: https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/420
+
+### Suggested MR Reply
+
+```
+Rebased onto latest ci/master (6ffc40c796b).
+
+Build tested with `buildman -L --board sandbox -w` - OK.
+
+All commit deltas verified - no changes to functional content.
+```
+
+---
+
+### Review: 2026-01-20
+
+Branch: cherry-4f1dc6f1e1d
+
+Comments addressed:
+
+
+### Conversation log
+I can see the branch exists locally and on the remote. Let me check the current state and fetch the latest from ci/master to rebase onto.
+
+I can see the branch is currently based on 6ffc40c796b but ci/master has moved ahead to f900786595b. Let me check how many commits behind and save the commit stats before rebasing:
+
+The branch has 10 commits ahead and is 37 commits behind ci/master. Let me save the stats for each commit before rebasing:
+
+Good, I have the pre-rebase stats saved. Now let me perform the rebase:
+
+Rebase completed successfully without conflicts. Now let me verify the commits and check the deltas:
+
+Rebase was successful. Now let me verify the deltas for each commit match the pre-rebase stats:
+
+All deltas match exactly:
+- Commit 1: +2 ✓
+- Commit 2: +9 ✓
+- Commit 3: +8 ✓
+- Commit 4: +1/-3 ✓
+- Commit 5: +38/-7 ✓
+- Commit 6: +6/-1 ✓
+- Commit 7: +11/-26 ✓
+- Commit 8: empty (merge) ✓
+- Commit 9: +72/-1 ✓
+- Commit 10: +114 ✓
+
+Now let me run the build test:
+
+Build passed. Now let me check if there's already a v3 branch and create the appropriate versioned local branch:
+
+Now let me force push to the original remote branch to update the MR:
+
+The remote was updated after we fetched. Let me fetch and check what changed:
+
+The remote is behind our local branch (it doesn't have the latest pickman record commit). Let me force push properly:
+
+Push succeeded. Let me verify the final state:
+
+## Rebase Complete
+
+### Summary
+
+**Branch:** `cherry-4f1dc6f1e1d` successfully rebased onto `ci/master` (f900786595b)
+
+**Build result:** ✅ OK
+
+### Commits Rebased (10 total):
+
+| # | Old Hash | New Hash | Subject | Delta Match |
+|---|----------|----------|---------|-------------|
+| 1 | a1f168b3be0 | a2fe0a15f35 | configs: e850-96: Enable options for updated env | ✅ +2 |
+| 2 | 4e13264c3f0 | b81d7bb5915 | configs: e850-96: Enable U-Boot environment on eMMC | ✅ +9 |
+| 3 | 436d713d3c7 | a7748726812 | configs: e850-96: Enable more EFI features | ✅ +8 |
+| 4 | 48a4f9b37ed | 921fed570da | configs: e850-96: Enable Standard Boot | ✅ +1/-3 |
+| 5 | 04612542905 | 20118191076 | board: samsung: e850-96: Load LDFW from EFI partition | ✅ +38/-7 |
+| 6 | 2e0d2102ef1 | 8e384223d9d | board: samsung: e850-96: Report LDFW loading failures | ✅ +6/-1 |
+| 7 | 66711003f84 | cdd2557d870 | board: samsung: e850-96: Provide bootstd default env | ✅ +11/-26 |
+| 8 | c75bc7631b6 | 68cd65f1a84 | Merge https://source.denx.de/u-boot/custodians/u-boot-samsung | ✅ empty |
+| 9 | da8545f98a7 | 1863695d7e7 | pickman: Record cherry-pick of 8 commits from us/next | ✅ +72/-1 |
+| 10 | 761a2583161 | 7cf9b7e99ca | pickman: Record review handling for cherry-4f1dc6f1e1d | ✅ +114 |
+
+### Fix-ups Made
+- None required - rebase completed cleanly without conflicts
+
+### Status
+- Local branch: `cherry-4f1dc6f1e1d-v3` (backup)
+- Remote branch: `cherry-4f1dc6f1e1d` (force pushed)
+- MR: https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/420
+
+### Suggested MR Reply
+
+```
+Rebased onto latest ci/master (f900786595b).
+
+Build tested with `buildman -L --board sandbox -w` - OK.
+
+All commit deltas verified - no changes to functional content.
+```
 
 ---
 
