@@ -5485,3 +5485,97 @@ All commit deltas verified - no changes to functional content.
 
 ---
 
+### Review: 2026-01-21
+
+Branch: cherry-dcf1c627cf4
+
+Comments addressed:
+
+
+### Conversation log
+Good, ci/master has progressed. Let me check the merge base and see what commits need to be rebased:
+
+There are 15 commits to be rebased. Let me save the original commit stats before rebase for later comparison:
+
+Now let me rebase onto ci/master:
+
+There's a conflict in the pickman history file. Let me check the conflict and resolve it:
+
+The .pickman-history file has a conflict. This is a log file that tracks changes, so I should resolve it by accepting both sides. Let me check the conflict markers:
+
+I see the conflict. The file has both entries for different MRs that should be kept. I need to resolve this by keeping both entries. Let me check the full context and fix it:
+
+I see. The conflict is because both HEAD (which has cherry-4f1dc6f1e1d records) and the incoming commit (which has cherry-dcf1c627cf4 records) have entries under the same date header "## 2026-01-20: us/next". I need to keep both MR entries. Let me resolve this properly:
+
+Let me get the incoming changes from the cherry-dcf1c627cf4 entry and add it to HEAD:
+
+I need to resolve the conflict by keeping both entries. The HEAD version has the cherry-4f1dc6f1e1d entry and the incoming has the cherry-dcf1c627cf4 entry, both under the same date. I'll resolve by keeping HEAD (which has both entries from previous operations) and appending the dcf1c627cf4 entry after:
+
+Good. Now I need to append the HEAD's additional entries that were made after the initial cherry-pick. Let me check what's in HEAD that's missing:
+
+I see - HEAD has the 4f1dc6f1e1d entry and its review records. But the incoming (--theirs) has the dcf1c627cf4 entry which is the one we're rebasing. By using --theirs, I took the dcf1c627cf4 entry and lost the 4f1dc6f1e1d entries. I need to append HEAD's entries to preserve them:
+
+Rebase completed successfully. Now let me verify the commits and check deltas:
+
+Good, 15 commits are on the rebased branch. Now let me verify the deltas by comparing with the pre-rebase stats:
+
+Excellent! Let me compare the pre and post rebase stats:
+
+All deltas match exactly (the pickman commit has 119 vs 118 insertions which is expected due to conflict resolution adding one extra line). Now let me run the build test:
+
+Build passed. Now let me check if there's already a v2 branch and create the appropriate versioned local branch:
+
+The remote was updated while we were working. Let me fetch and check what changed:
+
+I see - the remote doesn't have the pickman record commit yet (ends at the merge commit). Let me force push:
+
+Push succeeded. Let me verify the final state:
+
+## Rebase Complete
+
+### Summary
+
+**Branch:** `cherry-dcf1c627cf4` successfully rebased onto `ci/master` (761806cdc04)
+
+**Build result:** ✅ OK
+
+### Commits Rebased (15 total):
+
+| # | Old Hash | New Hash | Subject | Delta Match |
+|---|----------|----------|---------|-------------|
+| 1 | ee65c3eb3cf | c7e4349c049 | usb: gadget: g_dnl: Fix NULLPTR dereference when serial# is unset | ✅ +2/-1 |
+| 2 | 81e2a8a8a11 | dff140afa85 | boot: android: handle boot images with missing DTB | ✅ +4/-1 |
+| 3 | 05d56f3e455 | 67ae6de951f | Prepare v2025.04-rc2 | ✅ +15/-14 |
+| 4 | 82a4bf94ce0 | 1d71a1b8836 | usb: gadget: f_mass_storage: Add schedule() in sleep_thread() | ✅ +1 |
+| 5 | 708ebeaf4ff | 69660b28bee | ARM: dts: sti: Add fixed clock for ehci and ohci nodes | ✅ +10 |
+| 6 | 89f2642b374 | fded4008788 | configs: stih410-b2260: Enable DM_REGULATOR flag | ✅ +1 |
+| 7 | 69f99e28bf6 | ba3bee5ba7a | usb: dwc3: Remove dwc3 glue driver support for STi | ✅ -307 |
+| 8 | 5c7c97b37c2 | ff684ee4f24 | usb: dwc3-generic: Reorder include | ✅ +4/-16 |
+| 9 | 9a02eb2b19f | fe4ab11a1bd | usb: dwc3-generic: Add STih407 support | ✅ +144 |
+| 10 | fba26d69d40 | 8cbdb987475 | configs: stih410-b2260: Enable USB_DWC3_GENERIC and USB_DWC3_STI flags | ✅ +2 |
+| 11 | f721106f55e | 37e00b7f0d7 | configs: stih410-b2260: Enable DM_USB_GADGET flag | ✅ +1 |
+| 12 | d31272e7552 | 2d0121d2517 | board: stih410-b2260: Remove board_usb_init/cleanup() | ✅ -29 |
+| 13 | 737ffec3bf0 | 566bc5f06bc | configs: stih410-b2260: Enable CMD_USB_MASS_STORAGE flag | ✅ +1 |
+| 14 | 11ed665ccc7 | 3932cafbb85 | Merge tag 'u-boot-dfu-20250211' | ✅ empty |
+| 15 | 585ac9b451a | 198bfd96790 | pickman: Record cherry-pick of 15 commits from us/next | ✅ +119 |
+
+### Fix-ups Made
+- **Conflict in `.pickman-history`**: Resolved by merging both entries (preserved ci/master's cherry-4f1dc6f1e1d records alongside this branch's cherry-dcf1c627cf4 records)
+
+### Status
+- Local branch: `cherry-dcf1c627cf4-v2` (backup)
+- Remote branch: `cherry-dcf1c627cf4` (force pushed)
+- MR: https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/425
+
+### Suggested MR Reply
+
+```
+Rebased onto latest ci/master (761806cdc04).
+
+Build tested with `buildman -L --board sandbox -w` - OK.
+
+All commit deltas verified - no changes to functional content.
+```
+
+---
+
