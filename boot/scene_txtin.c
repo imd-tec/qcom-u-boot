@@ -68,6 +68,46 @@ int scene_txtin_arrange(struct scene *scn, struct expo_arrange_info *arr,
 	return x;
 }
 
+/**
+ * set_cursor_pos() - Set cursor position for multiline text
+ *
+ * Finds the visual line containing the cursor and sets the cursor position
+ * to the correct pixel location within that line.
+ *
+ * @cons: Vidconsole device
+ * @ctx: Vidconsole context
+ * @txt: Text object containing line measurement info
+ * @buf: Text buffer
+ * @pos: Cursor position in buffer
+ */
+static void set_cursor_pos(struct udevice *cons, void *ctx,
+			   struct scene_obj_txt *txt, const char *buf, uint pos)
+{
+	const struct vidconsole_mline *mline, *res;
+	struct vidconsole_bbox bbox;
+	struct alist lines;
+	uint i;
+
+	alist_init_struct(&lines, struct vidconsole_mline);
+	for (i = 0; i < txt->gen.lines.count; i++) {
+		mline = alist_get(&txt->gen.lines, i, struct vidconsole_mline);
+		if (pos < mline->start || pos > mline->start + mline->len)
+			continue;
+		if (vidconsole_measure(cons, txt->gen.font_name,
+				       txt->gen.font_size, buf + mline->start,
+				       pos - mline->start, -1, &bbox, &lines))
+			break;
+		/* measured text is within a single line, so only one result */
+		res = alist_get(&lines, 0, struct vidconsole_mline);
+		if (!res)
+			break;
+		vidconsole_set_cursor_pos(cons, ctx, txt->obj.bbox.x0 + res->xpos,
+					  txt->obj.bbox.y0 + mline->bbox.y0);
+		break;
+	}
+	alist_uninit(&lines);
+}
+
 int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 			    struct scene_txtin *tin)
 {
@@ -81,9 +121,19 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 	if (open) {
 		scene_render_obj(scn, tin->edit_id, ctx);
 
-		/* move cursor back to the correct position */
-		for (i = cls->num; i < cls->eol_num; i++)
-			vidconsole_put_char(cons, ctx, '\b');
+		if (cls->multiline) {
+			/* for multiline, set cursor position directly */
+			struct scene_obj_txt *txt;
+
+			txt = scene_obj_find(scn, tin->edit_id, SCENEOBJT_NONE);
+			if (txt)
+				set_cursor_pos(cons, ctx, txt, cls->buf,
+					       cls->num);
+		} else {
+			/* for single-line, use backspaces */
+			for (i = cls->num; i < cls->eol_num; i++)
+				vidconsole_put_char(cons, ctx, '\b');
+		}
 
 		vidconsole_show_cursor(cons, ctx);
 	}
