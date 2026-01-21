@@ -297,10 +297,6 @@ int sync_filesystem(void *sb);
 #include <asm-generic/timex.h>
 #include <linux/nospec.h>
 
-/* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
-#define DEFINE_RAW_FLEX(type, name, member, count) \
-	type *name = NULL
-
 /*
  * Stubs for page-io.c - bio types are in linux/bio.h
  */
