@@ -4275,6 +4275,7 @@ Final build passes. Let me provide the final status report:
 - **Commit #7**: +267 lines vs original +265 lines (difference due to mach-qemu Kconfig line already present in conflict resolution) - acceptable variance.
 
 The branch `cherry-5a42996c490` is ready for pushing.
+>>>>>>> b1f3e2932da (pickman: Record cherry-pick of 9 commits from us/next)
 
 ---
 
@@ -5090,6 +5091,124 @@ All 13 cherry-picked commits are present (15 original commits minus 2 that were 
 - None - all applied commits match their originals in file changes and line counts.
 
 The branch `cherry-499386c5eb6` is ready for pushing.
+
+---
+
+## 2026-01-20: us/next
+
+Branch: cherry-dcf1c627cf4
+
+Commits:
+- dcf1c627cf4 usb: gadget: g_dnl: Fix NULLPTR dereference when serial# is unset
+- aa817a2f1fb boot: android: handle boot images with missing DTB
+- cb3612dfe3f CI: Drop extra condition for sjg lab
+- 636fcc96c3d Prepare v2025.04-rc2
+- 4b6a3e86087 usb: gadget: f_mass_storage: Add schedule() in sleep_thread()
+- 3810cd52cbf ARM: dts: sti: Add fixed clock for ehci and ohci nodes in stih410-b2260.dtsi
+- 0f688eb0d69 configs: stih410-b2260: Enable DM_REGULATOR flag
+- 15cd35cb3f1 usb: dwc3: Remove dwc3 glue driver support for STi
+- 9de4b7e0a4c usb: dwc3-generic: Reorder include
+- 23542078ec9 usb: dwc3-generic: Add STih407 support
+- 08fec26a676 configs: stih410-b2260: Enable USB_DWC3_GENERIC and USB_DWC3_STI flags
+- d0ff527f623 configs: stih410-b2260: Enable DM_USB_GADGET flag
+- 0b96214cb32 board: stih410-b2260: Remove board_usb_init/cleanup()
+- 4096d28ec80 configs: stih410-b2260: Enable CMD_USB_MASS_STORAGE flag
+- 7f89b40f1c1 Merge tag 'u-boot-dfu-20250211' of https://source.denx.de/u-boot/custodians/u-boot-dfu
+
+### Conversation log
+The repository is clean (only has an untracked file which is fine). Let me create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the commits one by one. First, let me verify commit dcf1c627cf4 exists in us/next:
+
+Let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build test:
+
+Commit delta looks identical. Now let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Build passed. Let me continue with the third commit which was marked as "maybe already applied as c2ca92d2ee2":
+
+The patches are very similar - only line numbers and some minor context differ. Let me verify the actual changes being made are the same:
+
+Both commits are identical in purpose - same author, same date, same message, same change (removing 3 lines from .gitlab-ci.yml). The only difference is the line numbers due to surrounding context. This commit is already applied as c2ca92d2ee2. I'll skip this cherry-pick.
+
+Let me continue with the fourth commit:
+
+There's a conflict. Let me check if this commit might already be applied in ci/master:
+
+Not already applied. Let me look at the conflict:
+
+I can see the conflicts. This is a "Prepare" commit that updates version references. Let me resolve this by taking the incoming changes since we want the v2025.04-rc2 release notes:
+
+Let me amend the commit to note the conflict resolution:
+
+There's a notable difference in the delta for doc/develop/release_cycle.rst (27 lines changed vs 4 in original). This is expected due to the different base - the original was on the v2025.04 branch while ci/master is on a different release cycle. The actual version bump in Makefile is the same. Let me run the build test:
+
+Build passed. Now let me continue with the 5th commit:
+
+Build passed. Continue with commit 6:
+
+Both deltas match perfectly and build passed. Continue with commit 7:
+
+Both deltas match and build passed. Continue with commit 8:
+
+Deltas match perfectly and build passed. Continue with commit 9:
+
+Both deltas match and build passed. Continue with commit 10:
+
+Both deltas match and build passed. Continue with commit 11:
+
+Both deltas match and build passed. Continue with commit 12:
+
+Both deltas match and build passed. Continue with commit 13:
+
+Both deltas match and build passed. Continue with commit 14:
+
+Both deltas match and build passed. Now for the last commit (commit 15), which is a merge commit:
+
+The merge commit results in an empty commit because all the changes it brought in were already cherry-picked individually. Let me commit it anyway to preserve the merge commit message:
+
+All 14 commits (plus 1 skipped) have been cherry-picked. Let me verify with git log:
+
+I can see 14 new commits on top of ci/master. Let me run the final build test:
+
+## Final Status Report
+
+**Branch:** `cherry-dcf1c627cf4` (based on `ci/master`)
+
+**Build Result:** ✅ OK - sandbox builds successfully
+
+**Cherry-pick Summary:**
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | dcf1c627cf4 | usb: gadget: g_dnl: Fix NULLPTR dereference when serial# is unset | ✅ Applied |
+| 2 | aa817a2f1fb | boot: android: handle boot images with missing DTB | ✅ Applied |
+| 3 | cb3612dfe3f | CI: Drop extra condition for sjg lab | ⏭️ **SKIPPED** - already applied as c2ca92d2ee2 |
+| 4 | 636fcc96c3d | Prepare v2025.04-rc2 | ✅ Applied (conflict resolved) |
+| 5 | 4b6a3e86087 | usb: gadget: f_mass_storage: Add schedule() in sleep_thread() | ✅ Applied |
+| 6 | 3810cd52cbf | ARM: dts: sti: Add fixed clock for ehci and ohci nodes in stih410-b2260.dtsi | ✅ Applied |
+| 7 | 0f688eb0d69 | configs: stih410-b2260: Enable DM_REGULATOR flag | ✅ Applied |
+| 8 | 15cd35cb3f1 | usb: dwc3: Remove dwc3 glue driver support for STi | ✅ Applied |
+| 9 | 9de4b7e0a4c | usb: dwc3-generic: Reorder include | ✅ Applied |
+| 10 | 23542078ec9 | usb: dwc3-generic: Add STih407 support | ✅ Applied |
+| 11 | 08fec26a676 | configs: stih410-b2260: Enable USB_DWC3_GENERIC and USB_DWC3_STI flags | ✅ Applied |
+| 12 | d0ff527f623 | configs: stih410-b2260: Enable DM_USB_GADGET flag | ✅ Applied |
+| 13 | 0b96214cb32 | board: stih410-b2260: Remove board_usb_init/cleanup() | ✅ Applied |
+| 14 | 4096d28ec80 | configs: stih410-b2260: Enable CMD_USB_MASS_STORAGE flag | ✅ Applied |
+| 15 | 7f89b40f1c1 | Merge tag 'u-boot-dfu-20250211' | ✅ Applied (empty commit - changes already in prior commits) |
+
+**Fix-ups Made:**
+- **Commit 636fcc96c3d (Prepare v2025.04-rc2):** Conflict in `doc/develop/release_cycle.rst` resolved by taking theirs. This is expected since ci/master is on a different release cycle base.
+
+**Commits with Notable Deltas:**
+- **Commit 636fcc96c3d:** Cherry-picked version has 15 insertions/14 deletions vs original's 3 insertions/3 deletions in `doc/develop/release_cycle.rst`. This is expected due to the different base context (ci/master vs v2025.04 release branch).
+
+**Total Commits on Branch:** 14 new commits (1 skipped as already applied)
+
+The branch `cherry-dcf1c627cf4` is ready for pushing.
 
 ---
 
