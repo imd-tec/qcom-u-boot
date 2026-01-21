@@ -405,6 +405,23 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		break;
 	case CTL_CH('p'):
 	case CTL_CH('n'):
+		if (cls->multiline && cls->line_nav) {
+			int new_num;
+
+			new_num = cls->line_nav(cls, ichar == CTL_CH('p'));
+			if (new_num < 0) {
+				getcmd_cbeep(cls);
+				break;
+			}
+
+			/*
+			 * Just update the position - the callback handles
+			 * cursor display since backspaces don't work across
+			 * wrapped line boundaries
+			 */
+			cls->num = new_num;
+			break;
+		}
 		if (cls->history) {
 			char *hline;
 
