@@ -114,18 +114,19 @@ static int switch_gc_head(struct ubifs_info *c)
  * This function compares data nodes @a and @b. Returns %1 if @a has greater
  * inode or block number, and %-1 otherwise.
  */
-static int data_nodes_cmp(void *priv, struct list_head *a, struct list_head *b)
+static int data_nodes_cmp(void *priv, const struct list_head *a,
+			  const struct list_head *b)
 {
 	ino_t inuma, inumb;
 	struct ubifs_info *c = priv;
-	struct ubifs_scan_node *sa, *sb;
+	const struct ubifs_scan_node *sa, *sb;
 
 	cond_resched();
 	if (a == b)
 		return 0;
 
-	sa = list_entry(a, struct ubifs_scan_node, list);
-	sb = list_entry(b, struct ubifs_scan_node, list);
+	sa = list_entry(a, const struct ubifs_scan_node, list);
+	sb = list_entry(b, const struct ubifs_scan_node, list);
 
 	ubifs_assert(key_type(c, &sa->key) == UBIFS_DATA_KEY);
 	ubifs_assert(key_type(c, &sb->key) == UBIFS_DATA_KEY);
@@ -157,19 +158,19 @@ static int data_nodes_cmp(void *priv, struct list_head *a, struct list_head *b)
  * first and sorted by length in descending order. Directory entry nodes go
  * after inode nodes and are sorted in ascending hash valuer order.
  */
-static int nondata_nodes_cmp(void *priv, struct list_head *a,
-			     struct list_head *b)
+static int nondata_nodes_cmp(void *priv, const struct list_head *a,
+			     const struct list_head *b)
 {
 	ino_t inuma, inumb;
 	struct ubifs_info *c = priv;
-	struct ubifs_scan_node *sa, *sb;
+	const struct ubifs_scan_node *sa, *sb;
 
 	cond_resched();
 	if (a == b)
 		return 0;
 
-	sa = list_entry(a, struct ubifs_scan_node, list);
-	sb = list_entry(b, struct ubifs_scan_node, list);
+	sa = list_entry(a, const struct ubifs_scan_node, list);
+	sb = list_entry(b, const struct ubifs_scan_node, list);
 
 	ubifs_assert(key_type(c, &sa->key) != UBIFS_DATA_KEY &&
 		     key_type(c, &sb->key) != UBIFS_DATA_KEY);
