@@ -1004,12 +1004,12 @@ static int truetype_select_font(struct udevice *dev, void *vctx,
 }
 
 static int truetype_measure(struct udevice *dev, const char *name, uint size,
-			    const char *text, int pixel_limit,
+			    const char *text, int len, int pixel_limit,
 			    struct vidconsole_bbox *bbox, struct alist *lines)
 {
 	struct console_tt_metrics *met;
 	struct vidconsole_mline mline;
-	const char *s, *last_space;
+	const char *s, *last_space, *end;
 	int width, last_width;
 	stbtt_fontinfo *font;
 	int lsb, advance;
@@ -1030,6 +1030,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	if (pixel_limit != -1)
 		limit = tt_ceil((double)pixel_limit / met->scale);
 
+	end = len < 0 ? NULL : text + len;
 	font = &met->font;
 	width = 0;
 	bbox->y1 = 0;
@@ -1037,7 +1038,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	start = 0;
 	last_space = NULL;
 	last_width = 0;
-	for (lastch = 0, s = text; *s; s++) {
+	for (lastch = 0, s = text; *s && s != end; s++) {
 		int neww;
 		int ch = *s;
 
@@ -1069,6 +1070,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 			mline.bbox.x0 = 0;
 			mline.bbox.y0 = bbox->y1;
 			mline.bbox.x1 = tt_ceil((double)width * met->scale);
+			mline.xpos = (int)((double)width * met->scale);
 			bbox->x1 = max(bbox->x1, mline.bbox.x1);
 			bbox->y1 += met->font_size;
 			mline.bbox.y1 = bbox->y1;
@@ -1095,6 +1097,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	mline.bbox.x0 = 0;
 	mline.bbox.y0 = bbox->y1;
 	mline.bbox.x1 = tt_ceil((double)width * met->scale);
+	mline.xpos = (int)((double)width * met->scale);
 	bbox->y1 += met->font_size;
 	mline.bbox.y1 = bbox->y1;
 	mline.start = start;

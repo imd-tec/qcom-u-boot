@@ -665,7 +665,7 @@ int vidconsole_select_font(struct udevice *dev, void *ctx, const char *name,
 }
 
 int vidconsole_measure(struct udevice *dev, const char *name, uint size,
-		       const char *text, int limit,
+		       const char *text, int len, int limit,
 		       struct vidconsole_bbox *bbox, struct alist *lines)
 {
 	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
@@ -675,7 +675,8 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 	if (ops->measure) {
 		if (lines)
 			alist_empty(lines);
-		ret = ops->measure(dev, name, size, text, limit, bbox, lines);
+		ret = ops->measure(dev, name, size, text, len, limit, bbox,
+				   lines);
 		if (ret != -ENOSYS)
 			return ret;
 	}
@@ -683,7 +684,7 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 	bbox->valid = true;
 	bbox->x0 = 0;
 	bbox->y0 = 0;
-	bbox->x1 = ctx->x_charsize * strlen(text);
+	bbox->x1 = ctx->x_charsize * (len < 0 ? strlen(text) : len);
 	bbox->y1 = ctx->y_charsize;
 
 	return 0;

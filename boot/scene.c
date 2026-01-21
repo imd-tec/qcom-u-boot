@@ -538,7 +538,7 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 			obj->req_bbox.x1 - obj->req_bbox.x0 : -1;
 
 		ret = vidconsole_measure(scn->expo->cons, gen->font_name,
-					 gen->font_size, str, limit, &bbox,
+					 gen->font_size, str, -1, limit, &bbox,
 					 &gen->lines);
 		if (ret)
 			return log_msg_ret("mea", ret);

@@ -982,7 +982,7 @@ static int dm_test_font_measure(struct unit_test_state *uts)
 	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
 	vidconsole_position_cursor(con, 0, 0);
 	alist_init_struct(&lines, struct vidconsole_mline);
-	ut_assertok(vidconsole_measure(con, NULL, 0, test_string, -1, &bbox,
+	ut_assertok(vidconsole_measure(con, NULL, 0, test_string, -1, -1, &bbox,
 				       &lines));
 	ut_asserteq(0, bbox.x0);
 	ut_asserteq(0, bbox.y0);
@@ -1013,8 +1013,8 @@ static int dm_test_font_measure(struct unit_test_state *uts)
 	ut_asserteq(strlen(test_string + nl + 1), line->len);
 
 	/* now use a limit on the width */
-	ut_assertok(vidconsole_measure(con, NULL, 0, test_string, limit, &bbox,
-				       &lines));
+	ut_assertok(vidconsole_measure(con, NULL, 0, test_string, -1, limit,
+				       &bbox, &lines));
 	ut_asserteq(0, bbox.x0);
 	ut_asserteq(0, bbox.y0);
 	ut_asserteq(0x31e, bbox.x1);
