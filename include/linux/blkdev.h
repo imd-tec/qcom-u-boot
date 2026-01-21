@@ -83,7 +83,10 @@ void invalidate_bdev(struct block_device *bdev);
 unsigned int bdev_max_discard_sectors(struct block_device *bdev);
 
 /* Block device file operations - implemented in ext4l/stub.c */
-struct blk_holder_ops;
+struct blk_holder_ops {
+	void (*mark_dead)(struct block_device *, bool);
+};
+static const struct blk_holder_ops fs_holder_ops;
 void bdev_fput(void *file);
 void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
 			    const struct blk_holder_ops *ops);

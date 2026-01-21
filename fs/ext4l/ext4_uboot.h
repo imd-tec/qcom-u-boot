@@ -269,12 +269,6 @@ void ext4_unregister_li_request(struct super_block *sb);
 /* I/O priority classes - use linux/ioprio.h */
 #include <linux/ioprio.h>
 
-/* blk_holder_ops for block device */
-struct blk_holder_ops {
-	void (*mark_dead)(struct block_device *, bool);
-};
-static const struct blk_holder_ops fs_holder_ops;
-
 /* end_buffer_write_sync - implemented in support.c */
 void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
