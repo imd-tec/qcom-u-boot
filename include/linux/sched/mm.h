@@ -29,4 +29,7 @@ static inline void memalloc_nofs_restore(unsigned int flags)
 {
 }
 
+/* Memory allocation retry wait - stub for U-Boot */
+#define memalloc_retry_wait(g)		do { } while (0)
+
 #endif /* _LINUX_SCHED_MM_H */

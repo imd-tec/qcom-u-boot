@@ -412,6 +412,16 @@ static inline void inode_init_once(struct inode *inode)
 #define SB_FREEZE_FS		3
 #define SB_FREEZE_COMPLETE	4
 
+/* Filesystem management time flag */
+#define FS_MGTIME		0
+
+/* Block size constant */
+#define BLOCK_SIZE		1024
+
+/* VFS position helper */
+#define vfs_setpos(file, offset, maxsize) \
+	({ (void)(file); (void)(maxsize); (offset); })
+
 /* fallocate() flags */
 #define FALLOC_FL_KEEP_SIZE		0x01
 #define FALLOC_FL_PUNCH_HOLE		0x02

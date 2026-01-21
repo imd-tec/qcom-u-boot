@@ -34,5 +34,6 @@ struct proc_ops {
 	   (struct proc_dir_entry *)NULL; })
 #define remove_proc_entry(n, p) \
 	do { (void)(n); (void)(p); } while (0)
+#define pde_data(inode)		((void *)NULL)
 
 #endif /* _LINUX_PROC_FS_H */

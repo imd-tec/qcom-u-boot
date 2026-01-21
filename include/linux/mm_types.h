@@ -44,6 +44,9 @@ typedef unsigned int vm_fault_t;
 #define VM_FAULT_NOPAGE		0x0010
 #define VM_FAULT_LOCKED		0x0200
 
+/* VM fault error helper */
+#define vmf_fs_error(e)		((vm_fault_t)VM_FAULT_SIGBUS)
+
 /* Maximum order for page cache allocations */
 #define MAX_PAGECACHE_ORDER	12
 

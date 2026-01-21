@@ -22,6 +22,8 @@ struct rw_semaphore {
 #define up_read(sem)		do { } while (0)
 #define down_write(sem)		do { } while (0)
 #define down_write_trylock(sem)	1
+#define down_write_nested(sem, subclass) \
+	do { (void)(sem); (void)(subclass); } while (0)
 #define up_write(sem)		do { } while (0)
 #define downgrade_write(sem)	do { } while (0)
 #define rwsem_is_locked(sem)	(1)

@@ -156,12 +156,7 @@ struct path;
 
 /* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
-#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
-
 #include <linux/minmax.h>
-
-/* Memory retry wait */
-#define memalloc_retry_wait(g)		do { } while (0)
 
 /* indirect.c stubs */
 
@@ -205,9 +200,6 @@ struct path;
 
 /* UID/GID bit helpers - use linux/highuid.h */
 #include <linux/highuid.h>
-
-/* File operations */
-#define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 
 /*
  * Additional stubs for dir.c
@@ -272,12 +264,6 @@ void ext4_unregister_li_request(struct super_block *sb);
 /* end_buffer_write_sync - implemented in support.c */
 void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
-/* File system management time flag */
-#define FS_MGTIME			0
-
-/* Block size */
-#define BLOCK_SIZE			1024
-
 #define EXT4_SUPER_MAGIC		0xEF53
 
 /* blockgroup_lock - use linux/blockgroup_lock.h */
@@ -326,15 +312,9 @@ int sync_filesystem(void *sb);
 #include <asm-generic/timex.h>
 #include <linux/nospec.h>
 
-/* pde_data - proc dir entry data (not supported in U-Boot) */
-#define pde_data(inode)			((void *)NULL)
-
 /* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
 #define DEFINE_RAW_FLEX(type, name, member, count) \
 	type *name = NULL
-
-/* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
-#define raw_cpu_ptr(ptr)		(ptr)
 
 /*
  * Stubs for page-io.c - bio types are in linux/bio.h
@@ -347,8 +327,7 @@ int sync_filesystem(void *sb);
 
 #include <linux/mempool.h>
 
-/* prefetch operations */
-#define prefetchw(addr)			do { (void)(addr); } while (0)
+#include <linux/prefetch.h>
 
 /*
  * Stubs for fast_commit.c
@@ -395,10 +374,6 @@ struct disk_partition *ext4l_get_partition(void);
 /*
  * Stubs for move_extent.c
  */
-
-/* down_write_nested - nested write lock acquisition */
-#define down_write_nested(sem, subclass) \
-	do { (void)(sem); (void)(subclass); } while (0)
 
 /* PAGE_MASK - mask for page alignment */
 #ifndef PAGE_MASK
