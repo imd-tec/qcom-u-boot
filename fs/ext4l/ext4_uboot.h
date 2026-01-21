@@ -223,12 +223,6 @@ struct path;
 
 #define kfree_link		kfree
 
-/* nd_terminate_link - terminate symlink string */
-static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
-{
-	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
-}
-
 /*
  * Additional stubs for super.c
  */
