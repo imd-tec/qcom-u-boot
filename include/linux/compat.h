@@ -90,6 +90,13 @@ typedef struct unused unused_t;
 #define PAGE_SIZE	4096
 #endif
 
+#ifndef PAGE_SHIFT
+#define PAGE_SHIFT	12
+#endif
+
+#ifndef PAGE_MASK
+#define PAGE_MASK	(~(PAGE_SIZE - 1))
+#endif
 
 /* include/linux/leds.h */
 struct led_trigger {};

@@ -94,9 +94,6 @@
 #include <linux/sched/mm.h>
 
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
-#ifndef PAGE_SHIFT
-#define PAGE_SHIFT	12
-#endif
 
 /*
  * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
@@ -358,15 +355,6 @@ struct disk_partition *ext4l_get_partition(void);
 
 /* init_utsname - use linux/utsname.h */
 #include <linux/utsname.h>
-
-/*
- * Stubs for move_extent.c
- */
-
-/* PAGE_MASK - mask for page alignment */
-#ifndef PAGE_MASK
-#define PAGE_MASK	(~(PAGE_SIZE - 1))
-#endif
 
 /*
  * Stubs for fsmap.c
