@@ -210,11 +210,6 @@ struct path;
 /* UID/GID bit helpers - use linux/highuid.h */
 #include <linux/highuid.h>
 
-/* Attribute operations */
-#define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
-#define setattr_copy(m, i, a)		do { } while (0)
-#define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
-
 /* File operations */
 #define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
 

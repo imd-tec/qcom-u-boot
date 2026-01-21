@@ -356,6 +356,11 @@ struct iattr {
 #define ATTR_KILL_SGID	(1 << 12)
 #define ATTR_TIMES_SET	(ATTR_ATIME_SET | ATTR_MTIME_SET)
 
+/* Attribute operations - stubs for U-Boot */
+#define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
+#define setattr_copy(m, i, a)		do { } while (0)
+#define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
+
 /* writeback_control - defined in linux/compat.h */
 
 /* fsnotify - stubs */
