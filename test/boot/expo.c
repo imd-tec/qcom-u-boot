@@ -1646,6 +1646,63 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(240, ctx->ycur);
 	ut_asserteq(21538, video_compress_fb(uts, dev, false));
 
+	/* delete the word before cursor (deletes "lik" from "likely") */
+	ut_assertok(expo_send_key(exp, CTL_CH('w')));
+	ut_asserteq(64, ted->tin.cls.num);
+	ut_asserteq(97, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21462, video_compress_fb(uts, dev, false));
+
+	/* delete another word (deletes "quite ") */
+	ut_assertok(expo_send_key(exp, CTL_CH('w')));
+	ut_asserteq(58, ted->tin.cls.num);
+	ut_asserteq(91, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21241, video_compress_fb(uts, dev, false));
+
+	/* go back 4 characters */
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_assertok(expo_send_key(exp, CTL_CH('b')));
+	ut_asserteq(54, ted->tin.cls.num);
+	ut_asserteq(91, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21225, video_compress_fb(uts, dev, false));
+
+	/* move cursor to next visual line at same x position */
+	ut_assertok(expo_send_key(exp, CTL_CH('n')));
+	ut_asserteq(87, ted->tin.cls.num);
+	ut_asserteq(91, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21211, video_compress_fb(uts, dev, false));
+
+	/* go to start of buffer and delete a character */
+	ut_assertok(expo_send_key(exp, CTL_CH('a')));
+	ut_asserteq(0, ted->tin.cls.num);
+	ut_asserteq(91, ted->tin.cls.eol_num);
+	ut_assertok(expo_send_key(exp, CTL_CH('d')));
+	ut_asserteq(0, ted->tin.cls.num);
+	ut_asserteq(90, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21147, video_compress_fb(uts, dev, false));
+
+	/* go to end of buffer and backspace */
+	ut_assertok(expo_send_key(exp, CTL_CH('e')));
+	ut_asserteq(90, ted->tin.cls.num);
+	ut_asserteq(90, ted->tin.cls.eol_num);
+	ut_assertok(expo_send_key(exp, '\x7f'));
+	ut_asserteq(89, ted->tin.cls.num);
+	ut_asserteq(89, ted->tin.cls.eol_num);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21083, video_compress_fb(uts, dev, false));
+
 	/* close the textedit with Enter (BKEY_SELECT) */
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
 	ut_assertok(expo_action_get(exp, &act));
@@ -1655,12 +1712,12 @@ static int expo_render_textedit(struct unit_test_state *uts)
 
 	/* check the textedit is closed and text is changed */
 	ut_asserteq(0, ted->obj.flags & SCENEOF_OPEN);
-	ut_asserteq_str("This\nis the initial contents of the text "
-		"editor but it is quite likely that more will be added latrX",
+	ut_asserteq_str("his\nis the initial contents of the text "
+		"editor but it is ely that more will be added latr",
 		abuf_data(&ted->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(21659, video_compress_fb(uts, dev, false));
+	ut_asserteq(21230, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
