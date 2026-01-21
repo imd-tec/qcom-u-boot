@@ -199,8 +199,8 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 			break;
 		event->type = EXPOACT_CLOSE;
 		event->select.id = obj->id;
-		key = '\n';
-		fallthrough;
+		scene_txtin_close(scn, tin);
+		break;
 	default:
 		cread_line_process_ch(cls, key);
 		break;
