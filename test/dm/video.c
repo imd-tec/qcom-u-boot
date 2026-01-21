@@ -1516,3 +1516,91 @@ static int dm_test_video_context_alloc(struct unit_test_state *uts)
 	return 0;
 }
 DM_TEST(dm_test_video_context_alloc, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+/* Test that two vidconsole contexts are independent */
+static int dm_test_video_context_indep(struct unit_test_state *uts)
+{
+	struct vidconsole_ctx *ctx1, *ctx2;
+	struct udevice *dev, *con;
+
+	ut_assertok(select_vidconsole(uts, "vidconsole0"));
+	ut_assertok(video_get_nologo(uts, &dev));
+	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
+	ut_assertok(vidconsole_select_font(con, NULL, "8x16", 0));
+
+	/* Create two contexts */
+	ut_assertok(vidconsole_ctx_new(con, (void **)&ctx1));
+	ut_assertok(vidconsole_ctx_new(con, (void **)&ctx2));
+
+	/* Set different cursor positions in each context */
+	vidconsole_set_cursor_pos(con, ctx1, 100, 50);
+	vidconsole_set_cursor_pos(con, ctx2, 200, 100);
+
+	/* Verify positions are independent */
+	ut_asserteq(VID_TO_POS(100), ctx1->xcur_frac);
+	ut_asserteq(50, ctx1->ycur);
+	ut_asserteq(VID_TO_POS(200), ctx2->xcur_frac);
+	ut_asserteq(100, ctx2->ycur);
+
+	/* Write to ctx1, verify ctx2 is unchanged */
+	vidconsole_put_string(con, ctx1, "Hello");
+	ut_asserteq(VID_TO_POS(200), ctx2->xcur_frac);
+	ut_asserteq(100, ctx2->ycur);
+
+	/* Write to ctx2, verify it moves independently */
+	vidconsole_put_string(con, ctx2, "World");
+	ut_assert(ctx2->xcur_frac > VID_TO_POS(200));
+	ut_asserteq(100, ctx2->ycur);
+
+	/* ctx1 should have moved from the first write */
+	ut_assert(ctx1->xcur_frac > VID_TO_POS(100));
+	ut_asserteq(50, ctx1->ycur);
+
+	ut_assertok(vidconsole_ctx_dispose(con, ctx1));
+	ut_assertok(vidconsole_ctx_dispose(con, ctx2));
+
+	return 0;
+}
+DM_TEST(dm_test_video_context_indep, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+/* Test multiple contexts with truetype font */
+static int dm_test_video_context_indep_tt(struct unit_test_state *uts)
+{
+	struct vidconsole_ctx *ctx1, *ctx2;
+	struct udevice *dev, *con;
+	int ctx1_x, ctx2_x;
+
+	ut_assertok(video_get_nologo(uts, &dev));
+	ut_assertok(uclass_get_device(UCLASS_VIDEO_CONSOLE, 0, &con));
+	ut_assertok(vidconsole_select_font(con, NULL, NULL, 30));
+
+	/* Create two contexts */
+	ut_assertok(vidconsole_ctx_new(con, (void **)&ctx1));
+	ut_assertok(vidconsole_ctx_new(con, (void **)&ctx2));
+
+	/* Set different cursor positions */
+	vidconsole_set_cursor_pos(con, ctx1, 50, 100);
+	vidconsole_set_cursor_pos(con, ctx2, 300, 200);
+
+	/* Write different text to each */
+	vidconsole_put_string(con, ctx1, "First");
+	ctx1_x = ctx1->xcur_frac;
+
+	vidconsole_put_string(con, ctx2, "Second context");
+	ctx2_x = ctx2->xcur_frac;
+
+	/* Verify they moved independently */
+	ut_asserteq(ctx1_x, ctx1->xcur_frac);  /* ctx1 unchanged by ctx2 write */
+	ut_asserteq(100, ctx1->ycur);
+	ut_asserteq(ctx2_x, ctx2->xcur_frac);
+	ut_asserteq(200, ctx2->ycur);
+
+	/* ctx2 should have moved more (longer string) */
+	ut_assert(ctx2_x - VID_TO_POS(300) > ctx1_x - VID_TO_POS(50));
+
+	ut_assertok(vidconsole_ctx_dispose(con, ctx1));
+	ut_assertok(vidconsole_ctx_dispose(con, ctx2));
+
+	return 0;
+}
+DM_TEST(dm_test_video_context_indep_tt, UTF_SCAN_PDATA | UTF_SCAN_FDT);
