@@ -1542,6 +1542,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	struct scene_obj_txtedit *ted;
 	struct scene_obj_menu *menu;
 	struct abuf buf, logo_copy;
+	struct expo_action act;
 	struct scene *scn;
 	struct udevice *dev;
 	struct expo *exp;
@@ -1549,6 +1550,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 
 	ut_assertok(create_test_expo(uts, &exp, &scn, &menu, &buf, &logo_copy));
 	dev = exp->display;
+	expo_enter_mode(exp);
 
 	id = scene_texted(scn, "texted", OBJ_TEXTED, 40, &ted);
 	ut_assert(id > 0);
@@ -1580,9 +1582,33 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_assertok(expo_render(exp));
 	ut_asserteq(21662, video_compress_fb(uts, dev, false));
 
+	/* open the textedit and re-render */
+	ut_assertok(scene_set_open(scn, OBJ_TEXTED, true));
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+
+	/* the cursor should be at the end */
+	ut_asserteq(100, ted->tin.cls.num);
+	ut_asserteq(100, ted->tin.cls.eol_num);
+	ut_asserteq(21526, video_compress_fb(uts, dev, false));
+
+	/* close the textedit with Enter (BKEY_SELECT) */
+	ut_assertok(expo_send_key(exp, BKEY_SELECT));
+	ut_assertok(expo_action_get(exp, &act));
+	ut_asserteq(EXPOACT_CLOSE, act.type);
+	ut_asserteq(OBJ_TEXTED, act.select.id);
+	ut_assertok(scene_set_open(scn, act.select.id, false));
+
+	/* check the textedit is closed */
+	ut_asserteq(0, ted->obj.flags & SCENEOF_OPEN);
+	ut_assertok(scene_arrange(scn));
+	ut_assertok(expo_render(exp));
+	ut_asserteq(21662, video_compress_fb(uts, dev, false));
+
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);
 
+	expo_exit_mode(exp);
 	expo_destroy(exp);
 
 	return 0;
