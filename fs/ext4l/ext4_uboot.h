@@ -94,9 +94,6 @@
 #include <linux/sched/mm.h>
 
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
-#define O_SYNC		0
-#define S_NOQUOTA		0
-
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT	12
 #endif
@@ -209,8 +206,6 @@ struct path;
 #include <linux/overflow.h>
 
 #include <linux/delayed_call.h>
-
-#define kfree_link		kfree
 
 /*
  * Additional stubs for super.c

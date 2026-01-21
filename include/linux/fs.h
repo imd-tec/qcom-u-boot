@@ -387,6 +387,10 @@ static inline void inode_init_once(struct inode *inode)
 #define S_ENCRYPTED	64	/* Encrypted */
 #define S_CASEFOLD	128	/* Case-folded */
 #define S_VERITY	256	/* Verity enabled */
+#define S_NOQUOTA	0	/* No quota (stub) */
+
+/* Open flags - stubs for U-Boot */
+#define O_SYNC		0
 
 /* Permission mode constants */
 #define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
