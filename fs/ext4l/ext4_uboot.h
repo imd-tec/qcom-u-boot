@@ -19,32 +19,142 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+/* U-Boot headers */
 #include <div64.h>
+#include <hexdump.h>
+#include <u-boot/crc.h>
+#include <vsprintf.h>
+
+/* Linux types - must come first */
 #include <linux/types.h>
-#include <linux/bitops.h>
-#include <vsprintf.h>		/* For panic() */
-#include <linux/string.h>
-#include <linux/stat.h>
+
+/* Linux headers (alphabetical) */
 #include <asm/byteorder.h>
-#include <linux/errno.h>
+#include <linux/bitops.h>
+#include <linux/bug.h>
+#include <linux/build_bug.h>
+#include <linux/cred.h>
 #include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/fs.h>
+#include <linux/init.h>
+#include <linux/iomap.h>
 #include <linux/list.h>
 #include <linux/log2.h>
-#include <linux/init.h>
 #include <linux/math64.h>
-#include <linux/workqueue.h>
-#include <linux/cred.h>
-#include <linux/fs.h>
-#include <linux/iomap.h>
+#include <linux/minmax.h>
+#include <linux/pagevec.h>
+#include <linux/rbtree.h>
 #include <linux/seq_file.h>
-#include <linux/rbtree.h>	/* Real rbtree implementation */
-#include <linux/time.h>		/* For timespec64, time64_t */
-#include <linux/pagevec.h>	/* For struct folio_batch */
-#include <linux/build_bug.h>	/* For BUILD_BUG_ON */
-#include <linux/bug.h>		/* For WARN_ON, WARN_ONCE */
-#include <u-boot/crc.h>		/* For crc32() used by crc32_be */
-#include "ext4_trace.h"		/* Trace event stubs */
-#include "ext4_fscrypt.h"	/* fscrypt stubs */
+#include <linux/stat.h>
+#include <linux/string.h>
+#include <linux/time.h>
+#include <linux/workqueue.h>
+
+/*
+ * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
+ * In Linux, these indicate kernel bugs. In ext4l, some BUG_ON conditions
+ * that check for race conditions can trigger in single-threaded U-Boot,
+ * so we stub them out as no-ops.
+ */
+#undef BUG_ON
+#undef BUG
+#define BUG_ON(cond)	do { (void)(cond); } while (0)
+#define BUG()		do { } while (0)
+
+/* Local ext4l headers */
+#include "ext4_fscrypt.h"
+#include "ext4_trace.h"
+
+/*
+ * Override no_printk to avoid format warnings in disabled debug prints.
+ * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
+ * This causes format mismatches with %llu that we want to ignore.
+ */
+#undef no_printk
+#define no_printk(fmt, ...)	({ 0; })
+
+/* More Linux headers (alphabetical) */
+#include <asm-generic/atomic.h>
+#include <asm-generic/bitops/le.h>
+#include <asm-generic/bitops/lock.h>
+#include <asm-generic/timex.h>
+#include <kunit/static_stub.h>
+#include <linux/bio.h>
+#include <linux/blkdev.h>
+#include <linux/blk_types.h>
+#include <linux/blockgroup_lock.h>
+#include <linux/buffer_head.h>
+#include <linux/cache.h>
+#include <linux/capability.h>
+#include <linux/completion.h>
+#include <linux/crc16.h>
+#include <linux/crc32c.h>
+#include <linux/ctype.h>
+#include <linux/dax.h>
+#include <linux/dcache.h>
+#include <linux/delayed_call.h>
+#include <linux/exportfs.h>
+#include <linux/fiemap.h>
+#include <linux/fsmap.h>
+#include <linux/fs_context.h>
+#include <linux/fs_parser.h>
+#include <linux/fsverity.h>
+#include <linux/hash.h>
+#include <linux/highuid.h>
+#include <linux/hrtimer.h>
+#include <linux/ioprio.h>
+#include <linux/iversion.h>
+#include <linux/jbd2.h>
+#include <linux/jiffies.h>
+#include <linux/kdev_t.h>
+#include <linux/kobject.h>
+#include <linux/ktime.h>
+#include <linux/list_sort.h>
+#include <linux/lockdep.h>
+#include <linux/mbcache.h>
+#include <linux/mempool.h>
+#include <linux/mm_types.h>
+#include <linux/mnt_idmapping.h>
+#include <linux/module.h>
+#include <linux/namei.h>
+#include <linux/nospec.h>
+#include <linux/overflow.h>
+#include <linux/pagemap.h>
+#include <linux/path.h>
+#include <linux/percpu.h>
+#include <linux/percpu_counter.h>
+#include <linux/prefetch.h>
+#include <linux/proc_fs.h>
+#include <linux/projid.h>
+#include <linux/quotaops.h>
+#include <linux/random.h>
+#include <linux/ratelimit.h>
+#include <linux/rcupdate.h>
+#include <linux/refcount.h>
+#include <linux/rwsem.h>
+#include <linux/sched.h>
+#include <linux/sched/mm.h>
+#include <linux/shrinker.h>
+#include <linux/slab.h>
+#include <linux/smp.h>
+#include <linux/sort.h>
+#include <linux/spinlock.h>
+#include <linux/statfs.h>
+#include <linux/uio.h>
+#include <linux/utsname.h>
+#include <linux/uuid.h>
+#include <linux/wait_bit.h>
+#include <linux/writeback.h>
+#include <linux/xarray.h>
+#include <linux/xattr.h>
+
+/*
+ * Hex dump - Linux kernel print_hex_dump has a different signature
+ * (includes log level) than U-Boot's, so we stub it out here.
+ */
+#undef print_hex_dump
+#define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
 /*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
@@ -62,61 +172,13 @@
  * See super.c:5123 and ioctl.c:1489 for the hash algorithm selection code.
  */
 
-/*
- * Override no_printk to avoid format warnings in disabled debug prints.
- * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
- * This causes format mismatches with %llu that we want to ignore.
- */
-#undef no_printk
-#define no_printk(fmt, ...)	({ 0; })
-
-#include <asm-generic/atomic.h>
-#include <linux/jiffies.h>
-#include <linux/blkdev.h>
-#include <linux/blk_types.h>
-#include <linux/fs_context.h>
-#include <linux/fs_parser.h>
-#include <linux/dcache.h>
-#include <linux/uuid.h>
-#include <linux/smp.h>
-#include <linux/refcount.h>
-#include <linux/spinlock.h>
-#include <linux/percpu_counter.h>
-#include <linux/percpu.h>
-#include <linux/projid.h>
-#include <linux/kobject.h>
-#include <linux/lockdep.h>
-#include <linux/completion.h>
-#include <linux/cache.h>
-#include <linux/capability.h>
-#include <linux/fiemap.h>
-#include <linux/uio.h>
-#include <linux/sched/mm.h>
-
+/* ext4-specific constants */
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
+#define EXT4_SUPER_MAGIC		0xEF53
 
-/*
- * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
- * In Linux, these indicate kernel bugs. In ext4l, some BUG_ON conditions
- * that check for race conditions can trigger in single-threaded U-Boot,
- * so we stub them out as no-ops.
- */
-#undef BUG_ON
-#undef BUG
-#define BUG_ON(cond)	do { (void)(cond); } while (0)
-#define BUG()		do { } while (0)
-
-#include <asm-generic/bitops/le.h>
-#include <kunit/static_stub.h>
-#include <linux/quotaops.h>
-#include <linux/random.h>
-
-#include <linux/rcupdate.h>
-#include <linux/slab.h>
-
-#include <linux/sched.h>
-#include <linux/buffer_head.h>
-#include <linux/jbd2.h>
+#define EXT4_GOING_FLAGS_DEFAULT	0
+#define EXT4_GOING_FLAGS_LOGFLUSH	1
+#define EXT4_GOING_FLAGS_NOLOGFLUSH	2
 
 /*
  * U-Boot buffer head private bits.
@@ -134,143 +196,30 @@ BUFFER_FNS(OwnsData, ownsdata)
 #define BH_Cached		(BH_JBDPrivateStart + 2)
 BUFFER_FNS(Cached, cached)
 
-#include <linux/crc32c.h>
-#include <linux/ratelimit.h>
-#include <linux/mm_types.h>
-#include <linux/mnt_idmapping.h>
-#include <linux/rwsem.h>
-
 /* Forward declarations */
-struct pipe_inode_info;
+struct fid;
 struct kstat;
+struct kstatfs;
 struct path;
-
-/* QSTR_INIT and dotdot_name are now in linux/dcache.h */
-
-#include <linux/minmax.h>
-
-/* indirect.c stubs */
-
-/* ext4_sb_bread_nofail is stubbed in interface.c */
-
-/* extents_status.c stubs */
-
-/* shrinker - use linux/shrinker.h */
-#include <linux/shrinker.h>
-
-/* ktime functions - use linux/ktime.h */
-#include <linux/ktime.h>
-
-/* hrtimer - use linux/hrtimer.h */
-#include <linux/hrtimer.h>
-
-/* folio and pagemap - use linux/pagemap.h */
-#include <linux/pagemap.h>
-#include <linux/xarray.h>
-
-/* wbc_to_tag, WB_REASON_* - use linux/writeback.h */
-#include <linux/writeback.h>
-
-/* projid_t is now in linux/projid.h */
-
-/*
- * Additional stubs for inode.c
- */
-
-/* try_cmpxchg is now in asm-generic/atomic.h */
-
-/* hash_64 - use linux/hash.h */
-#include <linux/hash.h>
-
-#include <linux/path.h>
-#include <linux/dax.h>
-
-#include <linux/fsverity.h>
-#include <linux/iversion.h>
-#include <linux/kdev_t.h>
-
-/* UID/GID bit helpers - use linux/highuid.h */
-#include <linux/highuid.h>
-
-/*
- * Additional stubs for dir.c
- */
+struct pipe_inode_info;
 
 /* FSTR_INIT - fscrypt_str initializer (fscrypt_str defined in ext4_fscrypt.h) */
 #define FSTR_INIT(n, l)		{ .name = (n), .len = (l) }
 
-/* struct_size - use linux/overflow.h */
-#include <linux/overflow.h>
-
-#include <linux/delayed_call.h>
-
-/*
- * Additional stubs for super.c
- */
-
 /* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
-#define STAT_WRITE		0
 #define STAT_READ		0
+#define STAT_WRITE		0
 static u64 __attribute__((unused)) __ext4_sectors[2];
 #define sectors			__ext4_sectors
 #define part_stat_read(p, f)	({ (void)(p); (void)(f); 0ULL; })
 
-/*
- * Hex dump - DUMP_PREFIX_* types are in hexdump.h.
- * However, the Linux kernel print_hex_dump has a different signature
- * (includes log level) than U-Boot's, so we stub it out here.
- */
-#include <hexdump.h>
-#undef print_hex_dump
-#define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
+/* CRC32 big-endian - map to U-Boot's crc32() */
+#define crc32_be(crc, p, len)		crc32(crc, p, len)
 
-/* Forward declarations for super_operations and export_operations */
-struct kstatfs;
-struct fid;
-
-#include <linux/exportfs.h>
-#include <linux/statfs.h>
-#include <linux/module.h>
-
-/* EXT4_GOING flags */
-#define EXT4_GOING_FLAGS_DEFAULT	0
-#define EXT4_GOING_FLAGS_LOGFLUSH	1
-#define EXT4_GOING_FLAGS_NOLOGFLUSH	2
-
-/* ext4 superblock initialisation and commit */
-int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
-int ext4_commit_super(struct super_block *sb);
-void ext4_unregister_li_request(struct super_block *sb);
-
-#include <linux/ctype.h>
-
-#include <linux/crc16.h>
-#include <linux/namei.h>
-
-/* I/O priority classes - use linux/ioprio.h */
-#include <linux/ioprio.h>
-
-/* end_buffer_write_sync - implemented in support.c */
-void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
-
-#define EXT4_SUPER_MAGIC		0xEF53
-
-/* blockgroup_lock - use linux/blockgroup_lock.h */
-#include <linux/blockgroup_lock.h>
-
-/* Buffer submission stubs - declaration for stub.c */
-int trylock_buffer(struct buffer_head *bh);
-
-/* Trace stubs for super.c - declaration for stub.c implementation */
-void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
-
-/* ___ratelimit is now in linux/ratelimit.h */
-
-/* kobject_put is now in linux/kobject.h */
-/* wait_for_completion is now a macro in linux/completion.h */
-
-/* DAX - declaration for stub.c */
-void fs_put_dax(void *dax, void *holder);
+/* Memory allocation for journal.c */
+#define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
+#define free_pages(addr, order)		free((void *)(addr))
+#define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
 
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
@@ -280,87 +229,42 @@ void *kvzalloc(size_t size, gfp_t flags);
 unsigned long get_zeroed_page(gfp_t gfp);
 void free_page(unsigned long addr);
 
-/* DAX - declaration for stub.c */
+/* DAX - declarations for stub.c */
 void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
 			 void *holder);
+void fs_put_dax(void *dax, void *holder);
 
-#include <linux/mbcache.h>
-#include <linux/xattr.h>
+/* Buffer submission - declaration for stub.c */
+int trylock_buffer(struct buffer_head *bh);
 
 /* Filesystem sync - declaration for stub.c */
 int sync_filesystem(void *sb);
 
-/*
- * Stubs for mballoc.c
- */
+/* Trace stubs for super.c - declaration for stub.c */
+void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
 
-#include <asm-generic/timex.h>
-#include <linux/nospec.h>
+/* end_buffer_write_sync - implemented in support.c */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
-/*
- * Stubs for page-io.c - bio types are in linux/bio.h
- */
-#include <linux/bio.h>
-
-/*
- * Stubs for readpage.c
- */
-
-#include <linux/mempool.h>
-
-#include <linux/prefetch.h>
-
-/*
- * Stubs for fast_commit.c
- */
-
-/* Wait bit operations - use linux/wait_bit.h */
-#include <linux/wait_bit.h>
-
-/* JBD2 checkpoint.c and commit.c stubs */
-#include <asm-generic/bitops/lock.h>
-/* smp_mb__after_atomic is now in linux/smp.h */
-#define crc32_be(crc, p, len)		crc32(crc, p, len)
+/* ext4 superblock initialisation and commit */
+int ext4_commit_super(struct super_block *sb);
+int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
+void ext4_unregister_li_request(struct super_block *sb);
 
 /* ext4l support functions (support.c) */
-void ext4l_crc32c_init(void);
-void bh_cache_release_jbd(void);
-void bh_cache_clear(void);
 int bh_cache_sync(void);
 int ext4l_read_block(sector_t block, size_t size, void *buffer);
 int ext4l_write_block(sector_t block, size_t size, void *buffer);
-void ext4l_msg_init(void);
-void ext4l_record_msg(const char *msg, int len);
 struct membuf *ext4l_get_msg_buf(void);
+void bh_cache_clear(void);
+void bh_cache_release_jbd(void);
+void ext4l_crc32c_init(void);
+void ext4l_msg_init(void);
 void ext4l_print_msgs(void);
+void ext4l_record_msg(const char *msg, int len);
 
 /* ext4l interface functions (interface.c) */
 struct blk_desc *ext4l_get_blk_dev(void);
 struct disk_partition *ext4l_get_partition(void);
-
-#include <linux/proc_fs.h>
-
-/* Memory allocation for journal.c */
-#define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
-#define free_pages(addr, order)		free((void *)(addr))
-#define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
-
-/*
- * Stubs for mmp.c
- */
-
-/* init_utsname - use linux/utsname.h */
-#include <linux/utsname.h>
-
-/*
- * Stubs for fsmap.c
- */
-
-/* fsmap is now in linux/fsmap.h */
-#include <linux/fsmap.h>
-
-/* list_sort and sort for fsmap.c */
-#include <linux/list_sort.h>
-#include <linux/sort.h>
 
 #endif /* __EXT4_UBOOT_H__ */
