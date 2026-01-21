@@ -433,6 +433,11 @@ void invalidate_bdev(struct block_device *bdev)
 {
 }
 
+int bdev_read_only(struct block_device *bdev)
+{
+	return bdev ? bdev->read_only : 0;
+}
+
 struct block_device *file_bdev(struct file *file)
 {
 	return NULL;

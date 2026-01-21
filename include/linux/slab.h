@@ -126,6 +126,8 @@ struct kmem_cache {
 
 struct kmem_cache *get_mem(int element_sz);
 #define kmem_cache_create(a, sz, c, d, e)	({ (void)(a); (void)(e); get_mem(sz); })
+#define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
+	kmem_cache_create(n, sz, al, fl, c)
 
 /**
  * KMEM_CACHE - shorthand for creating a named kmem_cache

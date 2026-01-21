@@ -19,32 +19,142 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+/* U-Boot headers */
 #include <div64.h>
+#include <hexdump.h>
+#include <u-boot/crc.h>
+#include <vsprintf.h>
+
+/* Linux types - must come first */
 #include <linux/types.h>
-#include <linux/bitops.h>
-#include <vsprintf.h>		/* For panic() */
-#include <linux/string.h>
-#include <linux/stat.h>
+
+/* Linux headers (alphabetical) */
 #include <asm/byteorder.h>
-#include <linux/errno.h>
+#include <linux/bitops.h>
+#include <linux/bug.h>
+#include <linux/build_bug.h>
+#include <linux/cred.h>
 #include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/fs.h>
+#include <linux/init.h>
+#include <linux/iomap.h>
 #include <linux/list.h>
 #include <linux/log2.h>
-#include <linux/init.h>
 #include <linux/math64.h>
-#include <linux/workqueue.h>
-#include <linux/cred.h>
-#include <linux/fs.h>
-#include <linux/iomap.h>
+#include <linux/minmax.h>
+#include <linux/pagevec.h>
+#include <linux/rbtree.h>
 #include <linux/seq_file.h>
-#include <linux/rbtree.h>	/* Real rbtree implementation */
-#include <linux/time.h>		/* For timespec64, time64_t */
-#include <linux/pagevec.h>	/* For struct folio_batch */
-#include <linux/build_bug.h>	/* For BUILD_BUG_ON */
-#include <linux/bug.h>		/* For WARN_ON, WARN_ONCE */
-#include <u-boot/crc.h>		/* For crc32() used by crc32_be */
-#include "ext4_trace.h"		/* Trace event stubs */
-#include "ext4_fscrypt.h"	/* fscrypt stubs */
+#include <linux/stat.h>
+#include <linux/string.h>
+#include <linux/time.h>
+#include <linux/workqueue.h>
+
+/*
+ * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
+ * In Linux, these indicate kernel bugs. In ext4l, some BUG_ON conditions
+ * that check for race conditions can trigger in single-threaded U-Boot,
+ * so we stub them out as no-ops.
+ */
+#undef BUG_ON
+#undef BUG
+#define BUG_ON(cond)	do { (void)(cond); } while (0)
+#define BUG()		do { } while (0)
+
+/* Local ext4l headers */
+#include "ext4_fscrypt.h"
+#include "ext4_trace.h"
+
+/*
+ * Override no_printk to avoid format warnings in disabled debug prints.
+ * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
+ * This causes format mismatches with %llu that we want to ignore.
+ */
+#undef no_printk
+#define no_printk(fmt, ...)	({ 0; })
+
+/* More Linux headers (alphabetical) */
+#include <asm-generic/atomic.h>
+#include <asm-generic/bitops/le.h>
+#include <asm-generic/bitops/lock.h>
+#include <asm-generic/timex.h>
+#include <kunit/static_stub.h>
+#include <linux/bio.h>
+#include <linux/blkdev.h>
+#include <linux/blk_types.h>
+#include <linux/blockgroup_lock.h>
+#include <linux/buffer_head.h>
+#include <linux/cache.h>
+#include <linux/capability.h>
+#include <linux/completion.h>
+#include <linux/crc16.h>
+#include <linux/crc32c.h>
+#include <linux/ctype.h>
+#include <linux/dax.h>
+#include <linux/dcache.h>
+#include <linux/delayed_call.h>
+#include <linux/exportfs.h>
+#include <linux/fiemap.h>
+#include <linux/fsmap.h>
+#include <linux/fs_context.h>
+#include <linux/fs_parser.h>
+#include <linux/fsverity.h>
+#include <linux/hash.h>
+#include <linux/highuid.h>
+#include <linux/hrtimer.h>
+#include <linux/ioprio.h>
+#include <linux/iversion.h>
+#include <linux/jbd2.h>
+#include <linux/jiffies.h>
+#include <linux/kdev_t.h>
+#include <linux/kobject.h>
+#include <linux/ktime.h>
+#include <linux/list_sort.h>
+#include <linux/lockdep.h>
+#include <linux/mbcache.h>
+#include <linux/mempool.h>
+#include <linux/mm_types.h>
+#include <linux/mnt_idmapping.h>
+#include <linux/module.h>
+#include <linux/namei.h>
+#include <linux/nospec.h>
+#include <linux/overflow.h>
+#include <linux/pagemap.h>
+#include <linux/path.h>
+#include <linux/percpu.h>
+#include <linux/percpu_counter.h>
+#include <linux/prefetch.h>
+#include <linux/proc_fs.h>
+#include <linux/projid.h>
+#include <linux/quotaops.h>
+#include <linux/random.h>
+#include <linux/ratelimit.h>
+#include <linux/rcupdate.h>
+#include <linux/refcount.h>
+#include <linux/rwsem.h>
+#include <linux/sched.h>
+#include <linux/sched/mm.h>
+#include <linux/shrinker.h>
+#include <linux/slab.h>
+#include <linux/smp.h>
+#include <linux/sort.h>
+#include <linux/spinlock.h>
+#include <linux/statfs.h>
+#include <linux/uio.h>
+#include <linux/utsname.h>
+#include <linux/uuid.h>
+#include <linux/wait_bit.h>
+#include <linux/writeback.h>
+#include <linux/xarray.h>
+#include <linux/xattr.h>
+
+/*
+ * Hex dump - Linux kernel print_hex_dump has a different signature
+ * (includes log level) than U-Boot's, so we stub it out here.
+ */
+#undef print_hex_dump
+#define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
 
 /*
  * __CHAR_UNSIGNED__ - directory hash algorithm selection
@@ -62,242 +172,13 @@
  * See super.c:5123 and ioctl.c:1489 for the hash algorithm selection code.
  */
 
-/*
- * Override no_printk to avoid format warnings in disabled debug prints.
- * The Linux kernel uses sector_t as u64, but U-Boot uses unsigned long.
- * This causes format mismatches with %llu that we want to ignore.
- */
-#undef no_printk
-#define no_printk(fmt, ...)	({ 0; })
-
-/* rol32 and ror32 are now in linux/bitops.h */
-/* Time types - timespec64 and time64_t are now in linux/time.h */
-
-/*
- * ktime_t, sector_t are now in linux/types.h
- * atomic_t, atomic64_t are now in asm-generic/atomic.h
- * MAX_JIFFY_OFFSET is now in linux/jiffies.h
- * BDEVNAME_SIZE is now in linux/blkdev.h
- * blk_opf_t is now in linux/blk_types.h
- */
-#include <asm-generic/atomic.h>
-#include <linux/jiffies.h>
-#include <linux/blkdev.h>
-#include <linux/blk_types.h>
-#include <linux/fs_context.h>
-#include <linux/fs_parser.h>
-#include <linux/dcache.h>
-#include <linux/uuid.h>
-#include <linux/smp.h>
-#include <linux/refcount.h>
-
-/* atomic_dec_if_positive, atomic_add_unless, etc. are now in asm-generic/atomic.h */
-/* cmpxchg is now in asm-generic/atomic.h */
-/* SMP stubs (raw_smp_processor_id, smp_*mb) are now in linux/smp.h */
-/* refcount_t and operations are now in linux/refcount.h */
-
-/* rwlock_t and read_lock/read_unlock are now in linux/spinlock.h */
-#include <linux/spinlock.h>
-
-/* RB tree types - from <linux/rbtree.h> included above */
-
-/* percpu - use Linux headers */
-#include <linux/percpu_counter.h>
-#include <linux/percpu.h>
-
-/* Project ID type - use linux/projid.h */
-#include <linux/projid.h>
-
-/* kobject is now in linux/kobject.h */
-#include <linux/kobject.h>
-
-/* lockdep stubs - needed before jbd2.h is included */
-#include <linux/lockdep.h>
-/* _THIS_IP_ is in linux/kernel.h */
-
-/* completion - use Linux header */
-#include <linux/completion.h>
-
-/* Cache alignment - use linux/cache.h */
-#include <linux/cache.h>
-
-/* ZERO_OR_NULL_PTR is in linux/slab.h */
-/* data_race is in linux/compiler.h */
-
-/* REQ_META, REQ_PRIO, REQ_RAHEAD are in linux/blk_types.h */
-/* __GFP_MOVABLE, __GFP_FS are in linux/slab.h */
-
-/* Capabilities - use linux/capability.h */
-#include <linux/capability.h>
-
-/* FIEMAP types - use linux/fiemap.h */
-#include <linux/fiemap.h>
+/* ext4-specific constants */
 #define EXT4_FIEMAP_EXTENT_HOLE		0x08000000
+#define EXT4_SUPER_MAGIC		0xEF53
 
-/* FALLOC_FL_* flags are in linux/fs.h */
-
-/* File flags */
-#define O_SYNC		0
-
-/* Forward declarations (struct inode, struct address_space) are in linux/fs.h */
-
-/* pgoff_t is in linux/types.h */
-#ifndef PAGE_SHIFT
-#define PAGE_SHIFT	12
-#endif
-
-/* FMODE_32BITHASH, FMODE_64BITHASH are in linux/fs.h */
-
-/* struct file is defined in linux/fs.h */
-
-/* kiocb, iov_iter - use linux/uio.h */
-#include <linux/uio.h>
-
-/* __counted_by is in linux/compiler_attributes.h */
-
-/* dir_context, filldir_t are in linux/fs.h */
-
-/* iomap types and structs are in linux/iomap.h */
-
-/* fscrypt_str, qstr are now in ext4_fscrypt.h */
-
-/* percpu rw semaphore is in linux/percpu.h */
-
-/* Memory allocation context - use linux/sched/mm.h */
-#include <linux/sched/mm.h>
-
-/* IS_CASEFOLDED is in linux/fs.h */
-/* IS_ENCRYPTED and FSCRYPT_SET_CONTEXT_MAX_SIZE are in ext4_fscrypt.h */
-#define S_NOQUOTA		0
-
-/* user_namespace and init_user_ns are in linux/cred.h */
-
-/*
- * BUG_ON / BUG - stubs (not using linux/bug.h which panics)
- * In Linux, these indicate kernel bugs. In ext4l, some BUG_ON conditions
- * that check for race conditions can trigger in single-threaded U-Boot,
- * so we stub them out as no-ops.
- */
-#undef BUG_ON
-#undef BUG
-#define BUG_ON(cond)	do { (void)(cond); } while (0)
-#define BUG()		do { } while (0)
-
-/* might_sleep is in linux/kernel.h */
-
-/* sb_rdonly is in linux/super.h */
-
-/* Trace stubs are now in ext4_trace.h */
-
-/* Buffer operations are in linux/buffer_head.h */
-/* wait_on_bit_io is now in linux/wait_bit.h */
-
-/* inode_needs_sync is in linux/fs.h */
-
-/* Memory barriers are now in linux/smp.h */
-
-/*
- * set_bit/clear_bit are declared extern in asm/bitops.h but not implemented.
- * We implement them in interface.c for sandbox.
- */
-
-/* Little-endian bit operations - use asm-generic/bitops/le.h */
-#include <asm-generic/bitops/le.h>
-
-/* KUNIT stub - use kunit/static_stub.h */
-#include <kunit/static_stub.h>
-
-/* percpu_counter operations are in linux/percpu_counter.h */
-
-/* in_group_p is in linux/cred.h */
-
-/* Quota operations - use linux/quotaops.h */
-#include <linux/quotaops.h>
-
-/* icount_read is in linux/fs.h */
-/* d_inode is now in linux/dcache.h */
-
-/* Random number functions - use linux/random.h */
-#include <linux/random.h>
-
-/* Buffer cache operations - sb_find_get_block, sync_dirty_buffer are in linux/buffer_head.h */
-
-/* Time functions - ktime_get_real_seconds, time_before32 are in linux/time.h */
-
-/* Inode operations - iget_locked and new_inode are in interface.c */
-extern struct inode *new_inode(struct super_block *sb);
-/* i_uid_write, i_gid_write, inode_fsuid_set, inode_init_owner are in linux/fs.h */
-/* insert_inode_locked, unlock_new_inode, clear_nlink are in linux/fs.h */
-/* IS_DIRSYNC is in linux/fs.h */
-
-/* fscrypt_prepare_new_inode, fscrypt_set_context are in ext4_fscrypt.h */
-
-/* ext4_init_acl is provided by acl.h */
-/* xattr stubs for files that don't include xattr.h */
-struct super_block;
-struct buffer_head;
-struct qstr;
-
-#ifdef CONFIG_EXT4_XATTR
-int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-			     struct buffer_head *block_bh, size_t value_len,
-			     bool is_create);
-#endif
-/* ext4_init_security is provided by xattr.h */
-
-/* is_bad_inode is in linux/fs.h */
-
-/* Block device operations - stubs */
-#define sb_issue_zeroout(sb, blk, num, gfp)	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
-#define blkdev_issue_flush(bdev)		({ (void)(bdev); 0; })
-
-/* inode_is_locked, i_size_write, i_size_read are in linux/fs.h */
-
-/* spin_trylock is defined in linux/spinlock.h */
-
-/* atomic_add_unless is now in asm-generic/atomic.h */
-
-/* bgl_lock_ptr is now in linux/blockgroup_lock.h */
-
-/* RCU stubs - use linux/rcupdate.h */
-#include <linux/rcupdate.h>
-
-/* RCU head for callbacks - defined in linux/compat.h as callback_head */
-
-/* lockdep_is_held is in linux/lockdep.h */
-
-/* Memory allocation - use linux/slab.h which is already available */
-#include <linux/slab.h>
-
-/* KMEM_CACHE macro is in linux/slab.h */
-
-/*
- * RB tree operations - use real rbtree implementation from lib/rbtree.c
- * and include/linux/rbtree.h. rb_entry, rb_first, rb_next, rb_prev,
- * rb_insert_color, rb_erase, rb_link_node, RB_EMPTY_ROOT, and
- * rbtree_postorder_for_each_entry_safe are all provided by the real
- * implementation - do not stub them!
- */
-
-/* inode/dentry operations */
-void iput(struct inode *inode);
-
-/* current task - from linux/sched.h */
-#include <linux/sched.h>
-
-/* _RET_IP_ is in linux/kernel.h */
-
-/* SB_FREEZE_* constants are in linux/fs.h */
-
-/* sb_writers is in linux/super.h */
-
-/* mapping_large_folio_support is in linux/pagemap.h */
-
-/* sector_t is now in linux/types.h */
-
-/* Buffer head - from linux/buffer_head.h */
-#include <linux/buffer_head.h>
-#include <linux/jbd2.h>
+#define EXT4_GOING_FLAGS_DEFAULT	0
+#define EXT4_GOING_FLAGS_LOGFLUSH	1
+#define EXT4_GOING_FLAGS_NOLOGFLUSH	2
 
 /*
  * U-Boot buffer head private bits.
@@ -315,1098 +196,75 @@ BUFFER_FNS(OwnsData, ownsdata)
 #define BH_Cached		(BH_JBDPrivateStart + 2)
 BUFFER_FNS(Cached, cached)
 
-/* get_block_t is in linux/fs.h */
-
-/* crc32c - from linux/crc32c.h */
-#include <linux/crc32c.h>
-
-/* ratelimit_state - use linux/ratelimit.h */
-#include <linux/ratelimit.h>
-
-/* fscrypt_dummy_policy and qstr are now in ext4_fscrypt.h */
-
-/* errseq_t is defined in linux/fs.h */
-/* time64_t is now in linux/time.h */
-
-/* IS_NOQUOTA is in linux/fs.h */
-/* dentry, name_snapshot are now in linux/dcache.h */
-
-/* VM types - use linux/mm_types.h */
-#include <linux/mm_types.h>
-
-/* pipe_inode_info - forward declaration */
-struct pipe_inode_info;
-
-/* Forward declarations for function prototypes (vm_fault is in linux/mm_types.h) */
+/* Forward declarations */
+struct fid;
 struct kstat;
+struct kstatfs;
 struct path;
-struct file_kattr;
-struct dir_context;
-struct readahead_control;
-struct fiemap_extent_info;
-struct folio;
-
-/* qsize_t is in linux/quotaops.h */
-
-/* blk_opf_t is in linux/blk_types.h */
-
-/* bh_end_io_t and struct buffer_head are in linux/buffer_head.h */
-
-/* DT_* directory entry types are in linux/fs.h */
-
-/* mnt_idmap - use linux/mnt_idmapping.h */
-#include <linux/mnt_idmapping.h>
-
-/* fstrim_range is in linux/fs.h */
-
-/* rw_semaphore - defined in linux/rwsem.h, include it */
-#include <linux/rwsem.h>
-
-/* block_device is defined in linux/fs.h */
-
-/* SB_RDONLY, SB_I_VERSION, etc. superblock flags are in linux/fs.h */
-
-/* uuid_t is now in linux/uuid.h */
-
-/* super_block is now in linux/super.h */
-
-/* Block device read-only check */
-static inline int bdev_read_only(struct block_device *bdev)
-{
-	return bdev ? bdev->read_only : 0;
-}
-
-/* kuid_t and kgid_t - from linux/cred.h */
-#include <linux/cred.h>
-
-/* Inode state bits (I_NEW, I_FREEING, etc.) are in linux/fs.h */
-/* S_SYNC, S_NOATIME, etc. inode flags are in linux/fs.h */
-/* S_IRWXUGO is in linux/fs.h */
-
-/* Whiteout mode for overlayfs */
-#define WHITEOUT_DEV	0
-#define WHITEOUT_MODE	0
-
-/* RENAME_* flags are in linux/fs.h */
-/* I_DIRTY_TIME is in linux/fs.h */
-
-/* SB_LAZYTIME is in linux/fs.h */
-/* ATTR_* iattr valid flags are in linux/fs.h */
-/* STATX_* flags and struct kstat are in linux/stat.h */
-/* VM fault return values are in linux/mm_types.h */
-/* struct path is defined in linux/fs.h */
-/* VM structs (vm_area_struct, page, vm_fault, vm_operations_struct) are in linux/mm_types.h */
-
-/* Forward declaration for swap */
-struct swap_info_struct;
-
-/* PF_MEMALLOC is in linux/sched.h */
-
-/* Forward declarations for inode operations */
-struct inode_operations;
-struct file_operations;
-
-/* inode - extended for inode.c */
-struct inode {
-	struct super_block *i_sb;
-	unsigned long i_ino;
-	umode_t i_mode;
-	unsigned int i_nlink;
-	loff_t i_size;
-	struct address_space *i_mapping;
-	struct address_space i_data;
-	kuid_t i_uid;
-	kgid_t i_gid;
-	unsigned long i_blocks;
-	unsigned int i_generation;
-	unsigned int i_flags;
-	unsigned int i_blkbits;
-	unsigned long i_state;
-	struct timespec64 i_atime;
-	struct timespec64 i_mtime;
-	struct timespec64 i_ctime;
-	struct list_head i_io_list;
-	dev_t i_rdev;
-	const struct inode_operations *i_op;
-	const struct file_operations *i_fop;
-	atomic_t i_writecount;		/* Count of writers */
-	atomic_t i_count;		/* Reference count */
-	struct rw_semaphore i_rwsem;	/* inode lock */
-	const char *i_link;		/* Symlink target for fast symlinks */
-	unsigned short i_write_hint;	/* Write life time hint */
-
-	/* U-Boot: linkage into super_block s_inodes list */
-	struct list_head i_sb_list;
-};
-
-/* Inode time accessors */
-static inline struct timespec64 inode_get_atime(const struct inode *inode)
-{
-	return inode->i_atime;
-}
-
-static inline struct timespec64 inode_get_mtime(const struct inode *inode)
-{
-	return inode->i_mtime;
-}
-
-static inline struct timespec64 inode_get_ctime(const struct inode *inode)
-{
-	return inode->i_ctime;
-}
-
-static inline time_t inode_get_atime_sec(const struct inode *inode)
-{
-	return inode->i_atime.tv_sec;
-}
-
-static inline time_t inode_get_ctime_sec(const struct inode *inode)
-{
-	return inode->i_ctime.tv_sec;
-}
-
-static inline time_t inode_get_mtime_sec(const struct inode *inode)
-{
-	return inode->i_mtime.tv_sec;
-}
-
-static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_ctime.tv_sec = sec;
-	inode->i_ctime.tv_nsec = nsec;
-}
-
-static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_atime.tv_sec = sec;
-	inode->i_atime.tv_nsec = nsec;
-}
-
-static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
-{
-	inode->i_mtime.tv_sec = sec;
-	inode->i_mtime.tv_nsec = nsec;
-}
-
-static inline void simple_inode_init_ts(struct inode *inode)
-{
-	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
-
-	inode->i_atime = ts;
-	inode->i_mtime = ts;
-	inode->i_ctime = ts;
-}
-
-/*
- * Inode state accessors - simplified for single-threaded U-Boot.
- * Linux uses READ_ONCE/WRITE_ONCE and lockdep assertions; we use direct access.
- */
-static inline unsigned long inode_state_read_once(struct inode *inode)
-{
-	return inode->i_state;
-}
-
-static inline unsigned long inode_state_read(struct inode *inode)
-{
-	return inode->i_state;
-}
-
-static inline void inode_state_set_raw(struct inode *inode, unsigned long flags)
-{
-	inode->i_state |= flags;
-}
-
-static inline void inode_state_set(struct inode *inode, unsigned long flags)
-{
-	inode->i_state |= flags;
-}
-
-static inline void inode_state_clear_raw(struct inode *inode,
-					 unsigned long flags)
-{
-	inode->i_state &= ~flags;
-}
-
-static inline void inode_state_clear(struct inode *inode, unsigned long flags)
-{
-	inode->i_state &= ~flags;
-}
-
-static inline void inode_state_assign_raw(struct inode *inode,
-					  unsigned long flags)
-{
-	inode->i_state = flags;
-}
-
-static inline void inode_state_assign(struct inode *inode, unsigned long flags)
-{
-	inode->i_state = flags;
-}
-
-/* QSTR_INIT and dotdot_name are now in linux/dcache.h */
-
-/*
- * Hash info structure - defined in ext4.h.
- * Only defined here for files that don't include ext4.h (like hash.c)
- * This is wrapped in EXT4_UBOOT_NO_EXT4_H which hash.c defines.
- */
-#ifdef EXT4_UBOOT_NO_EXT4_H
-struct dx_hash_info {
-	u32 hash;
-	u32 minor_hash;
-	int hash_version;
-	u32 *seed;
-};
-#endif
-
-/* Hash algorithm types */
-#define DX_HASH_LEGACY			0
-#define DX_HASH_HALF_MD4		1
-#define DX_HASH_TEA			2
-#define DX_HASH_LEGACY_UNSIGNED		3
-#define DX_HASH_HALF_MD4_UNSIGNED	4
-#define DX_HASH_TEA_UNSIGNED		5
-#define DX_HASH_SIPHASH			6
-#define DX_HASH_LAST			DX_HASH_SIPHASH
-
-/* EOF markers for htree */
-#define EXT4_HTREE_EOF_32BIT   ((1UL  << (32 - 1)) - 1)
-#define EXT4_HTREE_EOF_64BIT   ((1ULL << (64 - 1)) - 1)
-
-/* jbd2_buffer_trigger_type is defined in jbd2.h */
-/* struct seq_file is in linux/seq_file.h */
-
-/* fscrypt_has_encryption_key, fscrypt_fname_siphash are in ext4_fscrypt.h */
-
-/* ext4 warning macros - stubs (only when ext4.h is not included) */
-#ifdef EXT4_UBOOT_NO_EXT4_H
-#define ext4_warning(sb, fmt, ...) \
-	do { } while (0)
-
-#define ext4_warning_inode(inode, fmt, ...) \
-	do { } while (0)
-#endif
-
-/* fallthrough is in linux/compiler_attributes.h */
-
-/* BUILD_BUG_ON is in linux/build_bug.h */
-/* WARN_ON, WARN_ON_ONCE, WARN_ONCE are in linux/bug.h */
-/* pr_warn_once is in linux/printk.h */
-
-/* lockdep_assert_held_read is in linux/lockdep.h */
-/* strtomem_pad is in linux/string.h */
-/* strscpy_pad is in linux/string.h */
-
-/* memweight is in linux/string.h */
-
-/* BITS_PER_BYTE is in linux/bitops.h */
-
-/* extents.c stubs */
-
-/* rwsem_is_locked is in linux/rwsem.h */
-
-/* Buffer operations - sb_getblk_gfp, bh_uptodate_or_lock are in linux/buffer_head.h */
-/* ext4_read_bh is stubbed in interface.c */
-
-/* Inode locking stubs are in linux/fs.h */
-/* Lock debugging stubs are in linux/lockdep.h */
-
-/* File operations */
-#define file_modified(file)		({ (void)(file); 0; })
-#define file_accessed(file)		do { (void)(file); } while (0)
-
-/* Generic file operations - stubs for file.c */
-#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
-#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
-#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
-#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
-#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
-#define vfs_setpos(file, offset, maxsize)	({ (void)(file); (void)(maxsize); (offset); })
-
-/* IS_NOSEC is in linux/fs.h */
-
-/* Filemap operations and fault handlers are in linux/pagemap.h */
-
-/* DAX device mapping check - always false in U-Boot */
-#define daxdev_mapping_supported(f, i, d) ({ (void)(f); (void)(i); (void)(d); 1; })
-
-/* Inode time/size operations - inode_newsize_ok, i_blocksize, IS_SYNC are in linux/fs.h */
-/* inode_set_ctime_current, inode_set_mtime_to_ts are in linux/fs.h */
-
-/* Case-folding stubs - not supported in U-Boot */
-#define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
-#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
-
-/* in_range - use linux/minmax.h */
-#include <linux/minmax.h>
-
-/* dquot_reclaim_block is in linux/quotaops.h */
-
-/* fiemap stubs are now in linux/fiemap.h */
-
-/* Memory retry wait */
-#define memalloc_retry_wait(g)		do { } while (0)
-
-/* bdev operations */
-#define bdev_write_zeroes_unmap_sectors(b) ({ (void)(b); 0; })
-
-/* indirect.c stubs */
-
-/* umin is in linux/minmax.h */
-
-/* truncate_inode_pages is in linux/pagemap.h */
-
-/* ext4_sb_bread_nofail is stubbed in interface.c */
-
-/* extents_status.c stubs */
-
-/* shrinker - use linux/shrinker.h */
-#include <linux/shrinker.h>
-
-/* ktime functions - use linux/ktime.h */
-#include <linux/ktime.h>
-
-/* hrtimer - use linux/hrtimer.h */
-#include <linux/hrtimer.h>
-
-/* write_trylock is in linux/spinlock.h */
-
-/* percpu_counter_init/destroy are in linux/percpu_counter.h */
-
-/* ratelimit macros are now in linux/ratelimit.h */
-
-/* SEQ_START_TOKEN is in linux/seq_file.h */
-
-/* folio and pagemap - use linux/pagemap.h */
-#include <linux/pagemap.h>
-#include <linux/xarray.h>
-
-/* wbc_to_tag, WB_REASON_* - use linux/writeback.h */
-#include <linux/writeback.h>
-
-/* blk_plug is now in linux/blkdev.h */
-
-/* address_space_operations is in linux/fs.h */
-/* buffer_migrate_folio, buffer_migrate_folio_norefs, noop_dirty_folio are in linux/buffer_head.h */
-/* readahead_control, FGP_*, kmap/kunmap, folio stubs are in linux/pagemap.h */
-/* __filemap_get_folio, folio_put, folio_get, mapping_clear_folio_cache are in linux/pagemap.h */
-
-/* projid_t is now in linux/projid.h */
-
-/*
- * Additional stubs for inode.c
- */
-
-/* try_cmpxchg is now in asm-generic/atomic.h */
-
-/* hash_64 - use linux/hash.h */
-#include <linux/hash.h>
-
-/* Dentry operations are now in linux/dcache.h */
-#define finish_open_simple(f, e)		(e)
-#define ihold(i)				do { (void)(i); } while (0)
-
-/* Sync operations - stubs */
-#define sync_mapping_buffers(m)			({ (void)(m); 0; })
-#define sync_inode_metadata(i, w)		({ (void)(i); (void)(w); 0; })
-#define generic_buffers_fsync_noflush(f, s, e, d) ({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
-#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
-#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
-
-/* DAX stubs - DAX not supported in U-Boot */
-#define IS_DAX(inode)				(0)
-#define dax_break_layout_final(inode)		do { } while (0)
-#define dax_writeback_mapping_range(m, bd, wb)	({ (void)(m); (void)(bd); (void)(wb); 0; })
-#define dax_zero_range(i, p, l, d, op)		({ (void)(i); (void)(p); (void)(l); (void)(d); (void)(op); -EOPNOTSUPP; })
-#define dax_break_layout_inode(i, m)		({ (void)(i); (void)(m); 0; })
-
-/* Superblock freezing stubs */
-#define sb_start_intwrite(sb)			do { (void)(sb); } while (0)
-#define sb_end_intwrite(sb)			do { (void)(sb); } while (0)
-#define sb_start_intwrite_trylock(sb)		({ (void)(sb); 1; })
-#define sb_start_pagefault(sb)			do { (void)(sb); } while (0)
-#define sb_end_pagefault(sb)			do { (void)(sb); } while (0)
-
-/* d_path, path_put - use linux/path.h */
-#include <linux/path.h>
-
-/* fscrypt_file_open is in ext4_fscrypt.h */
-/* fsverity_file_open is in linux/fsverity.h */
-#include <linux/fsverity.h>
-
-/* dquot_file_open is in linux/quotaops.h */
-
-/* inode_io_list_del is in linux/writeback.h */
-/* inode_is_open_for_write, inode_is_dirtytime_only are in linux/fs.h */
-
-/* Folio operations and writeback stubs are in linux/pagemap.h */
-/* folio_batch_release is in linux/pagevec.h */
-
-/* Quota stubs are in linux/quotaops.h */
-
-/* percpu_counter_sub is in linux/percpu_counter.h */
-
-/* Filemap operations are in linux/pagemap.h */
-/* try_to_writeback_inodes_sb is in linux/writeback.h */
-
-/* Buffer/block folio operations are in linux/buffer_head.h */
-/* write_begin_get_folio is in linux/pagemap.h */
-
-/* fscrypt_name, fscrypt_match_name, and fscrypt stubs are in ext4_fscrypt.h */
-
-/* fsverity stubs are in linux/fsverity.h */
-
-/* Inode time setters - needed for ext4.h */
-static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
-						      struct timespec64 ts)
-{
-	inode->i_atime = ts;
-	return ts;
-}
-
-static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
-						      struct timespec64 ts)
-{
-	inode->i_ctime = ts;
-	return ts;
-}
-
-/* Inode version operations - use linux/iversion.h */
-#include <linux/iversion.h>
-/* inode_set_flags is in linux/fs.h */
-
-/* Inode credential helpers - i_uid_read, i_gid_read need struct inode */
-static inline unsigned int i_uid_read(const struct inode *inode)
-{
-	return inode->i_uid.val;
-}
-
-static inline unsigned int i_gid_read(const struct inode *inode)
-{
-	return inode->i_gid.val;
-}
-
-/* i_uid_needs_update, i_gid_needs_update, i_uid_update, i_gid_update are in linux/fs.h */
-
-/* Device encoding helpers are now in linux/kdev_t.h */
-#include <linux/kdev_t.h>
-
-/* UID/GID bit helpers - use linux/highuid.h */
-#include <linux/highuid.h>
-
-/* Inode allocation/state operations */
-extern struct inode *iget_locked(struct super_block *sb, unsigned long ino);
-/* set_nlink, inc_nlink, drop_nlink are in linux/fs.h */
-/* inode_set_cached_link, init_special_inode, make_bad_inode are in linux/fs.h */
-/* iget_failed, find_inode_by_ino_rcu, mark_inode_dirty are in linux/fs.h */
-
-/* Attribute operations */
-#define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
-#define setattr_copy(m, i, a)		do { } while (0)
-#define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
-#define generic_fillattr(m, req, i, s)	do { } while (0)
-#define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
-
-/* IS_APPEND, IS_IMMUTABLE are in linux/fs.h */
-
-/* File operations */
-#define file_update_time(f)		do { } while (0)
-#define vmf_fs_error(e)			((vm_fault_t)VM_FAULT_SIGBUS)
-
-/* iomap stubs */
-#define iomap_bmap(m, b, o)		({ (void)(m); (void)(b); (void)(o); 0UL; })
-#define iomap_swapfile_activate(s, f, sp, o) ({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
-
-/* Block device alignment */
-#define bdev_dma_alignment(bd)		(0)
-
-/* Truncation stubs are in linux/pagemap.h */
-
-/*
- * Additional stubs for dir.c
- */
+struct pipe_inode_info;
 
 /* FSTR_INIT - fscrypt_str initializer (fscrypt_str defined in ext4_fscrypt.h) */
 #define FSTR_INIT(n, l)		{ .name = (n), .len = (l) }
 
-/* fscrypt directory operations are in ext4_fscrypt.h */
-
-/* Readahead operations are in linux/pagemap.h */
-
-/* Inode version operations are in linux/iversion.h */
-
-/* dir_emit, dir_relax_shared are in linux/fs.h */
-
-/* File llseek */
-#define generic_file_llseek_size(f, o, w, m, e)	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })
-
-/* generic_read_dir - stub function (needs to be a real function for struct init) */
-ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
-			 loff_t *ppos);
-
-/* struct_size - use linux/overflow.h */
-#include <linux/overflow.h>
-
-/* file_operations - extended for dir.c */
-struct file_operations {
-	int (*open)(struct inode *, struct file *);
-	loff_t (*llseek)(struct file *, loff_t, int);
-	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
-	int (*iterate_shared)(struct file *, struct dir_context *);
-	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
-	int (*fsync)(struct file *, loff_t, loff_t, int);
-	int (*release)(struct inode *, struct file *);
-};
-
-/* delayed_call - use linux/delayed_call.h */
-#include <linux/delayed_call.h>
-
-#define kfree_link		kfree
-
-/* nd_terminate_link - terminate symlink string */
-static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
-{
-	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
-}
-
-/* inode_operations - for file and directory operations */
-struct inode_operations {
-	/* Symlink operations */
-	const char *(*get_link)(struct dentry *, struct inode *,
-				struct delayed_call *);
-	/* Common operations */
-	int (*getattr)(struct mnt_idmap *, const struct path *,
-		       struct kstat *, u32, unsigned int);
-	ssize_t (*listxattr)(struct dentry *, char *, size_t);
-	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
-	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
-	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
-	int (*set_acl)(struct mnt_idmap *, struct dentry *,
-		       struct posix_acl *, int);
-	int (*fileattr_get)(struct dentry *, struct file_kattr *);
-	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
-			    struct file_kattr *);
-	/* Directory operations */
-	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
-	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
-		      umode_t, bool);
-	int (*link)(struct dentry *, struct inode *, struct dentry *);
-	int (*unlink)(struct inode *, struct dentry *);
-	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
-		       const char *);
-	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
-				struct dentry *, umode_t);
-	int (*rmdir)(struct inode *, struct dentry *);
-	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
-		     umode_t, dev_t);
-	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
-		      struct inode *, struct dentry *, unsigned int);
-	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
-		       umode_t);
-};
-
-/* file open helper */
-#define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
-
-/* simple_get_link - for fast symlinks stored in inode */
-static inline const char *simple_get_link(struct dentry *dentry,
-					  struct inode *inode,
-					  struct delayed_call *callback)
-{
-	return inode->i_link;
-}
-
-/* fscrypt symlink stubs are in ext4_fscrypt.h */
-
-/*
- * Additional stubs for super.c
- */
-
-/* QFMT_VFS_* quota format constants are in linux/quotaops.h */
-
-/* end_buffer_read_sync is in linux/buffer_head.h */
-
-/* REQ_OP_READ is in linux/blk_types.h */
-/* SB_ACTIVE is in linux/fs.h */
-
 /* Part stat - not used in U-Boot. Note: sectors[X] is passed as second arg */
-#define STAT_WRITE		0
 #define STAT_READ		0
+#define STAT_WRITE		0
 static u64 __attribute__((unused)) __ext4_sectors[2];
 #define sectors			__ext4_sectors
 #define part_stat_read(p, f)	({ (void)(p); (void)(f); 0ULL; })
 
-/* system_state, SYSTEM_HALT, etc. are in linux/kernel.h */
-
-/*
- * Hex dump - DUMP_PREFIX_* types are in hexdump.h.
- * However, the Linux kernel print_hex_dump has a different signature
- * (includes log level) than U-Boot's, so we stub it out here.
- */
-#include <hexdump.h>
-#undef print_hex_dump
-#define print_hex_dump(l, p, pt, rg, gc, b, len, a) do { } while (0)
-
-/* SLAB_RECLAIM_ACCOUNT, SLAB_ACCOUNT are in linux/slab.h */
-
-/* Forward declarations for super_operations and export_operations */
-struct kstatfs;
-struct fid;
-
-/* super_operations is in linux/fs/super_types.h */
-
-/* export_operations and fid - use linux/exportfs.h */
-#include <linux/exportfs.h>
-
-/* uuid_to_fsid is in linux/statfs.h */
-
-/* kstatfs - use linux/statfs.h */
-#include <linux/statfs.h>
-
-/* struct seq_file is in linux/seq_file.h */
-
-/* Module stubs and register_filesystem are in linux/module.h */
-#include <linux/module.h>
-
-/* EXT4_GOING flags */
-#define EXT4_GOING_FLAGS_DEFAULT	0
-#define EXT4_GOING_FLAGS_LOGFLUSH	1
-#define EXT4_GOING_FLAGS_NOLOGFLUSH	2
-
-/* ext4 superblock initialisation and commit */
-int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
-int ext4_commit_super(struct super_block *sb);
-void ext4_unregister_li_request(struct super_block *sb);
-
-/* prandom - get_random_u32, prandom_u32_max are in linux/random.h */
-
-/* ctype */
-#include <linux/ctype.h>
-
-/* crc16 - use U-Boot's implementation */
-#include <linux/crc16.h>
-
-/* Timer and timing stubs are in linux/jiffies.h */
-
-/* Path lookup flags - use linux/namei.h */
-#include <linux/namei.h>
-
-/* I/O priority classes - use linux/ioprio.h */
-#include <linux/ioprio.h>
-
-/* SB_INLINECRYPT, SB_SILENT, SB_POSIXACL are in linux/fs.h */
-#define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
-#define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
-
-/* BLK_OPEN_* flags are in linux/blkdev.h */
-/* REQ_OP_*, REQ_SYNC, REQ_FUA are in linux/blk_types.h */
-
-/* blk_holder_ops for block device */
-struct blk_holder_ops {
-	void (*mark_dead)(struct block_device *, bool);
-};
-static const struct blk_holder_ops fs_holder_ops;
-
-/* end_buffer_write_sync - implemented in support.c */
-void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
-
-/* File system management time flag */
-#define FS_MGTIME			0
-
-/* Block size */
-#define BLOCK_SIZE			1024
-
-/* NSEC_PER_SEC is in linux/time.h */
-
-/* EXT4 magic number */
-#define EXT4_SUPER_MAGIC		0xEF53
-
-/* MAX_LFS_FILESIZE is in linux/fs.h */
-
-/* blockgroup_lock - use linux/blockgroup_lock.h */
-#include <linux/blockgroup_lock.h>
-
-/* submit_bh is in linux/buffer_head.h */
-/* Buffer submission stubs - declarations for stub.c implementations */
-struct buffer_head *bdev_getblk(struct block_device *bdev, sector_t block,
-				unsigned int size, gfp_t gfp);
-int trylock_buffer(struct buffer_head *bh);
-
-/* Trace stubs for super.c - declaration for stub.c implementation */
-void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
-
-/* ___ratelimit is now in linux/ratelimit.h */
-
-/* Filesystem notification - declaration for stub.c */
-void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
-
-/* File path operations - declaration for stub.c */
-char *file_path(struct file *file, char *buf, int buflen);
-struct block_device *file_bdev(struct file *file);
-
-/* percpu_init_rwsem/percpu_free_rwsem are in linux/percpu.h */
-
-/* Block device sync - declarations for stub.c */
-int sync_blockdev(struct block_device *bdev);
-void invalidate_bdev(struct block_device *bdev);
-
-/* kobject_put is now in linux/kobject.h */
-/* wait_for_completion is now a macro in linux/completion.h */
-
-/* DAX - declaration for stub.c */
-void fs_put_dax(void *dax, void *holder);
-
-/* fscrypt declarations are in ext4_fscrypt.h */
-
-/* alloc_inode_sb, inode_generic_drop are in linux/fs.h */
-/* inode_set_iversion is in linux/iversion.h */
-
-/* rwlock_init is a macro in linux/spinlock.h */
-
-/* slab usercopy - use regular kmem_cache_create */
-#define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
-	kmem_cache_create(n, sz, al, fl, c)
-
-/* invalidate_inode_buffers, clear_inode are in linux/fs.h */
-/* fsverity_cleanup_inode is in linux/fsverity.h */
-
-/* NFS export helpers are now in linux/exportfs.h */
-
-/* Path operations - path_put, d_path are in linux/path.h */
-
-/* I/O priority stubs are in linux/ioprio.h */
-
-/* kmemdup_nul is in linux/slab.h */
-/* fscrypt declarations are in ext4_fscrypt.h */
-
-/* Memory allocation - declarations for stub.c */
-void *kvzalloc(size_t size, gfp_t flags);
-#define kvmalloc(size, flags)	kvzalloc(size, flags)
-
-/* Time operations - ktime_get_ns is in linux/ktime.h */
-/* nsecs_to_jiffies is in linux/jiffies.h */
-
-/* sb_start_write, sb_end_write are in linux/fs/super_types.h */
-
-/* schedule_timeout_interruptible is in linux/sched.h */
-
-/* Page allocation - declarations for stub.c */
-unsigned long get_zeroed_page(gfp_t gfp);
-void free_page(unsigned long addr);
-
-/* DAX - declaration for stub.c */
-void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
-			 void *holder);
-
-/* Block device atomic write stubs are in linux/blkdev.h */
-
-/* Superblock blocksize - declaration for stub.c */
-int sb_set_blocksize(struct super_block *sb, int size);
-
-/* Superblock min blocksize - stub */
-static inline int sb_min_blocksize(struct super_block *sb, int size)
-{
-	return sb_set_blocksize(sb, size);
-}
-
-/* Block device size - declarations for stub.c */
-int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
-u64 sb_bdev_nr_blocks(struct super_block *sb);
-unsigned int bdev_max_discard_sectors(struct block_device *bdev);
-
-/* bgl_lock_init is now in linux/blockgroup_lock.h */
-
-/* set_task_ioprio is in linux/ioprio.h */
-
-/* Superblock identity functions */
-static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
-				  unsigned len)
-{
-	if (len > sizeof(sb->s_uuid.b))
-		len = sizeof(sb->s_uuid.b);
-	memcpy(sb->s_uuid.b, uuid, len);
-}
-
-/* super_set_sysfs_name_bdev is now in linux/kobject.h */
-
-/* mb_cache - use linux/mbcache.h */
-#include <linux/mbcache.h>
-
-/* xattr helper stubs for xattr.c */
-#define xattr_handler_can_list(h, d)		({ (void)(h); (void)(d); 0; })
-#define xattr_prefix(h)				({ (void)(h); (const char *)NULL; })
-
-/* I_MUTEX_* constants and inode locking stubs are in linux/fs.h */
-
-/* PF_MEMALLOC_NOFS is in linux/sched.h */
-
-/* generic_set_sb_d_ops, d_make_root are now in linux/dcache.h */
-
-/* strreplace is in linux/string.h */
-
-/* ratelimit_state_init is now in linux/ratelimit.h */
-
-/* Block device operations - declarations for stub.c */
-void bdev_fput(void *file);
-void *bdev_file_open_by_dev(dev_t dev, int flags, void *holder,
-			    const struct blk_holder_ops *ops);
-
-/* Filesystem sync - declaration for stub.c */
-int sync_filesystem(void *sb);
-
-/* Quota operations are in linux/quotaops.h */
-
-/* Block device file operations - stubs */
-#define set_blocksize(f, size)		({ (void)(f); (void)(size); 0; })
-struct buffer_head *__bread(struct block_device *bdev, sector_t block, unsigned size);
-
-/* flush_workqueue is now in linux/workqueue.h */
-
-/* Quota stubs for super.c are in linux/quotaops.h */
-
-/*
- * Stubs for mballoc.c
- */
-
-/* XArray is now in linux/xarray.h */
-/* Per-CPU stubs are in linux/percpu.h */
-
-/* Little-endian bit operations are in asm-generic/bitops/le.h */
-
-/* atomic64 operations are now in asm-generic/atomic.h */
-
-/* get_cycles is in asm-generic/timex.h */
-#include <asm-generic/timex.h>
-
-/* folio_address is in linux/pagemap.h */
-
-/* sb_end_intwrite defined earlier */
-
-/* WARN_RATELIMIT is in linux/ratelimit.h */
-
-/* folio_get - now implemented in support.c */
-
-/* array_index_nospec is in linux/nospec.h */
-#include <linux/nospec.h>
-
-/* atomic_inc_return and atomic_add_return are now in asm-generic/atomic.h */
-
-/* pde_data - proc dir entry data (not supported in U-Boot) */
-#define pde_data(inode)			((void *)NULL)
-
-/* struct seq_operations is in linux/seq_file.h */
-
-/* DEFINE_RAW_FLEX - define a flexible array struct on the stack (stubbed to NULL) */
-#define DEFINE_RAW_FLEX(type, name, member, count) \
-	type *name = NULL
-
-/* Block layer constants */
-#define BLK_MAX_SEGMENT_SIZE		65536
-
-/* num_possible_cpus, alloc_percpu, free_percpu are in linux/percpu.h */
-
-/* Block device properties */
-#define bdev_nonrot(bdev)		({ (void)(bdev); 0; })
-
-/* sb_issue_discard - issue discard request (no-op in U-Boot) */
-#define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
-	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
-
-/* atomic_sub, atomic64_sub, atomic_dec_and_test are in asm-generic/atomic.h */
-
-/* RCU list operations are in linux/rcupdate.h */
-
-/* raw_cpu_ptr - get pointer to per-CPU data for current CPU */
-#define raw_cpu_ptr(ptr)		(ptr)
-
-/* schedule_timeout_uninterruptible, need_resched are in linux/sched.h */
-
-/* sb_find_get_block_nonatomic, __find_get_block_nonatomic are in linux/buffer_head.h */
-#define bdev_discard_granularity(bdev) \
-	({ (void)(bdev); 0U; })
-
-/*
- * Stubs for page-io.c - bio types are in linux/bio.h
- */
-#include <linux/bio.h>
-
-/* refcount operations are now in linux/refcount.h */
-
-/* xchg is now in asm-generic/atomic.h */
-
-/* printk_ratelimited is in linux/printk.h */
-
-/* atomic_inc is in asm-generic/atomic.h */
-/* GFP_NOIO is in linux/slab.h */
-
-/* fscrypt page-io stubs are in ext4_fscrypt.h */
-
-/* folio writeback operations are in linux/pagemap.h */
-/* writeback control stubs are in linux/pagemap.h */
-/* bio_add_folio is in linux/bio.h */
-
-/*
- * Stubs for readpage.c
- */
-
-/* mempool is now in linux/mempool.h */
-#include <linux/mempool.h>
-
-/* folio read operations are in linux/pagemap.h */
-/* fscrypt readpage stubs are in ext4_fscrypt.h */
-
-/* fsverity stubs are in linux/fsverity.h */
-
-/* readahead operations are in linux/pagemap.h */
-
-/* prefetch operations */
-#define prefetchw(addr)			do { (void)(addr); } while (0)
-
-/* block_read_full_folio is in linux/buffer_head.h */
-
-/*
- * Stubs for fast_commit.c
- */
-
-/* Wait bit operations - use linux/wait_bit.h */
-#include <linux/wait_bit.h>
-
-/* Dentry name snapshot operations are now in linux/dcache.h */
-
-/* lockdep_assert_not_held is in linux/lockdep.h */
-/* REQ_IDLE, REQ_PREFLUSH are in linux/blk_types.h */
-/* wake_up_bit is now in linux/wait_bit.h */
-
-/* d_alloc, d_drop are now in linux/dcache.h */
-
-/* get_current_ioprio is in linux/ioprio.h */
-
-/* JBD2 checkpoint.c stubs */
-/* mutex_lock_io is in linux/mutex.h */
-/* write_dirty_buffer is in linux/buffer_head.h */
-/* spin_needbreak is in linux/spinlock.h */
-
-/* JBD2 commit.c stubs (folio_trylock is in linux/pagemap.h) */
-/* clear_bit_unlock is in asm-generic/bitops/lock.h */
-#include <asm-generic/bitops/lock.h>
-/* smp_mb__after_atomic is now in linux/smp.h */
-#define ktime_get_coarse_real_ts64(ts)	do { (ts)->tv_sec = 0; (ts)->tv_nsec = 0; } while (0)
-#define filemap_fdatawait_range_keep_errors(m, s, e) \
-	({ (void)(m); (void)(s); (void)(e); 0; })
+/* CRC32 big-endian - map to U-Boot's crc32() */
 #define crc32_be(crc, p, len)		crc32(crc, p, len)
-/* free_buffer_head is in linux/buffer_head.h */
-
-/* ext4l support functions (support.c) */
-void ext4l_crc32c_init(void);
-void bh_cache_release_jbd(void);
-void bh_cache_clear(void);
-int bh_cache_sync(void);
-int ext4l_read_block(sector_t block, size_t size, void *buffer);
-int ext4l_write_block(sector_t block, size_t size, void *buffer);
-void ext4l_msg_init(void);
-void ext4l_record_msg(const char *msg, int len);
-struct membuf *ext4l_get_msg_buf(void);
-void ext4l_print_msgs(void);
-
-/* ext4l interface functions (interface.c) */
-struct blk_desc *ext4l_get_blk_dev(void);
-struct disk_partition *ext4l_get_partition(void);
-
-#define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
-
-/* DEFINE_WAIT stub - creates a wait queue entry */
-#define DEFINE_WAIT(name)		int name = 0
-
-/* cond_resched_lock is in linux/sched.h */
-
-/* JBD2 journal.c stubs */
-/* alloc_buffer_head, __getblk are in linux/buffer_head.h */
-int bmap(struct inode *inode, sector_t *block);
-
-/* seq_file operations for /proc - stubs */
-#define seq_open(f, ops)		({ (void)(f); (void)(ops); 0; })
-#define seq_release(i, f)		({ (void)(i); (void)(f); 0; })
-
-/* proc_ops - use linux/proc_fs.h */
-#include <linux/proc_fs.h>
-
-/* seq_read and seq_lseek declarations (defined in stub.c) */
-ssize_t seq_read(struct file *f, char *b, size_t s, loff_t *p);
-loff_t seq_lseek(struct file *f, loff_t o, int w);
-
-/* S_IRUGO is in linux/fs.h */
-
-/* procfs stubs are now in linux/proc_fs.h */
-
-/* lockdep_init_map and lock_class_key are in linux/lockdep.h */
-
-/* Block device operations for journal.c */
-/* bh_read, bh_read_nowait, bh_readahead_batch are in linux/buffer_head.h */
-#define truncate_inode_pages_range(m, s, e) \
-	do { (void)(m); (void)(s); (void)(e); } while (0)
-#define blkdev_issue_discard(bdev, s, n, gfp) \
-	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); 0; })
-#define blkdev_issue_zeroout(bdev, s, n, gfp, f) \
-	({ (void)(bdev); (void)(s); (void)(n); (void)(gfp); (void)(f); 0; })
-/* SECTOR_SHIFT, SECTOR_SIZE are in linux/blk_types.h */
-/* mapping_max_folio_order is in linux/pagemap.h */
 
 /* Memory allocation for journal.c */
 #define __get_free_pages(gfp, order)	((unsigned long)memalign(PAGE_SIZE, PAGE_SIZE << (order)))
 #define free_pages(addr, order)		free((void *)(addr))
 #define get_order(size)			ilog2(roundup_pow_of_two((size) / PAGE_SIZE))
 
-/* pr_notice_ratelimited is in linux/printk.h */
+/* Memory allocation - declarations for stub.c */
+void *kvzalloc(size_t size, gfp_t flags);
+#define kvmalloc(size, flags)	kvzalloc(size, flags)
 
-/*
- * Stubs for mmp.c
- */
+/* Page allocation - declarations for stub.c */
+unsigned long get_zeroed_page(gfp_t gfp);
+void free_page(unsigned long addr);
 
-/* init_utsname - use linux/utsname.h */
-#include <linux/utsname.h>
+/* DAX - declarations for stub.c */
+void *fs_dax_get_by_bdev(struct block_device *bdev, u64 *start, u64 *len,
+			 void *holder);
+void fs_put_dax(void *dax, void *holder);
 
-/*
- * Stubs for move_extent.c
- */
+/* Buffer submission - declaration for stub.c */
+int trylock_buffer(struct buffer_head *bh);
 
-/* down_write_nested - nested write lock acquisition */
-#define down_write_nested(sem, subclass) \
-	do { (void)(sem); (void)(subclass); } while (0)
+/* Filesystem sync - declaration for stub.c */
+int sync_filesystem(void *sb);
 
-/* filemap_release_folio is in linux/pagemap.h */
+/* Trace stubs for super.c - declaration for stub.c */
+void trace_ext4_error(struct super_block *sb, const char *func, unsigned int line);
 
-/* IS_SWAPFILE is in linux/fs.h */
+/* end_buffer_write_sync - implemented in support.c */
+void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
 
-/* PAGE_MASK - mask for page alignment */
-#ifndef PAGE_MASK
-#define PAGE_MASK	(~(PAGE_SIZE - 1))
-#endif
+/* ext4 superblock initialisation and commit */
+int ext4_commit_super(struct super_block *sb);
+int ext4_fill_super(struct super_block *sb, struct fs_context *fc);
+void ext4_unregister_li_request(struct super_block *sb);
 
-/* lock_two_nondirectories, unlock_two_nondirectories are in linux/fs.h */
+/* ext4l support functions (support.c) */
+int bh_cache_sync(void);
+int ext4l_read_block(sector_t block, size_t size, void *buffer);
+int ext4l_write_block(sector_t block, size_t size, void *buffer);
+struct membuf *ext4l_get_msg_buf(void);
+void bh_cache_clear(void);
+void bh_cache_release_jbd(void);
+void ext4l_crc32c_init(void);
+void ext4l_msg_init(void);
+void ext4l_print_msgs(void);
+void ext4l_record_msg(const char *msg, int len);
 
-/*
- * Stubs for resize.c
- */
-
-/* test_and_set_bit_lock is in asm-generic/bitops/lock.h */
-
-/* time_is_before_jiffies - check if time is before current jiffies */
-#define time_is_before_jiffies(a)	({ (void)(a); 0; })
-
-/* ext4_update_overhead - declaration for stub.c */
-int ext4_update_overhead(struct super_block *sb, bool force);
-
-/*
- * Stubs for fsmap.c
- */
-
-/* fsmap is now in linux/fsmap.h */
-#include <linux/fsmap.h>
-
-/* list_sort and sort stubs for fsmap.c - not used in U-Boot */
-#define list_sort(priv, head, cmp) \
-	do { (void)(priv); (void)(head); (void)(cmp); } while (0)
-#define sort(base, num, size, cmp, swap) \
-	do { (void)(base); (void)(num); (void)(size); (void)(cmp); (void)(swap); } while (0)
+/* ext4l interface functions (interface.c) */
+struct blk_desc *ext4l_get_blk_dev(void);
+struct disk_partition *ext4l_get_partition(void);
 
 #endif /* __EXT4_UBOOT_H__ */

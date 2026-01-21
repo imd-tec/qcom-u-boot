@@ -9,6 +9,7 @@
 
 #include <linux/list.h>
 #include <linux/rwsem.h>
+#include <linux/string.h>
 #include <linux/time.h>
 #include <linux/types.h>
 #include <linux/uuid.h>
@@ -97,5 +98,48 @@ static inline bool sb_rdonly(const struct super_block *sb)
 #define sb_start_write(sb)		do { (void)(sb); } while (0)
 #define sb_end_write(sb)		do { (void)(sb); } while (0)
 #define sb_start_write_trylock(sb)	({ (void)(sb); 1; })
+
+/* Superblock internal write operations */
+#define sb_start_intwrite(sb)		do { (void)(sb); } while (0)
+#define sb_end_intwrite(sb)		do { (void)(sb); } while (0)
+#define sb_start_intwrite_trylock(sb)	({ (void)(sb); 1; })
+
+/* Superblock pagefault operations */
+#define sb_start_pagefault(sb)		do { (void)(sb); } while (0)
+#define sb_end_pagefault(sb)		do { (void)(sb); } while (0)
+
+/* Superblock internal flags */
+#define SB_I_CGROUPWB			0	/* Not supported in U-Boot */
+#define SB_I_ALLOW_HSM			0	/* Not supported in U-Boot */
+
+/* Superblock block size operations - sb_set_blocksize in stub.c */
+int sb_set_blocksize(struct super_block *sb, int size);
+
+static inline int sb_min_blocksize(struct super_block *sb, int size)
+{
+	return sb_set_blocksize(sb, size);
+}
+
+/* Superblock block device operations */
+u64 sb_bdev_nr_blocks(struct super_block *sb);
+#define sb_is_blkdev_sb(sb)		({ (void)(sb); 0; })
+
+/* Superblock discard/zeroout operations - no-op in U-Boot */
+#define sb_issue_zeroout(sb, blk, num, gfp) \
+	({ (void)(sb); (void)(blk); (void)(num); (void)(gfp); 0; })
+#define sb_issue_discard(sb, sector, nr_sects, gfp, flags) \
+	({ (void)(sb); (void)(sector); (void)(nr_sects); (void)(gfp); (void)(flags); 0; })
+
+/* Case-folding - not supported in U-Boot */
+#define sb_no_casefold_compat_fallback(sb)	({ (void)(sb); 1; })
+
+/* Superblock identity functions */
+static inline void super_set_uuid(struct super_block *sb, const u8 *uuid,
+				  unsigned len)
+{
+	if (len > sizeof(sb->s_uuid.b))
+		len = sizeof(sb->s_uuid.b);
+	memcpy(sb->s_uuid.b, uuid, len);
+}
 
 #endif /* _LINUX_FS_SUPER_TYPES_H */

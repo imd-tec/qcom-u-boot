@@ -23,4 +23,15 @@
 #define LOOKUP_EXCL		0x40000	/* Exclusive create */
 #define LOOKUP_RENAME_TARGET	0x80000	/* Rename target */
 
+#include <linux/minmax.h>
+
+/* nd_terminate_link - terminate symlink string */
+static inline void nd_terminate_link(void *name, loff_t len, int maxlen)
+{
+	((char *)name)[min_t(loff_t, len, maxlen)] = '\0';
+}
+
+/* kfree_link - free a symlink target allocated with kmalloc */
+#define kfree_link		kfree
+
 #endif /* _LINUX_NAMEI_H */

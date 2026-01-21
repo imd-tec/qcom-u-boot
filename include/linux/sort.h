@@ -6,7 +6,7 @@
 #define _LINUX_SORT_H
 
 #include <linux/types.h>
-#include <stdlib.h>
+#include <sort.h>
 
 typedef int (*cmp_func_t)(const void *, const void *);
 

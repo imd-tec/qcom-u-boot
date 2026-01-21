@@ -5,7 +5,9 @@
 
 struct list_head;
 
-void list_sort(void *priv, struct list_head *head,
-	       int (*cmp)(void *priv, struct list_head *a,
-			  struct list_head *b));
+typedef int (*list_cmp_func_t)(void *priv, const struct list_head *a,
+			       const struct list_head *b);
+
+void list_sort(void *priv, struct list_head *head, list_cmp_func_t cmp);
+
 #endif

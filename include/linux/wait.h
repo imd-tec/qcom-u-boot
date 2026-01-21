@@ -28,4 +28,7 @@ struct wait_queue_entry {
 #define wait_event(wq, condition)	do { } while (0)
 #define wait_event_interruptible(wq, condition)	0
 
+/* DEFINE_WAIT - creates a wait queue entry (stub for U-Boot) */
+#define DEFINE_WAIT(name)		int name = 0
+
 #endif /* _LINUX_WAIT_H */

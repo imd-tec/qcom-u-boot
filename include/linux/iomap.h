@@ -105,4 +105,8 @@ iomap_seek_data(struct inode *inode, loff_t pos, const struct iomap_ops *ops)
 	return -EOPNOTSUPP;
 }
 
+#define iomap_bmap(m, b, o)	({ (void)(m); (void)(b); (void)(o); 0UL; })
+#define iomap_swapfile_activate(s, f, sp, o) \
+	({ (void)(s); (void)(f); (void)(sp); (void)(o); -EOPNOTSUPP; })
+
 #endif /* LINUX_IOMAP_H */

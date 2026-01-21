@@ -11,7 +11,7 @@
 #ifndef _LINUX_PREFETCH_H
 #define _LINUX_PREFETCH_H
 
-#define prefetch(x)		do { } while (0)
-#define prefetchw(x)		do { } while (0)
+#define prefetch(x)		((void)0)
+#define prefetchw(x)		((void)0)
 
 #endif /* _LINUX_PREFETCH_H */

@@ -116,10 +116,11 @@ static u64 checksum(struct efi_pool_allocation *alloc)
  * @b:		second memory area
  * Return:	1 if @a is before @b, -1 if @b is before @a, 0 if equal
  */
-static int efi_mem_cmp(void *priv, struct list_head *a, struct list_head *b)
+static int efi_mem_cmp(void *priv, const struct list_head *a,
+		       const struct list_head *b)
 {
-	struct mem_node *mema = list_entry(a, struct mem_node, link);
-	struct mem_node *memb = list_entry(b, struct mem_node, link);
+	const struct mem_node *mema = list_entry(a, struct mem_node, link);
+	const struct mem_node *memb = list_entry(b, struct mem_node, link);
 
 	if (mema->base == memb->base)
 		return 0;

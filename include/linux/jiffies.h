@@ -29,4 +29,7 @@
 #define nsecs_to_jiffies(ns)	((ns) / (1000000000L / HZ))
 #define round_jiffies_up(j)	(j)
 
+/* Time comparison - stub for U-Boot (jiffies is always 0) */
+#define time_is_before_jiffies(a)	({ (void)(a); 0; })
+
 #endif /* _LINUX_JIFFIES_H */

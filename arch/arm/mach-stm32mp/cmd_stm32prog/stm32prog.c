@@ -708,12 +708,13 @@ static int parse_flash_layout(struct stm32prog_data *data,
 	return 0;
 }
 
-static int __init part_cmp(void *priv, struct list_head *a, struct list_head *b)
+static int __init part_cmp(void *priv, const struct list_head *a,
+			   const struct list_head *b)
 {
-	struct stm32prog_part_t *parta, *partb;
+	const struct stm32prog_part_t *parta, *partb;
 
-	parta = container_of(a, struct stm32prog_part_t, list);
-	partb = container_of(b, struct stm32prog_part_t, list);
+	parta = container_of(a, const struct stm32prog_part_t, list);
+	partb = container_of(b, const struct stm32prog_part_t, list);
 
 	if (parta->part_id != partb->part_id)
 		return parta->part_id - partb->part_id;

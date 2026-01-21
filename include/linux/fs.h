@@ -11,9 +11,12 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/fs/super_types.h>
+#include <linux/cred.h>
+#include <linux/rwsem.h>
+#include <linux/time.h>
+#include <asm-generic/atomic.h>
 
 /* Forward declarations */
-struct inode;
 struct buffer_head;
 struct file;
 struct folio;
@@ -100,6 +103,176 @@ struct address_space_operations {
 			     sector_t *);
 };
 
+/* Forward declarations for inode */
+struct inode_operations;
+struct file_operations;
+
+/**
+ * struct inode - filesystem inode
+ *
+ * Core filesystem object representing a file, directory, or other entity.
+ */
+struct inode {
+	struct super_block *i_sb;
+	unsigned long i_ino;
+	umode_t i_mode;
+	unsigned int i_nlink;
+	loff_t i_size;
+	struct address_space *i_mapping;
+	struct address_space i_data;
+	kuid_t i_uid;
+	kgid_t i_gid;
+	unsigned long i_blocks;
+	unsigned int i_generation;
+	unsigned int i_flags;
+	unsigned int i_blkbits;
+	unsigned long i_state;
+	struct timespec64 i_atime;
+	struct timespec64 i_mtime;
+	struct timespec64 i_ctime;
+	struct list_head i_io_list;
+	dev_t i_rdev;
+	const struct inode_operations *i_op;
+	const struct file_operations *i_fop;
+	atomic_t i_writecount;		/* Count of writers */
+	atomic_t i_count;		/* Reference count */
+	struct rw_semaphore i_rwsem;	/* inode lock */
+	const char *i_link;		/* Symlink target for fast symlinks */
+	unsigned short i_write_hint;	/* Write life time hint */
+#ifdef __UBOOT__
+	struct list_head i_sb_list;	/* Linkage into super_block s_inodes */
+#endif
+};
+
+/* Inode time accessors */
+static inline struct timespec64 inode_get_atime(const struct inode *inode)
+{
+	return inode->i_atime;
+}
+
+static inline struct timespec64 inode_get_mtime(const struct inode *inode)
+{
+	return inode->i_mtime;
+}
+
+static inline struct timespec64 inode_get_ctime(const struct inode *inode)
+{
+	return inode->i_ctime;
+}
+
+static inline time_t inode_get_atime_sec(const struct inode *inode)
+{
+	return inode->i_atime.tv_sec;
+}
+
+static inline time_t inode_get_ctime_sec(const struct inode *inode)
+{
+	return inode->i_ctime.tv_sec;
+}
+
+static inline time_t inode_get_mtime_sec(const struct inode *inode)
+{
+	return inode->i_mtime.tv_sec;
+}
+
+static inline void inode_set_ctime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_ctime.tv_sec = sec;
+	inode->i_ctime.tv_nsec = nsec;
+}
+
+static inline void inode_set_atime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_atime.tv_sec = sec;
+	inode->i_atime.tv_nsec = nsec;
+}
+
+static inline void inode_set_mtime(struct inode *inode, time_t sec, long nsec)
+{
+	inode->i_mtime.tv_sec = sec;
+	inode->i_mtime.tv_nsec = nsec;
+}
+
+static inline void simple_inode_init_ts(struct inode *inode)
+{
+	struct timespec64 ts = { .tv_sec = 0, .tv_nsec = 0 };
+
+	inode->i_atime = ts;
+	inode->i_mtime = ts;
+	inode->i_ctime = ts;
+}
+
+static inline struct timespec64 inode_set_atime_to_ts(struct inode *inode,
+						      struct timespec64 ts)
+{
+	inode->i_atime = ts;
+	return ts;
+}
+
+static inline struct timespec64 inode_set_ctime_to_ts(struct inode *inode,
+						      struct timespec64 ts)
+{
+	inode->i_ctime = ts;
+	return ts;
+}
+
+/* Inode credential helpers */
+static inline unsigned int i_uid_read(const struct inode *inode)
+{
+	return inode->i_uid.val;
+}
+
+static inline unsigned int i_gid_read(const struct inode *inode)
+{
+	return inode->i_gid.val;
+}
+
+/*
+ * Inode state accessors - simplified for single-threaded U-Boot.
+ * Linux uses READ_ONCE/WRITE_ONCE and lockdep assertions; we use direct access.
+ */
+static inline unsigned long inode_state_read_once(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline unsigned long inode_state_read(struct inode *inode)
+{
+	return inode->i_state;
+}
+
+static inline void inode_state_set_raw(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_set(struct inode *inode, unsigned long flags)
+{
+	inode->i_state |= flags;
+}
+
+static inline void inode_state_clear_raw(struct inode *inode,
+					 unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_clear(struct inode *inode, unsigned long flags)
+{
+	inode->i_state &= ~flags;
+}
+
+static inline void inode_state_assign_raw(struct inode *inode,
+					  unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
+static inline void inode_state_assign(struct inode *inode, unsigned long flags)
+{
+	inode->i_state = flags;
+}
+
 /* block_device - minimal stub */
 struct block_device {
 	struct address_space *bd_mapping;
@@ -148,6 +321,17 @@ static inline struct inode *file_inode(struct file *f)
 	return f->f_inode;
 }
 
+/* File modification tracking - stubs for U-Boot */
+#define file_modified(file)		({ (void)(file); 0; })
+#define file_accessed(file)		do { (void)(file); } while (0)
+#define file_update_time(f)		do { } while (0)
+#define file_write_and_wait_range(f, s, e)	({ (void)(f); (void)(s); (void)(e); 0; })
+#define file_check_and_advance_wb_err(f)	({ (void)(f); 0; })
+
+/* File path operations - implemented in ext4l/stub.c */
+char *file_path(struct file *file, char *buf, int buflen);
+struct block_device *file_bdev(struct file *file);
+
 /* iattr - inode attributes for setattr */
 struct iattr {
 	unsigned int ia_valid;
@@ -172,10 +356,18 @@ struct iattr {
 #define ATTR_KILL_SGID	(1 << 12)
 #define ATTR_TIMES_SET	(ATTR_ATIME_SET | ATTR_MTIME_SET)
 
+/* Attribute operations - stubs for U-Boot */
+#define setattr_prepare(m, d, a)	({ (void)(m); (void)(d); (void)(a); 0; })
+#define setattr_copy(m, i, a)		do { } while (0)
+#define posix_acl_chmod(m, i, mo)	({ (void)(m); (void)(i); (void)(mo); 0; })
+
 /* writeback_control - defined in linux/compat.h */
 
-/* fsnotify - stub */
+/* fsnotify - stubs */
 #define fsnotify_change(d, m)	do { } while (0)
+
+/* fsnotify_sb_error - implemented in ext4l/stub.c */
+void fsnotify_sb_error(struct super_block *sb, struct inode *inode, int error);
 
 /* inode_init_once - stub */
 static inline void inode_init_once(struct inode *inode)
@@ -195,6 +387,10 @@ static inline void inode_init_once(struct inode *inode)
 #define S_ENCRYPTED	64	/* Encrypted */
 #define S_CASEFOLD	128	/* Case-folded */
 #define S_VERITY	256	/* Verity enabled */
+#define S_NOQUOTA	0	/* No quota (stub) */
+
+/* Open flags - stubs for U-Boot */
+#define O_SYNC		0
 
 /* Permission mode constants */
 #define S_IRWXUGO	(S_IRWXU | S_IRWXG | S_IRWXO)
@@ -204,6 +400,10 @@ static inline void inode_init_once(struct inode *inode)
 #define RENAME_NOREPLACE	(1 << 0)
 #define RENAME_EXCHANGE		(1 << 1)
 #define RENAME_WHITEOUT		(1 << 2)
+
+/* Whiteout device - used for overlayfs */
+#define WHITEOUT_DEV		0
+#define WHITEOUT_MODE		0
 
 /* Superblock flags */
 #define SB_RDONLY	(1 << 0)	/* Read-only mount */
@@ -219,6 +419,16 @@ static inline void inode_init_once(struct inode *inode)
 #define SB_FREEZE_PAGEFAULT	2
 #define SB_FREEZE_FS		3
 #define SB_FREEZE_COMPLETE	4
+
+/* Filesystem management time flag */
+#define FS_MGTIME		0
+
+/* Block size constant */
+#define BLOCK_SIZE		1024
+
+/* VFS position helper */
+#define vfs_setpos(file, offset, maxsize) \
+	({ (void)(file); (void)(maxsize); (offset); })
 
 /* fallocate() flags */
 #define FALLOC_FL_KEEP_SIZE		0x01
@@ -370,11 +580,31 @@ enum {
 #define unlock_two_nondirectories(i1, i2) \
 	do { (void)(i1); (void)(i2); } while (0)
 
-/* Inode allocation - implemented in ext4l/stub.c */
+/* Inode allocation and lifecycle - implemented in ext4l */
 struct kmem_cache;
 void *alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache,
 		     gfp_t gfp);
 int inode_generic_drop(struct inode *inode);
+struct inode *new_inode(struct super_block *sb);
+struct inode *iget_locked(struct super_block *sb, unsigned long ino);
+void iput(struct inode *inode);
+#define ihold(i)			do { (void)(i); } while (0)
+
+/* Block mapping - implemented in ext4l/stub.c */
+int bmap(struct inode *inode, sector_t *block);
+
+/* Simple filesystem helpers */
+#define simple_open(i, f)		({ (void)(i); (void)(f); 0; })
+#define finish_open_simple(f, e)	(e)
+
+/* simple_get_link - for fast symlinks stored in inode */
+struct delayed_call;
+static inline const char *simple_get_link(struct dentry *dentry,
+					  struct inode *inode,
+					  struct delayed_call *callback)
+{
+	return inode->i_link;
+}
 
 /**
  * get_block_t - block mapping callback type
@@ -401,5 +631,105 @@ struct fstrim_range {
 	u64 len;
 	u64 minlen;
 };
+
+/* Forward declarations for file/inode operations */
+struct delayed_call;
+struct fiemap_extent_info;
+struct file_kattr;
+struct posix_acl;
+struct mnt_idmap;
+struct kstat;
+
+/**
+ * struct file_operations - filesystem file operations
+ *
+ * Methods for file I/O and directory iteration.
+ */
+struct file_operations {
+	int (*open)(struct inode *, struct file *);
+	loff_t (*llseek)(struct file *, loff_t, int);
+	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
+	int (*iterate_shared)(struct file *, struct dir_context *);
+	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
+	int (*fsync)(struct file *, loff_t, loff_t, int);
+	int (*release)(struct inode *, struct file *);
+};
+
+/**
+ * struct inode_operations - filesystem inode operations
+ *
+ * Methods for inode manipulation, including symlinks and directories.
+ */
+struct inode_operations {
+	/* Symlink operations */
+	const char *(*get_link)(struct dentry *, struct inode *,
+				struct delayed_call *);
+	/* Common operations */
+	int (*getattr)(struct mnt_idmap *, const struct path *,
+		       struct kstat *, u32, unsigned int);
+	ssize_t (*listxattr)(struct dentry *, char *, size_t);
+	int (*fiemap)(struct inode *, struct fiemap_extent_info *, u64, u64);
+	int (*setattr)(struct mnt_idmap *, struct dentry *, struct iattr *);
+	struct posix_acl *(*get_inode_acl)(struct inode *, int, bool);
+	int (*set_acl)(struct mnt_idmap *, struct dentry *,
+		       struct posix_acl *, int);
+	int (*fileattr_get)(struct dentry *, struct file_kattr *);
+	int (*fileattr_set)(struct mnt_idmap *, struct dentry *,
+			    struct file_kattr *);
+	/* Directory operations */
+	struct dentry *(*lookup)(struct inode *, struct dentry *, unsigned int);
+	int (*create)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      umode_t, bool);
+	int (*link)(struct dentry *, struct inode *, struct dentry *);
+	int (*unlink)(struct inode *, struct dentry *);
+	int (*symlink)(struct mnt_idmap *, struct inode *, struct dentry *,
+		       const char *);
+	struct dentry *(*mkdir)(struct mnt_idmap *, struct inode *,
+				struct dentry *, umode_t);
+	int (*rmdir)(struct inode *, struct dentry *);
+	int (*mknod)(struct mnt_idmap *, struct inode *, struct dentry *,
+		     umode_t, dev_t);
+	int (*rename)(struct mnt_idmap *, struct inode *, struct dentry *,
+		      struct inode *, struct dentry *, unsigned int);
+	int (*tmpfile)(struct mnt_idmap *, struct inode *, struct file *,
+		       umode_t);
+};
+
+/*
+ * Generic VFS operations - stubs for U-Boot
+ */
+
+/* Generic file I/O operations */
+#define generic_file_read_iter(iocb, to)	({ (void)(iocb); (void)(to); 0L; })
+#define generic_write_checks(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_perform_write(iocb, from)	({ (void)(iocb); (void)(from); 0L; })
+#define generic_write_sync(iocb, count)		({ (void)(iocb); (count); })
+#define generic_atomic_write_valid(iocb, from)	({ (void)(iocb); (void)(from); 0; })
+
+/* Generic fsync operation */
+#define generic_buffers_fsync_noflush(f, s, e, d) \
+	({ (void)(f); (void)(s); (void)(e); (void)(d); 0; })
+
+/* Sync operations - stubs */
+#define sync_mapping_buffers(m)		({ (void)(m); 0; })
+#define sync_inode_metadata(i, w)	({ (void)(i); (void)(w); 0; })
+
+/* Generic attribute operations */
+#define generic_fillattr(m, req, i, s)	do { } while (0)
+#define generic_fill_statx_atomic_writes(s, u_m, u_M, g) do { } while (0)
+
+/* Generic seek operation */
+#define generic_file_llseek_size(f, o, w, m, e) \
+	({ (void)(f); (void)(o); (void)(w); (void)(m); (void)(e); 0LL; })
+
+/* Case-insensitive name validation - not supported */
+#define generic_ci_validate_strict_name(d, n)	({ (void)(d); (void)(n); 1; })
+
+/* Generic directory read - implemented in ext4l/stub.c */
+ssize_t generic_read_dir(struct file *f, char __user *buf, size_t count,
+			 loff_t *ppos);
+
+/* Block addressability check - implemented in ext4l/stub.c */
+int generic_check_addressable(unsigned int blocksize_bits, u64 num_blocks);
 
 #endif /* _LINUX_FS_H */

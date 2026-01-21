@@ -17,6 +17,7 @@
 #define DEFINE_PER_CPU(type, name)	type name
 #define per_cpu(var, cpu)		(var)
 #define per_cpu_ptr(ptr, cpu)		(ptr)
+#define raw_cpu_ptr(ptr)		(ptr)
 #define this_cpu_inc(var)		((var)++)
 #define this_cpu_read(var)		(var)
 
