@@ -397,6 +397,10 @@ static inline void inode_init_once(struct inode *inode)
 #define RENAME_EXCHANGE		(1 << 1)
 #define RENAME_WHITEOUT		(1 << 2)
 
+/* Whiteout device - used for overlayfs */
+#define WHITEOUT_DEV		0
+#define WHITEOUT_MODE		0
+
 /* Superblock flags */
 #define SB_RDONLY	(1 << 0)	/* Read-only mount */
 #define SB_POSIXACL	(1 << 16)	/* POSIX ACL support */

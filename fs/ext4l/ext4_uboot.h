@@ -151,9 +151,6 @@ struct pipe_inode_info;
 struct kstat;
 struct path;
 
-#define WHITEOUT_DEV	0
-#define WHITEOUT_MODE	0
-
 /* QSTR_INIT and dotdot_name are now in linux/dcache.h */
 
 #include <linux/minmax.h>
@@ -282,10 +279,6 @@ void trace_ext4_error(struct super_block *sb, const char *func, unsigned int lin
 
 /* DAX - declaration for stub.c */
 void fs_put_dax(void *dax, void *holder);
-
-/* slab usercopy - use regular kmem_cache_create */
-#define kmem_cache_create_usercopy(n, sz, al, fl, uo, us, c) \
-	kmem_cache_create(n, sz, al, fl, c)
 
 /* Memory allocation - declarations for stub.c */
 void *kvzalloc(size_t size, gfp_t flags);
