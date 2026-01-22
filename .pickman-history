@@ -5755,3 +5755,178 @@ The branch `cherry-c125ef543c1` is ready for pushing.
 
 ---
 
+## 2026-01-21: us/next
+
+Branch: cherry-714a0227fef
+
+Commits:
+- 714a0227fef Gitlab: Add missing symlink for qemu_arm64_lwip boardenv file
+- 92880a58caf tpm: unconstify tpm_tis_chip_data
+- e93f11148ae power: regulator: tps65941: Fix voltage calculation for ldo
+- 50e8089c1de tools: use cryptographically safe RNG
+- cdc67e27500 led: fix coverity scan error
+- 7a45cb4ffef fs/erofs: fix an integer overflow in symlink resolution
+- 3f866c47b58 board: verdin-am62: add dram_init_banksize
+- 7dba748433e Revert "rockchip: rk3399: Drop unneeded bob and kevin board specific code"
+- 227b505f045 rockchip: rk3399-gru: Enable TPL_GPIO for bob and kevin
+- 76228340658 Revert "rockchip: rk3399: Fix TPL build of bob and kevin"
+- 64cec76899a rockchip: rk3399: grf: Fix enum typos for UART2
+- 57ad1ed7e84 rockchip: sdram: Allow the first bank to extend beyond 4 GiB
+- 356236126da rockchip: sdram: Limit usable ram_top to max 4G
+- d5fc369a598 rockchip: sdram: Ensure ram_base is correct in SPL
+- d4aac2894a8 rockchip: use OF_UPSTREAM for rk3036
+- 110428931cb rockchip: rk3288: Use rk3288-cru.h from dts/upstream
+- d5a3fb9ef82 pinctrl: rockchip: rk3328: Fix pinmux for GPIO2-B and GPIO3-B pins
+- c4ec920cb94 net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK356x
+- 8d25dbb725f net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK3588
+- d69097683d6 arm64: dts: rockchip: Fix sdmmc access on rk3308-rock-s0 v1.1 boards
+- ee69293e0d6 Merge tag 'u-boot-rockchip-20250220' of https://source.denx.de/u-boot/custodians/u-boot-rockchip
+
+### Conversation log
+Now let me start cherry-picking the commits in order.
+
+**Commit 1: 714a0227fef - Gitlab: Add missing symlink for qemu_arm64_lwip boardenv file**
+
+Conflict on the first commit. Let me check if this might already be applied.
+
+Let me look at the original commit and see what changes it makes:
+
+Let me check if the change is already in ci/master:
+
+The symlink is already present in the current ci/master but at a different path (the path changed from `/tmp/uboot-test-hooks/py/travis-ci/` to `test/hooks/py/travis-ci/`). Let me find when this change was made:
+
+The commit 714a0227fef's change has already been incorporated in ci/master via commit 74a1e9edc61 (CI update). Let me try the cherry-pick again and see if I can resolve the conflict:
+
+I see - the change we're trying to apply has already been included in ci/master, but the paths changed from `/tmp/uboot-test-hooks/` to `test/hooks/`. The ci/master version already has both symlinks (conf and boardenv). The resolution is to keep HEAD (ci/master) since it has the intended change already applied (at a different path).
+
+The cherry-pick is empty because the change is already applied. Let me commit it as empty to preserve history:
+
+Now let me verify and run build test:
+
+Build passes. 
+
+**Commit 2: 92880a58caf - tpm: unconstify tpm_tis_chip_data**
+
+**Commit 3: e93f11148ae - power: regulator: tps65941: Fix voltage calculation for ldo**
+
+**Commit 4: 50e8089c1de - tools: use cryptographically safe RNG (maybe already applied as 1b4d1fd4480)**
+
+The patches are nearly identical - only differ in commit hash and line numbers. This commit is already applied. Let me skip it:
+
+**Commit 5: cdc67e27500 - led: fix coverity scan error**
+
+**Commit 6: 7a45cb4ffef - fs/erofs: fix an integer overflow in symlink resolution**
+
+**Commit 7: 3f866c47b58 - board: verdin-am62: add dram_init_banksize**
+
+**Commit 8: 7dba748433e - Revert "rockchip: rk3399: Drop unneeded bob and kevin board specific code"**
+
+This commit resulted in an empty cherry-pick - let me check if the change is already applied:
+
+The change is already applied in ci/master. Let me commit as empty to preserve history:
+
+**Commit 9: 227b505f045 - rockchip: rk3399-gru: Enable TPL_GPIO for bob and kevin (maybe already applied as 90749d0ad3d)**
+
+The patches are essentially the same - adding TPL_GPIO to the same config files. The differences are just context (line numbers/surrounding context). Skipping:
+
+**Commit 10: 76228340658 - Revert "rockchip: rk3399: Fix TPL build of bob and kevin"**
+
+**Commit 11: 64cec76899a - rockchip: rk3399: grf: Fix enum typos for UART2 (maybe already applied as d36b1ac6d36)**
+
+The patches are identical except for commit hashes. Skipping:
+
+**Commit 12: 57ad1ed7e84 - rockchip: sdram: Allow the first bank to extend beyond 4 GiB (maybe already applied as ab18df4559e)**
+
+Identical patches. Skipping:
+
+**Commit 13: 356236126da - rockchip: sdram: Limit usable ram_top to max 4G (maybe already applied as a62dae9c199)**
+
+Identical patches. Skipping:
+
+**Commit 14: d5fc369a598 - rockchip: sdram: Ensure ram_base is correct in SPL (maybe already applied as fc64abeeb34)**
+
+Identical patches. Skipping:
+
+**Commit 15: d4aac2894a8 - rockchip: use OF_UPSTREAM for rk3036 (maybe already applied as 16a966b576e)**
+
+The patches differ only in context (line numbers and surrounding context). The essential changes are the same. Skipping:
+
+**Commit 16: 110428931cb - rockchip: rk3288: Use rk3288-cru.h from dts/upstream (maybe already applied as 5b6a7997958)**
+
+Identical patches. Skipping:
+
+**Commit 17: d5a3fb9ef82 - pinctrl: rockchip: rk3328: Fix pinmux for GPIO2-B and GPIO3-B pins (maybe already applied as 2f491552e8f)**
+
+Identical patches. Skipping:
+
+**Commit 18: c4ec920cb94 - net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK356x (maybe already applied as edb4c2905b8)**
+
+Identical patches. Skipping:
+
+**Commit 19: 8d25dbb725f - net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK3588 (maybe already applied as ee7a6b0ea3f)**
+
+Identical patches. Skipping:
+
+**Commit 20: d69097683d6 - arm64: dts: rockchip: Fix sdmmc access on rk3308-rock-s0 v1.1 boards (maybe already applied as b2afe05af0f)**
+
+Identical patches. Skipping:
+
+**Commit 21: ee69293e0d6 - Merge tag 'u-boot-rockchip-20250220'**
+
+Let me see what the conflict is about:
+
+The conflicts are just empty blocks (HEAD has additional code that's not in the merge commit). Since HEAD already has RK3528 and RK3576 support, we should keep HEAD's version (which has more content). The merge commit is adding code that's already been added through other means.
+
+The merge commit is now empty because all its content is already in ci/master. Let me commit it as empty to preserve the merge commit history:
+
+Now let me verify the commit log and run the final build test:
+
+Build passes. Let me provide the final status report:
+
+## Cherry-Pick Summary for branch `cherry-714a0227fef`
+
+### Final Status: ✅ SUCCESS
+
+**Build result:** OK (sandbox builds cleanly)
+
+### Commits Applied (9 total):
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 714a0227fef | Gitlab: Add missing symlink for qemu_arm64_lwip boardenv file | ✅ Empty (already applied via CI update) |
+| 2 | 92880a58caf | tpm: unconstify tpm_tis_chip_data | ✅ Applied |
+| 3 | e93f11148ae | power: regulator: tps65941: Fix voltage calculation for ldo | ✅ Applied |
+| 4 | 50e8089c1de | tools: use cryptographically safe RNG | ⏭️ **SKIPPED** - already applied as 1b4d1fd4480 |
+| 5 | cdc67e27500 | led: fix coverity scan error | ✅ Applied |
+| 6 | 7a45cb4ffef | fs/erofs: fix an integer overflow in symlink resolution | ✅ Applied |
+| 7 | 3f866c47b58 | board: verdin-am62: add dram_init_banksize | ✅ Applied |
+| 8 | 7dba748433e | Revert "rockchip: rk3399: Drop unneeded bob..." | ✅ Empty (already applied) |
+| 9 | 227b505f045 | rockchip: rk3399-gru: Enable TPL_GPIO for bob and kevin | ⏭️ **SKIPPED** - already applied as 90749d0ad3d |
+| 10 | 76228340658 | Revert "rockchip: rk3399: Fix TPL build of bob and kevin" | ✅ Applied |
+| 11 | 64cec76899a | rockchip: rk3399: grf: Fix enum typos for UART2 | ⏭️ **SKIPPED** - already applied as d36b1ac6d36 |
+| 12 | 57ad1ed7e84 | rockchip: sdram: Allow the first bank to extend beyond 4 GiB | ⏭️ **SKIPPED** - already applied as ab18df4559e |
+| 13 | 356236126da | rockchip: sdram: Limit usable ram_top to max 4G | ⏭️ **SKIPPED** - already applied as a62dae9c199 |
+| 14 | d5fc369a598 | rockchip: sdram: Ensure ram_base is correct in SPL | ⏭️ **SKIPPED** - already applied as fc64abeeb34 |
+| 15 | d4aac2894a8 | rockchip: use OF_UPSTREAM for rk3036 | ⏭️ **SKIPPED** - already applied as 16a966b576e |
+| 16 | 110428931cb | rockchip: rk3288: Use rk3288-cru.h from dts/upstream | ⏭️ **SKIPPED** - already applied as 5b6a7997958 |
+| 17 | d5a3fb9ef82 | pinctrl: rockchip: rk3328: Fix pinmux for GPIO2-B and GPIO3-B | ⏭️ **SKIPPED** - already applied as 2f491552e8f |
+| 18 | c4ec920cb94 | net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK356x | ⏭️ **SKIPPED** - already applied as edb4c2905b8 |
+| 19 | 8d25dbb725f | net: dwc_eth_qos_rockchip: Fix disable of RX/TX delay for RK3588 | ⏭️ **SKIPPED** - already applied as ee7a6b0ea3f |
+| 20 | d69097683d6 | arm64: dts: rockchip: Fix sdmmc access on rk3308-rock-s0 | ⏭️ **SKIPPED** - already applied as b2afe05af0f |
+| 21 | ee69293e0d6 | Merge tag 'u-boot-rockchip-20250220' | ✅ Empty (all changes already in ci/master) |
+
+### Summary:
+- **9 commits applied** to the branch (6 with content, 3 empty for tracking)
+- **12 commits skipped** - already present in ci/master with different hashes
+- **No fix-ups required**
+- **No concerning deltas**
+
+### Notes:
+- Commit 1 (714a0227fef) and commit 8 (7dba748433e) were committed as empty because their changes were already incorporated into ci/master through other paths
+- Commit 21 (merge commit ee69293e0d6) was committed as empty because all the rockchip patches it contained were already applied to ci/master
+- Most rockchip-related commits (11-20) were already present in ci/master as they came through the u-boot-rockchip custodian merge
+
+The branch `cherry-714a0227fef` is ready for pushing.
+
+---
+
