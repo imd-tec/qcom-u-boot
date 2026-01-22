@@ -6511,3 +6511,83 @@ All commit deltas verified identical. Build test passed.
 
 ---
 
+### Review: 2026-01-22
+
+Branch: cherry-87ef1987de3
+
+Comments addressed:
+- [sjg]: pickman: Please drop this commit as efi-x86_payload32/64 need to call efi_add_memory_map_pg():
+
+efi_...
+
+### Conversation log
+I can see the commit history. The reviewer asks to drop the commit "efi_loader: make efi_add_memory_map_pg() static" (commit 9bbc8841532) because efi-x86_payload32/64 need to call `efi_add_memory_map_pg()`.
+
+Let me understand the structure of the commits to be rebased:
+1. `f5d8c15897a` - lmb: avoid superfluous value check in lmb_map_update_notify() (KEEP)
+2. `a0e851c7d93` - lmb: move lmb_map_update_notify() to EFI (KEEP)
+3. `9bbc8841532` - efi_loader: make efi_add_memory_map_pg() static (DROP)
+4. `56fc5f1df52` - Merge tag 'efi-2025-04-rc3' (KEEP)
+5. `a1f7b579e80` - pickman: Record cherry-pick (KEEP)
+6. `6bd6ba9734f` - pickman: Record review handling (KEEP)
+7. `b6ec24c93a9` - pickman: Record review handling (KEEP)
+8. `193a6a43501` - pickman: Record review handling (KEEP, HEAD)
+
+I need to do an interactive rebase to drop the "make efi_add_memory_map_pg() static" commit. Let me use a non-interactive approach with `git rebase --onto`:
+
+The branch is 11 commits behind ci/master and 8 commits ahead. I need to:
+1. Drop the commit `9bbc8841532` (efi_loader: make efi_add_memory_map_pg() static)
+2. Rebase onto latest ci/master
+
+Let me first save the pre-rebase state for verification:
+
+I'll use `git rebase -i` with `GIT_SEQUENCE_EDITOR` to programmatically drop the commit. Let me create a script to edit the rebase todo list:
+
+The rebase completed successfully. Let me verify the commit history and that the static commit was dropped:
+
+The commit "efi_loader: make efi_add_memory_map_pg() static" has been dropped. Now let me verify the commit deltas:
+
+Now let me run the build test to make sure the build passes without the static commit:
+
+Build passed. Now let me check for existing version branches and create a new one:
+
+There are already v2, v3, and v4 branches. I need to create v5:
+
+Push succeeded. Let me verify the final state:
+
+## Summary
+
+**Review comment addressed successfully for MR !433**
+
+### What was done:
+1. Checked out branch `cherry-87ef1987de3`
+2. Dropped the commit `9bbc8841532` - "efi_loader: make efi_add_memory_map_pg() static" as requested by reviewer sjg
+   - Reason: efi-x86_payload32/64 need to call `efi_add_memory_map_pg()`, so it cannot be made static
+3. Rebased onto latest `ci/master` (5b97d5052d1) with `--keep-empty`
+4. Verified remaining commit deltas:
+   - `2c011c0cb60` lmb: avoid superfluous value check - 2 files, +19/-16 ✓
+   - `21ccf589c99` lmb: move lmb_map_update_notify - 3 files, +45/-25 ✓
+   - `cc8b93000a9` Merge tag 'efi-2025-04-rc3' - Empty ✓
+   - `0adf9b4ce63` pickman: Record cherry-pick ✓
+   - `1a2f104408a` pickman: Record review handling ✓
+   - `01893c94d1a` pickman: Record review handling ✓
+   - `d4f37a5430f` pickman: Record review handling ✓
+5. Build test passed (sandbox board)
+6. Created local branch `cherry-87ef1987de3-v5`
+7. Force pushed to remote branch `cherry-87ef1987de3`
+
+### Final state:
+- 0 commits behind ci/master
+- 7 commits ahead of ci/master (3 cherry-picked commits + 1 empty merge + 3 pickman records)
+- **Dropped commit**: "efi_loader: make efi_add_memory_map_pg() static" - removed as requested
+
+### Reply to post on MR:
+
+```
+Dropped commit "efi_loader: make efi_add_memory_map_pg() static" as requested - efi-x86_payload32/64 need to call this function.
+
+Rebased onto latest ci/master (5b97d5052d1). Build test passed.
+```
+
+---
+
