@@ -1004,12 +1004,12 @@ static int truetype_select_font(struct udevice *dev, void *vctx,
 }
 
 static int truetype_measure(struct udevice *dev, const char *name, uint size,
-			    const char *text, int pixel_limit,
+			    const char *text, int len, int pixel_limit,
 			    struct vidconsole_bbox *bbox, struct alist *lines)
 {
 	struct console_tt_metrics *met;
 	struct vidconsole_mline mline;
-	const char *s, *last_space;
+	const char *s, *last_space, *end;
 	int width, last_width;
 	stbtt_fontinfo *font;
 	int lsb, advance;
@@ -1030,6 +1030,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	if (pixel_limit != -1)
 		limit = tt_ceil((double)pixel_limit / met->scale);
 
+	end = len < 0 ? NULL : text + len;
 	font = &met->font;
 	width = 0;
 	bbox->y1 = 0;
@@ -1037,7 +1038,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	start = 0;
 	last_space = NULL;
 	last_width = 0;
-	for (lastch = 0, s = text; *s; s++) {
+	for (lastch = 0, s = text; *s && s != end; s++) {
 		int neww;
 		int ch = *s;
 
@@ -1069,6 +1070,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 			mline.bbox.x0 = 0;
 			mline.bbox.y0 = bbox->y1;
 			mline.bbox.x1 = tt_ceil((double)width * met->scale);
+			mline.xpos = (int)((double)width * met->scale);
 			bbox->x1 = max(bbox->x1, mline.bbox.x1);
 			bbox->y1 += met->font_size;
 			mline.bbox.y1 = bbox->y1;
@@ -1095,6 +1097,7 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 	mline.bbox.x0 = 0;
 	mline.bbox.y0 = bbox->y1;
 	mline.bbox.x1 = tt_ceil((double)width * met->scale);
+	mline.xpos = (int)((double)width * met->scale);
 	bbox->y1 += met->font_size;
 	mline.bbox.y1 = bbox->y1;
 	mline.start = start;
@@ -1156,34 +1159,6 @@ static int truetype_ctx_new(struct udevice *dev, void *vctx)
 	return 0;
 }
 
-static int truetype_entry_save(struct udevice *dev, struct abuf *buf)
-{
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-	const uint size = sizeof(*ctx);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	if (!abuf_realloc(buf, size))
-		return log_msg_ret("sav", -ENOMEM);
-
-	memcpy(abuf_data(buf), ctx, size);
-
-	return 0;
-}
-
-static int truetype_entry_restore(struct udevice *dev, struct abuf *buf)
-{
-	struct console_tt_ctx *ctx = vidconsole_ctx(dev);
-
-	if (xpl_phase() <= PHASE_SPL)
-		return -ENOSYS;
-
-	memcpy(ctx, abuf_data(buf), sizeof(*ctx));
-
-	return 0;
-}
-
 static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 {
 	struct console_tt_ctx *ctx = vctx;
@@ -1196,9 +1171,7 @@ static int truetype_get_cursor_info(struct udevice *dev, void *vctx)
 		return -ENOSYS;
 
 	/*
-	 * figure out where to place the cursor. This driver ignores the
-	 * passed-in values, since an entry_restore() must have been done before
-	 * calling this function.
+	 * Figure out where to place the cursor.
 	 *
 	 * A current quirk is that the cursor is always at xcur_frac, since we
 	 * output characters directly to the console as they are typed by the
@@ -1315,8 +1288,6 @@ struct vidconsole_ops console_truetype_ops = {
 	.measure	= truetype_measure,
 	.nominal	= truetype_nominal,
 	.ctx_new	= truetype_ctx_new,
-	.entry_save	= truetype_entry_save,
-	.entry_restore	= truetype_entry_restore,
 	.get_cursor_info	= truetype_get_cursor_info,
 	.mark_start	= truetype_mark_start,
 };

@@ -522,6 +522,16 @@ void scene_menu_calc_bbox(struct scene_obj_menu *menu,
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars);
 
 /**
+ * scene_txtin_destroy() - Destroy a text-input object's resources
+ *
+ * Frees memory allocated for the text buffer and vidconsole context
+ *
+ * @scn: Scene containing the object
+ * @tin: Text-input info to destroy
+ */
+void scene_txtin_destroy(struct scene *scn, struct scene_txtin *tin);
+
+/**
  * scene_txtin_arrange() - Arrange common parts of a text-input object
  *
  * Sets the label position and SCENEOF_POINT flag
@@ -588,8 +598,9 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
  * Close out the text editor after use
  *
  * @scn: Scene containing the object
+ * @tin: Text-input info
  */
-void scene_txtin_close(struct scene *scn);
+void scene_txtin_close(struct scene *scn, struct scene_txtin *tin);
 
 /**
  * scene_obj_calc_bbox() - Calculate bounding boxes for an object

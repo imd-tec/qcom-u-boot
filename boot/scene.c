@@ -92,7 +92,6 @@ int scene_new(struct expo *exp, const char *name, uint id, struct scene **scnp)
 		free(scn);
 		return log_msg_ret("buf", -ENOMEM);
 	}
-	abuf_init(&scn->entry_save);
 
 	INIT_LIST_HEAD(&scn->obj_head);
 	scn->id = resolve_id(exp, id);
@@ -108,6 +107,9 @@ void scene_obj_destroy(struct scene_obj *obj)
 {
 	if (obj->type == SCENEOBJT_MENU)
 		scene_menu_destroy((struct scene_obj_menu *)obj);
+	else if (obj->type == SCENEOBJT_TEXTLINE ||
+		 obj->type == SCENEOBJT_TEXTEDIT)
+		scene_txtin_destroy(obj->scene, scene_obj_txtin(obj));
 	free(obj->name);
 	free(obj);
 }
@@ -119,7 +121,6 @@ void scene_destroy(struct scene *scn)
 	list_for_each_entry_safe(obj, next, &scn->obj_head, sibling)
 		scene_obj_destroy(obj);
 
-	abuf_uninit(&scn->entry_save);
 	abuf_uninit(&scn->buf);
 	free(scn->name);
 	free(scn);
@@ -537,7 +538,7 @@ int scene_obj_get_hw(struct scene *scn, uint id, int *widthp)
 			obj->req_bbox.x1 - obj->req_bbox.x0 : -1;
 
 		ret = vidconsole_measure(scn->expo->cons, gen->font_name,
-					 gen->font_size, str, limit, &bbox,
+					 gen->font_size, str, -1, limit, &bbox,
 					 &gen->lines);
 		if (ret)
 			return log_msg_ret("mea", ret);

@@ -665,7 +665,7 @@ int vidconsole_select_font(struct udevice *dev, void *ctx, const char *name,
 }
 
 int vidconsole_measure(struct udevice *dev, const char *name, uint size,
-		       const char *text, int limit,
+		       const char *text, int len, int limit,
 		       struct vidconsole_bbox *bbox, struct alist *lines)
 {
 	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
@@ -675,7 +675,8 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 	if (ops->measure) {
 		if (lines)
 			alist_empty(lines);
-		ret = ops->measure(dev, name, size, text, limit, bbox, lines);
+		ret = ops->measure(dev, name, size, text, len, limit, bbox,
+				   lines);
 		if (ret != -ENOSYS)
 			return ret;
 	}
@@ -683,7 +684,7 @@ int vidconsole_measure(struct udevice *dev, const char *name, uint size,
 	bbox->valid = true;
 	bbox->x0 = 0;
 	bbox->y0 = 0;
-	bbox->x1 = ctx->x_charsize * strlen(text);
+	bbox->x1 = ctx->x_charsize * (len < 0 ? strlen(text) : len);
 	bbox->y1 = ctx->y_charsize;
 
 	return 0;
@@ -797,37 +798,6 @@ int vidconsole_ctx_dispose(struct udevice *dev, void *vctx)
 	alist_update_end(&priv->ctx_list, from);
 
 	vidconsole_free_ctx(dev, ctx);
-
-	return 0;
-}
-
-int vidconsole_entry_save(struct udevice *dev, struct abuf *buf)
-{
-	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	int ret;
-
-	if (ops->entry_save) {
-		ret = ops->entry_save(dev, buf);
-		if (ret != -ENOSYS)
-			return ret;
-	}
-
-	/* no data so make sure the buffer is empty */
-	abuf_realloc(buf, 0);
-
-	return 0;
-}
-
-int vidconsole_entry_restore(struct udevice *dev, struct abuf *buf)
-{
-	struct vidconsole_ops *ops = vidconsole_get_ops(dev);
-	int ret;
-
-	if (ops->entry_restore) {
-		ret = ops->entry_restore(dev, buf);
-		if (ret != -ENOSYS)
-			return ret;
-	}
 
 	return 0;
 }
@@ -1064,9 +1034,8 @@ void vidconsole_set_bitmap_font(struct udevice *dev, struct vidconsole_ctx *ctx,
 	ctx->xstart_frac = 0;
 }
 
-void vidconsole_idle(struct udevice *dev)
+static void vidconsole_idle_ctx(struct udevice *dev, struct vidconsole_ctx *ctx)
 {
-	struct vidconsole_ctx *ctx = vidconsole_ctx(dev);
 	struct vidconsole_cursor *curs = &ctx->curs;
 
 	/* Only handle cursor if it's enabled */
@@ -1078,6 +1047,15 @@ void vidconsole_idle(struct udevice *dev)
 		 */
 		vidconsole_show_cursor(dev, ctx);
 	}
+}
+
+void vidconsole_idle(struct udevice *dev)
+{
+	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx **ctxp;
+
+	alist_for_each(ctxp, &priv->ctx_list)
+		vidconsole_idle_ctx(dev, *ctxp);
 }
 
 #ifdef CONFIG_CURSOR

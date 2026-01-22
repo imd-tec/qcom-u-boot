@@ -34,10 +34,15 @@ struct cli_ch_state {
  * @history: true if history should be accessible
  * @cmd_complete: true if tab completion should be enabled (requires @prompt to
  *	be set)
+ * @multiline: true if input may contain multiple lines (enables Ctrl-P/N for
+ *	line navigation instead of history)
  * @buf: Buffer containing line
  * @prompt: Prompt for the line
  * @putch: Function to call to output a character (NULL to use putc())
- * @priv: Private data for putch callback
+ * @line_nav: Function to call for multi-line navigation (Ctrl-P/N). Called with
+ *	@up true for previous line, false for next. Returns new cursor position,
+ *	or -ve if at boundary
+ * @priv: Private data for callbacks
  */
 struct cli_line_state {
 	uint num;
@@ -46,9 +51,11 @@ struct cli_line_state {
 	bool insert;
 	bool history;
 	bool cmd_complete;
+	bool multiline;
 	char *buf;
 	const char *prompt;
 	void (*putch)(struct cli_line_state *cls, int ch);
+	int (*line_nav)(struct cli_line_state *cls, bool up);
 	void *priv;
 };
 
