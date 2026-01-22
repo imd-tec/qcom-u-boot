@@ -6061,3 +6061,63 @@ All commit deltas verified identical. Build test passed.
 
 ---
 
+## 2026-01-21: us/next
+
+Branch: cherry-ad3ec11b393
+
+Commits:
+- ad3ec11b393 board: acer: picasso: add Acer Iconia Tab A500 support
+- 5061eab96ac Merge branch 'picasso' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+The repository state is clean. Now let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (not a merge commit based on the subject):
+
+First commit cherry-picked successfully. Now let me check the commit delta:
+
+The delta is identical - 13 files changed, 858 insertions. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit, which is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (which is expected since the changes were already applied by the first commit). Let me commit it as an empty commit to preserve the merge commit message:
+
+The merge commit was preserved. Let me check the commit stats:
+
+The cherry-picked merge commit is empty (as expected since we already cherry-picked the underlying commit), while the original merge commit shows the 13 files that were merged. This is normal behavior - the actual changes came with the first commit (ad3ec11b393). The merge commit message is preserved, which is the important part.
+
+Now let me run the build test after the second cherry-pick:
+
+Build passed. Now let me verify the cherry-pick log:
+
+Both commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Branch Information
+- **Branch name:** `cherry-ad3ec11b393`
+- **Base:** `ci/master`
+
+### Commits Cherry-picked (2 total):
+1. `557a5b6561b` - board: acer: picasso: add Acer Iconia Tab A500 support (from `ad3ec11b393`)
+   - Delta: ✅ Identical (13 files, 858 insertions)
+   
+2. `0d0d2e94ecf` - Merge branch 'picasso' of https://source.denx.de/u-boot/custodians/u-boot-tegra (from `5061eab96ac`)
+   - Note: Empty commit (changes already applied by first commit), merge message preserved
+
+### Build Result
+- **Status:** ✅ OK (sandbox board builds successfully)
+- **No warnings or errors**
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - the merge commit being empty is expected since the actual content was already cherry-picked in the first commit
+
+The branch `cherry-ad3ec11b393` is ready for pushing.
+
+---
+
