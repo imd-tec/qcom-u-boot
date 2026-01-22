@@ -707,6 +707,15 @@ config CMD_EDITENV
 	help
 	  Edit environment variable.
 
+config CMD_EDITENV_EXPO
+	bool "editenv expo support"
+	depends on CMD_EDITENV && EXPO_EDITENV
+	default y if EXPO_EDITENV
+	help
+	  Enable the -e flag for the editenv command, which provides a
+	  graphical editor using the expo framework. This requires a video
+	  console.
+
 config CMD_GREPENV
 	bool "search env"
 	help

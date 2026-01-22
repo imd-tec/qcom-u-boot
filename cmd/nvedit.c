@@ -29,6 +29,7 @@
 #include <console.h>
 #include <env.h>
 #include <env_internal.h>
+#include <expo.h>
 #include <log.h>
 #include <search.h>
 #include <errno.h>
@@ -427,31 +428,55 @@ static int do_env_edit(struct cmd_tbl *cmdtp, int flag, int argc,
 		       char *const argv[])
 {
 	char buffer[CONFIG_SYS_CBSIZE];
+	bool use_expo = false;
+	const char *varname;
 	char *init_val;
+
+	if (IS_ENABLED(CONFIG_CMD_EDITENV_EXPO) &&
+	    argc >= 2 && !strcmp(argv[1], "-e")) {
+		use_expo = true;
+		argc--;
+		argv++;
+	}
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
+
+	varname = argv[1];
 
 	/* before import into hashtable */
 	if (!(gd->flags & GD_FLG_ENV_READY))
 		return 1;
 
-	/* Set read buffer to initial value or empty sting */
-	init_val = env_get(argv[1]);
+	/* Set read buffer to initial value or empty string */
+	init_val = env_get(varname);
 	if (init_val)
 		snprintf(buffer, CONFIG_SYS_CBSIZE, "%s", init_val);
 	else
 		buffer[0] = '\0';
 
-	if (cli_readline_into_buffer("edit: ", buffer, 0) < 0)
-		return 1;
+	if (IS_ENABLED(CONFIG_CMD_EDITENV_EXPO) && use_expo) {
+		int ret;
+
+		ret = expo_editenv(varname, init_val, buffer,
+				   CONFIG_SYS_CBSIZE);
+		if (ret == -EAGAIN)
+			return 0;	/* User cancelled, no change */
+		if (ret) {
+			printf("Edit failed (err=%d)\n", ret);
+			return CMD_RET_FAILURE;
+		}
+	} else {
+		if (cli_readline_into_buffer("edit: ", buffer, 0) < 0)
+			return 1;
+	}
 
 	if (buffer[0] == '\0') {
-		const char * const _argv[3] = { "setenv", argv[1], NULL };
+		const char * const _argv[3] = { "setenv", varname, NULL };
 
 		return env_do_env_set(0, 2, (char * const *)_argv, H_INTERACTIVE);
 	} else {
-		const char * const _argv[4] = { "setenv", argv[1], buffer,
+		const char * const _argv[4] = { "setenv", varname, buffer,
 			NULL };
 
 		return env_do_env_set(0, 3, (char * const *)_argv, H_INTERACTIVE);
@@ -1065,7 +1090,7 @@ static struct cmd_tbl cmd_env_sub[] = {
 	U_BOOT_CMD_MKENT(default, 1, 0, do_env_default, "", ""),
 	U_BOOT_CMD_MKENT(delete, CONFIG_SYS_MAXARGS, 0, do_env_delete, "", ""),
 #if defined(CONFIG_CMD_EDITENV)
-	U_BOOT_CMD_MKENT(edit, 2, 0, do_env_edit, "", ""),
+	U_BOOT_CMD_MKENT(edit, 3, 0, do_env_edit, "", ""),
 #endif
 #if defined(CONFIG_CMD_ENV_CALLBACK)
 	U_BOOT_CMD_MKENT(callbacks, 1, 0, do_env_callback, "", ""),
@@ -1141,7 +1166,11 @@ U_BOOT_LONGHELP(env,
 	"      \"-k\": keep variables not defined in default environment\n"
 	"env delete [-f] var [...] - [forcibly] delete variable(s)\n"
 #if defined(CONFIG_CMD_EDITENV)
+#if defined(CONFIG_CMD_EDITENV_EXPO)
+	"env edit [-e] name - edit environment variable (-e for expo)\n"
+#else
 	"env edit name - edit environment variable\n"
+#endif
 #endif
 #if defined(CONFIG_CMD_ENV_EXISTS)
 	"env exists name - tests for existence of variable\n"
@@ -1208,9 +1237,14 @@ U_BOOT_CMD(
 
 #if defined(CONFIG_CMD_EDITENV)
 U_BOOT_CMD_COMPLETE(
-	editenv, 2, 0,	do_env_edit,
+	editenv, 3, 0,	do_env_edit,
 	"edit environment variable",
+#if defined(CONFIG_CMD_EDITENV_EXPO)
+	"[-e] name\n"
+	"    -e - use expo (graphical editor)\n"
+#else
 	"name\n"
+#endif
 	"    - edit environment variable 'name'",
 	var_complete
 );
