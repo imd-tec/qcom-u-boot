@@ -171,6 +171,14 @@ static int editenv_test_funcs(struct unit_test_state *uts)
 	ut_assertok(expo_editenv_init("testvar", initial, &info));
 	ut_asserteq(16611, ut_check_video(uts, "init"));
 
+	/* Navigate up to previous line */
+	ut_assertok(editenv_send(&info, BKEY_UP));
+	ut_asserteq(16684, ut_check_video(uts, "up"));
+
+	/* Navigate back down */
+	ut_assertok(editenv_send(&info, BKEY_DOWN));
+	ut_asserteq(16611, ut_check_video(uts, "down"));
+
 	/* Type a character and press Enter to accept */
 	ut_assertok(editenv_send(&info, '*'));
 	ut_asserteq(16689, ut_check_video(uts, "insert"));

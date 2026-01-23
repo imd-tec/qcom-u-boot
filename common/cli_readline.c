@@ -333,6 +333,37 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			cls->num--;
 		}
 		break;
+	case CTL_CH('r'):	/* backward-word */
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cls->num) {
+			uint pos = cls->num;
+
+			/* skip spaces before word */
+			while (pos > 0 && buf[pos - 1] == ' ')
+				pos--;
+			/* skip word characters */
+			while (pos > 0 && buf[pos - 1] != ' ')
+				pos--;
+			cls_putchars(cls, cls->num - pos, CTL_BACKSPACE);
+			cls->num = pos;
+		}
+		break;
+	case CTL_CH('t'):	/* forward-word */
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cls->num < cls->eol_num) {
+			uint pos = cls->num;
+
+			/* skip spaces after cursor */
+			while (pos < cls->eol_num && buf[pos] == ' ') {
+				cls_putch(cls, buf[pos]);
+				pos++;
+			}
+			/* skip word characters */
+			while (pos < cls->eol_num && buf[pos] != ' ') {
+				cls_putch(cls, buf[pos]);
+				pos++;
+			}
+			cls->num = pos;
+		}
+		break;
 	case CTL_CH('d'):
 		if (cls->num < cls->eol_num) {
 			uint wlen;
