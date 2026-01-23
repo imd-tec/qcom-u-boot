@@ -358,6 +358,8 @@ static void cread_end_of_line(struct cli_line_state *cls)
 #define REFRESH_TO_EOL() GOTO_LINE_END(cls->eol_num)
 #endif
 
+/* undo/yank functions are in cli_undo.c when CMDLINE_UNDO is enabled */
+
 static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 			   uint *num, uint *eol_num, char *buf, uint len)
 {
@@ -484,9 +486,21 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			cls->eol_num--;
 		}
 		break;
-	case CTL_CH('k'):
+	case CTL_CH('k'): {
+		uint erase_to = cls->eol_num;
+
+		ed = cli_editor(cls);
+		if (ed && ed->multiline) {
+			char *nl = strchr(&buf[cls->num], '\n');
+
+			if (nl)
+				erase_to = nl - buf;
+		}
+		cread_save_undo(cls);
+		cread_save_yank(cls, &buf[cls->num], erase_to - cls->num);
 		cread_erase_to_eol(cls);
 		break;
+	}
 	case CTL_CH('e'):
 		REFRESH_TO_EOL();
 		break;
@@ -505,6 +519,8 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 
 			/* now delete chars from base to cls->num */
 			wlen = cls->num - base;
+			cread_save_undo(cls);
+			cread_save_yank(cls, &buf[base], wlen);
 			cls->eol_num -= wlen;
 			memmove(&buf[base], &buf[cls->num],
 				cls->eol_num - base + 1);
@@ -517,7 +533,24 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		}
 		break;
 	case CTL_CH('x'):
+		if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+			cread_save_undo(cls);
+			cread_save_yank(cls, buf, cls->eol_num);
+			BEGINNING_OF_LINE();
+			cread_erase_to_eol(cls);
+		}
+		break;
+	case CTL_CH('y'):
+#if CONFIG_IS_ENABLED(CMDLINE_UNDO)
+		cread_yank(cls);
+#endif
+		break;
+	case CTL_CH('z'):
+		cread_restore_undo(cls);
+		break;
 	case CTL_CH('u'):
+		cread_save_undo(cls);
+		cread_save_yank(cls, buf, cls->eol_num);
 		BEGINNING_OF_LINE();
 		cread_erase_to_eol(cls);
 		break;
@@ -628,6 +661,27 @@ void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size)
 	cls->insert = true;
 	cls->buf = buf;
 	cls->len = buf_size;
+}
+
+void cli_cread_init_undo(struct cli_line_state *cls, char *buf, uint buf_size)
+{
+	cli_cread_init(cls, buf, buf_size);
+	if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+		struct cli_editor_state *ed = cli_editor(cls);
+
+		abuf_init_size(&ed->undo.buf, buf_size);
+		abuf_init_size(&ed->yank, buf_size);
+	}
+}
+
+void cli_cread_uninit(struct cli_line_state *cls)
+{
+	if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+		struct cli_editor_state *ed = cli_editor(cls);
+
+		abuf_uninit(&ed->undo.buf);
+		abuf_uninit(&ed->yank);
+	}
 }
 
 void cli_cread_add_initial(struct cli_line_state *cls)

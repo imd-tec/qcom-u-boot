@@ -1729,6 +1729,12 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(86, ted->tin.cls.eol_num);
 	ut_asserteq('\n', ((char *)abuf_data(&ted->tin.buf))[85]);
 
+	/* Ctrl+Y yanks back the killed text "latr" */
+	ut_assertok(expo_send_key(exp, CTL_CH('y')));
+	ut_asserteq(89, ted->tin.cls.num);
+	ut_asserteq(90, ted->tin.cls.eol_num);
+	ut_asserteq('\n', ((char *)abuf_data(&ted->tin.buf))[89]);
+
 	/* clear multiline mode, close the textedit with Enter (BKEY_SELECT) */
 	ted->obj.flags &= ~SCENEOF_MULTILINE;
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
@@ -1740,11 +1746,11 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	/* check the textedit is closed and text is changed */
 	ut_asserteq(0, ted->obj.flags & SCENEOF_OPEN);
 	ut_asserteq_str("This\ns the initial contents of the text "
-		"editor but it is ely that more will be added \n",
+		"editor but it is ely that more will be added latr\n",
 		abuf_data(&ted->tin.buf));
 	ut_assertok(scene_arrange(scn));
 	ut_assertok(expo_render(exp));
-	ut_asserteq(21099, video_compress_fb(uts, dev, false));
+	ut_asserteq(21251, video_compress_fb(uts, dev, false));
 
 	abuf_uninit(&buf);
 	abuf_uninit(&logo_copy);

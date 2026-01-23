@@ -66,6 +66,15 @@ config CMDLINE_EDITOR
 	  - Undo/redo support (Ctrl+Z / Ctrl+Shift+Z)
 	  - Yank/paste of killed text (Ctrl+Y)
 
+config CMDLINE_UNDO
+	bool "Support undo in command-line editing"
+	depends on CMDLINE_EDITOR
+	default y
+	help
+	  Enable an undo buffer for command-line editing. When enabled,
+	  pressing Ctrl+Z restores the previous state of the edit buffer.
+	  This uses additional memory to store the undo state.
+
 config CMDLINE_PS_SUPPORT
 	bool "Enable support for changing the command prompt string at run-time"
 	depends on HUSH_PARSER

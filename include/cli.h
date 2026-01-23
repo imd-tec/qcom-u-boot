@@ -7,6 +7,7 @@
 #ifndef __CLI_H
 #define __CLI_H
 
+#include <abuf.h>
 #include <stdbool.h>
 #include <linux/types.h>
 
@@ -28,6 +29,19 @@ struct cli_ch_state {
 struct cli_line_state;
 
 /**
+ * struct cli_undo_state - state for undo buffer
+ *
+ * @buf: Buffer for saved state
+ * @num: Saved cursor position
+ * @eol_num: Saved end-of-line position
+ */
+struct cli_undo_state {
+	struct abuf buf;
+	uint num;
+	uint eol_num;
+};
+
+/**
  * struct cli_editor_state - state for enhanced editing features
  *
  * This is only available when CONFIG_CMDLINE_EDITOR is enabled.
@@ -36,6 +50,9 @@ struct cli_line_state;
  * @line_nav: Handle multi-line navigation (Ctrl-P/N)
  * @multiline: true if input may contain multiple lines (enables
  *	Ctrl-P/N for line navigation instead of history)
+ * @undo: Undo ring buffer state
+ * @yank: Buffer for killed text (for Ctrl+Y yank)
+ * @yank_len: Length of killed text in yank buffer
  */
 struct cli_editor_state {
 	/**
@@ -60,6 +77,15 @@ struct cli_editor_state {
 	 * Ctrl-P/N for line navigation instead of history)
 	 */
 	bool multiline;
+
+	/** @undo: Undo state (if CONFIG_CMDLINE_UNDO) */
+	struct cli_undo_state undo;
+
+	/** @yank: Buffer for killed text (for Ctrl+Y yank) */
+	struct abuf yank;
+
+	/** @yank_len: Length of killed text in yank buffer */
+	uint yank_len;
 };
 
 /**
@@ -337,6 +363,24 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar);
 void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size);
 
 /**
+ * cli_cread_init_undo() - Set up a new cread struct with undo support
+ *
+ * Like cli_cread_init() but also sets up the undo buffer.
+ *
+ * @cls: CLI line state
+ * @buf: Text buffer containing the initial text
+ * @buf_size: Buffer size, including nul terminator
+ */
+void cli_cread_init_undo(struct cli_line_state *cls, char *buf, uint buf_size);
+
+/**
+ * cli_cread_uninit() - Free resources allocated by cli_cread_init_undo()
+ *
+ * @cls: CLI line state
+ */
+void cli_cread_uninit(struct cli_line_state *cls);
+
+/**
  * cli_cread_add_initial() - Output initial buffer contents
  *
  * Called after cli_cread_init() to output the initial text in the buffer and
@@ -348,5 +392,57 @@ void cli_cread_add_initial(struct cli_line_state *cls);
 
 /** cread_print_hist_list() - Print the command-line history list */
 void cread_print_hist_list(void);
+
+/*
+ * Undo/yank functions - implementations in cli_undo.c when CMDLINE_UNDO is enabled
+ */
+#if CONFIG_IS_ENABLED(CMDLINE_UNDO)
+/**
+ * cread_save_undo() - Save current state for undo
+ *
+ * @cls: CLI line state
+ */
+void cread_save_undo(struct cli_line_state *cls);
+
+/**
+ * cread_restore_undo() - Restore previous state from undo buffer
+ *
+ * @cls: CLI line state
+ */
+void cread_restore_undo(struct cli_line_state *cls);
+
+/**
+ * cread_save_yank() - Save killed text to yank buffer
+ *
+ * @cls: CLI line state
+ * @text: Text to save
+ * @len: Length of text
+ */
+void cread_save_yank(struct cli_line_state *cls, const char *text, uint len);
+
+/**
+ * cread_yank() - Insert yanked text at cursor position
+ *
+ * @cls: CLI line state
+ */
+void cread_yank(struct cli_line_state *cls);
+#else
+static inline void cread_save_undo(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_restore_undo(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_save_yank(struct cli_line_state *cls, const char *text,
+				   uint len)
+{
+}
+
+static inline void cread_yank(struct cli_line_state *cls)
+{
+}
+#endif
 
 #endif
