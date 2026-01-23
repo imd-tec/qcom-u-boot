@@ -47,6 +47,7 @@ static int editenv_setup(struct expo *exp, struct udevice *dev,
 	ret = scene_texted(scn, "textedit", EDITENV_OBJ_TEXTEDIT, 70, &ted);
 	if (ret < 0)
 		return log_msg_ret("ted", ret);
+	ted->obj.flags |= SCENEOF_MULTILINE;
 
 	ret = scene_obj_set_bbox(scn, EDITENV_OBJ_TEXTEDIT, 50, 200, 1300, 400);
 	if (ret < 0)
@@ -122,6 +123,7 @@ int expo_editenv_init(const char *varname, const char *value,
 	if (ret) {
 		expo_destroy(exp);
 		return log_msg_ret("set", ret);
+
 	}
 
 	return 0;

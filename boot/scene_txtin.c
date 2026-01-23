@@ -342,12 +342,31 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 			log_debug("menu quit\n");
 		}
 		break;
-	case BKEY_SELECT:
+	case BKEY_SAVE:
 		if (!open)
 			break;
+		/* Accept contents even in multiline mode */
 		event->type = EXPOACT_CLOSE;
 		event->select.id = obj->id;
 		scene_txtin_close(scn, tin);
+		break;
+	case BKEY_SELECT:
+		if (!open)
+			break;
+		if (obj->flags & SCENEOF_MULTILINE) {
+			char *buf = cls->buf;
+			int wlen = cls->eol_num - cls->num;
+
+			/* Insert newline at cursor position */
+			memmove(&buf[cls->num + 1], &buf[cls->num], wlen);
+			buf[cls->num] = '\n';
+			cls->num++;
+			cls->eol_num++;
+		} else {
+			event->type = EXPOACT_CLOSE;
+			event->select.id = obj->id;
+			scene_txtin_close(scn, tin);
+		}
 		break;
 	case BKEY_UP:
 		cread_line_process_ch(cls, CTL_CH('p'));

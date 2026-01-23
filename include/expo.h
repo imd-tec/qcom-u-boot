@@ -321,6 +321,7 @@ enum scene_obj_align {
  * @SCENEOF_MANUAL: manually arrange the items associated with this object
  * @SCENEOF_DIRTY: object has been modified and needs to be redrawn
  * @SCENEOF_PASSWORD: textline input should show stars instead of characters
+ * @SCENEOF_MULTILINE: textedit allows multiline input (Enter adds newline)
  * @SCENEOF_LAST: used just as a check for the size of the flags mask
  */
 enum scene_obj_flags_t {
@@ -335,6 +336,7 @@ enum scene_obj_flags_t {
 	SCENEOF_MANUAL		= BIT(8),
 	SCENEOF_DIRTY		= BIT(9),
 	SCENEOF_PASSWORD	= BIT(10),
+	SCENEOF_MULTILINE	= BIT(11),
 
 	SCENEOF_LAST,	/* check for size of flags below */
 };

@@ -74,10 +74,10 @@ static int editenv_test_base(struct unit_test_state *uts)
 	int ret;
 
 	/*
-	 * Type "test" then press Enter to accept
-	 * \x0d is Ctrl-M (Enter/carriage return)
+	 * Type "test" then press Ctrl-S to save
+	 * \x13 is Ctrl-S
 	 */
-	console_in_puts("test\x0d");
+	console_in_puts("test\x13");
 	ret = expo_editenv("myvar", NULL, buf, sizeof(buf));
 	ut_assertok(ret);
 	ut_asserteq_str("test", buf);
@@ -94,9 +94,9 @@ static int editenv_test_initial(struct unit_test_state *uts)
 
 	/*
 	 * Start with "world", go to start with Ctrl-A, type "hello ", then
-	 * press Enter
+	 * press Ctrl-S to save
 	 */
-	console_in_puts("\x01hello \x0d");
+	console_in_puts("\x01hello \x13");
 	ret = expo_editenv("myvar", "world", buf, sizeof(buf));
 	ut_assertok(ret);
 	ut_asserteq_str("hello world", buf);
@@ -138,11 +138,11 @@ static int editenv_test_video(struct unit_test_state *uts)
 	ut_assertok(vidconsole_select_font(con, NULL, NULL, 30));
 
 	/*
-	 * Navigate with up arrow, insert text, then press Enter. The up arrow
-	 * should be converted to Ctrl-P by scene_txtin_send_key().
-	 * \x1b[A is the escape sequence for up arrow
+	 * Navigate with up arrow, insert text, then press Ctrl-S to save.
+	 * The up arrow should be converted to Ctrl-P by scene_txtin_send_key().
+	 * \x1b[A is the escape sequence for up arrow, \x13 is Ctrl-S (save)
 	 */
-	console_in_puts("\x1b[A!\x0d");
+	console_in_puts("\x1b[A!\x13");
 	ret = expo_editenv("testvar", initial, buf, sizeof(buf));
 	ut_assertok(ret);
 
@@ -179,11 +179,11 @@ static int editenv_test_funcs(struct unit_test_state *uts)
 	ut_assertok(editenv_send(&info, BKEY_DOWN));
 	ut_asserteq(16611, ut_check_video(uts, "down"));
 
-	/* Type a character and press Enter to accept */
+	/* Type a character and press Ctrl-S to save */
 	ut_assertok(editenv_send(&info, '*'));
 	ut_asserteq(16689, ut_check_video(uts, "insert"));
 
-	ut_asserteq(1, editenv_send(&info, BKEY_SELECT));
+	ut_asserteq(1, editenv_send(&info, BKEY_SAVE));
 
 	/* The '*' should be appended to the initial text */
 	ut_assert(strstr(expo_editenv_result(&info), "editor.*"));
