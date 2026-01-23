@@ -179,15 +179,22 @@ static int editenv_test_funcs(struct unit_test_state *uts)
 	ut_assertok(editenv_send(&info, BKEY_DOWN));
 	ut_asserteq(16611, ut_check_video(uts, "down"));
 
-	/* Type a character and press Ctrl-S to save */
+	/* Navigate with up arrow and insert '*' */
+	ut_assertok(editenv_send(&info, BKEY_UP));
+	ut_asserteq(16684, ut_check_video(uts, "up2"));
+
 	ut_assertok(editenv_send(&info, '*'));
-	ut_asserteq(16689, ut_check_video(uts, "insert"));
+	ut_asserteq(16877, ut_check_video(uts, "insert"));
+
+	/* Use Ctrl-K to kill to end of line (stops at the existing newline) */
+	ut_assertok(editenv_send(&info, CTL_CH('k')));
+	ut_asserteq(16033, ut_check_video(uts, "kill"));
 
 	ut_asserteq(1, editenv_send(&info, BKEY_SAVE));
 
-	/* The '*' should be appended to the initial text */
-	ut_assert(strstr(expo_editenv_result(&info), "editor.*"));
-	ut_asserteq(16689, ut_check_video(uts, "save"));
+	/* The '*' is inserted after "tes", Ctrl-K killed "ted properly." */
+	ut_assert(strstr(expo_editenv_result(&info), "tes*\n"));
+	ut_asserteq(16033, ut_check_video(uts, "save"));
 
 	expo_editenv_uninit(&info);
 

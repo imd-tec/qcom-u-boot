@@ -231,13 +231,86 @@ void cread_print_hist_list(void)
 	}
 }
 
-#define BEGINNING_OF_LINE() {			\
-	while (cls->num) {			\
+#define GOTO_LINE_START(target) {		\
+	while (cls->num > (target)) {		\
 		cls_putch(cls, CTL_BACKSPACE);	\
 		cls->num--;			\
 	}					\
 }
 
+#define ERASE_TO(erase_to) {					\
+	if (cls->num < (erase_to)) {				\
+		uint wlen = (erase_to) - cls->num;		\
+								\
+		/* erase characters on screen */		\
+		printf("%*s", wlen, "");			\
+		while (wlen--)					\
+			cls_putch(cls, CTL_BACKSPACE);		\
+								\
+		/* remove characters from buffer */		\
+		memmove(&buf[cls->num], &buf[erase_to],		\
+			cls->eol_num - (erase_to) + 1);		\
+		cls->eol_num -= (erase_to) - cls->num;		\
+	}							\
+}
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+/**
+ * cread_start_of_line() - Move cursor to start of line
+ *
+ * In multiline mode, moves to the character after the previous newline.
+ * Otherwise moves to position 0.
+ *
+ * @cls: CLI line state
+ */
+static void cread_start_of_line(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	uint target = 0;
+
+	if (ed && ed->multiline) {
+		char *buf = cls->buf;
+		uint i;
+
+		/* find previous newline */
+		for (i = cls->num; i > 0; i--) {
+			if (buf[i - 1] == '\n') {
+				target = i;
+				break;
+			}
+		}
+	}
+	GOTO_LINE_START(target);
+}
+#define BEGINNING_OF_LINE() cread_start_of_line(cls)
+#else
+#define BEGINNING_OF_LINE() GOTO_LINE_START(0)
+#endif
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+static void cread_erase_to_eol(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	char *buf = cls->buf;
+	uint erase_to;
+
+	if (cls->num >= cls->eol_num)
+		return;
+
+	/*
+	 * In multiline mode, only erase to end of current line (next newline
+	 * or end of buffer)
+	 */
+	erase_to = cls->eol_num;
+	if (ed && ed->multiline) {
+		char *nl = strchr(&buf[cls->num], '\n');
+
+		if (nl)
+			erase_to = nl - buf;
+	}
+	ERASE_TO(erase_to);
+}
+#else
 static void cread_erase_to_eol(struct cli_line_state *cls)
 {
 	if (cls->num < cls->eol_num) {
@@ -247,14 +320,43 @@ static void cread_erase_to_eol(struct cli_line_state *cls)
 		} while (--cls->eol_num > cls->num);
 	}
 }
+#endif
 
-#define REFRESH_TO_EOL() {				\
-	if (cls->num < cls->eol_num) {			\
-		uint wlen = cls->eol_num - cls->num;	\
+#define GOTO_LINE_END(target) {				\
+	if (cls->num < (target)) {			\
+		uint wlen = (target) - cls->num;	\
 		cls_putnstr(cls, buf + cls->num, wlen);	\
-		cls->num = cls->eol_num;		\
+		cls->num = (target);			\
 	}						\
 }
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+/**
+ * cread_end_of_line() - Move cursor to end of line
+ *
+ * In multiline mode, moves to the next newline character.
+ * Otherwise moves to end of buffer.
+ *
+ * @cls: CLI line state
+ */
+static void cread_end_of_line(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	char *buf = cls->buf;
+	uint target = cls->eol_num;
+
+	if (ed && ed->multiline) {
+		char *nl = strchr(&buf[cls->num], '\n');
+
+		if (nl)
+			target = nl - buf;
+	}
+	GOTO_LINE_END(target);
+}
+#define REFRESH_TO_EOL() cread_end_of_line(cls)
+#else
+#define REFRESH_TO_EOL() GOTO_LINE_END(cls->eol_num)
+#endif
 
 static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 			   uint *num, uint *eol_num, char *buf, uint len)
