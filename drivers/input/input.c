@@ -28,6 +28,9 @@ enum {
 	/* Special flag ORed with key code to indicate release */
 	KEY_RELEASE		= 1 << 15,
 	KEY_MASK		= 0xfff,
+
+	/* Modifier bits for config->modifiers */
+	MOD_CTRL		= 1 << 0,
 };
 
 /*
@@ -428,6 +431,31 @@ static int input_keycode_to_ansi364(struct input_config *config,
 	int ch_count;
 	int i;
 
+	/* Handle Ctrl+arrow keys for word navigation */
+	if (config->modifiers & MOD_CTRL) {
+		const char *seq = NULL;
+
+		switch (keycode) {
+		case KEY_LEFT:
+			seq = "[1;5D";	/* Ctrl+Left: backward-word */
+			break;
+		case KEY_RIGHT:
+			seq = "[1;5C";	/* Ctrl+Right: forward-word */
+			break;
+		}
+		if (seq) {
+			ch_count = 0;
+			output_ch[ch_count++] = 0x1b;
+			while (*seq) {
+				if (ch_count < max_chars)
+					output_ch[ch_count] = *seq;
+				ch_count++;
+				seq++;
+			}
+			return ch_count;
+		}
+	}
+
 	for (i = ch_count = 0; i < ARRAY_SIZE(kbd_to_ansi364); i++) {
 		if (keycode != kbd_to_ansi364[i].kbd_scan_code)
 			continue;
@@ -483,6 +511,9 @@ static int input_keycodes_to_ascii(struct input_config *config,
 			table = process_modifier(config, key,
 					keycode[i] & KEY_RELEASE);
 		}
+		/* Track Ctrl state for special key handling */
+		if (key == KEY_LEFTCTRL || key == KEY_RIGHTCTRL)
+			config->modifiers |= MOD_CTRL;
 	}
 
 	/* Start conversion by looking for the first new keycode (by same). */
