@@ -124,23 +124,33 @@ static int editenv_test_escape(struct unit_test_state *uts)
 }
 BOOTSTD_TEST(editenv_test_escape, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
 
-/* Check expo_editenv() renders correctly */
+/* Check expo_editenv() renders correctly with multiline text and navigation */
 static int editenv_test_video(struct unit_test_state *uts)
 {
-	struct udevice *dev;
-	char buf[256];
+	struct udevice *dev, *con;
+	char buf[512];
 	int ret;
 
 	ut_assertok(uclass_first_device_err(UCLASS_VIDEO, &dev));
+	ut_assertok(uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &con));
 
-	/* Type "abc" then press Enter */
-	console_in_puts("abc\x0d");
-	ret = expo_editenv("testvar", "initial", buf, sizeof(buf));
+	/* Set font size to 30 */
+	ut_assertok(vidconsole_select_font(con, NULL, NULL, 30));
+
+	/*
+	 * Navigate with up arrow, insert text, then press Enter. The up arrow
+	 * should be converted to Ctrl-P by scene_txtin_send_key().
+	 * \x1b[A is the escape sequence for up arrow
+	 */
+	console_in_puts("\x1b[A!\x0d");
+	ret = expo_editenv("testvar", initial, buf, sizeof(buf));
 	ut_assertok(ret);
-	ut_asserteq_str("initialabc", buf);
+
+	/* The '!' should be inserted one visual line up from the end */
+	ut_assert(strstr(buf, "tes!ted"));
 
 	/* Check the framebuffer has expected content */
-	ut_asserteq(1029, video_compress_fb(uts, dev, false));
+	ut_asserteq(16829, video_compress_fb(uts, dev, false));
 
 	return 0;
 }

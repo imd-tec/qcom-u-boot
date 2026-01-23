@@ -349,6 +349,12 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 		event->select.id = obj->id;
 		scene_txtin_close(scn, tin);
 		break;
+	case BKEY_UP:
+		cread_line_process_ch(cls, CTL_CH('p'));
+		break;
+	case BKEY_DOWN:
+		cread_line_process_ch(cls, CTL_CH('n'));
+		break;
 	default:
 		cread_line_process_ch(cls, key);
 		break;
