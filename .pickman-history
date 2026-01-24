@@ -6832,3 +6832,79 @@ The branch is ready for pushing.
 
 ---
 
+## 2026-01-23: us/next
+
+Branch: cherry-15d6518c942
+
+Commits:
+- 15d6518c942 ARM: dts: imx: Drop bogus regulator extras on DH i.MX6 DHCOM DRC02
+- 7ddb8d999ac arm64: renesas: Add TFA BL31 handoff support on Renesas R-Car Gen4
+- 9292a304718 arm64: renesas: Enable fallback PSCI on Renesas R-Car R8A779G0 V4H White Hawk
+- 56490b1e012 ARM: renesas: Drop stale common Makefile description
+- 92659829aa1 arm64: renesas: Drop stale R-Car V4H SPL implementation description
+- 15111aeb9c7 arm64: dts: renesas: Make OTP available in SPL on R8A779G0 V4H
+- 6c219e184f9 ram: renesas: dbsc5: Fix bitrate MD pin parsing
+- 9a106f15fac ram: renesas: dbsc5: Fix JS1 index calculation
+- da7662f6bb0 ram: renesas: dbsc5: Fix DBTR11 calculation
+- 9ae94d2aedb ram: renesas: dbsc5: Synchronize initialization code to rev.1.10
+- 74e28113618 ram: renesas: dbsc5: Add V4H-3/V4H-5/V4H-7 OTP based detection
+- 885fd621a30 ram: renesas: dbsc5: Make struct renesas_dbsc5_board_config public
+- e1b6d514d48 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+Let me find the correct repository location:
+
+Now let me cherry-pick the first commit:
+
+Delta looks good (same files and lines). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Now the last commit is a merge commit that may already be applied. Let me check first:
+
+The commits are different - one is the original merge commit from Tom Rini, and the other is a Pickman merge. Let me compare their actual changes:
+
+This is a merge commit that previously merged the same content. Since we've already applied all 12 regular commits, and 8e85f501c22 was a pickman merge that applied this same series, the merge commit content is already in ci/master. I'll still try to cherry-pick the original merge commit since it's in the list and includes valuable commit metadata:
+
+The merge commit is empty because all the content was already cherry-picked individually. Let me commit it as an empty commit to preserve the merge history:
+
+All commits cherry-picked successfully. Let me verify with git log:
+
+All 13 commits are present. Now let me run the final build test:
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+All 13 commits have been cherry-picked from `us/next` branch onto `ci/master` in a new branch `cherry-15d6518c942`:
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 858f0cd14be | ARM: dts: imx: Drop bogus regulator extras on DH i.MX6 DHCOM DRC02 |
+| 2 | 70d0a706cb2 | arm64: renesas: Add TFA BL31 handoff support on Renesas R-Car Gen4 |
+| 3 | 9a9d7e784bf | arm64: renesas: Enable fallback PSCI on Renesas R-Car R8A779G0 V4H White Hawk |
+| 4 | c0763991095 | ARM: renesas: Drop stale common Makefile description |
+| 5 | dcf0f134200 | arm64: renesas: Drop stale R-Car V4H SPL implementation description |
+| 6 | 247072ca318 | arm64: dts: renesas: Make OTP available in SPL on R8A779G0 V4H |
+| 7 | 116f05c3559 | ram: renesas: dbsc5: Fix bitrate MD pin parsing |
+| 8 | 9745aa3d1ba | ram: renesas: dbsc5: Fix JS1 index calculation |
+| 9 | 2ef36daf229 | ram: renesas: dbsc5: Fix DBTR11 calculation |
+| 10 | 8f44eb7d2ef | ram: renesas: dbsc5: Synchronize initialization code to rev.1.10 |
+| 11 | 20a29da5250 | ram: renesas: dbsc5: Add V4H-3/V4H-5/V4H-7 OTP based detection |
+| 12 | 465d8b8b6ed | ram: renesas: dbsc5: Make struct renesas_dbsc5_board_config public |
+| 13 | 34238ece96d | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh (empty, already applied) |
+
+**Build result:** ✅ OK - sandbox build passes
+
+**Fix-ups made:** None
+
+**Commits with concerning deltas:** None - all commit deltas matched the originals exactly
+
+**Notes:**
+- The merge commit (e1b6d514d48) was applied as an empty commit because all its content was already cherry-picked via the individual commits. The merge commit message is preserved for history tracking.
+- Commit #6 (15111aeb9c7) had an auto-merge on `arch/arm/dts/r8a779g0-u-boot.dtsi` but applied cleanly.
+
+The branch `cherry-15d6518c942` is ready for pushing.
+
+---
+
