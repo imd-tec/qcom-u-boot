@@ -6971,3 +6971,62 @@ The branch `cherry-aa7d628b78d` is ready for pushing.
 
 ---
 
+## 2026-01-24: us/next
+
+Branch: cherry-c5fd2c7ac7f
+
+Commits:
+- c5fd2c7ac7f board: libre-computer: check interface before comparing it in set_dfu_alt_info()
+- 848f7ffc64a Merge tag 'u-boot-amlogic-20250404' of https://source.denx.de/u-boot/custodians/u-boot-amlogic
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit (regular commit):
+
+First cherry-pick succeeded. Let me check the delta and run the build test:
+
+The delta matches perfectly: same 3 files changed, 3 insertions(+), 3 deletions(-). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit, which is a merge commit (identified by "Merge" in the subject):
+
+The merge commit is empty because its changes are already applied. According to the instructions, I should use --allow-empty to preserve it. Let me commit it:
+
+The merge commit was preserved. Let me check the delta:
+
+This is expected - the cherry-picked merge commit is empty because the underlying change (c5fd2c7ac7f) was already applied in the first cherry-pick. The original merge commit brought in the same 3 files that we already applied. This is correct behavior.
+
+Now let me run the build test after the second cherry-pick:
+
+Build passed. Now let me verify the commits with git log:
+
+All 2 commits are present. Let me run the final build test:
+
+## Final Status
+
+### Summary
+All 2 commits have been successfully cherry-picked onto branch `cherry-c5fd2c7ac7f`.
+
+### Commits Applied
+| Original Hash | New Hash | Subject |
+|---------------|----------|---------|
+| c5fd2c7ac7f | 8f9d4bd664c | board: libre-computer: check interface before comparing it in set_dfu_alt_info() |
+| 848f7ffc64a | e6b4e648608 | Merge tag 'u-boot-amlogic-20250404' of https://source.denx.de/u-boot/custodians/u-boot-amlogic |
+
+### Build Result
+✅ **Build OK** - No warnings or errors
+
+### Fix-ups Made
+None required - all commits applied cleanly.
+
+### Delta Analysis
+- **c5fd2c7ac7f**: Delta matches exactly (3 files, +3/-3 lines)
+- **848f7ffc64a**: Merge commit is empty as expected - the underlying change was already applied in the first cherry-pick
+
+### Notes
+- The merge commit (848f7ffc64a) resulted in an empty commit because the changes it merged (c5fd2c7ac7f) were already applied via the first cherry-pick. This is expected behavior and the commit message is preserved for tracking history.
+
+The branch `cherry-c5fd2c7ac7f` is ready for pushing.
+
+---
+
