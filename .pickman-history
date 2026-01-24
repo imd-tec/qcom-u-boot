@@ -6591,3 +6591,87 @@ Rebased onto latest ci/master (5b97d5052d1). Build test passed.
 
 ---
 
+## 2026-01-23: us/next
+
+Branch: cherry-a149456d6a5
+
+Commits:
+- a149456d6a5 net: tsec: Reorder tsec_recv and tsec_free_pkt
+- 63a23cb4656 net: tsec: Re-arm packet buffer in error case
+- 9f258e48200 board: freescale: fix LS1021a build
+- ef0e979e143 crypto: fsl_hash: fix flush dcache alignment in caam_hash()
+- cf6354ab23b Merge tag 'fsl-qoriq-2025-3-3' of https://source.denx.de/u-boot/custodians/u-boot-fsl-qoriq
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Good. Now let me cherry-pick the first commit:
+
+Cherry-pick successful. Let me verify the delta and run the build test:
+
+Deltas match (1 file, 18 insertions, 18 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Let me verify the delta and run the build test:
+
+Deltas match (1 file, 3 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Let me verify the delta and run the build test:
+
+Deltas match (2 files, 16 insertions, 14 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+There was an auto-merge. Let me verify the delta:
+
+Deltas match (1 file, 4 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fifth and final commit. This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit because the changes were already applied. Let me commit it as an empty commit to preserve the history:
+
+Good, the empty merge commit was created. Let me verify the delta:
+
+The cherry-picked merge commit is empty (which is expected since we already cherry-picked all its constituent commits). The original merge commit shows the combined changes from the merged branch. This is the expected behavior - the merge commit itself is now empty because all the changes it brought in were already applied via the individual cherry-picks. Let me run the build test:
+
+Build passed. Now let me verify all 5 commits are present:
+
+All 5 commits are present. Let me run the final build test to verify everything works together:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All 5 commits have been successfully cherry-picked from `us/next` branch onto `cherry-a149456d6a5` (based on `ci/master`):
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | a149456d6a5 | net: tsec: Reorder tsec_recv and tsec_free_pkt | ✅ Applied cleanly |
+| 2 | 63a23cb4656 | net: tsec: Re-arm packet buffer in error case | ✅ Applied cleanly |
+| 3 | 9f258e48200 | board: freescale: fix LS1021a build | ✅ Applied cleanly |
+| 4 | ef0e979e143 | crypto: fsl_hash: fix flush dcache alignment in caam_hash() | ✅ Applied cleanly (auto-merged) |
+| 5 | cf6354ab23b | Merge tag 'fsl-qoriq-2025-3-3' ... | ✅ Applied as empty commit (expected) |
+
+### Build Result
+**OK** - All builds passed (sandbox board)
+
+### Fix-ups Made
+None required
+
+### Delta Verification
+All commit deltas matched between original and cherry-picked versions:
+- Commit 1: 1 file, 18+/18- ✅
+- Commit 2: 1 file, 3+/0- ✅
+- Commit 3: 2 files, 16+/14- ✅
+- Commit 4: 1 file, 4+/2- ✅
+- Commit 5: Empty merge (expected, constituent commits already applied) ✅
+
+### Notes
+- The merge commit (cf6354ab23b) resulted in an empty commit, which is expected behavior since all its constituent commits were already cherry-picked individually before it.
+- The branch `cherry-a149456d6a5` is ready for pushing.
+
+---
+
