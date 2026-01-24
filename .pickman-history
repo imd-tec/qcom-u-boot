@@ -6908,3 +6908,79 @@ The branch `cherry-15d6518c942` is ready for pushing.
 
 ---
 
+## 2026-01-24: us/next
+
+Branch: cherry-f364ea8c257
+
+Commits:
+- f364ea8c257 board: ti: am335x: Fix selection of BeagleBone Green
+- 870c4d105a6 board: starfive: Remove compatible boards Milk-V Mars CM and Mars CM Lite
+- 5e74863ad66 MAINTAINERS: Update email of Mattijs Korpershoek
+- 6d66a72a0ac net: lwip: remove superfluous newline at tftp help text
+- 42df30a210c net: lwip: do_ping() should return CMD_RET_FAILURE when no device
+- 36510e4e41f net: remove commented out line
+- f93b15e7064 net: lwip: Remove error print on failed tx
+- 64b973fc78f cmd: Kconfig: Fix submenu for network commands
+- c17f03a7e93 Merge tag 'net-20250314' of https://source.denx.de/u-boot/custodians/u-boot-net
+
+### Conversation log
+Good, the repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Now let me verify the commit delta and run build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Build passed. Now let me check if the fifth commit (42df30a210c) might already be applied as f03c2c2e1cb. First let me compare the patches:
+
+The commits are identical except for the hash and the cherry-pick annotation. Let me verify that f03c2c2e1cb is present in ci/master:
+
+Good, the commit is already present in ci/master as f03c2c2e1cb. The patches are identical (only difference is the commit hash and the cherry-pick note). I'll skip this commit and report it as already applied. Let me continue with the next commit:
+
+Build passed. Now let me cherry-pick commit 7:
+
+Build passed. Now let me cherry-pick commit 8:
+
+Build passed. Now let me cherry-pick the final commit - the merge commit:
+
+The merge commit is empty because the changes were already cherry-picked. As instructed, I should still commit it with --allow-empty to preserve the history:
+
+Build passed. Now let me verify the final commit log:
+
+Let me run the final build test:
+
+## Final Status
+
+All cherry-picks completed successfully. Here's the summary:
+
+### Build Result: ✅ OK
+
+### Commits Applied (8 of 9 requested):
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | f364ea8c257 | 116ff89cc81 | board: ti: am335x: Fix selection of BeagleBone Green | ✅ Applied |
+| 2 | 870c4d105a6 | 48cca02c7c9 | board: starfive: Remove compatible boards Milk-V Mars CM and Mars CM Lite | ✅ Applied |
+| 3 | 5e74863ad66 | 529555c0615 | MAINTAINERS: Update email of Mattijs Korpershoek | ✅ Applied |
+| 4 | 6d66a72a0ac | 7b74fb8099a | net: lwip: remove superfluous newline at tftp help text | ✅ Applied |
+| 5 | 42df30a210c | - | net: lwip: do_ping() should return CMD_RET_FAILURE when no device | ⏭️ Skipped - already applied as f03c2c2e1cb |
+| 6 | 36510e4e41f | 8948f073f7b | net: remove commented out line | ✅ Applied |
+| 7 | f93b15e7064 | b2e3d03a56a | net: lwip: Remove error print on failed tx | ✅ Applied |
+| 8 | 64b973fc78f | 2729013640e | cmd: Kconfig: Fix submenu for network commands | ✅ Applied |
+| 9 | c17f03a7e93 | c7c7d57242d | Merge tag 'net-20250314' | ✅ Applied (empty - changes already picked) |
+
+### Notes:
+- **Commit 5 (42df30a210c)**: Verified as already applied in ci/master as f03c2c2e1cb. Patches are identical (only diff is commit hash and cherry-pick annotation). Skipped to avoid duplication.
+- **Commit 9 (merge commit)**: Applied as an empty commit since all the underlying changes were already cherry-picked individually.
+- **No fix-ups needed**: All cherry-picks applied cleanly.
+- **No concerning deltas**: All commit deltas matched exactly between original and cherry-picked versions.
+
+The branch `cherry-f364ea8c257` is ready for pushing with 8 new commits on top of ci/master.
+
+---
+
