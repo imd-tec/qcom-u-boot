@@ -151,6 +151,10 @@
 	bootph-all;
 };
 
+&otp {
+	bootph-all;
+};
+
 &pfc {
 	bootph-all;
 };
