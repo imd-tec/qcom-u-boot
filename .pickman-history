@@ -6675,3 +6675,160 @@ All commit deltas matched between original and cherry-picked versions:
 
 ---
 
+## 2026-01-23: us/next
+
+Branch: cherry-e34aa2975ab
+
+Commits:
+- e34aa2975ab MAINTAINERS: Update contact information for Greg Malysa
+- 7e0370f37d2 miiphy: define mii_devs with LIST_HEAD()
+- 4164289db88 board: verdin-am62: fix missing memory fixup call
+- cd48a21dbde Revert "dm: core: Simplify dm_probe_devices()"
+- 3ff97659ae9 samsung: snow: Use BLOBLIST_FIXED
+- 91fa9d9ed2e binman: Rename Entry.end_4gb
+- 2c252d36b8d binman: Honour the skip-at-start property more faithfully
+- ebe3c3c4a8f x86: Stop working around skip-at-start
+- 78f8c8c58f7 Merge patch series "Syncing up on skip-at-start"
+
+### Conversation log
+Now let's cherry-pick the first commit:
+
+Good, the commit delta is identical. Now let's build test:
+
+Build passed. Let's continue with the second commit:
+
+Good, deltas match. Let's build test:
+
+Build passed. Let's continue with the third commit:
+
+Deltas match. Let's build test:
+
+Build passed. Let's continue with the fourth commit:
+
+The commit appears to be empty (likely already applied). Let me check if this is truly the same commit:
+
+The code already has the reverted state. Let me verify by comparing the full file:
+
+I see - the Revert commit (cd48a21dbde) has already been effectively applied via b64009e9a6a (which was already cherry-picked). The current code already has the reverted state with `dm_probe_devices(struct udevice *dev, bool pre_reloc_only)`. Let me commit an empty commit to preserve the history:
+
+Build passed. Now let's continue with the fifth commit:
+
+Let me check the conflict:
+
+I can see the conflict. The issue is that `CONFIG_BLOBLIST_FIXED=y` appears twice - both in the HEAD version and the cherry-pick is trying to add it. Let me resolve this:
+
+The commit adds `CONFIG_BLOBLIST_FIXED=y` and `CONFIG_BLOBLIST_ADDR=0x43d00000`. Looking at the conflict, both are already present in HEAD. This means the commit was already applied. Let me check:
+
+I see! The change from 3ff97659ae9 was partially applied through the resync (CONFIG_BLOBLIST_FIXED=y is there but in a different order). But looking at the current state, it seems both CONFIG_BLOBLIST_FIXED=y and CONFIG_BLOBLIST_ADDR=0x43d00000 are already present. Let me resolve the conflict by removing the duplicate:
+
+I need to remove the conflict markers. The resolution should keep CONFIG_BLOBLIST_FIXED=y (already on line 36) and keep CONFIG_BLOBLIST_ADDR=0x43d00000 (on line 42):
+
+Conflict resolved. Now let me continue the cherry-pick:
+
+The change is slightly different (1 insertion vs 2 insertions) because some of the config was already partially applied by earlier resync commits. Let me verify the actual content difference:
+
+The effective change is similar - the file now has CONFIG_BLOBLIST_FIXED=y and CONFIG_BLOBLIST_ADDR=0x43d00000 in the right location. The order is just slightly different but functionally equivalent. Let me add a note to the commit message about the fix-up and proceed:
+
+Build passed. Now let's handle the sixth commit (marked as maybe already applied as b20aa188335):
+
+The patches are virtually identical (only commit hash and date differ). Let me verify the actual diff parts are the same:
+
+No difference - the patches are identical. Let me verify the commit is actually in ci/master:
+
+The commit is already applied with the same changes. Skipping this one:
+
+Now let's check the seventh commit (also marked as maybe already applied):
+
+Let me check the actual code changes more closely:
+
+The actual changes are identical - only context line numbers differ slightly. Let me verify it's in ci/master:
+
+Skipping this one too. Now let's check the eighth commit:
+
+These are different - the found commit (552ae59e0d6) is a merge commit, while the original (ebe3c3c4a8f) is the actual patch. Let me look more closely:
+
+The patches differ - the original ebe3c3c4a8f has an additional line removal (`ulong mask = CONFIG_ROM_SIZE - 1;`). Let me check the current state of the file:
+
+The line still exists in the current code, so fe961793f1d didn't include that change. The commits are actually different. Let me try to cherry-pick ebe3c3c4a8f:
+
+I see - the conflict is about `map_base` vs `map_base + CONFIG_ROM_SIZE`. Looking at commit fe961793f1d, the current code has `map_base` (which is what fe961793f1d changed it to). But the original commit ebe3c3c4a8f expected the old form `(map_base & mask) - CONFIG_ROM_SIZE`. Let me look at what the files should actually be:
+
+Interesting! Both commits have the same title and make the same line change (`rom_offset = map_base + CONFIG_ROM_SIZE`), but ebe3c3c4a8f additionally removes the `mask` variable declaration at line 110.
+
+Looking at the current file, the mask variable is still there (at line 153 in a different scope), and the `rom_offset = map_base` was already changed via commit d2d24e0ba0f ("x86: fsp: Simplify map_base location"):
+
+I see - commit 13f3265ec4f already did what ebe3c3c4a8f was trying to do (and more - it changed it to just `map_base`). So the situation is:
+- fe961793f1d: changed `(map_base & mask) - CONFIG_ROM_SIZE` -> `map_base + CONFIG_ROM_SIZE` 
+- 13f3265ec4f: removed the mask and changed `map_base + CONFIG_ROM_SIZE` -> `map_base`
+
+The original commit ebe3c3c4a8f wanted to change:
+- `(map_base & mask) - CONFIG_ROM_SIZE` -> `map_base + CONFIG_ROM_SIZE`
+- and remove the mask variable
+
+But ci/master now has `map_base` (without the addition of CONFIG_ROM_SIZE). Looking at the conflict, the HEAD version is `rom_offset = map_base;` which is actually different from what ebe3c3c4a8f wanted. Let me check if this is OK by examining the binman commit:
+
+Commit 13f3265ec4f is a more complete fix that was already applied, which obsoletes ebe3c3c4a8f. The current code has the proper behavior already. Let me abort this cherry-pick and skip it:
+
+Now let's handle the ninth (and final) commit - the merge commit:
+
+Let me check what the merge commit includes:
+
+The merge commit has conflicts because much of its content was already applied via different commits. Since the individual commits in the merge (except for the already skipped ones) have been applied or the work has been superseded, let me abort and commit an empty merge to preserve the history:
+
+Build passed. Now let me verify the final state with git log:
+
+I see we have 6 commits cherry-picked. Let me count what we actually applied:
+
+1. ✅ e34aa2975ab: MAINTAINERS: Update contact information for Greg Malysa
+2. ✅ 7e0370f37d2: miiphy: define mii_devs with LIST_HEAD()
+3. ✅ 4164289db88: board: verdin-am62: fix missing memory fixup call
+4. ✅ cd48a21dbde: Revert "dm: core: Simplify dm_probe_devices()" (empty - already applied)
+5. ✅ 3ff97659ae9: samsung: snow: Use BLOBLIST_FIXED (with conflict resolution)
+6. ⏭️ 91fa9d9ed2e: binman: Rename Entry.end_4gb - SKIPPED (already applied as b20aa188335)
+7. ⏭️ 2c252d36b8d: binman: Honour the skip-at-start property - SKIPPED (already applied as f663a687939)
+8. ⏭️ ebe3c3c4a8f: x86: Stop working around skip-at-start - SKIPPED (superseded by 13f3265ec4f)
+9. ✅ 78f8c8c58f7: Merge patch series "Syncing up on skip-at-start" (empty - content already applied)
+
+We have 6 commits on the branch. Let me run the final build:
+
+## Final Status Report
+
+**Branch:** `cherry-e34aa2975ab` (based on `ci/master`, ahead by 6 commits)
+
+**Build Result:** ✅ OK - sandbox builds successfully
+
+### Cherry-picked Commits (6 total):
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | e34aa2975ab | MAINTAINERS: Update contact information for Greg Malysa | ✅ Applied cleanly |
+| 2 | 7e0370f37d2 | miiphy: define mii_devs with LIST_HEAD() | ✅ Applied cleanly |
+| 3 | 4164289db88 | board: verdin-am62: fix missing memory fixup call | ✅ Applied cleanly |
+| 4 | cd48a21dbde | Revert "dm: core: Simplify dm_probe_devices()" | ✅ Empty commit (already applied via b64009e9a6a) |
+| 5 | 3ff97659ae9 | samsung: snow: Use BLOBLIST_FIXED | ✅ Applied with conflict resolution |
+| 6 | 78f8c8c58f7 | Merge patch series "Syncing up on skip-at-start" | ✅ Empty commit (all content already applied) |
+
+### Skipped Commits (3 total - already applied to ci/master):
+
+| Original Hash | Subject | Already Applied As |
+|--------------|---------|-------------------|
+| 91fa9d9ed2e | binman: Rename Entry.end_4gb | b20aa188335 (identical patches) |
+| 2c252d36b8d | binman: Honour the skip-at-start property more faithfully | f663a687939 (identical patches) |
+| ebe3c3c4a8f | x86: Stop working around skip-at-start | superseded by 13f3265ec4f |
+
+### Fix-ups Made:
+
+1. **samsung: snow: Use BLOBLIST_FIXED** (3ff97659ae9): Conflict resolved - reordered lines as CONFIG_BLOBLIST_FIXED was partially applied via config resyncs, resulting in line order adjustment.
+
+2. **Revert "dm: core: Simplify dm_probe_devices()"** (cd48a21dbde): Committed as empty - the revert was already effectively applied via commit b64009e9a6a "common: Move autoprobe out to board init".
+
+3. **Merge patch series "Syncing up on skip-at-start"** (78f8c8c58f7): Committed as empty - all component commits were already applied to ci/master via b20aa188335, f663a687939, and 13f3265ec4f.
+
+### Commits with Concerning Deltas:
+
+None - all applied commits matched their original deltas or had expected differences due to prior partial application.
+
+The branch is ready for pushing.
+
+---
+
