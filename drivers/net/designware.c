@@ -227,9 +227,9 @@ static int dw_dm_mdio_init(const char *name, void *priv)
 #endif
 
 #if IS_ENABLED(CONFIG_BITBANGMII) && IS_ENABLED(CONFIG_DM_GPIO)
-static int dw_eth_bb_mdio_active(struct bb_miiphy_bus *bus)
+static int dw_eth_bb_mdio_active(struct mii_dev *miidev)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 	struct gpio_desc *desc = &priv->mdio_gpio;
 
 	desc->flags = 0;
@@ -238,9 +238,9 @@ static int dw_eth_bb_mdio_active(struct bb_miiphy_bus *bus)
 	return 0;
 }
 
-static int dw_eth_bb_mdio_tristate(struct bb_miiphy_bus *bus)
+static int dw_eth_bb_mdio_tristate(struct mii_dev *miidev)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 	struct gpio_desc *desc = &priv->mdio_gpio;
 
 	desc->flags = 0;
@@ -249,9 +249,9 @@ static int dw_eth_bb_mdio_tristate(struct bb_miiphy_bus *bus)
 	return 0;
 }
 
-static int dw_eth_bb_set_mdio(struct bb_miiphy_bus *bus, int v)
+static int dw_eth_bb_set_mdio(struct mii_dev *miidev, int v)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 
 	if (v)
 		dm_gpio_set_value(&priv->mdio_gpio, 1);
@@ -261,18 +261,18 @@ static int dw_eth_bb_set_mdio(struct bb_miiphy_bus *bus, int v)
 	return 0;
 }
 
-static int dw_eth_bb_get_mdio(struct bb_miiphy_bus *bus, int *v)
+static int dw_eth_bb_get_mdio(struct mii_dev *miidev, int *v)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 
 	*v = dm_gpio_get_value(&priv->mdio_gpio);
 
 	return 0;
 }
 
-static int dw_eth_bb_set_mdc(struct bb_miiphy_bus *bus, int v)
+static int dw_eth_bb_set_mdc(struct mii_dev *miidev, int v)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 
 	if (v)
 		dm_gpio_set_value(&priv->mdc_gpio, 1);
@@ -282,12 +282,35 @@ static int dw_eth_bb_set_mdc(struct bb_miiphy_bus *bus, int v)
 	return 0;
 }
 
-static int dw_eth_bb_delay(struct bb_miiphy_bus *bus)
+static int dw_eth_bb_delay(struct mii_dev *miidev)
 {
-	struct dw_eth_dev *priv = bus->priv;
+	struct dw_eth_dev *priv = miidev->priv;
 
 	udelay(priv->bb_delay);
 	return 0;
+}
+
+static const struct bb_miiphy_bus_ops dw_eth_bb_miiphy_bus_ops = {
+	.mdio_active	= dw_eth_bb_mdio_active,
+	.mdio_tristate	= dw_eth_bb_mdio_tristate,
+	.set_mdio	= dw_eth_bb_set_mdio,
+	.get_mdio	= dw_eth_bb_get_mdio,
+	.set_mdc	= dw_eth_bb_set_mdc,
+	.delay		= dw_eth_bb_delay,
+};
+
+static int dw_bb_miiphy_read(struct mii_dev *miidev, int addr,
+			     int devad, int reg)
+{
+	return bb_miiphy_read(miidev, &dw_eth_bb_miiphy_bus_ops,
+			      addr, devad, reg);
+}
+
+static int dw_bb_miiphy_write(struct mii_dev *miidev, int addr,
+			      int devad, int reg, u16 value)
+{
+	return bb_miiphy_write(miidev, &dw_eth_bb_miiphy_bus_ops,
+			       addr, devad, reg, value);
 }
 
 static int dw_bb_mdio_init(const char *name, struct udevice *dev)
@@ -322,20 +345,12 @@ static int dw_bb_mdio_init(const char *name, struct udevice *dev)
 	dwpriv->dev = dev;
 
 	snprintf(bus->name, sizeof(bus->name), "%s", name);
-	bus->read = bb_miiphy_read;
-	bus->write = bb_miiphy_write;
+	bus->read = dw_bb_miiphy_read;
+	bus->write = dw_bb_miiphy_write;
 #if CONFIG_IS_ENABLED(DM_GPIO)
 	bus->reset = dw_mdio_reset;
 #endif
 	bus->priv = dwpriv;
-
-	/* Copy the bus accessors and private data */
-	bb_miiphy->mdio_active = dw_eth_bb_mdio_active;
-	bb_miiphy->mdio_tristate = dw_eth_bb_mdio_tristate;
-	bb_miiphy->set_mdio = dw_eth_bb_set_mdio;
-	bb_miiphy->get_mdio = dw_eth_bb_get_mdio;
-	bb_miiphy->set_mdc = dw_eth_bb_set_mdc;
-	bb_miiphy->delay = dw_eth_bb_delay;
 
 	return mdio_register(bus);
 }

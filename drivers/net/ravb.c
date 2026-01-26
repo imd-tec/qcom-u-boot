@@ -498,27 +498,27 @@ static void ravb_stop(struct udevice *dev)
 }
 
 /* Bitbang MDIO access */
-static int ravb_bb_mdio_active(struct bb_miiphy_bus *bus)
+static int ravb_bb_mdio_active(struct mii_dev *miidev)
 {
-	struct ravb_priv *eth = bus->priv;
+	struct ravb_priv *eth = miidev->priv;
 
 	setbits_le32(eth->iobase + RAVB_REG_PIR, PIR_MMD);
 
 	return 0;
 }
 
-static int ravb_bb_mdio_tristate(struct bb_miiphy_bus *bus)
+static int ravb_bb_mdio_tristate(struct mii_dev *miidev)
 {
-	struct ravb_priv *eth = bus->priv;
+	struct ravb_priv *eth = miidev->priv;
 
 	clrbits_le32(eth->iobase + RAVB_REG_PIR, PIR_MMD);
 
 	return 0;
 }
 
-static int ravb_bb_set_mdio(struct bb_miiphy_bus *bus, int v)
+static int ravb_bb_set_mdio(struct mii_dev *miidev, int v)
 {
-	struct ravb_priv *eth = bus->priv;
+	struct ravb_priv *eth = miidev->priv;
 
 	if (v)
 		setbits_le32(eth->iobase + RAVB_REG_PIR, PIR_MDO);
@@ -528,18 +528,18 @@ static int ravb_bb_set_mdio(struct bb_miiphy_bus *bus, int v)
 	return 0;
 }
 
-static int ravb_bb_get_mdio(struct bb_miiphy_bus *bus, int *v)
+static int ravb_bb_get_mdio(struct mii_dev *miidev, int *v)
 {
-	struct ravb_priv *eth = bus->priv;
+	struct ravb_priv *eth = miidev->priv;
 
 	*v = (readl(eth->iobase + RAVB_REG_PIR) & PIR_MDI) >> 3;
 
 	return 0;
 }
 
-static int ravb_bb_set_mdc(struct bb_miiphy_bus *bus, int v)
+static int ravb_bb_set_mdc(struct mii_dev *miidev, int v)
 {
-	struct ravb_priv *eth = bus->priv;
+	struct ravb_priv *eth = miidev->priv;
 
 	if (v)
 		setbits_le32(eth->iobase + RAVB_REG_PIR, PIR_MDC);
@@ -549,11 +549,34 @@ static int ravb_bb_set_mdc(struct bb_miiphy_bus *bus, int v)
 	return 0;
 }
 
-static int ravb_bb_delay(struct bb_miiphy_bus *bus)
+static int ravb_bb_delay(struct mii_dev *miidev)
 {
 	udelay(10);
 
 	return 0;
+}
+
+static const struct bb_miiphy_bus_ops ravb_bb_miiphy_bus_ops = {
+	.mdio_active	= ravb_bb_mdio_active,
+	.mdio_tristate	= ravb_bb_mdio_tristate,
+	.set_mdio	= ravb_bb_set_mdio,
+	.get_mdio	= ravb_bb_get_mdio,
+	.set_mdc	= ravb_bb_set_mdc,
+	.delay		= ravb_bb_delay,
+};
+
+static int ravb_bb_miiphy_read(struct mii_dev *miidev, int addr,
+			       int devad, int reg)
+{
+	return bb_miiphy_read(miidev, &ravb_bb_miiphy_bus_ops,
+			      addr, devad, reg);
+}
+
+static int ravb_bb_miiphy_write(struct mii_dev *miidev, int addr,
+				int devad, int reg, u16 value)
+{
+	return bb_miiphy_write(miidev, &ravb_bb_miiphy_bus_ops,
+			       addr, devad, reg, value);
 }
 
 static int ravb_probe(struct udevice *dev)
