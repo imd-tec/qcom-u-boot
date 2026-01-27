@@ -8293,3 +8293,177 @@ The branch `cherry-a936352f9e0` is ready for pushing with 9 commits ahead of `ci
 
 ---
 
+## 2026-01-27: us/next
+
+Branch: cherry-82f5ce11e66
+
+Commits:
+- 82f5ce11e66 common: console: move break; statement
+- 7c9f8680c16 armv8: start.S: Subordinate CPUs psci setup vector
+- 2a6d7ad24d3 bootm: Add support for passing arguments to elf app
+- 40dcd5088b7 image-fit-sig: skip in tools build if key is missing
+- 9c79c8fe70d tools/fit_check_sign: make key optional
+- 157119d69a8 bootm: Support load images when os is elf
+- 6a5177a58cd dm: blk: Add 'erase' generic block device commands
+- 7dd49a9264a drivers: scsi: Add 'erase' support
+- 53bb8fdea12 mmc: Kconfig: Correct dependencies SDHCI ADMA options
+- 4357167e0e9 mmc: Simplify poll CD logic in case cyclic framework is enabled
+- fcef00c284f mmc: Exit from mmc_init() if mmc_complete_init() fails
+- 674a0498e9b mmc: Optimize eMMC erase speed
+- 2057bb4b516 mmc: sdhci: Fix possible Synchronous Abort using PIO mode
+- d99f8d2d749 mmc: Avoid uniniting twice
+- 7550bfdbf41 mmc: mmc_boot: Support Sandisk and Micron eMMC BOOT/RPMB hardware partition resizing
+- 048266be426 Merge tag 'mmc-2025-04-11' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+
+### Conversation log
+Let me find the correct repository location:
+
+Good, I'm already in the u-boot repository. Let me check the git status:
+
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Let me verify the delta and run the build test:
+
+Delta matches. Now let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta matches. Let me run the build test:
+
+Build passed. Let me continue with the third commit:
+
+Delta matches. Let me run the build test:
+
+Build passed. Let me continue with the fourth commit:
+
+Delta matches. Let me run the build test:
+
+Build passed. Now for the fifth commit which might be already applied. Let me verify first:
+
+The patches are similar with only minor differences (commit hash and line numbers). This commit is already applied. Let me skip it and continue:
+
+Now let me continue with the sixth commit:
+
+There's a conflict. Let me check what the conflict looks like:
+
+I can see the conflict. The incoming commit adds `IH_OS_ELF` to the list of supported OS types. The HEAD version has been refactored to use intermediate variables (`type_ok`, `os_ok`). I need to merge these two approaches - keep the refactored version and add the ELF support. Let me resolve this:
+
+The resolution is straightforward - I need to keep the refactored HEAD version but add `IH_OS_ELF` to the `os_ok` condition. Let me fix this:
+
+Let me use sed to resolve the conflict:
+
+The conflict is resolved. Now let me add the file and continue the cherry-pick:
+
+I need to amend the commit to add a note about the conflict resolution:
+
+Let me verify delta and run the build:
+
+Delta matches (same file, same line count changes). Let me run build:
+
+Build passed. Continuing with the seventh commit:
+
+Delta matches. Build test:
+
+Continuing with the eighth commit:
+
+This is a simple conflict - both additions are needed. Let me resolve it:
+
+I see there's a duplicate line. Let me fix this:
+
+Now the conflict is properly resolved. Let me continue:
+
+Let me amend the commit to add a conflict resolution note:
+
+Delta matches. Build test:
+
+Continuing with the ninth commit:
+
+Build test:
+
+Continuing with tenth commit:
+
+Build test:
+
+Continuing with eleventh commit:
+
+Build test:
+
+Continuing with twelfth commit:
+
+Build test:
+
+Continuing with thirteenth commit:
+
+Build test:
+
+Now the fourteenth commit - checking if already applied:
+
+The original (d99f8d2d749) is actually the commit with the fix. The found commit (5b14354376e) is a merge commit. Let me search to see if this commit is already applied with a different hash:
+
+Let me compare with c09525a5247:
+
+The patches are almost identical - just minor header differences (commit hash, date, and some sign-off lines). This commit is already applied as c09525a5247. Skipping:
+
+Now continuing with fifteenth commit:
+
+Build test:
+
+Now the sixteenth commit - it's a merge commit:
+
+The merge commit is empty (likely because all changes have been applied). As instructed, I need to include the merge commit anyway:
+
+Now let me run the final build test:
+
+Now let me verify the final log and run the final verification:
+
+Now let me verify we have all 14 cherry-picked commits (since 2 were skipped as already applied):
+
+We have 14 new commits (16 requested - 2 skipped as already applied = 14 cherry-picked).
+
+## Final Status Report
+
+**Build Result:** ✅ OK - All builds passed
+
+**Cherry-pick Summary:**
+- **Total commits requested:** 16
+- **Commits cherry-picked:** 14
+- **Commits skipped (already applied):** 2
+
+### Commits Cherry-picked Successfully:
+1. ✅ `82f5ce11e66` - common: console: move break; statement
+2. ✅ `7c9f8680c16` - armv8: start.S: Subordinate CPUs psci setup vector
+3. ✅ `2a6d7ad24d3` - bootm: Add support for passing arguments to elf app
+4. ✅ `40dcd5088b7` - image-fit-sig: skip in tools build if key is missing
+5. ⏭️ `9c79c8fe70d` - **SKIPPED** - Already applied as `f944dfeed93`
+6. ✅ `157119d69a8` - bootm: Support load images when os is elf
+7. ✅ `6a5177a58cd` - dm: blk: Add 'erase' generic block device commands
+8. ✅ `7dd49a9264a` - drivers: scsi: Add 'erase' support
+9. ✅ `53bb8fdea12` - mmc: Kconfig: Correct dependencies SDHCI ADMA options
+10. ✅ `4357167e0e9` - mmc: Simplify poll CD logic in case cyclic framework is enabled
+11. ✅ `fcef00c284f` - mmc: Exit from mmc_init() if mmc_complete_init() fails
+12. ✅ `674a0498e9b` - mmc: Optimize eMMC erase speed
+13. ✅ `2057bb4b516` - mmc: sdhci: Fix possible Synchronous Abort using PIO mode
+14. ⏭️ `d99f8d2d749` - **SKIPPED** - Already applied as `c09525a5247`
+15. ✅ `7550bfdbf41` - mmc: mmc_boot: Support Sandisk and Micron eMMC BOOT/RPMB hardware partition resizing
+16. ✅ `048266be426` - Merge tag 'mmc-2025-04-11' (empty commit - changes already applied)
+
+### Fix-ups Made:
+1. **157119d69a8 (bootm: Support load images when os is elf)**
+   - Conflict in `boot/bootm.c` with refactored `bootm_find_other()` function
+   - Resolution: Added `IH_OS_ELF` to the `os_ok` condition while keeping the refactored variable-based structure
+   - Note added: `[sglass: Resolve conflict with refactored bootm_find_other()]`
+
+2. **7dd49a9264a (drivers: scsi: Add 'erase' support)**
+   - Conflict in `include/scsi.h` with `SCSI_REPORT_LUNS` addition
+   - Resolution: Kept both `SCSI_UNMAP` (new) and `SCSI_REPORT_LUNS` (existing)
+   - Note added: `[sglass: Resolve conflict with SCSI_REPORT_LUNS addition]`
+
+### Concerning Deltas: None
+All cherry-picked commits had matching deltas with the original commits.
+
+**Branch ready for pushing:** `cherry-82f5ce11e66` (14 commits ahead of `ci/master`)
+
+---
+
