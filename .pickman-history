@@ -8655,3 +8655,152 @@ Rebased onto latest ci/master. Build passes.
 
 ---
 
+## 2026-01-27: us/next
+
+Branch: cherry-a6c88ca805c
+
+Commits:
+- a6c88ca805c qcom_defconfig: enable OF_UPSTREAM_BUILD_VENDOR
+- ec2850e40ce phy: Add SDM660 support to Qualcomm QUSB2 phy
+- ec8209d04a4 clk/qcom: sdm845: add missing USB3 clocks
+- 7c07628e5b5 clk/stub: add sdm845 rpmh clock
+- c8db6bdba6d clk/qcom: sdm845: add GCC_AGGRE_UFS_PHY_AXI_CLK
+- 520f26425bb mach-snapdragon: enable DM_USB_GADGET by default
+- 32ad75f7873 qcom_defconfig: enable fastboot
+- 1542c090ee0 mach-snapdragon: of_fixup: fix property length at writing
+- 925efba5793 power: regulator: add qcom-usb-vbus
+- b2f89b33d33 regulator: qcom-rpmh-regulator: add support for pmm8654 regulators
+- 5effb1e6255 pinctrl: qcom: add driver for SA8775P SoC
+- 55fee70fb08 qcom_defconfig: enable pinctrl for SA8775P
+- 2c1462e38b7 clk/qcom: sc7280: add missing UFS and MMC clocks
+- 1a02b7aa58a spmi: msm: use real number of channels for v5 & v7
+- f2523506233 spmi: msm: factor out channel mapping for v5 & v7
+- 69400a696cb spmi: msm: introduce SPMI_CHANNEL_VALID flag
+- 5b233442afa spmi: msm: correctly handle multiple mapping entries
+- 602ceb0c927 mach-snapdragon: of_fixup: fix condition check in ft_board_setup()
+- c5e05651b1a hmibsc_defconfig: disable DM_USB_GADGET
+- f933b5a704b board: qualcomm: dragonboard820c: update readme
+- 1561b01a085 clk/qcom: apq8096: fix set rate for the uart clock
+- 8fc48d1a01a clk/qcom: apq8096: fix the sdhci clock
+- 7afddbee3b1 clk: stub: add qcom,glink-smd-rpm
+- adb79d30827 configs: dragonboard820: updates
+- 49cf3b29134 qcom_defconfig: Disable MMC HS200 mode support
+- 45acd9d2d4e phy: phy-qcom-qusb2: Fix USB PHY power on sequence
+- 0708bdd34d4 gpio: msm: fix get_function return for special pins
+- 8803cd6dd78 gpio: msm: return correct value return for special output pins
+- b4420a0c9ed drivers: pinctrl: Add Qualcomm SDM630/660 TLMM driver
+- fd775fb7aff board/qualcomm: introduce phone config
+- 657e19f8f2d cli_hush: support running bootcmd on boot retry
+- aa5ef3c0a75 bootretry: check for bootretry variable changes
+- 4509f818397 doc: board/qualcomm: describe phone support and bringup
+- 8f5685d5d32 button: qcom-pmic: prettify and standardise button labels
+- 9c607005c51 button: make button_get_by_label() case insensitive
+- 91ba4976c05 pinctrl: qcom: handle reserved ranges
+- fa9eb2f1e6a mach-snapdragon: Fix EL2 boot on DragonBoard 410c
+- c53664c6810 board: dragonboard410c: Fix RAM size
+- 2cc2dc23360 board: dragonboard410c: Fix BD address
+- f7d3009b39d board: dragonboard410c: Drop UNSTUFF_BITS() macro
+- 49f2e9780bb board: dragonboard410c: Drop reflash functionality
+- 7fde40768c1 board: dragonboard410c: Drop unused linux_image
+- 39ae0bc73ee board: dragonboard410c: Use dynamically allocated load addresses
+- c68ef4484f6 board: dragonboard410c: Fix counter frequency
+- 69aa453d29e board: dragonboard410c: Enable RTL8152 ethernet
+- cfd27d130b3 board: dragonboard410c: Use BOOTSTD instead of DISTRO_DEFAULTS
+- 268bfcd2160 board: dragonboard410c: Enable support for Android boot images
+- 359e1d4a57e board: dragonboard410c: Use button_cmd instead of custom code
+- f3563fc3035 board: dragonboard410c: Update maintainers
+- ff0b7d741de Merge tag 'qcom-for-2025.07' of https://source.denx.de/u-boot/custodians/u-boot-snapdragon
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Good, delta looks fine (1 file, 1 line). Let me run the build test:
+
+Build passed. Let me continue with the remaining commits. I'll create a todo list to track this complex task:
+
+Let me continue with the remaining commits efficiently:
+
+Now I need to cherry-pick the final commit which is a merge commit:
+
+The merge commit is empty (all commits were already cherry-picked individually). I'll commit it anyway with --allow-empty to preserve the merge commit message:
+
+All 50 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+### Summary
+Successfully cherry-picked all **50 commits** from `us/next` branch to the new `cherry-a6c88ca805c` branch based on `ci/master`.
+
+### Build Result
+**✓ Build passes** - sandbox builds cleanly with no warnings or errors
+
+### Commits Applied
+All 50 commits were cherry-picked successfully:
+
+| # | Original Hash | Subject |
+|---|---------------|---------|
+| 1 | a6c88ca805c | qcom_defconfig: enable OF_UPSTREAM_BUILD_VENDOR |
+| 2 | ec2850e40ce | phy: Add SDM660 support to Qualcomm QUSB2 phy |
+| 3 | ec8209d04a4 | clk/qcom: sdm845: add missing USB3 clocks |
+| 4 | 7c07628e5b5 | clk/stub: add sdm845 rpmh clock |
+| 5 | c8db6bdba6d | clk/qcom: sdm845: add GCC_AGGRE_UFS_PHY_AXI_CLK |
+| 6 | 520f26425bb | mach-snapdragon: enable DM_USB_GADGET by default |
+| 7 | 32ad75f7873 | qcom_defconfig: enable fastboot |
+| 8 | 1542c090ee0 | mach-snapdragon: of_fixup: fix property length at writing |
+| 9 | 925efba5793 | power: regulator: add qcom-usb-vbus |
+| 10 | b2f89b33d33 | regulator: qcom-rpmh-regulator: add support for pmm8654 |
+| 11 | 5effb1e6255 | pinctrl: qcom: add driver for SA8775P SoC |
+| 12 | 55fee70fb08 | qcom_defconfig: enable pinctrl for SA8775P |
+| 13 | 2c1462e38b7 | clk/qcom: sc7280: add missing UFS and MMC clocks |
+| 14 | 1a02b7aa58a | spmi: msm: use real number of channels for v5 & v7 |
+| 15 | f2523506233 | spmi: msm: factor out channel mapping for v5 & v7 |
+| 16 | 69400a696cb | spmi: msm: introduce SPMI_CHANNEL_VALID flag |
+| 17 | 5b233442afa | spmi: msm: correctly handle multiple mapping entries |
+| 18 | 602ceb0c927 | mach-snapdragon: of_fixup: fix condition check |
+| 19 | c5e05651b1a | hmibsc_defconfig: disable DM_USB_GADGET |
+| 20 | f933b5a704b | board: qualcomm: dragonboard820c: update readme |
+| 21 | 1561b01a085 | clk/qcom: apq8096: fix set rate for the uart clock |
+| 22 | 8fc48d1a01a | clk/qcom: apq8096: fix the sdhci clock |
+| 23 | 7afddbee3b1 | clk: stub: add qcom,glink-smd-rpm |
+| 24 | adb79d30827 | configs: dragonboard820: updates |
+| 25 | 49cf3b29134 | qcom_defconfig: Disable MMC HS200 mode support |
+| 26 | 45acd9d2d4e | phy: phy-qcom-qusb2: Fix USB PHY power on sequence |
+| 27 | 0708bdd34d4 | gpio: msm: fix get_function return for special pins |
+| 28 | 8803cd6dd78 | gpio: msm: return correct value for special output pins |
+| 29 | b4420a0c9ed | drivers: pinctrl: Add Qualcomm SDM630/660 TLMM driver |
+| 30 | fd775fb7aff | board/qualcomm: introduce phone config |
+| 31 | 657e19f8f2d | cli_hush: support running bootcmd on boot retry |
+| 32 | aa5ef3c0a75 | bootretry: check for bootretry variable changes |
+| 33 | 4509f818397 | doc: board/qualcomm: describe phone support and bringup |
+| 34 | 8f5685d5d32 | button: qcom-pmic: prettify and standardise button labels |
+| 35 | 9c607005c51 | button: make button_get_by_label() case insensitive |
+| 36 | 91ba4976c05 | pinctrl: qcom: handle reserved ranges |
+| 37 | fa9eb2f1e6a | mach-snapdragon: Fix EL2 boot on DragonBoard 410c |
+| 38 | c53664c6810 | board: dragonboard410c: Fix RAM size |
+| 39 | 2cc2dc23360 | board: dragonboard410c: Fix BD address |
+| 40 | f7d3009b39d | board: dragonboard410c: Drop UNSTUFF_BITS() macro |
+| 41 | 49f2e9780bb | board: dragonboard410c: Drop reflash functionality |
+| 42 | 7fde40768c1 | board: dragonboard410c: Drop unused linux_image |
+| 43 | 39ae0bc73ee | board: dragonboard410c: Use dynamically allocated addresses |
+| 44 | c68ef4484f6 | board: dragonboard410c: Fix counter frequency |
+| 45 | 69aa453d29e | board: dragonboard410c: Enable RTL8152 ethernet |
+| 46 | cfd27d130b3 | board: dragonboard410c: Use BOOTSTD instead of DISTRO_DEFAULTS |
+| 47 | 268bfcd2160 | board: dragonboard410c: Enable Android boot images |
+| 48 | 359e1d4a57e | board: dragonboard410c: Use button_cmd instead of custom code |
+| 49 | f3563fc3035 | board: dragonboard410c: Update maintainers |
+| 50 | ff0b7d741de | Merge tag 'qcom-for-2025.07' (empty - preserved for history) |
+
+### Fix-ups Made
+- **None required** - All commits applied cleanly with auto-merging where needed
+
+### Delta Concerns
+- **None** - All cherry-picked commits matched their original deltas exactly
+
+### Notes
+- The merge commit (ff0b7d741de) was cherry-picked as an empty commit since all constituent commits were already applied individually
+- The branch `cherry-a6c88ca805c` is ready for pushing
+
+---
+
