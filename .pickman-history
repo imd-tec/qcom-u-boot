@@ -8179,4 +8179,117 @@ f1f77f29e17 ata: ahci: implement SCSI_SYNC_CACHE
 The branch `cherry-0cd3c1e7d02` is ready for pushing.
 
 ---
+## 2026-01-27: us/next
+
+Branch: cherry-a936352f9e0
+
+Commits:
+- a936352f9e0 arm: dts: k3-am625-phyboard-lyra-rdk: Add boot phase tag to phy_gmii_sel
+- 1acffb57114 configs: Add phycore_am62x_r5_ethboot_defconfig
+- 93d22aca3d3 configs: phycore_am62x_a53_defconfig: Update for ethernet boot
+- 77183dfbbcf arch: arm: dts: k3-am62a7-phyboard-lyra-rdk-u-boot: Disable Ethernet2
+- 2dec0fc59c5 arch: arm: mach-k3: am62a7: Probe CPSW NUSS in board_init_f()
+- a0f73e847d1 arch: arm: mach-k3: r5: am62ax: Update SoC auto-gen data to enable CPSW boot
+- 5327b62c12c board: phytec: phycore_am62ax: Share ethernet resources with boot r5 core
+- e41c21acced configs: Add phycore_am62ax_r5_ethboot_defconfig
+- cb7555e9307 Merge patch series "*** Add Ethernet boot support for AM62Ax + phyCORE-AM62 SoMs ***"
+
+### Conversation log
+Good, the repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. Starting with the first commit:
+
+First cherry-pick successful. Let me verify the delta and run the build test:
+
+The deltas match (1 file, 4 insertions, 10 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Let me verify the delta:
+
+Deltas match (2 files, 44 insertions). Now build test:
+
+Build passed. Cherry-pick the third commit:
+
+Let me verify the delta:
+
+Deltas match (1 file, 7 insertions, 2 deletions). Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Verify the delta:
+
+Deltas match (1 file, 1 insertion, 1 deletion). Build test:
+
+Build passed. Cherry-pick the fifth commit:
+
+Verify the delta:
+
+Deltas match (1 file, 9 insertions). Build test:
+
+Build passed. Cherry-pick the sixth commit:
+
+Verify the delta:
+
+Deltas match (2 files, 65 insertions, 15 deletions). Build test:
+
+Build passed. Cherry-pick the seventh commit:
+
+Verify the delta:
+
+Deltas match (2 files, 32 insertions, 26 deletions). Build test:
+
+Build passed. Cherry-pick the eighth commit:
+
+There's a conflict. Let me examine the conflicting file and try to resolve it:
+
+This is a simple conflict - we need both lines. Let me resolve it:
+
+Conflict resolved. Now let me amend the commit to add a note about the fix-up, verify the delta and run build test:
+
+Now let me verify the delta:
+
+Deltas match (2 files, 44 insertions). Build test:
+
+Build passed. Now cherry-pick the ninth commit (the merge commit):
+
+The merge commit is empty (expected since all the individual commits were already cherry-picked). Let me commit it as an empty commit as instructed:
+
+All 9 commits cherry-picked. Now let me verify the log and run the final build:
+
+All 9 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+**Branch:** `cherry-a936352f9e0` (based on `ci/master`)
+
+**All 9 commits successfully cherry-picked:**
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | a936352f9e0 → be1c1a08341 | arm: dts: k3-am625-phyboard-lyra-rdk: Add boot phase tag to phy_gmii_sel | ✅ Clean |
+| 2 | 1acffb57114 → 77e86410e2c | configs: Add phycore_am62x_r5_ethboot_defconfig | ✅ Clean |
+| 3 | 93d22aca3d3 → da158b99b09 | configs: phycore_am62x_a53_defconfig: Update for ethernet boot | ✅ Clean |
+| 4 | 77183dfbbcf → a76ac0b9323 | arch: arm: dts: k3-am62a7-phyboard-lyra-rdk-u-boot: Disable Ethernet2 | ✅ Clean |
+| 5 | 2dec0fc59c5 → c4f4922cc09 | arch: arm: mach-k3: am62a7: Probe CPSW NUSS in board_init_f() | ✅ Clean |
+| 6 | a0f73e847d1 → b73a214e9e9 | arch: arm: mach-k3: r5: am62ax: Update SoC auto-gen data to enable CPSW boot | ✅ Clean |
+| 7 | 5327b62c12c → 3ca3622a1e4 | board: phytec: phycore_am62ax: Share ethernet resources with boot r5 core | ✅ Clean |
+| 8 | e41c21acced → 3a3ecdd1e5d | configs: Add phycore_am62ax_r5_ethboot_defconfig | ⚠️ Fixed conflict |
+| 9 | cb7555e9307 → bfb7e9f0b91 | Merge patch series "*** Add Ethernet boot support for AM62Ax + phyCORE-AM62 SoMs ***" | ✅ Empty (expected) |
+
+### Build Result
+**✅ OK** - All sandbox builds passed
+
+### Fix-ups Made
+- **Commit 8 (e41c21acced)**: Resolved conflict in `board/phytec/phycore_am62ax/MAINTAINERS`. The conflict was between adding `phycore_am62ax_r5_ethboot_defconfig` vs `phycore_am62ax_r5_usbdfu_defconfig`. Resolved by keeping both entries. Note added to commit message.
+
+### Commits with Concerning Deltas
+- None - all cherry-picked commits match their original deltas exactly
+
+### Ready for Push
+The branch `cherry-a936352f9e0` is ready for pushing with 9 commits ahead of `ci/master`.
+
+---
 
