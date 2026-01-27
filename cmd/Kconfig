@@ -54,13 +54,17 @@ config CMDLINE_EDITING
 	  Enable editing and History functions for interactive command line
 	  input operations
 
-config CLI_READLINE_CALLBACK
-	bool "Support a callback for character output"
+config CMDLINE_EDITOR
+	bool "Enhanced command-line editing features"
 	depends on CMDLINE_EDITING
+	default y if EXPO
 	help
-	  Enable a callback for character output during line editing. This
-	  allows redirection of output to a different destination, such as
-	  a vidconsole. This is used by expo to support textline editing.
+	  Enable enhanced editing features for the command line, including:
+	  - Character-output callback for redirection to vidconsole
+	  - Multi-line navigation callback (Ctrl-P/N)
+	  - Ctrl+Left/Right arrow keys to move by words
+	  - Undo/redo support (Ctrl+Z / Ctrl+Shift+Z)
+	  - Yank/paste of killed text (Ctrl+Y)
 
 config CMDLINE_PS_SUPPORT
 	bool "Enable support for changing the command prompt string at run-time"

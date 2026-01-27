@@ -79,8 +79,10 @@ static char *delete_char (char *buffer, char *p, int *colp, int *np, int plen)
  */
 static void cls_putch(struct cli_line_state *cls, int ch)
 {
-	if (CONFIG_IS_ENABLED(CLI_READLINE_CALLBACK) && cls->putch)
-		cls->putch(cls, ch);
+	struct cli_editor_state *ed = cli_editor(cls);
+
+	if (ed && ed->putch)
+		ed->putch(cls, ch);
 	else
 		putc(ch);
 }
@@ -299,6 +301,7 @@ static void cread_add_str(struct cli_line_state *cls, char *str, int strsize,
 
 int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 {
+	struct cli_editor_state *ed;
 	char *buf = cls->buf;
 
 	/* ichar=0x0 when error occurs in U-Boot getc */
@@ -405,10 +408,11 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		break;
 	case CTL_CH('p'):
 	case CTL_CH('n'):
-		if (cls->multiline && cls->line_nav) {
+		ed = cli_editor(cls);
+		if (ed && ed->multiline && ed->line_nav) {
 			int new_num;
 
-			new_num = cls->line_nav(cls, ichar == CTL_CH('p'));
+			new_num = ed->line_nav(cls, ichar == CTL_CH('p'));
 			if (new_num < 0) {
 				getcmd_cbeep(cls);
 				break;

@@ -112,6 +112,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 			    struct scene_txtin *tin)
 {
 	struct cli_line_state *cls = &tin->cls;
+	struct cli_editor_state *ed = cli_editor(cls);
 	const bool open = obj->flags & SCENEOF_OPEN;
 	struct udevice *cons = scn->expo->cons;
 	void *ctx = tin->ctx;
@@ -121,7 +122,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 	if (open) {
 		scene_render_obj(scn, tin->edit_id, ctx);
 
-		if (cls->multiline) {
+		if (ed->multiline) {
 			/* for multiline, set cursor position directly */
 			struct scene_obj_txt *txt;
 
@@ -260,6 +261,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
 	struct cli_line_state *cls = &tin->cls;
+	struct cli_editor_state *ed = cli_editor(cls);
 	struct udevice *cons = scn->expo->cons;
 	struct scene_obj_txt *txt;
 	void *ctx;
@@ -286,11 +288,11 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	vidconsole_entry_start(cons, ctx);
 	cli_cread_init(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
 	cls->insert = true;
-	cls->putch = scene_txtin_putch;
+	ed->putch = scene_txtin_putch;
 	cls->priv = scn;
 	if (obj->type == SCENEOBJT_TEXTEDIT) {
-		cls->multiline = true;
-		cls->line_nav = scene_txtin_line_nav;
+		ed->multiline = true;
+		ed->line_nav = scene_txtin_line_nav;
 	}
 	cli_cread_add_initial(cls);
 

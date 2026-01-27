@@ -25,6 +25,43 @@ struct cli_ch_state {
 	bool emitting;
 };
 
+struct cli_line_state;
+
+/**
+ * struct cli_editor_state - state for enhanced editing features
+ *
+ * This is only available when CONFIG_CMDLINE_EDITOR is enabled.
+ *
+ * @putch: Output a character (NULL to use putc())
+ * @line_nav: Handle multi-line navigation (Ctrl-P/N)
+ * @multiline: true if input may contain multiple lines (enables
+ *	Ctrl-P/N for line navigation instead of history)
+ */
+struct cli_editor_state {
+	/**
+	 * @putch: Output a character (NULL to use putc())
+	 *
+	 * @cls: CLI line state
+	 * @ch: Character to output
+	 */
+	void (*putch)(struct cli_line_state *cls, int ch);
+
+	/**
+	 * @line_nav: Handle multi-line navigation (Ctrl-P/N)
+	 *
+	 * @cls: CLI line state
+	 * @up: true for previous line, false for next
+	 * Return: new cursor position, or -ve if at boundary
+	 */
+	int (*line_nav)(struct cli_line_state *cls, bool up);
+
+	/**
+	 * @multiline: true if input may contain multiple lines (enables
+	 * Ctrl-P/N for line navigation instead of history)
+	 */
+	bool multiline;
+};
+
 /**
  * struct cli_line_state - state of the line editor
  *
@@ -34,15 +71,10 @@ struct cli_ch_state {
  * @history: true if history should be accessible
  * @cmd_complete: true if tab completion should be enabled (requires @prompt to
  *	be set)
- * @multiline: true if input may contain multiple lines (enables Ctrl-P/N for
- *	line navigation instead of history)
  * @buf: Buffer containing line
  * @prompt: Prompt for the line
- * @putch: Function to call to output a character (NULL to use putc())
- * @line_nav: Function to call for multi-line navigation (Ctrl-P/N). Called with
- *	@up true for previous line, false for next. Returns new cursor position,
- *	or -ve if at boundary
  * @priv: Private data for callbacks
+ * @ed: Editor state for enhanced features (if CONFIG_CMDLINE_EDITOR)
  */
 struct cli_line_state {
 	uint num;
@@ -51,13 +83,29 @@ struct cli_line_state {
 	bool insert;
 	bool history;
 	bool cmd_complete;
-	bool multiline;
 	char *buf;
 	const char *prompt;
-	void (*putch)(struct cli_line_state *cls, int ch);
-	int (*line_nav)(struct cli_line_state *cls, bool up);
 	void *priv;
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+	struct cli_editor_state ed;
+#endif
 };
+
+/**
+ * cli_editor() - Get the editor state from a line state
+ *
+ * @cls: CLI line state
+ * Return: Pointer to editor state, or NULL if CONFIG_CMDLINE_EDITOR is not
+ * enabled
+ */
+static inline struct cli_editor_state *cli_editor(struct cli_line_state *cls)
+{
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+	return &cls->ed;
+#else
+	return NULL;
+#endif
+}
 
 /**
  * Go into the command loop
