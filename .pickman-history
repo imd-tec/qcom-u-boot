@@ -7961,3 +7961,113 @@ The cherry-pick operation has been completed:
 
 ---
 
+## 2026-01-26: us/next
+
+Branch: cherry-a6a9d327334
+
+Commits:
+- a6a9d327334 spl: mmc: properly annotate fallthrough
+- 3d907a5a490 zlib: annotate switch/case fallthrough cases
+- 2938eb1e022 gadget: f_thor: annotate switch/case fallthrough
+- 26b2482f124 use proper fallthrough annotations
+- 06b1ebfe521 fastboot: annotate switch/case fallthrough case
+- 5ddb7d12656 net: sun8i-emac: annotate fallthrough
+- 921e4d480df usb: ohci-hcd: annotate switch/case fallthrough
+- 4d108c884b5 usb: xhci: annotate switch/case fallthrough properly
+- 2c22efbb37b video: annotate switch/case fall-through
+- 960d3d933db net: e1000: annotate switch/case fallthrough
+- 64bc0124581 mtd: ubi: annotate fallthrough
+- bc3e28e11b7 arm: mach-k3: am62p: annotate switch/case fallthrough
+- 452dfcc3b46 mtd: spi-nor-tiny: annotate switch/case fallthrough
+- 3f61113c276 mtd: rawnand: nand_base: annotate switch/case fallthrough
+- d29a90c8ce4 cmd: pmic: annotate switch/case fallthrough
+- 9ce2986e7e5 cmd: spl: annotate switch/case fallthrough
+- 1f0281294d8 Merge patch series "Annotate switch/case fallthrough cases"
+
+### Conversation log
+Let me find the repository:
+
+Good, I'm in the u-boot repository. Let me check the git status:
+
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Good, the branch is created. Now let me cherry-pick each commit in order. I'll start with the first one:
+
+Cherry-pick successful. Let me compare the deltas and run the build test:
+
+Excellent! First commit cherry-picked successfully, deltas match, and build passes. Let me continue with the next commit:
+
+Commit 2 cherry-picked successfully, deltas match, build passes. Let me continue with the remaining commits. I'll proceed with each one:
+
+Commit 3 done. Continuing with commit 4:
+
+Commit 4 done. Continuing with commit 5:
+
+Commit 5 done. Continuing with commit 6:
+
+Commit 6 done. Continuing with commit 7:
+
+Commit 7 done. Continuing with commit 8:
+
+Commit 8 done. Continuing with commit 9:
+
+Commit 9 done. Continuing with commit 10:
+
+Commit 10 done. Continuing with commit 11:
+
+Commit 11 done. Continuing with commit 12:
+
+Commit 12 done. Continuing with commit 13:
+
+Commit 13 done. Continuing with commit 14:
+
+Commit 14 done. Continuing with commit 15:
+
+Commit 15 done. Continuing with commit 16:
+
+Commit 16 done. Now for the last commit, which is a merge commit - I need to use special flags:
+
+The merge commit is empty because all the changes were already applied by the individual commits. Let me continue with --allow-empty as instructed:
+
+All 17 commits have been cherry-picked. Now let me verify the log and run the final build:
+
+All 17 commits are present and the build passes. Let me update the todo list and provide a final summary:
+
+## Summary - Cherry-pick Complete
+
+**Branch:** `cherry-a6a9d327334` (based on `ci/master`)
+
+**Build Result:** ✅ **OK** - sandbox builds successfully with no warnings or errors
+
+### All 17 Commits Cherry-picked Successfully:
+
+| # | Original Hash | New Hash | Subject |
+|---|--------------|----------|---------|
+| 1 | a6a9d327334 | 4c5d528e15f | spl: mmc: properly annotate fallthrough |
+| 2 | 3d907a5a490 | 56ee2a7406f | zlib: annotate switch/case fallthrough cases |
+| 3 | 2938eb1e022 | 946a6fff375 | gadget: f_thor: annotate switch/case fallthrough |
+| 4 | 26b2482f124 | 25c35ae7e6a | use proper fallthrough annotations |
+| 5 | 06b1ebfe521 | aa56c28e693 | fastboot: annotate switch/case fallthrough case |
+| 6 | 5ddb7d12656 | 7e6a13890e8 | net: sun8i-emac: annotate fallthrough |
+| 7 | 921e4d480df | 79323ef7d25 | usb: ohci-hcd: annotate switch/case fallthrough |
+| 8 | 4d108c884b5 | 455e538d8f1 | usb: xhci: annotate switch/case fallthrough properly |
+| 9 | 2c22efbb37b | f64039e365a | video: annotate switch/case fall-through |
+| 10 | 960d3d933db | efa03837549 | net: e1000: annotate switch/case fallthrough |
+| 11 | 64bc0124581 | fcba1cdedfb | mtd: ubi: annotate fallthrough |
+| 12 | bc3e28e11b7 | 0db0e3ee32f | arm: mach-k3: am62p: annotate switch/case fallthrough |
+| 13 | 452dfcc3b46 | 0a71971391b | mtd: spi-nor-tiny: annotate switch/case fallthrough |
+| 14 | 3f61113c276 | 01201cba522 | mtd: rawnand: nand_base: annotate switch/case fallthrough |
+| 15 | d29a90c8ce4 | 8d2c3dd2b9e | cmd: pmic: annotate switch/case fallthrough |
+| 16 | 9ce2986e7e5 | 310a5f158fb | cmd: spl: annotate switch/case fallthrough |
+| 17 | 1f0281294d8 | 4997fb7e7d0 | Merge patch series "Annotate switch/case fallthrough cases" (empty) |
+
+**Notes:**
+- No fix-ups were needed
+- No concerning deltas detected - all commits matched their originals exactly
+- Commit 17 (merge commit) was cherry-picked as an empty commit since all changes were already applied by the individual commits
+- Some commits had auto-merging but no conflicts (commits 4, 9, 14)
+
+The branch `cherry-a6a9d327334` is ready for pushing.
+
+---
+
