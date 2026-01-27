@@ -8469,175 +8469,102 @@ All cherry-picked commits had matching deltas with the original commits.
 
 ## 2026-01-27: us/next
 
-Branch: cherry-4e669d59846
+Branch: cherry-250a382a897
 
 Commits:
-- 4e669d59846 xilinx: dfu: Fill directly update_info.dfu_string
-- 546152624f4 efi_firmware: set EFI capsule dfu_alt_info env explicitly
-- 6f7fb8d29f2 board: remove capsule update support in set_dfu_alt_info()
-- 7b269a2bd64 efi_loader: Install the ACPI table from the bloblist
-- e8660b23f49 efi: Make FDT extra space configurable
-- 73c9a352705 efi_loader: efi_load_initrd: provide a memory mapped initrd
-- 36835a9105c efi_loader: binary_run: register an initrd
-- 3d8e1b7b2df bootm: add support for initrd in do_bootm_efi
-- 70d5f6e21ee cmd: fwu: Dump custom fields from mdata structure
-- 85403c46e68 efi: Fix efiboot for payloads loaded from memory
-- 742aa8b0396 efi_loader: Handle GD_FLG_SKIP_RELOC
-- f5e0f2198ec efi_loader: Print extra information from the bootmgr
-- 2dc04803b05 efi_loader: handle malloc() errors
-- fd58c275f6b efi_loader: Move public cert for capsules to .rodata
-- 00cf654b29e doc: Update authenticated capsules documentation
-- 93f3f143d6c acpi: select CONFIG_BLOBLIST
-- 253af704c5e smbios: select CONFIG_BLOBLIST
-- d8dcfeb7780 doc/buildman: typo 'require'
-- a73b854700a efi_selftest: remove un-needed NULL checks
-- dea298c62e9 Merge tag 'efi-2025-07-rc1' of https://source.denx.de/u-boot/custodians/u-boot-efi
+- 250a382a897 core: ofnode_graph: Fix a comment
+- 9fe367bb60d dm: doc: Fix example
+- 04fcddac28c dm: core: Add a helper to retrieve devices through graph endpoints
+- 7478d04e606 test: dm: test-fdt: Add checks for uclass_get_device_by_endpoint()
+- 197376fbf30 power-domain: Add refcounting
+- ac30d90f336 clk: Ensure the parent clocks are enabled while reparenting
+- e05d706ff61 clk: imx8mp: Add media related clocks
+- 17c42bf459b imx: power-domain: Describe the i.MX8 MEDIAMIX domain
+- c05e7c8cf7f imx: power-domain: Add support for the MEDIAMIX control block
+- 95654e67179 video: imx: Fix Makefile in order to be able to add other imx drivers
+- dce8222eead video: imx: Add LDB driver
+- f86a377f1fe video: imx: Add LCDIF driver
+- a3139fe0572 toradex: apalis-imx6: Fix build failure when CONFIG_VIDEO_IPUV3 is enabled
+- 51eed1cacaa firmware: scmi: smt: Interrupt communication enable
+- 02583d2c732 arm: dts: imx8mp: sync with Linux v6.15-rc1
+- be0f578439f toradex: tdx-cfg-block: add 0096 Toradex SMARC iMX95
+- dde53eae88d board: toradex: add Toradex SMARC iMX8MP
+- a2a55965b1c board: phycore-imx93: env: Move fdt and bootenv addresses
+- f7d7eaa5735 board: phycore-imx93: env: Add optargs to environment
+- e1d68ed3e21 board: phycore-imx93: env: Add prepare_mcore to environment
+- 82211629c63 board: phycore-imx93: env: Add option to disable bootenv.txt import
+- 90209b16d69 board: phycore-imx93: env: Move bootcmd from defconfig to env
+- ba71e4ef4d3 board: phycore-imx93: env: Add common RAUC boot logic
+- 295376ce8a3 Merge tag 'u-boot-imx-master-20250411' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
 
 ### Conversation log
-Now let me start cherry-picking the commits one by one. Let me start with the first commit:
+Now let me check the first commit which may already be applied. I'll verify by comparing patches:
 
-The delta looks good - same files, same line counts. Let me run the build test:
+The patches are identical except for the commit hash. So the first commit (250a382a897) is already applied as 219772a9739. Let me check the third commit which is also marked as "maybe already applied":
 
-Build passed. Now let me continue with the second commit:
+Both "maybe already applied" commits are indeed already applied with different hashes. Now let me check if all the other commits are also already in ci/master by searching for them:
 
-Delta looks good. Let me run the build test:
+Let me check if the main merge commit (295376ce8a3) is in ci/master, which would indicate the entire series is already applied:
 
-Build passed. Third commit:
+Let me check a few more commits to see which ones are already in ci/master:
 
-Delta looks good. Build test:
+Most commits don't appear to be in ci/master. The only two that are confirmed already applied (with different hashes) are:
+- 250a382a897 → 219772a9739 (core: ofnode_graph: Fix a comment)
+- 04fcddac28c → 5b241b1c58c (dm: core: Add a helper to retrieve devices through graph endpoints)
 
-Build passed. Now the fourth commit - which may be already applied as 1c5afd613ff. Let me check:
+Let me proceed with the cherry-picks, skipping the two already-applied commits. I'll start with the second commit (9fe367bb60d) since the first is already applied:
 
-The patches differ significantly - different context. Let me try to cherry-pick:
+Build passed. Now skip commit 3 (04fcddac28c) since it's already applied, and continue with commit 4:
 
-The commit is empty, meaning it was already applied. Let me skip this one:
+Now cherry-pick the merge commit (last commit):
 
-Commit 7b269a2bd64 was already applied. Now let me check the fifth commit (e8660b23f49 - maybe already applied as 87b87ab54d2):
-
-Only minor line number differences. Let me try to cherry-pick:
-
-Commit e8660b23f49 was already applied. Now sixth commit (73c9a352705 - maybe already applied as 74cb5e38b88):
-
-Commit 73c9a352705 was already applied. Seventh commit (36835a9105c - maybe already applied as 70a692335b3):
-
-There are conflicts. Let me check what they are:
-
-I see the conflict. The HEAD has the initrd information already with `images->initrd_start` and `images->initrd_end`, while the commit being cherry-picked is trying to add the parameters but sets them to NULL. This means a subsequent commit already added better support. Let me check the other conflict:
-
-This is getting complex. The changes in this commit seem to conflict because a more complete version is already in HEAD. Let me check if the feature is already fully implemented:
-
-These are related but different commits. 70a692335b3 is actually a FIX for 36835a9105c (as indicated by the "Fixes:" line). This means 36835a9105c was applied first, and then 70a692335b3 fixed it. The conflict is because HEAD already has the fix applied.
-
-Since 36835a9105c was already applied (as indicated by the fixes reference), let me abort and skip this:
-
-Commit 36835a9105c was already applied (and has a fix for it in ci/master). Let me continue with the 8th commit (3d8e1b7b2df - maybe already applied as 62020f17ed6):
-
-Commit 3d8e1b7b2df was already applied. Now the 9th commit (70d5f6e21ee - maybe already applied as 21f15bec66d):
-
-Commit 70d5f6e21ee was already applied. Now the 10th commit (85403c46e68 - maybe already applied as 7790acc6c17):
-
-Commit 85403c46e68 was already applied. Now the 11th commit (742aa8b0396):
-
-Delta looks good. Build test:
-
-Build passed. Now the 12th commit (f5e0f2198ec - maybe already applied as 8f23e418e9d):
-
-Commit f5e0f2198ec was already applied. Now the 13th commit (2dc04803b05 - maybe already applied as e3b62d7a60d):
-
-Commit 2dc04803b05 was already applied. Now the 14th commit (fd58c275f6b - maybe already applied as 3693046cc4d):
-
-There are conflicts. Let me check them:
-
-I see - HEAD has additional content (ulib_test stuff, libu-boot.so.tmp, etc.) that is more recent. The incoming change just adds "capsule_esl_file". Let me resolve by combining:
-
-I see - HEAD already has the capsule_esl_file infrastructure, and the incoming commit is trying to add it but in a different form. Let me check if this commit has already been applied:
-
-Interesting - there's a REVERT of this commit! So the original commit was applied and then reverted. Let me check what happened:
-
-The commit fd58c275f6b was originally applied and then reverted (3693046cc4d is the revert). The instructions say this commit "maybe already applied as 3693046cc4d" but actually 3693046cc4d is a REVERT. So we should NOT cherry-pick this commit since it was applied and then reverted on purpose.
-
-Now the 15th commit (00cf654b29e - maybe already applied as fc1c3ff8229):
-
-Delta looks good. Build test:
-
-Build passed. Now the 16th commit (93f3f143d6c - maybe already applied as 3fe84dc3ac5):
-
-I see - HEAD has `ARCH_QEMU_X86` while the commit has `QEMU`. The commit is making BLOBLIST be selected with ACPI. Let me check if this is already applied:
-
-I see - the commits are similar but 3fe84dc3ac5 (in ci/master) has additional changes to minnowmax_defconfig. The core change (select BLOBLIST) is the same. The conflict is just because ARCH_QEMU_X86 vs QEMU changed at some point. Since the essential change (select BLOBLIST) is already applied, let me abort and skip:
-
-Now the 17th commit (253af704c5e - maybe already applied as da51fe6e13c):
-
-Commit 253af704c5e was already applied. Now the 18th commit (d8dcfeb7780 - maybe already applied as b87cdc84e15):
-
-Commit d8dcfeb7780 was already applied. Now the 19th commit (a73b854700a):
-
-Delta looks good. Build test:
-
-Build passed. Now the 20th and last commit (dea298c62e9) - this is a merge commit:
-
-The merge commit has conflicts. Let me check them:
-
-These are similar to the conflicts we saw before. Since the merge commit should bring in all the changes from the tag, and most of those changes are already applied to ci/master, this merge might be empty or redundant. Let me check if this tag was already merged in some way:
-
-There's no efi-2025-07-rc1 merge tag in ci/master. However, most of the changes from this merge are already applied individually. The merge commit dea298c62e9 is trying to bring in a bunch of changes that we've already shown are either applied or reverted.
-
-Since the content is mostly already in ci/master, I'll try to resolve the conflicts by keeping the HEAD version (which has the already-applied content):
-
-I need to merge the HEAD content which is more complete. The incoming change adds `capsule_esl_file` but HEAD has more complete stuff plus that was reverted. Let me resolve these conflicts one at a time:
-
-Wait, there are changes being staged that we might not want. The merge is bringing back the capsule key stuff that was reverted. Let me check what's happening:
-
-This is bringing back the capsule key stuff that was explicitly REVERTED (3693046cc4d). The merge commit is trying to apply changes that have already been reverted. This is problematic.
-
-Since this merge brings in changes that were intentionally reverted in ci/master, we should not apply it. Let me abort:
-
-The merge commit dea298c62e9 contains changes that were later reverted in ci/master (specifically the capsule key .rodata move), so applying it would reintroduce code that was intentionally removed.
-
-Now let me verify the final state:
-
-We have 6 cherry-picked commits. Let me run the final build:
-
-Build passed. Let me verify the final state more carefully:
+Now let me verify the commits. Since I skipped 2 commits (250a382a897 and 04fcddac28c as they were already applied), I should have 22 commits (24 - 2 = 22):
 
 ## Summary
 
-The cherry-pick operation is complete. Here's the final status:
+### Cherry-pick Status: Complete ✅
 
-### Successfully Cherry-Picked (6 commits):
-1. `009d9ee14d0` - xilinx: dfu: Fill directly update_info.dfu_string (from 4e669d59846)
-2. `fb4b08704fb` - efi_firmware: set EFI capsule dfu_alt_info env explicitly (from 546152624f4)
-3. `a27f8988bd2` - board: remove capsule update support in set_dfu_alt_info() (from 6f7fb8d29f2)
-4. `51a95ed1e63` - efi_loader: Handle GD_FLG_SKIP_RELOC (from 742aa8b0396)
-5. `08581530a36` - doc: Update authenticated capsules documentation (from 00cf654b29e)
-6. `dd35d567a48` - efi_selftest: remove un-needed NULL checks (from a73b854700a)
+**Branch:** `cherry-250a382a897` (based on `ci/master`)
 
-### Skipped - Already Applied (12 commits):
-- `7b269a2bd64` - efi_loader: Install the ACPI table from the bloblist → already as 1c5afd613ff
-- `e8660b23f49` - efi: Make FDT extra space configurable → already as 87b87ab54d2
-- `73c9a352705` - efi_loader: efi_load_initrd: provide a memory mapped initrd → already as 74cb5e38b88
-- `36835a9105c` - efi_loader: binary_run: register an initrd → already applied (fixed by 70a692335b3)
-- `3d8e1b7b2df` - bootm: add support for initrd in do_bootm_efi → already as 62020f17ed6
-- `70d5f6e21ee` - cmd: fwu: Dump custom fields from mdata structure → already as 21f15bec66d
-- `85403c46e68` - efi: Fix efiboot for payloads loaded from memory → already as 7790acc6c17
-- `f5e0f2198ec` - efi_loader: Print extra information from the bootmgr → already as 8f23e418e9d
-- `2dc04803b05` - efi_loader: handle malloc() errors → already as e3b62d7a60d
-- `93f3f143d6c` - acpi: select CONFIG_BLOBLIST → already as 3fe84dc3ac5
-- `253af704c5e` - smbios: select CONFIG_BLOBLIST → already as da51fe6e13c
-- `d8dcfeb7780` - doc/buildman: typo 'require' → already as b87cdc84e15
+**Build Result:** OK - sandbox build passes
 
-### Skipped - Intentionally Reverted (1 commit):
-- `fd58c275f6b` - efi_loader: Move public cert for capsules to .rodata → was applied and then **reverted** by 3693046cc4d
+### Commits Applied: 22 of 24
 
-### Skipped - Merge Commit with Reverted Content (1 commit):
-- `dea298c62e9` - Merge tag 'efi-2025-07-rc1' → Contains changes that were later reverted (capsule key .rodata move)
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 250a382a897 | core: ofnode_graph: Fix a comment | **SKIPPED** - Already applied as 219772a9739 |
+| 2 | 9fe367bb60d | dm: doc: Fix example | ✅ Applied |
+| 3 | 04fcddac28c | dm: core: Add a helper to retrieve devices through graph endpoints | **SKIPPED** - Already applied as 5b241b1c58c |
+| 4 | 7478d04e606 | test: dm: test-fdt: Add checks for uclass_get_device_by_endpoint() | ✅ Applied |
+| 5 | 197376fbf30 | power-domain: Add refcounting | ✅ Applied |
+| 6 | ac30d90f336 | clk: Ensure the parent clocks are enabled while reparenting | ✅ Applied |
+| 7 | e05d706ff61 | clk: imx8mp: Add media related clocks | ✅ Applied |
+| 8 | 17c42bf459b | imx: power-domain: Describe the i.MX8 MEDIAMIX domain | ✅ Applied |
+| 9 | c05e7c8cf7f | imx: power-domain: Add support for the MEDIAMIX control block | ✅ Applied |
+| 10 | 95654e67179 | video: imx: Fix Makefile in order to be able to add other imx drivers | ✅ Applied |
+| 11 | dce8222eead | video: imx: Add LDB driver | ✅ Applied |
+| 12 | f86a377f1fe | video: imx: Add LCDIF driver | ✅ Applied |
+| 13 | a3139fe0572 | toradex: apalis-imx6: Fix build failure when CONFIG_VIDEO_IPUV3 is enabled | ✅ Applied |
+| 14 | 51eed1cacaa | firmware: scmi: smt: Interrupt communication enable | ✅ Applied |
+| 15 | 02583d2c732 | arm: dts: imx8mp: sync with Linux v6.15-rc1 | ✅ Applied |
+| 16 | be0f578439f | toradex: tdx-cfg-block: add 0096 Toradex SMARC iMX95 | ✅ Applied |
+| 17 | dde53eae88d | board: toradex: add Toradex SMARC iMX8MP | ✅ Applied |
+| 18 | a2a55965b1c | board: phycore-imx93: env: Move fdt and bootenv addresses | ✅ Applied |
+| 19 | f7d7eaa5735 | board: phycore-imx93: env: Add optargs to environment | ✅ Applied |
+| 20 | e1d68ed3e21 | board: phycore-imx93: env: Add prepare_mcore to environment | ✅ Applied |
+| 21 | 82211629c63 | board: phycore-imx93: env: Add option to disable bootenv.txt import | ✅ Applied |
+| 22 | 90209b16d69 | board: phycore-imx93: env: Move bootcmd from defconfig to env | ✅ Applied |
+| 23 | ba71e4ef4d3 | board: phycore-imx93: env: Add common RAUC boot logic | ✅ Applied |
+| 24 | 295376ce8a3 | Merge tag 'u-boot-imx-master-20250411' | ✅ Applied (empty - all changes already applied) |
 
-### Build Result: ✅ OK
+### Notes:
+- **Fix-ups:** None needed
+- **Concerning deltas:** None - all commits applied cleanly with identical stats to originals
+- **Skipped commits:** 2 commits were verified as already applied in ci/master (patches were identical except for commit hashes):
+  - 250a382a897 → 219772a9739
+  - 04fcddac28c → 5b241b1c58c
 
-### Fix-ups Made: None
+The branch `cherry-250a382a897` is ready for pushing with 22 commits ahead of ci/master.
 
-### Commits with Concerning Deltas: None
-
-The branch `cherry-4e669d59846` is ready for pushing with 6 new commits.
 ---
 
