@@ -42,6 +42,7 @@ Board-specific doc
    microsoft/index
    nxp/index
    openpiton/index
+   ouya/index
    phytec/index
    purism/index
    qualcomm/index
@@ -68,4 +69,5 @@ Board-specific doc
    variscite/index
    wexler/index
    xen/index
+   xiaomi/index
    xilinx/index

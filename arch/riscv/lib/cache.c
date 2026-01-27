@@ -8,6 +8,7 @@
 #include <dm.h>
 #include <asm/insn-def.h>
 #include <linux/const.h>
+#include <linux/errno.h>
 
 #define CBO_INVAL(base)						\
 	INSN_I(OPCODE_MISC_MEM, FUNC3(2), __RD(0),		\
@@ -168,4 +169,9 @@ __weak void enable_caches(void)
 {
 	if (!riscv_zicbom_init())
 		log_info("Zicbom not initialized.\n");
+}
+
+int __weak pgprot_set_attrs(phys_addr_t addr, size_t size, enum pgprot_attrs perm)
+{
+	return -ENOSYS;
 }

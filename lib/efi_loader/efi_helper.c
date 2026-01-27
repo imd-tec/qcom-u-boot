@@ -5,6 +5,7 @@
 
 #define LOG_CATEGORY LOGC_EFI
 
+#include <blkmap.h>
 #include <bootm.h>
 #include <efi_device_path.h>
 #include <env.h>
@@ -304,11 +305,30 @@ efi_status_t efi_env_set_load_options(efi_handle_t handle,
  */
 static efi_status_t copy_fdt(void **fdtp)
 {
-	unsigned long fdt_pages;
 	efi_status_t ret = 0;
 	void *fdt, *new_fdt;
-	u64 new_fdt_addr;
-	uint fdt_size;
+	static u64 new_fdt_addr;
+	static efi_uintn_t fdt_pages;
+	ulong fdt_size;
+
+	/*
+	 * Remove the configuration table that might already be
+	 * installed, ignoring EFI_NOT_FOUND if no device-tree
+	 * is installed
+	 */
+	efi_install_configuration_table(&efi_guid_fdt, NULL);
+
+	if (new_fdt_addr) {
+		log_debug("%s: Found allocated memory at %#llx, with %#zx pages\n",
+			  __func__, new_fdt_addr, fdt_pages);
+
+		ret = efi_free_pages(new_fdt_addr, fdt_pages);
+		if (ret != EFI_SUCCESS)
+			log_err("Unable to free up existing FDT memory region\n");
+
+		new_fdt_addr = 0;
+		fdt_pages = 0;
+	}
 
 	/*
 	 * Give us at least 12 KiB of breathing room in case the device tree
@@ -323,15 +343,18 @@ static efi_status_t copy_fdt(void **fdtp)
 				 &new_fdt_addr);
 	if (ret != EFI_SUCCESS) {
 		log_err("Failed to reserve space for FDT\n");
-		goto done;
+		return ret;
 	}
 	new_fdt = map_sysmem(new_fdt_addr, fdt_size);
+	log_debug("%s: Allocated memory at %#llx, with %#zx pages\n",
+		  __func__, new_fdt_addr, fdt_pages);
+
 	memcpy(new_fdt, fdt, fdt_totalsize(fdt));
 	fdt_set_totalsize(new_fdt, fdt_size);
 
 	*fdtp = new_fdt;
-done:
-	return ret;
+
+	return EFI_SUCCESS;
 }
 
 /**
@@ -384,9 +407,6 @@ efi_status_t efi_install_fdt(void *fdt)
 		const char *fdt_opt;
 		uintptr_t fdt_addr;
 
-		/* Look for device tree that is already installed */
-		if (efi_get_configuration_table(&efi_guid_fdt))
-			return EFI_SUCCESS;
 		/* Check if there is a hardware device tree */
 		fdt_opt = env_get("fdt_addr");
 		/* Use our own device tree as fallback */
@@ -546,4 +566,45 @@ out:
 	efi_set_watchdog(0);
 
 	return ret;
+}
+
+/**
+ * pmem_node_efi_memmap_setup() - Add pmem node and tweak EFI memmap
+ * @fdt: The devicetree to which pmem node is added
+ * @addr: start address of the pmem node
+ * @size: size of the memory of the pmem node
+ *
+ * The function adds the pmem node to the device-tree along with removing
+ * the corresponding region from the EFI memory map. Used primarily to
+ * pass the information of a RAM based ISO image to the OS.
+ *
+ * Return: 0 on success, -ve value on error
+ */
+static int pmem_node_efi_memmap_setup(void *fdt, u64 addr, u64 size)
+{
+	int ret;
+	u64 pages;
+	efi_status_t status;
+
+	ret = fdt_fixup_pmem_region(fdt, addr, size);
+	if (ret) {
+		log_err("Failed to setup pmem node for addr %#llx, size %#llx, err %d\n",
+			addr, size, ret);
+		return ret;
+	}
+
+	/* Remove the pmem region from the EFI memory map */
+	pages = efi_size_in_pages(size + (addr & EFI_PAGE_MASK));
+	status = efi_update_memory_map(addr, pages, EFI_CONVENTIONAL_MEMORY,
+				       false, true);
+	if (status != EFI_SUCCESS)
+		return -1;
+
+	return 0;
+}
+
+int fdt_efi_pmem_setup(void *fdt)
+{
+	return blkmap_get_preserved_pmem_slices(pmem_node_efi_memmap_setup,
+						fdt);
 }

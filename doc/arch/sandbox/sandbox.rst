@@ -835,6 +835,7 @@ Addr       Config                     Usage
     b000   CONFIG_BLOBLIST_ADDR       Blob list
    10000   CFG_MALLOC_F_ADDR          Early memory allocation
    f0000   CONFIG_PRE_CON_BUF_ADDR    Pre-console buffer
+   f4000   CFG_MALLOC_F_ADDR          Early memory allocation
   100000   TCG Event log              TCG Event Log
   180000   CONFIG_SYS_FDT_LOAD_ADDR   Device tree
   200000   CONFIG_TRACE_EARLY_ADDR    Early trace buffer (if enabled). Also used

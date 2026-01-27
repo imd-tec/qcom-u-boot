@@ -976,4 +976,17 @@ efi_status_t EFIAPI efi_startup(efi_handle_t image, struct efi_system_table *sys
  */
 void efi_shutdown(void);
 
+/**
+ * fdt_efi_pmem_setup() - Pmem setup in DT and EFI memory map
+ * @fdt: Devicetree to add the pmem nodes to
+ *
+ * Iterate through all the blkmap devices, look for BLKMAP_MEM devices,
+ * and add pmem nodes corresponding to the blkmap slice to the
+ * devicetree along with removing the corresponding region from the
+ * EFI memory map.
+ *
+ * Returns: 0 on success, negative error on failure
+ */
+int fdt_efi_pmem_setup(void *fdt);
+
 #endif /* _LINUX_EFI_H */

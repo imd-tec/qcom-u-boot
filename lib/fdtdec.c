@@ -1260,8 +1260,10 @@ static void *fdt_find_separate(void)
 	/* FDT is in a separate section */
 	fdt_blob = (ulong *)__dtb;
 #else
-	/* FDT is at end of image */
+	/* FDT is at end of image, possibly 8-byte aligned by SPL */
 	fdt_blob = (ulong *)_end;
+	if (fdt_magic(fdt_blob) != FDT_MAGIC)
+		fdt_blob = (void *)ALIGN((ulong)_end, 8);
 
 	if (_DEBUG && !fdtdec_prepare_fdt(fdt_blob)) {
 		int stack_ptr;

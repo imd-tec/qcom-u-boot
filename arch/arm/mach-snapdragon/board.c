@@ -42,15 +42,134 @@ static struct mm_region rbx_mem_map[CONFIG_NR_DRAM_BANKS + 2] = { { 0 } };
 
 struct mm_region *mem_map = rbx_mem_map;
 
+static struct {
+	phys_addr_t start;
+	phys_size_t size;
+} prevbl_ddr_banks[CONFIG_NR_DRAM_BANKS] __section(".data") = { 0 };
+
+static int ddr_bank_cmp(const void *v1, const void *v2)
+{
+	const struct {
+		phys_addr_t start;
+		phys_size_t size;
+	} *res1 = v1, *res2 = v2;
+
+	if (!res1->size)
+		return 1;
+	if (!res2->size)
+		return -1;
+
+	return (res1->start >> 24) - (res2->start >> 24);
+}
+
+/**
+ * The generic memory parsing code in U-Boot lacks a few things that we
+ * need on Qualcomm:
+ *
+ * 1. It sets gd->ram_size and gd->ram_base to represent a single memory block
+ * 2. setup_dest_addr() later relocates U-Boot to ram_base + ram_size, the end
+ *    of that first memory block.
+ *
+ * This results in all memory beyond U-Boot being unusable in Linux when booting
+ * with EFI.
+ *
+ * Since the ranges in the memory node may be out of order, the only way for us
+ * to correctly determine the relocation address for U-Boot is to parse all
+ * memory regions and find the highest valid address.
+ *
+ * We can't use fdtdec_setup_memory_banksize() since it stores the result in
+ * gd->bd, which is not yet allocated.
+ *
+ * @fdt: FDT blob to parse /memory node from
+ *
+ * Return: 0 on success or -ENODATA if /memory node is missing or incomplete
+ */
+static int qcom_parse_memory_(const void *fdt)
+{
+	int offset;
+	const fdt64_t *memory;
+	int memsize;
+	phys_addr_t ram_end = 0;
+	int i, j, banks;
+
+	offset = fdt_path_offset(fdt, "/memory");
+	if (offset < 0)
+		return -ENODATA;
+
+	memory = fdt_getprop(fdt, offset, "reg", &memsize);
+	if (!memory)
+		return -ENODATA;
+
+	banks = min(memsize / (2 * sizeof(u64)), (ulong)CONFIG_NR_DRAM_BANKS);
+
+	if (memsize / sizeof(u64) > CONFIG_NR_DRAM_BANKS * 2)
+		log_err("Provided more than the max of %d memory banks\n", CONFIG_NR_DRAM_BANKS);
+
+	if (banks > CONFIG_NR_DRAM_BANKS)
+		log_err("Provided more memory banks than we can handle\n");
+
+	for (i = 0, j = 0; i < banks * 2; i += 2, j++) {
+		prevbl_ddr_banks[j].start = get_unaligned_be64(&memory[i]);
+		prevbl_ddr_banks[j].size = get_unaligned_be64(&memory[i + 1]);
+		if (!prevbl_ddr_banks[j].size) {
+			j--;
+			continue;
+		}
+		ram_end = max(ram_end, prevbl_ddr_banks[j].start + prevbl_ddr_banks[j].size);
+	}
+
+	if (!banks || !prevbl_ddr_banks[0].size)
+		return -ENODATA;
+
+	/* Sort our RAM banks -_- */
+	qsort(prevbl_ddr_banks, banks, sizeof(prevbl_ddr_banks[0]), ddr_bank_cmp);
+
+	gd->ram_base = prevbl_ddr_banks[0].start;
+	gd->ram_size = ram_end - gd->ram_base;
+
+	return 0;
+}
+
 static void show_psci_version(void)
 {
 	struct arm_smccc_res res;
 
 	arm_smccc_smc(ARM_PSCI_0_2_FN_PSCI_VERSION, 0, 0, 0, 0, 0, 0, 0, &res);
 
+	/* Some older SoCs like MSM8916 don't always support PSCI */
+	if ((int)res.a0 == PSCI_RET_NOT_SUPPORTED)
+		return;
+
 	debug("PSCI:  v%ld.%ld\n",
 	      PSCI_VERSION_MAJOR(res.a0),
 	      PSCI_VERSION_MINOR(res.a0));
+}
+
+/**
+ * Most MSM8916 devices in the wild shipped without PSCI support, but the
+ * upstream DTs pretend that PSCI exists. If that situation is detected here,
+ * the /psci node is deleted. This is done very early to ensure the PSCI
+ * firmware driver doesn't bind (which then binds a sysreset driver that won't
+ * work).
+ */
+static void qcom_psci_fixup(void *fdt)
+{
+	int offset, ret;
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(ARM_PSCI_0_2_FN_PSCI_VERSION, 0, 0, 0, 0, 0, 0, 0, &res);
+
+	if ((int)res.a0 != PSCI_RET_NOT_SUPPORTED)
+		return;
+
+	offset = fdt_path_offset(fdt, "/psci");
+	if (offset < 0)
+		return;
+
+	debug("Found /psci DT node on device with no PSCI. Deleting.\n");
+	ret = fdt_del_node(fdt, offset);
+	if (ret)
+		log_err("Failed to delete /psci node: %d\n", ret);
 }
 
 /* We support booting U-Boot with an internal DT when running as a first-stage bootloader
@@ -59,13 +178,14 @@ static void show_psci_version(void)
  */
 int board_fdt_blob_setup(void **fdtp)
 {
-	struct fdt_header *fdt;
+	struct fdt_header *external_fdt, *internal_fdt;
 	bool internal_valid, external_valid;
-	int ret = 0;
+	int ret = -ENODATA;
 
-	fdt = (struct fdt_header *)get_prev_bl_fdt_addr();
-	external_valid = fdt && !fdt_check_header(fdt);
-	internal_valid = !fdt_check_header(gd->fdt_blob);
+	internal_fdt = (struct fdt_header *)*fdtp;
+	external_fdt = (struct fdt_header *)get_prev_bl_fdt_addr();
+	external_valid = external_fdt && !fdt_check_header(external_fdt);
+	internal_valid = !fdt_check_header(internal_fdt);
 
 	/*
 	 * There is no point returning an error here, U-Boot can't do anything useful in this situation.
@@ -73,29 +193,39 @@ int board_fdt_blob_setup(void **fdtp)
 	 */
 	if (!internal_valid && !external_valid)
 		panic("Internal FDT is invalid and no external FDT was provided! (fdt=%#llx)\n",
-		      (phys_addr_t)fdt);
+		      (phys_addr_t)external_fdt);
+
+	/* Prefer memory information from internal DT if it's present */
+	if (internal_valid)
+		ret = qcom_parse_memory_(internal_fdt);
+
+	if (ret < 0 && external_valid) {
+		/* No internal FDT or it lacks a proper /memory node.
+		 * The previous bootloader handed us something, let's try that.
+		 */
+		if (internal_valid)
+			debug("No memory info in internal FDT, falling back to external\n");
+
+		ret = qcom_parse_memory_(external_fdt);
+	}
+
+	if (ret < 0)
+		panic("No valid memory ranges found!\n");
+
+	debug("ram_base = %#011lx, ram_size = %#011llx\n",
+	      gd->ram_base, gd->ram_size);
 
 	if (internal_valid) {
 		debug("Using built in FDT\n");
-		ret = -EEXIST;
-	} else {
-		debug("Using external FDT\n");
-		/* So we can use it before returning */
-		*fdtp = fdt;
+		return -EEXIST;
 	}
 
-	/*
-	 * Parse the /memory node while we're here,
-	 * this makes it easy to do other things early.
-	 */
-	qcom_parse_memory(internal_valid);
+	debug("Using external FDT\n");
+	*fdtp = external_fdt;
 
-	return ret;
-}
+	qcom_psci_fixup(*fdtp);
 
-void reset_cpu(void)
-{
-	psci_system_reset();
+	return 0;
 }
 
 /*

@@ -14,6 +14,30 @@
 struct blkmap;
 
 /**
+ * define BLKMAP_SLICE_LINEAR - Linear mapping to another block device
+ *
+ * This blkmap slice type is used for mapping to other existing block
+ * devices.
+ */
+#define BLKMAP_SLICE_LINEAR	BIT(0)
+
+/**
+ * define BLKMAP_SLICE_MEM - Linear mapping to memory based block device
+ *
+ * This blkmap slice type is used for mapping to memory based block
+ * devices, like ramdisks.
+ */
+#define BLKMAP_SLICE_MEM	BIT(1)
+
+/**
+ * define BLKMAP_SLICE_PRESERVE - Preserved blkmap slice
+ *
+ * This blkmap slice is intended to be preserved, and it's
+ * information passed on to a later stage, like OS.
+ */
+#define BLKMAP_SLICE_PRESERVE	BIT(2)
+
+/**
  * struct blkmap_slice - Region mapped to a blkmap
  *
  * Common data for a region mapped to a blkmap, specialized by each
@@ -22,12 +46,14 @@ struct blkmap;
  * @node: List node used to associate this slice with a blkmap
  * @blknr: Start block number of the mapping
  * @blkcnt: Number of blocks covered by this mapping
+ * @attr: Attributes of blkmap slice
  */
 struct blkmap_slice {
 	struct list_head node;
 
 	lbaint_t blknr;
 	lbaint_t blkcnt;
+	uint     attr;
 
 	/**
 	 * @read: - Read from slice
