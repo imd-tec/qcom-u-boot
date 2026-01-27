@@ -8802,3 +8802,108 @@ The branch is ready for pushing.
 
 ---
 
+## 2026-01-27: us/next
+
+Branch: cherry-6bbe348bfcc
+
+Commits:
+- 6bbe348bfcc spi: tegra20_slink: fix CS polarity setup
+- 0edc47ba733 ARM: tegra: clock: take in account PLLD/D2 enable bit on clock_set_rate
+- 212757af3a3 ARM: tegra: clock: fix PLLD2 info table entry on Tegra124 and Tegra210
+- 782bd104b69 sysreset: diverge GPIO reset and poweroff configs per-phase
+- e69eeffb59c video: tegra20: dsi: add Tegra20 support
+- 901f249fdb6 video: rename tegra20 to tegra
+- 6255eb30a18 video: move tegra124 into common tegra dir
+- 59701a48914 video: tegra: drop prefix from file names
+- 3b929a1b7bb video: tegra: adjust DC and DSI config names
+- 0d12f77ce53 power: pmic: add the basic CPCAP PMIC support
+- 4dc27f96440 power: regulator: add regulator support for CPCAP PMIC
+- a9bf7e70c58 input: add support for CPCAP power button
+- 01793b3ddba video: panel: add Motorola Atrix 4G and Droid X2 panel
+- 041cb0b23ac video: backlight: add TI LM3532 led controller
+- 645350ed4b5 board: motorola: add Atrix 4G MB860 and Droid X2 MB870 support
+- a35bf832d70 pinctrl: tegra20: detect unknown/invalid pin/func configurations
+- e9245a360ac pinctrl: tegra: detect unknown/invalid pin/func configurations
+- 11bf63c2302 ARM: tegra: board: set CFG_SYS_NS16550_COM1 according to TEGRA_ENABLE_UART
+- ee3462160cf ARM: tegra: convert CFG_TEGRA_BOARD_STRING into Kconfig option
+- 9ee12daa591 ARM: tegra: replace per-device config headers with generic Tegra
+- 69dffab9416 ARM: tegra114: clock: avoid touching DISP clocks on init
+- 00d4996a82a board: asus: transformer: add ASUS Transformer Pad TF701T support
+- b12931d7ded board: nvidia: tegratab: add Nvidia Tegra Note 7 support
+- 427dd4dd27e ARM: tegra20: add funcmux for exposing UART over uSD slot on Tegra 20
+- 3c9c3d852e0 Merge branch 'staging' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+Now let me cherry-pick the first commit:
+
+Build passed. Now cherry-pick commit 2:
+
+The conflict is straightforward - I need to merge the two sections. The original has `tegra20/` and adds `obj-y += images/`, while the incoming commit wants to rename `tegra20/` to `tegra/`. I need to keep both the rename and the images/ line:
+
+I see the conflict. The incoming commit wants to remove the VIDEO_TEGRA124 config block since it's being moved into the tegra/ directory. But HEAD still has it because we're on ci/master. Let me resolve this by removing the conflicting config block (since it'll now be in tegra/Kconfig):
+
+The delta is very close - the original removes 8 lines from Kconfig and we removed 9 lines (the original had the video section already without the newline). This is acceptable.
+
+Now let's handle the last commit which is a merge commit and might already be applied:
+
+The two commits are clearly different. The original (3c9c3d852e0) is a merge commit from Tom Rini, while the found (702025856df) is a pickman record commit from Simon Glass. Let me cherry-pick the original merge commit:
+
+Since we've cherry-picked all the individual commits, the merge commit would essentially be empty. The conflicts are occurring because the content was already brought in by the individual commits. Let's check the merge commit content - since this is a merge commit that pulls in the changes we already cherry-picked, it should be empty after the individual picks. Let's abort and just create an empty commit to preserve the history:
+
+Let me check what the original merge commit actually contains:
+
+The merge commit contains all the same changes we've already picked. Since all the content is already applied, we should create an empty commit to preserve the merge commit message in the history:
+
+Now let's verify all 25 commits are present:
+
+All 25 commits are present. Now let's run the final build test:
+
+Let me give a final count to verify we have all 25 commits:
+
+## Final Status Report
+
+**Branch:** `cherry-6bbe348bfcc` (based on `ci/master`)
+
+**Build Result:** ✅ OK - Sandbox builds successfully with no warnings or errors
+
+**All 25 commits cherry-picked successfully:**
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 51206526619 | spi: tegra20_slink: fix CS polarity setup |
+| 2 | 7113a6c1789 | ARM: tegra: clock: take in account PLLD/D2 enable bit on clock_set_rate |
+| 3 | c570af2a7e0 | ARM: tegra: clock: fix PLLD2 info table entry on Tegra124 and Tegra210 |
+| 4 | cd02661704a | sysreset: diverge GPIO reset and poweroff configs per-phase |
+| 5 | 30f37edd7d3 | video: tegra20: dsi: add Tegra20 support |
+| 6 | f8701e2a061 | video: rename tegra20 to tegra |
+| 7 | 4ec66aab2a1 | video: move tegra124 into common tegra dir |
+| 8 | 9cac7ed20e0 | video: tegra: drop prefix from file names |
+| 9 | 5f7ddba6811 | video: tegra: adjust DC and DSI config names |
+| 10 | 76321c74a8f | power: pmic: add the basic CPCAP PMIC support |
+| 11 | 0efff5b2b9d | power: regulator: add regulator support for CPCAP PMIC |
+| 12 | 2f8aa5c51a2 | input: add support for CPCAP power button |
+| 13 | 1ac749088ef | video: panel: add Motorola Atrix 4G and Droid X2 panel |
+| 14 | 82e788dd087 | video: backlight: add TI LM3532 led controller |
+| 15 | 2f3a6741526 | board: motorola: add Atrix 4G MB860 and Droid X2 MB870 support |
+| 16 | 16cba465318 | pinctrl: tegra20: detect unknown/invalid pin/func configurations |
+| 17 | 8d6b2c3d657 | pinctrl: tegra: detect unknown/invalid pin/func configurations |
+| 18 | 0806cdb434e | ARM: tegra: board: set CFG_SYS_NS16550_COM1 according to TEGRA_ENABLE_UART |
+| 19 | 07f4a508e08 | ARM: tegra: convert CFG_TEGRA_BOARD_STRING into Kconfig option |
+| 20 | c8367144317 | ARM: tegra: replace per-device config headers with generic Tegra |
+| 21 | 7c8e5db6899 | ARM: tegra114: clock: avoid touching DISP clocks on init |
+| 22 | c49b8441e7a | board: asus: transformer: add ASUS Transformer Pad TF701T support |
+| 23 | b587571995b | board: nvidia: tegratab: add Nvidia Tegra Note 7 support |
+| 24 | b5ea0acfb5b | ARM: tegra20: add funcmux for exposing UART over uSD slot on Tegra 20 |
+| 25 | c4b44fcd499 | Merge branch 'staging' of u-boot-tegra (empty - content applied above) |
+
+**Fix-ups Made:**
+1. **Commit 6** (video: rename tegra20 to tegra): Resolved merge conflict in `drivers/video/Makefile` - kept both the tegra/ rename and the images/ line that was added in ci/master
+2. **Commit 7** (video: move tegra124 into common tegra dir): Resolved merge conflict in `drivers/video/Kconfig` - removed the VIDEO_TEGRA124 config block since it was moved into tegra/Kconfig
+3. **Commit 25** (Merge commit): Created as empty commit since all content was already cherry-picked via the individual commits
+
+**No concerning deltas detected** - all commits matched their originals within expected ranges.
+
+The cherry-pick branch `cherry-6bbe348bfcc` is ready for pushing.
+
+---
+
