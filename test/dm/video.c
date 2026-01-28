@@ -138,8 +138,8 @@ static int video_write_bmp(struct unit_test_state *uts, struct udevice *dev,
 	return ret;
 }
 
-int video_compress_fb(struct unit_test_state *uts, struct udevice *dev,
-		      bool use_copy)
+static int video_compress_fb_(struct unit_test_state *uts, struct udevice *dev,
+			      bool use_copy, const char *msg)
 {
 	struct sandbox_state *state = state_get_current();
 	struct video_priv *priv = dev_get_uclass_priv(dev);
@@ -182,6 +182,12 @@ int video_compress_fb(struct unit_test_state *uts, struct udevice *dev,
 		mdelay(300);
 
 	return destlen;
+}
+
+int video_compress_fb(struct unit_test_state *uts, struct udevice *dev,
+		      bool use_copy)
+{
+	return video_compress_fb_(uts, dev, use_copy, NULL);
 }
 
 int video_check_copy_fb(struct unit_test_state *uts, struct udevice *dev)
