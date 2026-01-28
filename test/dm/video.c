@@ -138,8 +138,106 @@ static int video_write_bmp(struct unit_test_state *uts, struct udevice *dev,
 	return ret;
 }
 
-static int video_compress_fb_(struct unit_test_state *uts, struct udevice *dev,
-			      bool use_copy, const char *msg)
+/**
+ * save_video() - Save a portion of the framebuffer
+ *
+ * Saves the top portion of the framebuffer so it can be restored later.
+ * The buffer is allocated on first use and stored in uts->video_save.
+ *
+ * @uts: Unit test state
+ * @dev: Video device
+ * @lines: Number of lines to save
+ * Return: 0 on success, -ve on error
+ */
+static int save_video(struct unit_test_state *uts, struct udevice *dev,
+		      uint lines)
+{
+	struct video_priv *priv = dev_get_uclass_priv(dev);
+	int size;
+
+	size = priv->line_length * lines;
+	if (size > priv->fb_size)
+		return -EINVAL;
+
+	/* Allocate/resize the save buffer to exact size needed */
+	if (!abuf_realloc(&uts->video_save, size))
+		return -ENOMEM;
+
+	memcpy(abuf_data(&uts->video_save), priv->fb, size);
+
+	return 0;
+}
+
+/**
+ * restore_video() - Restore a saved portion of the framebuffer
+ *
+ * Restores the framebuffer region previously saved by save_video().
+ *
+ * @uts: Unit test state
+ * @dev: Video device
+ * Return: 0 on success, -ve on error
+ */
+static int restore_video(struct unit_test_state *uts, struct udevice *dev)
+{
+	struct video_priv *priv = dev_get_uclass_priv(dev);
+
+	if (!abuf_size(&uts->video_save))
+		return -ENOENT;
+
+	memcpy(priv->fb, abuf_data(&uts->video_save),
+	       abuf_size(&uts->video_save));
+
+	return 0;
+}
+
+/**
+ * show_test_msg() - Display a test message at the top right of the screen
+ *
+ * @uts: Unit test state
+ * @dev: Video device
+ * @msg: Message to display
+ * Return: true if framebuffer was saved and needs restoring, false otherwise
+ */
+static bool show_test_msg(struct unit_test_state *uts, struct udevice *dev,
+			  const char *msg)
+{
+	struct video_priv *priv = dev_get_uclass_priv(dev);
+	struct vidconsole_ctx *ctx = uts->video_ctx;
+	struct udevice *con;
+	bool saved = false;
+	int len = strlen(msg);
+	int x, ret;
+
+	ret = uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &con);
+	if (ret)
+		return false;
+
+	/* Allocate context on first use and select 8x16 font */
+	if (!ctx) {
+		ret = vidconsole_ctx_new(con, (void **)&ctx);
+		if (ret)
+			return false;
+		uts->video_ctx = ctx;
+		vidconsole_select_font(con, ctx, "8x16", 0);
+	}
+
+	/* Calculate position at top right */
+	x = priv->xsize - (len + 2) * ctx->x_charsize;
+
+	/* Save the affected region (one line) */
+	if (!save_video(uts, dev, ctx->y_charsize))
+		saved = true;
+
+	/* Draw the message */
+	vidconsole_set_cursor_pos(con, ctx, x, 0);
+	vidconsole_put_string(con, ctx, msg);
+	video_manual_sync(dev, VIDSYNC_COPY | VIDSYNC_FLUSH);
+
+	return saved;
+}
+
+int video_compress_fb_(struct unit_test_state *uts, struct udevice *dev,
+		       bool use_copy, const char *msg)
 {
 	struct sandbox_state *state = state_get_current();
 	struct video_priv *priv = dev_get_uclass_priv(dev);
@@ -176,10 +274,21 @@ static int video_compress_fb_(struct unit_test_state *uts, struct udevice *dev,
 	}
 
 	/* provide a useful delay if -V flag is used or LOG_DEBUG is set */
-	if (state->video_test)
-		mdelay(state->video_test);
-	else if (_DEBUG)
-		mdelay(300);
+	if (state->video_test || _DEBUG) {
+		int delay = state->video_test ? state->video_test : 300;
+		bool saved = false;
+
+		if (msg)
+			saved = show_test_msg(uts, dev, msg);
+
+		mdelay(delay);
+
+		/* Restore the framebuffer region */
+		if (saved) {
+			restore_video(uts, dev);
+			video_manual_sync(dev, VIDSYNC_COPY | VIDSYNC_FLUSH);
+		}
+	}
 
 	return destlen;
 }
@@ -213,7 +322,7 @@ int ut_check_video(struct unit_test_state *uts, const char *msg)
 	if (ret)
 		return ret;
 
-	return video_compress_fb(uts, dev, false);
+	return video_compress_fb_(uts, dev, false, msg);
 }
 
 /*

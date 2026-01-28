@@ -824,6 +824,13 @@ For example, to watch an expo test render with a visible display::
 
     ./u-boot -T -l -V 500 --video_frames /tmp/good -c "ut bootstd expo_render_image"
 
+When using ``-V`` or with ``LOG_DEBUG`` enabled, some video tests call
+ut_check_video() to display a message at the top right corner of the screen
+identifying the current frame check. This helps identify which assertion is
+being displayed when debugging test failures. The message is automatically
+removed after the delay, so it does not affect the framebuffer checksums used by
+video tests.
+
 The :doc:`../usage/cmd/sb` ``grid`` subcommand can be used to overlay a grid on
 the display, to help with checking alignment of objects. The grid size defaults
 to 0x20 pixels but can be specified as a parameter.
