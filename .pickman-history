@@ -9137,3 +9137,156 @@ Rebased onto latest ci/master. Build passes.
 
 ---
 
+## 2026-01-28: us/next
+
+Branch: cherry-cb5af7aa4f5
+
+Commits:
+- cb5af7aa4f5 pci: xilinx: Handle size of ecam region properly
+- fc25cd0e1a1 pci: auto: Reduce bridge mem alignment boundary for boston
+- 1864dfb1c45 pci: Enable PCI_MAP_SYSTEM_MEMORY when ARCH_MAP_SYSMEM is not set
+- 8daa1fadc2c ahci: DMA addressing fixes
+- 2b62ec62ac3 ahci: dwc_ahsata: Generalize the driver
+- 0fd4686df5f MIPS: Provide dummy acpi_table.h
+- 49cc0e1adce MIPS: boston: Imply various options
+- a6661e260c5 MIPS: boston: Provide default env vars
+- 964bb01f347 clk: boston: Allow to get regmap from parent device
+- d3730b53d9a dts/upstream: Add Makefile for MIPS
+- 4ba5026a0fb MIPS: boston: Migrate to OF_UPSTREAM
+- baf4bdcdeda mailmap: Update email for Paul Burton
+- 20fcb6305ee Merge patch series "MIPS: Boston: Various enhancements"
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit succeeded. Let me verify the delta and run build test:
+
+Delta looks identical (1 file changed, 40 insertions, 13 deletions). Now let me run the build test:
+
+Build passed. Now let's cherry-pick the second commit:
+
+Let me verify the delta:
+
+Delta is identical. Now build test:
+
+Build passed. Cherry-pick the third commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the fifth commit:
+
+We have a conflict. Let me examine it:
+
+This is a simple conflict - we need both `#include <bootdev.h>` and `#include <clk.h>`. Let me resolve it:
+
+Now let me resolve the conflict by including both headers (sorted alphabetically):
+
+No more conflict markers. Let me complete the cherry-pick with the amend note:
+
+Let me amend the commit with a note about the fix-up:
+
+Now let's verify the delta and run build test:
+
+Delta is identical (the extra line is due to the fix-up note). Build test:
+
+Build passed. Cherry-pick the sixth commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the seventh commit:
+
+The conflict is that HEAD has `SUPPORT_BIG_ENDIAN` and `SUPPORT_LITTLE_ENDIAN`, while the cherry-picked commit has `SUPPORTS_LITTLE_ENDIAN` and some new imply statements. Let me see what the original commit changed:
+
+I see. The original context had `SUPPORTS_LITTLE_ENDIAN` but our HEAD has `SUPPORT_BIG_ENDIAN` and `SUPPORT_LITTLE_ENDIAN` (different naming). The key change from the commit is adding the imply statements. Let me resolve this:
+
+It looks like the imply statements from lines 157 onwards (AHCI, AHCI_PCI, etc.) were already added through a previous merge! The conflict is just about the select statements and adding BOOTSTD_FULL, CLK, CLK_BOSTON and CMD_DM. Let me resolve this by keeping HEAD's select statements and adding the new imply statements:
+
+Let me amend the commit with a fix-up note and check the delta:
+
+Delta is identical (27 insertions). Build test:
+
+Build passed. Cherry-pick the eighth commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the ninth commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the tenth commit:
+
+Delta is identical. Build test:
+
+Build passed. Cherry-pick the eleventh commit:
+
+Multiple conflicts. Let me check each one:
+
+I see. Let me check what the original commit looks like for this:
+
+I see. The conflict in defconfig files is about changing `"img,boston"` to `"img/boston"` and HEAD has an extra `CONFIG_SYS_BOOTM_LEN=0x4000000` line. And in Kconfig it's adding `imply OF_UPSTREAM`.
+
+Let me resolve all conflicts:
+
+Delta is identical (13 files, 20 insertions, 231 deletions). Build test:
+
+Build passed. Cherry-pick the twelfth commit:
+
+I see. The original commit updates Paul Burton's email and adds both old emails. HEAD has one entry, incoming has two entries with the new email. I need to keep both Paul Burton entries with the new email, and keep the Philipp line:
+
+Delta is identical. Build test:
+
+Build passed. Now the final commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty because all changes were already applied. Let me commit it with --allow-empty:
+
+The merge commit was applied as an empty commit (since all individual commits were already cherry-picked). Build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 13 commits are present. Now let me run the final build test:
+
+**Final Status:**
+
+## ✅ Cherry-pick completed successfully
+
+### Summary:
+- **Branch:** `cherry-cb5af7aa4f5` (based on `ci/master`)
+- **Total commits:** 13 (all present and verified)
+- **Build status:** OK (sandbox board builds successfully)
+
+### Commits applied:
+1. `07800366d4e` - pci: xilinx: Handle size of ecam region properly
+2. `dfcfea4f315` - pci: auto: Reduce bridge mem alignment boundary for boston
+3. `22d59743b9b` - pci: Enable PCI_MAP_SYSTEM_MEMORY when ARCH_MAP_SYSMEM is not set
+4. `5b93baea76f` - ahci: DMA addressing fixes
+5. `5a0fe9ddbc5` - ahci: dwc_ahsata: Generalize the driver ⚠️
+6. `3148b9bf64a` - MIPS: Provide dummy acpi_table.h
+7. `a184fc7501a` - MIPS: boston: Imply various options ⚠️
+8. `a080779fc8d` - MIPS: boston: Provide default env vars
+9. `a79e62a284d` - clk: boston: Allow to get regmap from parent device
+10. `e3a44e4553f` - dts/upstream: Add Makefile for MIPS
+11. `5fca6173a34` - MIPS: boston: Migrate to OF_UPSTREAM ⚠️
+12. `2d63ba17406` - mailmap: Update email for Paul Burton ⚠️
+13. `c56a3cec7a8` - Merge patch series "MIPS: Boston: Various enhancements" (empty merge)
+
+### Fix-ups made (4 commits):
+1. **ahci: dwc_ahsata: Generalize the driver** - Kept both `bootdev.h` and `clk.h` includes (ci/master already had `bootdev.h`)
+2. **MIPS: boston: Imply various options** - Kept `SUPPORT_BIG_ENDIAN` and `SUPPORT_LITTLE_ENDIAN` (renamed from `SUPPORTS_LITTLE_ENDIAN`), added new imply statements
+3. **MIPS: boston: Migrate to OF_UPSTREAM** - Kept `SUPPORT_BIG/LITTLE_ENDIAN`, `SYS_BOOTM_LEN`, changed DT path to `img/boston`
+4. **mailmap: Update email for Paul Burton** - Kept `Philipp Tomsich` entry, updated both Paul Burton entries to new email
+
+### Commit deltas:
+All cherry-picked commits have identical file changes and line counts compared to originals (within expected tolerance for fix-ups).
+
+### No concerning deltas detected.
+
+The branch `cherry-cb5af7aa4f5` is ready for pushing.
+
+---
+
