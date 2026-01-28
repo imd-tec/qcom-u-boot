@@ -9399,3 +9399,98 @@ Build passed. Now let me verify how many commits we have added:
 
 ---
 
+## 2026-01-28: us/next
+
+Branch: cherry-392a5860bd6
+
+Commits:
+- 392a5860bd6 mmc: type 'Relatvie'
+- d770e325e9d mmc: Add a new callback function to perform the 74 clocks cycle sequence
+- 991c9530fc0 mmc: omap_hsmmc: implement send_init_stream callback
+- 2a8e7ea4f94 power: regulator: scmi: Move regulator subnode hack to scmi_regulator
+- 873bca77a3d Merge tag 'mmc-2025-04-23' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+
+### Conversation log
+Let me find the repository location:
+
+The repository is clean. Now let me create a new branch based on ci/master and start cherry-picking:
+
+Now let me first verify that the commits we need to cherry-pick exist in the us/next branch:
+
+Let me search for the specific commits we need:
+
+All commits are present. Now let me check the "maybe already applied" commits. Let me first compare the two potentially already-applied commits:
+
+The patches are **completely different** - one is adding the callback function (d770e325e9d) and the other (c5bda375896) is a **revert** that removes it! They are not the same commit. Let me check the second "maybe already applied" pair:
+
+These patches are also **different** - they make similar changes but are from different commits and different time periods. The original (991c9530fc0) is from 2025, while the found one (42182c9b9ca) is from 2018.
+
+Now let me check if any of these commits are already in ci/master:
+
+The search found some related but different commits. Let me check each specific commit in ci/master:
+
+So the Revert is in ci/master but not the actual "Add" commit. Let me proceed with cherry-picking. Starting with the first commit:
+
+First commit applied. Let me verify the delta and run build test:
+
+Delta looks good - same files, same changes. Now run build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Let me verify the delta:
+
+Delta matches. Run build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Let me verify the delta:
+
+Delta matches. Run build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Cherry-pick succeeded with auto-merge. Let me verify the delta:
+
+Delta matches. Run build test:
+
+Build passed. Now cherry-pick the fifth and final commit (which is a merge commit):
+
+The merge commit is empty (as expected since we've already applied the individual commits). Let me commit it as empty:
+
+Now let me verify all commits are in place:
+
+All 5 commits are present. Now let me run the final build test:
+
+All builds passed. Here's the final status:
+
+## Cherry-Pick Summary
+
+### Branch: `cherry-392a5860bd6` (based on `ci/master`)
+
+### All 5 commits successfully cherry-picked:
+
+| # | Hash (new) | Original Hash | Subject | Status |
+|---|------------|---------------|---------|--------|
+| 1 | 78033ca0fdd | 392a5860bd6 | mmc: type 'Relatvie' | ✅ Applied |
+| 2 | 682b40d66b6 | d770e325e9d | mmc: Add a new callback function to perform the 74 clocks cycle sequence | ✅ Applied |
+| 3 | f706c14e057 | 991c9530fc0 | mmc: omap_hsmmc: implement send_init_stream callback | ✅ Applied |
+| 4 | 7a87b1f7f57 | 2a8e7ea4f94 | power: regulator: scmi: Move regulator subnode hack to scmi_regulator | ✅ Applied (auto-merged) |
+| 5 | 2024228d1fc | 873bca77a3d | Merge tag 'mmc-2025-04-23' of https://source.denx.de/u-boot/custodians/u-boot-mmc | ✅ Applied (empty commit) |
+
+### Build Result: ✅ OK
+- sandbox build passed at each step and final verification
+
+### Notes on "maybe already applied" commits:
+- **d770e325e9d vs c5bda375896**: NOT the same - c5bda375896 is a **Revert** of this commit, not the same commit. Proceeded with cherry-pick.
+- **991c9530fc0 vs 42182c9b9ca**: NOT the same - they are different commits from different authors and dates (2025 vs 2018). Proceeded with cherry-pick.
+
+### Fix-ups made:
+- None needed - all commits applied cleanly
+
+### Commits with concerning deltas:
+- None - all deltas matched expected changes
+
+The branch `cherry-392a5860bd6` is ready for pushing.
+
+---
+
