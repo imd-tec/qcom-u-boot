@@ -9287,6 +9287,115 @@ All cherry-picked commits have identical file changes and line counts compared t
 ### No concerning deltas detected.
 
 The branch `cherry-cb5af7aa4f5` is ready for pushing.
+Branch: cherry-4446bc331c6
+
+Commits:
+- 4446bc331c6 mips: mt7688: gardena-smart-gateway: Increase CONFIG_SYS_BOOTM_LEN
+- 9a6964e419c net: dhcp6: Send DHCPv6 using multicast MAC
+- 473032619f5 net: dhcpv6: remove excluded middle expression
+- f79db892fc9 cmd: Remove CMD_NET protection
+- fd7607be626 net: make initr_net() invocation command line agnostic
+- 5666865decb net: lwip: fix initialization sequence before a command
+- 761fe6719c4 net: lwip: provide net_start_again()
+- 7156533162a net: lwip: add restart support to ping
+- bebe7fe3eeb net: lwip: use timer_early_get_count() when CONFIG_SANDBOX_TIMER=y
+- 94289e291f2 drivers: net: sandbox: add support for NET_LWIP
+- 1772c85f7af sandbox: provide static IP addresses for eth{2, 3, 5, 6, 7}
+- 1f907e559d5 net: ping: make do_ping() available via <net.h>
+- 58ea7c3b507 test: dm: eth, dsa: update tests for NET_LWIP
+- ca8db26928b net: lwip: allow DM_DSA=y when NET_LWIP=y
+- 886d38a54d3 configs: add sandbox64_lwip_defconfig
+- 49ae68536f2 CI: add sandbox64_lwip
+- 5d4a6995bb4 Merge tag 'net-20250423' of https://source.denx.de/u-boot/custodians/u-boot-net
+
+### Conversation log
+Let me find the U-Boot repository:
+
+Good, I'm in the U-Boot repository. Let me check the git status:
+
+The repository is clean. Now let me create the new cherry-pick branch based on ci/master:
+
+Now let me start cherry-picking. First, let me verify the commits exist:
+
+Good, the first commit exists. Now let me start cherry-picking commit #1:
+
+Now let me check the delta and run a build test:
+
+Delta looks good (both show 1 file, 1 insertion). Now run the build test:
+
+Build passed. Now cherry-pick #2 (with potential already-applied check):
+
+Commit #2 has "maybe already applied as e21bfb8a4e2". Let me check if it's already applied:
+
+The commit e21bfb8a4e2 is a cherry-pick of 9a6964e419c (see line indicating "(cherry picked from commit 9a6964e419c0...)"). These are the same commit. Let me verify it's in ci/master:
+
+Commit 9a6964e419c is already applied to ci/master as e21bfb8a4e2. SKIP this cherry-pick.
+
+Let me check commit #3:
+
+Same pattern - it's already applied. Let me check the remaining commits with "maybe already applied" markers:
+
+All commits marked as "maybe already applied" ARE already applied. Now let me check the two commits that don't have "maybe already applied" markers:
+- 49ae68536f2: CI: add sandbox64_lwip
+- 5d4a6995bb4: Merge tag 'net-20250423'
+
+The two remaining commits weren't found directly by subject. Let me check if they exist in ci/master:
+
+The sandbox64_lwip is already in .gitlab-ci.yml on ci/master. Let me search for when it was added:
+
+The CI commit (49ae68536f2) was already included via a different commit (74a1e9edc61) in ci/master. Now let me check the merge commit:
+
+So the merge 5d4a6995bb4 merges all the commits we've been analyzing. Since all the individual commits in the merge are already applied to ci/master, the merge commit itself is effectively already applied.
+
+Let me now verify ALL 16 commits (excluding commit #1 which we cherry-picked and the merge commit) are already in ci/master:
+
+Excellent! All 16 commits (except the first one which was cherry-picked) are already in ci/master. Only commit 4446bc331c6 was NOT in ci/master and needed to be cherry-picked, which was done successfully.
+
+Now let me verify the current state and check if the merge commit is actually needed. Since we already cherry-picked commit 4446bc331c6, and all other commits are already in ci/master, we technically don't need to apply any more commits.
+
+Let me verify the current branch state and run the final build:
+
+Build passed. Now let me verify how many commits we have added:
+
+## Summary
+
+### Final Status
+
+**Build Result:** ✅ OK (no warnings/errors)
+
+**Commits Cherry-Picked:** 1 of 17
+
+| # | Commit | Status | Details |
+|---|--------|--------|---------|
+| 1 | 4446bc331c6 | ✅ CHERRY-PICKED | mips: mt7688: gardena-smart-gateway: Increase CONFIG_SYS_BOOTM_LEN |
+| 2 | 9a6964e419c | ⏭️ SKIPPED | Already applied as e21bfb8a4e2 in ci/master |
+| 3 | 473032619f5 | ⏭️ SKIPPED | Already applied as 62309ee7322 in ci/master |
+| 4 | f79db892fc9 | ⏭️ SKIPPED | Already applied as 7df79508d71 in ci/master |
+| 5 | fd7607be626 | ⏭️ SKIPPED | Already applied as 5bd878465be in ci/master |
+| 6 | 5666865decb | ⏭️ SKIPPED | Already applied as f45550e6a6a in ci/master |
+| 7 | 761fe6719c4 | ⏭️ SKIPPED | Already applied as 10d451bff5c in ci/master |
+| 8 | 7156533162a | ⏭️ SKIPPED | Already applied as 42e5a789940 in ci/master |
+| 9 | bebe7fe3eeb | ⏭️ SKIPPED | Already applied as bc8ddf658ce in ci/master |
+| 10 | 94289e291f2 | ⏭️ SKIPPED | Already applied as 6f9dab5d458 in ci/master |
+| 11 | 1772c85f7af | ⏭️ SKIPPED | Already applied as 0a22b570159 in ci/master |
+| 12 | 1f907e559d5 | ⏭️ SKIPPED | Already applied as 1b2b140e24b in ci/master |
+| 13 | 58ea7c3b507 | ⏭️ SKIPPED | Already applied as a836dad8fc0 in ci/master |
+| 14 | ca8db26928b | ⏭️ SKIPPED | Already applied as 600218ab663 in ci/master |
+| 15 | 886d38a54d3 | ⏭️ SKIPPED | Already applied as a8c8556d8e2 in ci/master |
+| 16 | 49ae68536f2 | ⏭️ SKIPPED | Already applied via 74a1e9edc61 (CI: Update from us/master) |
+| 17 | 5d4a6995bb4 | ⏭️ SKIPPED | Merge commit - all contents already in ci/master |
+
+### Branch Status
+- **Branch:** `cherry-4446bc331c6`
+- **Based on:** `ci/master`
+- **Commits added:** 1 (489ef751ab5)
+- **Ready for pushing:** Yes
+
+### Notes
+- 16 of 17 commits were already present in ci/master (cherry-picked via a previous effort)
+- Only commit 4446bc331c6 (mips: mt7688: gardena-smart-gateway) was new
+- No fix-ups were needed
+- No concerning deltas found
 
 ---
 
