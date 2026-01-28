@@ -198,6 +198,18 @@ int video_check_copy_fb(struct unit_test_state *uts, struct udevice *dev)
 	return 0;
 }
 
+int ut_check_video(struct unit_test_state *uts, const char *msg)
+{
+	struct udevice *dev;
+	int ret;
+
+	ret = uclass_first_device_err(UCLASS_VIDEO, &dev);
+	if (ret)
+		return ret;
+
+	return video_compress_fb(uts, dev, false);
+}
+
 /*
  * Call this function at any point to halt and show the current display. Be
  * sure to run the test with the -l flag.

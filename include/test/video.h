@@ -42,4 +42,16 @@ int video_compress_fb(struct unit_test_state *uts, struct udevice *dev,
  */
 int video_check_copy_fb(struct unit_test_state *uts, struct udevice *dev);
 
+/**
+ * ut_check_video() - Compress the frame buffer and return its size
+ *
+ * This is a convenience function that gets the first video device and calls
+ * video_compress_fb() on it.
+ *
+ * @uts:	Test state
+ * @msg:	Message describing the frame being checked (or NULL)
+ * Return: compressed size of the frame buffer, or -ve on error
+ */
+int ut_check_video(struct unit_test_state *uts, const char *msg);
+
 #endif
