@@ -113,6 +113,14 @@ static char hist_data[HIST_MAX][HIST_SIZE + 1];
 #endif
 static char *hist_list[HIST_MAX];
 
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+#ifdef CONFIG_CMDLINE_UNDO_COUNT
+#define UNDO_COUNT	CONFIG_CMDLINE_UNDO_COUNT
+#else
+#define UNDO_COUNT	64
+#endif
+#endif
+
 #define add_idx_minus_one() ((hist_add_idx == 0) ? hist_max : hist_add_idx-1)
 
 /**
@@ -358,7 +366,7 @@ static void cread_end_of_line(struct cli_line_state *cls)
 #define REFRESH_TO_EOL() GOTO_LINE_END(cls->eol_num)
 #endif
 
-/* undo/yank functions are in cli_undo.c when CMDLINE_UNDO is enabled */
+/* undo/redo/yank functions are in cli_undo.c when CMDLINE_EDITOR is enabled */
 
 static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 			   uint *num, uint *eol_num, char *buf, uint len)
@@ -373,6 +381,9 @@ static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 		}
 		(*eol_num)++;
 	}
+
+	/* new edit invalidates redo history */
+	cread_clear_redo(cls);
 
 	if (insert) {
 		wlen = *eol_num - *num;
@@ -472,6 +483,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		if (cls->num < cls->eol_num) {
 			uint wlen;
 
+			cread_save_undo(cls);
 			wlen = cls->eol_num - cls->num - 1;
 			if (wlen) {
 				memmove(&buf[cls->num], &buf[cls->num + 1],
@@ -511,6 +523,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		if (cls->num) {
 			uint base, wlen;
 
+			cread_save_undo(cls);
 			for (base = cls->num - 1;
 			     base >= 0 && buf[base] == ' ';)
 				base--;
@@ -519,7 +532,6 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 
 			/* now delete chars from base to cls->num */
 			wlen = cls->num - base;
-			cread_save_undo(cls);
 			cread_save_yank(cls, &buf[base], wlen);
 			cls->eol_num -= wlen;
 			memmove(&buf[base], &buf[cls->num],
@@ -541,12 +553,17 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		}
 		break;
 	case CTL_CH('y'):
-#if CONFIG_IS_ENABLED(CMDLINE_UNDO)
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
 		cread_yank(cls);
 #endif
 		break;
 	case CTL_CH('z'):
 		cread_restore_undo(cls);
+		break;
+	case CTL_CH('g'):
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+		cread_redo(cls);
+#endif
 		break;
 	case CTL_CH('u'):
 		cread_save_undo(cls);
@@ -560,6 +577,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		if (cls->num) {
 			uint wlen;
 
+			cread_save_undo(cls);
 			wlen = cls->eol_num - cls->num;
 			cls->num--;
 			memmove(&buf[cls->num], &buf[cls->num + 1], wlen);
@@ -605,6 +623,8 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 				break;
 			}
 
+			cread_save_undo(cls);
+
 			/* nuke the current line */
 			/* first, go home */
 			BEGINNING_OF_LINE();
@@ -632,6 +652,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			buf[cls->num] = '\0';
 			col = strlen(cls->prompt) + cls->eol_num;
 			num2 = cls->num;
+			cread_save_undo(cls);
 			if (cmd_auto_complete(cls->prompt, buf, &num2, &col)) {
 				col = num2 - cls->num;
 				cls->num += col;
@@ -669,17 +690,22 @@ void cli_cread_init_undo(struct cli_line_state *cls, char *buf, uint buf_size)
 	if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
 		struct cli_editor_state *ed = cli_editor(cls);
 
-		abuf_init_size(&ed->undo.buf, buf_size);
 		abuf_init_size(&ed->yank, buf_size);
 	}
 }
 
 void cli_cread_uninit(struct cli_line_state *cls)
 {
-	if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+	if (CONFIG_IS_ENABLED(CMDLINE_EDITOR)) {
 		struct cli_editor_state *ed = cli_editor(cls);
+		struct cli_undo_pos *pos;
 
-		abuf_uninit(&ed->undo.buf);
+		alist_for_each(pos, &ed->undo.pos)
+			abuf_uninit(&pos->buf);
+		alist_uninit(&ed->undo.pos);
+		alist_for_each(pos, &ed->redo.pos)
+			abuf_uninit(&pos->buf);
+		alist_uninit(&ed->redo.pos);
 		abuf_uninit(&ed->yank);
 	}
 }

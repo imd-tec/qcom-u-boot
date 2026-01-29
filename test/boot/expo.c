@@ -1735,6 +1735,16 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(90, ted->tin.cls.eol_num);
 	ut_asserteq('\n', ((char *)abuf_data(&ted->tin.buf))[89]);
 
+	/* Ctrl+Z undoes the yank */
+	ut_assertok(expo_send_key(exp, CTL_CH('z')));
+	ut_asserteq(85, ted->tin.cls.num);
+	ut_asserteq(86, ted->tin.cls.eol_num);
+
+	/* Ctrl+Shift+Z (internal code 'g') redoes the yank */
+	ut_assertok(expo_send_key(exp, CTL_CH('g')));
+	ut_asserteq(89, ted->tin.cls.num);
+	ut_asserteq(90, ted->tin.cls.eol_num);
+
 	/* clear multiline mode, close the textedit with Enter (BKEY_SELECT) */
 	ted->obj.flags &= ~SCENEOF_MULTILINE;
 	ut_assertok(expo_send_key(exp, BKEY_SELECT));
@@ -1743,7 +1753,7 @@ static int expo_render_textedit(struct unit_test_state *uts)
 	ut_asserteq(OBJ_TEXTED, act.select.id);
 	ut_assertok(scene_set_open(scn, act.select.id, false));
 
-	/* check the textedit is closed and text is changed */
+	/* check the textedit is closed and text is changed (redo restored latr) */
 	ut_asserteq(0, ted->obj.flags & SCENEOF_OPEN);
 	ut_asserteq_str("This\ns the initial contents of the text "
 		"editor but it is ely that more will be added latr\n",

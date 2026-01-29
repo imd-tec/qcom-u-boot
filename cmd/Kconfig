@@ -66,6 +66,8 @@ config CMDLINE_EDITOR
 	  - Undo/redo support (Ctrl+Z / Ctrl+Shift+Z)
 	  - Yank/paste of killed text (Ctrl+Y)
 
+	  This uses additional memory to store the undo, redo, and yank buffers.
+
 config CMDLINE_UNDO
 	bool "Support undo in command-line editing"
 	depends on CMDLINE_EDITOR
@@ -74,6 +76,19 @@ config CMDLINE_UNDO
 	  Enable an undo buffer for command-line editing. When enabled,
 	  pressing Ctrl+Z restores the previous state of the edit buffer.
 	  This uses additional memory to store the undo state.
+
+config CMDLINE_UNDO_COUNT
+	int "Number of undo levels"
+	depends on CMDLINE_UNDO
+	default 64
+	range 1 64
+	help
+	  Number of undo/redo levels to support. Each level requires memory
+	  to store a copy of the edit buffer. With multiple levels,
+	  pressing Ctrl+Z repeatedly undoes progressively older changes, and
+	  Ctrl+Shift+Z redoes them. Set to 1 for single-level undo/redo, or
+	  higher for multi-level. Note that any new edit clears the redo
+	  history.
 
 config CMDLINE_PS_SUPPORT
 	bool "Enable support for changing the command prompt string at run-time"

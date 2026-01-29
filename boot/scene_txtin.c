@@ -11,12 +11,19 @@
 #include <cli.h>
 #include <expo.h>
 #include <log.h>
+#include <malloc.h>
 #include <menu.h>
 #include <video_console.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include "scene_internal.h"
+
+#ifdef CONFIG_CMDLINE_UNDO_COUNT
+#define UNDO_COUNT	CONFIG_CMDLINE_UNDO_COUNT
+#else
+#define UNDO_COUNT	64
+#endif
 
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
 {
@@ -161,6 +168,10 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 
 void scene_txtin_close(struct scene *scn, struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
+
+	cli_cread_uninit(cls);
+
 	/* cursor is not needed now */
 	vidconsole_readline_end(scn->expo->cons, tin->ctx);
 }
@@ -265,7 +276,7 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 	struct udevice *cons = scn->expo->cons;
 	struct scene_obj_txt *txt;
 	void *ctx;
-	int ret;
+	int ret, i;
 
 	ctx = tin->ctx;
 	if (!ctx) {
@@ -286,10 +297,31 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 
 	vidconsole_set_cursor_pos(cons, ctx, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons, ctx);
-	cli_cread_init(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
+	cli_cread_init_undo(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
 	cls->insert = true;
 	ed->putch = scene_txtin_putch;
 	cls->priv = scn;
+
+	/* Initialise undo ring buffer */
+	alist_init_struct(&ed->undo.pos, struct cli_undo_pos);
+	for (i = 0; i < UNDO_COUNT; i++) {
+		struct cli_undo_pos *pos;
+
+		pos = alist_ensure(&ed->undo.pos, i, struct cli_undo_pos);
+		abuf_init_size(&pos->buf, abuf_size(&tin->buf));
+	}
+
+	/* Initialise redo ring buffer */
+	alist_init_struct(&ed->redo.pos, struct cli_undo_pos);
+	for (i = 0; i < UNDO_COUNT; i++) {
+		struct cli_undo_pos *pos;
+
+		pos = alist_ensure(&ed->redo.pos, i, struct cli_undo_pos);
+		abuf_init_size(&pos->buf, abuf_size(&tin->buf));
+	}
+
+	/* yank buffer is initialised by cli_cread_init_undo() above */
+
 	if (obj->type == SCENEOBJT_TEXTEDIT) {
 		ed->multiline = true;
 		ed->line_nav = scene_txtin_line_nav;

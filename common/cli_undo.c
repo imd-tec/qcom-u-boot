@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * CLI undo/yank support
+ * CLI undo/redo/yank support
  *
  * Copyright 2025 Google LLC
  * Written by Simon Glass <sjg@chromium.org>
@@ -55,25 +55,83 @@ static void cls_putchars(struct cli_line_state *cls, int count, int ch)
 
 #define getcmd_cbeep(cls)	cls_putch(cls, '\a')
 
+void cread_save_redo(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	struct cli_undo_state *redo = &ed->redo;
+	struct cli_undo_pos *pos;
+	uint idx;
+
+	if (!redo->pos.alloc)
+		return;
+
+	/* save at current head position */
+	idx = redo->head;
+	pos = alist_getw(&redo->pos, idx, struct cli_undo_pos);
+	memcpy(abuf_data(&pos->buf), cls->buf, cls->len);
+	pos->num = cls->num;
+	pos->eol_num = cls->eol_num;
+
+	/* advance head (ring buffer) */
+	redo->head = (redo->head + 1) % redo->pos.alloc;
+
+	/* track how many redo levels are available */
+	if (redo->count < redo->pos.alloc)
+		redo->count++;
+}
+
+void cread_clear_redo(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+
+	ed->redo.count = 0;
+	ed->redo.head = 0;
+}
+
 void cread_save_undo(struct cli_line_state *cls)
 {
 	struct cli_editor_state *ed = cli_editor(cls);
 	struct cli_undo_state *undo = &ed->undo;
+	struct cli_undo_pos *pos;
+	uint idx;
 
-	if (abuf_size(&undo->buf)) {
-		memcpy(abuf_data(&undo->buf), cls->buf, cls->len);
-		undo->num = cls->num;
-		undo->eol_num = cls->eol_num;
-	}
+	if (!undo->pos.alloc)
+		return;
+
+	/* save at current head position */
+	idx = undo->head;
+	pos = alist_getw(&undo->pos, idx, struct cli_undo_pos);
+	memcpy(abuf_data(&pos->buf), cls->buf, cls->len);
+	pos->num = cls->num;
+	pos->eol_num = cls->eol_num;
+
+	/* advance head (ring buffer) */
+	undo->head = (undo->head + 1) % undo->pos.alloc;
+
+	/* track how many undo levels are available */
+	if (undo->count < undo->pos.alloc)
+		undo->count++;
+
+	/* new edit invalidates redo history */
+	cread_clear_redo(cls);
 }
 
 void cread_restore_undo(struct cli_line_state *cls)
 {
-	struct cli_editor_state *ed = cli_editor(cls);
-	struct cli_undo_state *undo = &ed->undo;
+	struct cli_undo_state *undo = &cli_editor(cls)->undo;
+	const struct cli_undo_pos *pos;
+	uint idx;
 
-	if (!abuf_size(&undo->buf))
+	if (!undo->pos.alloc || !undo->count)
 		return;
+
+	/* save current state to redo buffer before restoring */
+	cread_save_redo(cls);
+
+	/* move back to previous undo state */
+	undo->head = undo->head ? undo->head - 1 : undo->pos.alloc - 1;
+	undo->count--;
+	idx = undo->head;
 
 	/* go to start of line */
 	while (cls->num) {
@@ -86,15 +144,66 @@ void cread_restore_undo(struct cli_line_state *cls)
 	cls_putchars(cls, cls->eol_num, CTL_BACKSPACE);
 
 	/* restore from undo buffer */
-	memcpy(cls->buf, abuf_data(&undo->buf), cls->len);
-	cls->eol_num = undo->eol_num;
+	pos = alist_get(&undo->pos, idx, struct cli_undo_pos);
+	memcpy(cls->buf, abuf_data(&pos->buf), cls->len);
+	cls->eol_num = pos->eol_num;
 
 	/* display restored content */
 	cls_putnstr(cls, cls->buf, cls->eol_num);
 
 	/* position cursor */
-	cls_putchars(cls, cls->eol_num - undo->num, CTL_BACKSPACE);
-	cls->num = undo->num;
+	cls_putchars(cls, cls->eol_num - pos->num, CTL_BACKSPACE);
+	cls->num = pos->num;
+}
+
+void cread_redo(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	struct cli_undo_state *undo = &ed->undo;
+	struct cli_undo_state *redo = &ed->redo;
+	struct cli_undo_pos *pos;
+	const struct cli_undo_pos *rpos;
+	uint idx;
+
+	if (!redo->pos.alloc || !redo->count)
+		return;
+
+	/* save current state to undo buffer */
+	idx = undo->head;
+	pos = alist_getw(&undo->pos, idx, struct cli_undo_pos);
+	memcpy(abuf_data(&pos->buf), cls->buf, cls->len);
+	pos->num = cls->num;
+	pos->eol_num = cls->eol_num;
+	undo->head = (undo->head + 1) % undo->pos.alloc;
+	if (undo->count < undo->pos.alloc)
+		undo->count++;
+
+	/* move back to previous redo state */
+	redo->head = redo->head ? redo->head - 1 : redo->pos.alloc - 1;
+	redo->count--;
+	idx = redo->head;
+
+	/* go to start of line */
+	while (cls->num) {
+		cls_putch(cls, CTL_BACKSPACE);
+		cls->num--;
+	}
+
+	/* erase current content on screen */
+	cls_putchars(cls, cls->eol_num, ' ');
+	cls_putchars(cls, cls->eol_num, CTL_BACKSPACE);
+
+	/* restore from redo buffer */
+	rpos = alist_get(&redo->pos, idx, struct cli_undo_pos);
+	memcpy(cls->buf, abuf_data(&rpos->buf), cls->len);
+	cls->eol_num = rpos->eol_num;
+
+	/* display restored content */
+	cls_putnstr(cls, cls->buf, cls->eol_num);
+
+	/* position cursor */
+	cls_putchars(cls, cls->eol_num - rpos->num, CTL_BACKSPACE);
+	cls->num = rpos->num;
 }
 
 void cread_save_yank(struct cli_line_state *cls, const char *text, uint len)

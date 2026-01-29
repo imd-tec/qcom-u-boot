@@ -74,8 +74,8 @@ static int editenv_test_base(struct unit_test_state *uts)
 	int ret;
 
 	/*
-	 * Type "test" then press Ctrl-S to save
-	 * \x13 is Ctrl-S
+	 * Type "test" then press Ctrl-S to accept (Enter inserts newline in
+	 * multiline mode)
 	 */
 	console_in_puts("test\x13");
 	ret = expo_editenv("myvar", NULL, buf, sizeof(buf));
@@ -94,7 +94,7 @@ static int editenv_test_initial(struct unit_test_state *uts)
 
 	/*
 	 * Start with "world", go to start with Ctrl-A, type "hello ", then
-	 * press Ctrl-S to save
+	 * press Ctrl-S to accept
 	 */
 	console_in_puts("\x01hello \x13");
 	ret = expo_editenv("myvar", "world", buf, sizeof(buf));
@@ -190,11 +190,61 @@ static int editenv_test_funcs(struct unit_test_state *uts)
 	ut_assertok(editenv_send(&info, CTL_CH('k')));
 	ut_asserteq(16033, ut_check_video(uts, "kill"));
 
+	/* Test undo - should restore the killed text */
+	ut_assertok(editenv_send(&info, CTL_CH('z')));
+	ut_asserteq(16877, ut_check_video(uts, "undo"));
+
+	/* Kill again and yank it back - text should be restored */
+	ut_assertok(editenv_send(&info, CTL_CH('k')));
+	ut_asserteq(16033, ut_check_video(uts, "kill2"));
+
+	ut_assertok(editenv_send(&info, CTL_CH('y')));
+	ut_asserteq(16808, ut_check_video(uts, "yank"));
+
+	/* Test Home - should go to start of current line */
+	ut_assertok(editenv_send(&info, CTL_CH('a')));
+	ut_asserteq(0, info.ted->tin.cls.num);
+	ut_asserteq(16845, ut_check_video(uts, "home"));
+
+	/* Test End - should go to end of current line */
+	ut_assertok(editenv_send(&info, CTL_CH('e')));
+	ut_asserteq(16808, ut_check_video(uts, "end"));
+
+	/* Go left two words with Ctrl+R */
+	ut_assertok(editenv_send(&info, CTL_CH('r')));
+	ut_asserteq(16838, ut_check_video(uts, "left1"));
+
+	ut_assertok(editenv_send(&info, CTL_CH('r')));
+	ut_asserteq(16812, ut_check_video(uts, "left2"));
+
+	/* Delete three words with Ctrl+W */
+	ut_assertok(editenv_send(&info, CTL_CH('w')));
+	ut_asserteq(16691, ut_check_video(uts, "delw1"));
+
+	ut_assertok(editenv_send(&info, CTL_CH('w')));
+	ut_asserteq(16445, ut_check_video(uts, "delw2"));
+
+	ut_assertok(editenv_send(&info, CTL_CH('w')));
+	ut_asserteq(16118, ut_check_video(uts, "delw3"));
+
+	/* Undo to restore one deleted word */
+	ut_assertok(editenv_send(&info, CTL_CH('z')));
+	ut_asserteq(16445, ut_check_video(uts, "undo1"));
+
+	/* Type a character - this clears the redo buffer */
+	ut_assertok(editenv_send(&info, '!'));
+	ut_asserteq(16469, ut_check_video(uts, "type"));
+
+	/* Redo (Ctrl+G) should do nothing since typing cleared the redo buffer */
+	ut_assertok(editenv_send(&info, CTL_CH('g')));
+	ut_asserteq(16469, ut_check_video(uts, "redo"));
+
+	/* Press Ctrl-S to save */
 	ut_asserteq(1, editenv_send(&info, BKEY_SAVE));
 
-	/* The '*' is inserted after "tes", Ctrl-K killed "ted properly." */
-	ut_assert(strstr(expo_editenv_result(&info), "tes*\n"));
-	ut_asserteq(16033, ut_check_video(uts, "save"));
+	/* The '*' and '!' are inserted; redo did nothing since it was cleared */
+	ut_assert(strstr(expo_editenv_result(&info), "tes*ted"));
+	ut_asserteq(16469, ut_check_video(uts, "save"));
 
 	expo_editenv_uninit(&info);
 

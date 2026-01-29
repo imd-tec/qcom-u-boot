@@ -366,6 +366,9 @@ type
     "textline"
         A line of text which can be edited
 
+    "textedit"
+        A multi-line text editor
+
     "box"
         A rectangle with a given line width (not filled)
 
@@ -445,6 +448,17 @@ max-chars:
 
     Specifies the maximum number of characters permitted to be in the textline.
     The user will be prevented from adding more.
+
+Textedit nodes have the same properties as textline nodes, with the following
+differences:
+
+- The editor supports multiple lines of text
+- Pressing Enter inserts a newline instead of closing the editor
+- Home/End move to start/end of the current line
+- Ctrl+K kills to end of the current line (not entire buffer)
+- Up/Down (Ctrl+P/N) navigate between lines
+
+See :doc:`../usage/cmdline` for a full list of editing keys.
 
 Box nodes have the following additional properties:
 

@@ -8,6 +8,7 @@
 #define __CLI_H
 
 #include <abuf.h>
+#include <alist.h>
 #include <stdbool.h>
 #include <linux/types.h>
 
@@ -29,16 +30,42 @@ struct cli_ch_state {
 struct cli_line_state;
 
 /**
- * struct cli_undo_state - state for undo buffer
+ * struct cli_undo_pos - saved state for a single undo/redo level
  *
- * @buf: Buffer for saved state
- * @num: Saved cursor position
- * @eol_num: Saved end-of-line position
+ * Before any editing operation (insert, delete, kill, etc.), the entire
+ * buffer state is saved so it can be restored on undo. The buffer contents,
+ * cursor position, and line length are captured together.
+ *
+ * @buf: Complete copy of the edit buffer at the time of save
+ * @num: Cursor position (offset from start of buffer)
+ * @eol_num: Number of characters in the buffer (end-of-line position)
  */
-struct cli_undo_state {
+struct cli_undo_pos {
 	struct abuf buf;
 	uint num;
 	uint eol_num;
+};
+
+/**
+ * struct cli_undo_state - state for undo/redo ring buffer
+ *
+ * This implements a ring buffer for storing undo or redo states. Each state
+ * consists of a complete copy of the edit buffer plus the cursor position.
+ * The ring buffer allows multiple levels of undo/redo up to alloc entries.
+ *
+ * When saving a new state, it is written at the @head index, then @head
+ * advances (wrapping at alloc). When restoring, @head moves back and the
+ * state at that index is restored. The @count tracks how many valid states
+ * are available for undo/redo.
+ *
+ * @pos: List of &struct cli_undo_pos entries
+ * @head: Index where the next state will be saved (0 to alloc-1)
+ * @count: Number of valid states available (0 to alloc)
+ */
+struct cli_undo_state {
+	struct alist pos;
+	uint head;
+	uint count;
 };
 
 /**
@@ -51,6 +78,7 @@ struct cli_undo_state {
  * @multiline: true if input may contain multiple lines (enables
  *	Ctrl-P/N for line navigation instead of history)
  * @undo: Undo ring buffer state
+ * @redo: Redo ring buffer state
  * @yank: Buffer for killed text (for Ctrl+Y yank)
  * @yank_len: Length of killed text in yank buffer
  */
@@ -80,6 +108,9 @@ struct cli_editor_state {
 
 	/** @undo: Undo state (if CONFIG_CMDLINE_UNDO) */
 	struct cli_undo_state undo;
+
+	/** @redo: Redo state (if CONFIG_CMDLINE_UNDO) */
+	struct cli_undo_state redo;
 
 	/** @yank: Buffer for killed text (for Ctrl+Y yank) */
 	struct abuf yank;
@@ -393,12 +424,13 @@ void cli_cread_add_initial(struct cli_line_state *cls);
 /** cread_print_hist_list() - Print the command-line history list */
 void cread_print_hist_list(void);
 
-/*
- * Undo/yank functions - implementations in cli_undo.c when CMDLINE_UNDO is enabled
- */
-#if CONFIG_IS_ENABLED(CMDLINE_UNDO)
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
 /**
  * cread_save_undo() - Save current state for undo
+ *
+ * Saves the buffer contents and cursor position to the undo ring buffer.
+ * Each call pushes a new undo state that can be restored with Ctrl+Z.
+ * Also clears the redo buffer since a new edit invalidates redo history.
  *
  * @cls: CLI line state
  */
@@ -407,12 +439,28 @@ void cread_save_undo(struct cli_line_state *cls);
 /**
  * cread_restore_undo() - Restore previous state from undo buffer
  *
+ * Restores the buffer contents and cursor position from the most recent
+ * undo state. Multiple calls restore progressively older states. The
+ * current state is saved to the redo buffer before restoring.
+ *
  * @cls: CLI line state
  */
 void cread_restore_undo(struct cli_line_state *cls);
 
 /**
+ * cread_redo() - Redo previously undone change
+ *
+ * Restores the buffer contents and cursor position from the redo buffer.
+ * The current state is saved to the undo buffer before restoring.
+ *
+ * @cls: CLI line state
+ */
+void cread_redo(struct cli_line_state *cls);
+
+/**
  * cread_save_yank() - Save killed text to yank buffer
+ *
+ * Saves the specified text so it can be yanked (pasted) later with Ctrl+Y.
  *
  * @cls: CLI line state
  * @text: Text to save
@@ -423,9 +471,21 @@ void cread_save_yank(struct cli_line_state *cls, const char *text, uint len);
 /**
  * cread_yank() - Insert yanked text at cursor position
  *
+ * Inserts the previously killed text at the current cursor position.
+ *
  * @cls: CLI line state
  */
 void cread_yank(struct cli_line_state *cls);
+
+/**
+ * cread_clear_redo() - Clear the redo buffer
+ *
+ * Called when a new edit is made to invalidate the redo history. This should
+ * be called for any edit operation that modifies the buffer.
+ *
+ * @cls: CLI line state
+ */
+void cread_clear_redo(struct cli_line_state *cls);
 #else
 static inline void cread_save_undo(struct cli_line_state *cls)
 {
@@ -435,12 +495,20 @@ static inline void cread_restore_undo(struct cli_line_state *cls)
 {
 }
 
+static inline void cread_redo(struct cli_line_state *cls)
+{
+}
+
 static inline void cread_save_yank(struct cli_line_state *cls, const char *text,
 				   uint len)
 {
 }
 
 static inline void cread_yank(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_clear_redo(struct cli_line_state *cls)
 {
 }
 #endif
