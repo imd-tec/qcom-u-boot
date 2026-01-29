@@ -31,6 +31,7 @@ enum {
 
 	/* Modifier bits for config->modifiers */
 	MOD_CTRL		= 1 << 0,
+	MOD_SHIFT		= 1 << 1,
 };
 
 /*
@@ -459,6 +460,23 @@ static int input_keycode_to_ansi364(struct input_config *config,
 		}
 	}
 
+	/* Handle Ctrl+Shift+Z for redo */
+	if ((config->modifiers & (MOD_CTRL | MOD_SHIFT)) ==
+	    (MOD_CTRL | MOD_SHIFT) && keycode == KEY_Z) {
+		/* Generate ESC [ 1 ; 6 z for Ctrl+Shift+Z */
+		const char *seq = "[1;6z";
+
+		ch_count = 0;
+		output_ch[ch_count++] = 0x1b;
+		while (*seq) {
+			if (ch_count < max_chars)
+				output_ch[ch_count] = *seq;
+			ch_count++;
+			seq++;
+		}
+		return ch_count;
+	}
+
 	for (i = ch_count = 0; i < ARRAY_SIZE(kbd_to_ansi364); i++) {
 		if (keycode != kbd_to_ansi364[i].kbd_scan_code)
 			continue;
@@ -514,9 +532,11 @@ static int input_keycodes_to_ascii(struct input_config *config,
 			table = process_modifier(config, key,
 					keycode[i] & KEY_RELEASE);
 		}
-		/* Track Ctrl state for special key handling */
+		/* Track Ctrl and Shift state for special key handling */
 		if (key == KEY_LEFTCTRL || key == KEY_RIGHTCTRL)
 			config->modifiers |= MOD_CTRL;
+		if (key == KEY_LEFTSHIFT || key == KEY_RIGHTSHIFT)
+			config->modifiers |= MOD_SHIFT;
 	}
 
 	/* Start conversion by looking for the first new keycode (by same). */
