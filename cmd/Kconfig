@@ -54,13 +54,41 @@ config CMDLINE_EDITING
 	  Enable editing and History functions for interactive command line
 	  input operations
 
-config CLI_READLINE_CALLBACK
-	bool "Support a callback for character output"
+config CMDLINE_EDITOR
+	bool "Enhanced command-line editing features"
 	depends on CMDLINE_EDITING
+	default y if EXPO
 	help
-	  Enable a callback for character output during line editing. This
-	  allows redirection of output to a different destination, such as
-	  a vidconsole. This is used by expo to support textline editing.
+	  Enable enhanced editing features for the command line, including:
+	  - Character-output callback for redirection to vidconsole
+	  - Multi-line navigation callback (Ctrl-P/N)
+	  - Ctrl+Left/Right arrow keys to move by words
+	  - Undo/redo support (Ctrl+Z / Ctrl+Shift+Z)
+	  - Yank/paste of killed text (Ctrl+Y)
+
+	  This uses additional memory to store the undo, redo, and yank buffers.
+
+config CMDLINE_UNDO
+	bool "Support undo in command-line editing"
+	depends on CMDLINE_EDITOR
+	default y
+	help
+	  Enable an undo buffer for command-line editing. When enabled,
+	  pressing Ctrl+Z restores the previous state of the edit buffer.
+	  This uses additional memory to store the undo state.
+
+config CMDLINE_UNDO_COUNT
+	int "Number of undo levels"
+	depends on CMDLINE_UNDO
+	default 64
+	range 1 64
+	help
+	  Number of undo/redo levels to support. Each level requires memory
+	  to store a copy of the edit buffer. With multiple levels,
+	  pressing Ctrl+Z repeatedly undoes progressively older changes, and
+	  Ctrl+Shift+Z redoes them. Set to 1 for single-level undo/redo, or
+	  higher for multi-level. Note that any new edit clears the redo
+	  history.
 
 config CMDLINE_PS_SUPPORT
 	bool "Enable support for changing the command prompt string at run-time"
@@ -702,6 +730,15 @@ config CMD_EDITENV
 	default y
 	help
 	  Edit environment variable.
+
+config CMD_EDITENV_EXPO
+	bool "editenv expo support"
+	depends on CMD_EDITENV && EXPO_EDITENV
+	default y if EXPO_EDITENV
+	help
+	  Enable the -e flag for the editenv command, which provides a
+	  graphical editor using the expo framework. This requires a video
+	  console.
 
 config CMD_GREPENV
 	bool "search env"

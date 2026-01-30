@@ -1012,6 +1012,15 @@ config EXPO_LOG_FILTER
 	  Only objects whose name contains the filter string are logged. This
 	  is useful for debugging specific expo objects.
 
+config EXPO_EDITENV
+	bool "Expo-based environment variable editor"
+	depends on EXPO
+	default y if SANDBOX
+	help
+	  Enable a graphical environment variable editor using expo. This
+	  provides a textedit widget for editing environment variables with
+	  full cursor movement support.
+
 config BOOTMETH_SANDBOX
 	def_bool y
 	depends on SANDBOX

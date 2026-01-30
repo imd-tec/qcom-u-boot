@@ -91,3 +91,71 @@ convenient::
 
   => i2c speed 0x30000
   Setting bus speed to 196608 Hz
+
+Command-line editing
+--------------------
+
+U-Boot supports command-line editing when `CONFIG_CMDLINE_EDITING` is enabled.
+This provides an Emacs-like interface for editing commands before they are
+executed. The following key bindings are available:
+
+Cursor movement
+~~~~~~~~~~~~~~~
+
+- **Left arrow** or **Ctrl+B**: Move cursor left one character
+- **Right arrow** or **Ctrl+F**: Move cursor right one character
+- **Ctrl+Left** or **Alt+B**: Move cursor left one word
+- **Ctrl+Right** or **Alt+F**: Move cursor right one word
+- **Home** or **Ctrl+A**: Move to beginning of line
+- **End** or **Ctrl+E**: Move to end of line
+
+Character deletion
+~~~~~~~~~~~~~~~~~~
+
+- **Backspace** or **Ctrl+H**: Delete character before cursor
+- **Delete** or **Ctrl+D**: Delete character at cursor
+- **Ctrl+K**: Kill (delete) from cursor to end of line
+- **Ctrl+W**: Kill word before cursor
+- **Ctrl+U**: Kill entire line
+- **Ctrl+X**: Kill entire line (same as Ctrl+U)
+
+History
+~~~~~~~
+
+- **Up arrow** or **Ctrl+P**: Previous command in history
+- **Down arrow** or **Ctrl+N**: Next command in history
+
+Undo, redo, and yank
+~~~~~~~~~~~~~~~~~~~~
+
+When `CONFIG_CMDLINE_UNDO` is enabled, the following features are available:
+
+- **Ctrl+Z**: Undo the last edit operation
+- **Ctrl+Shift+Z**: Redo the last undone operation
+- **Ctrl+Y**: Yank (paste) previously killed text
+
+Text killed by Ctrl+K, Ctrl+W, Ctrl+U, or Ctrl+X is saved to a yank buffer
+and can be pasted with Ctrl+Y.
+
+The number of undo/redo levels can be configured with `CONFIG_CMDLINE_UNDO_COUNT`
+(default 1, maximum 64). Each level saves the complete buffer state,
+so higher values use more memory. Note that any new edit clears the redo
+history.
+
+Other
+~~~~~
+
+- **Tab**: Command and argument completion (if `CONFIG_AUTO_COMPLETE` is enabled)
+- **Ctrl+C**: Cancel current input
+- **Enter**: Execute command
+
+Multiline editing
+~~~~~~~~~~~~~~~~~
+
+In multiline mode (used by expo text editors), some keys have modified
+behaviour:
+
+- **Home/End**: Move to start/end of current line (not entire buffer)
+- **Ctrl+K**: Kill to end of current line (not entire buffer)
+- **Ctrl+P/N** or **Up/Down**: Navigate between lines
+- **Enter**: Insert newline (instead of executing)

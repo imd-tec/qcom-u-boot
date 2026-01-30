@@ -7,6 +7,8 @@
 #ifndef __CLI_H
 #define __CLI_H
 
+#include <abuf.h>
+#include <alist.h>
 #include <stdbool.h>
 #include <linux/types.h>
 
@@ -25,6 +27,98 @@ struct cli_ch_state {
 	bool emitting;
 };
 
+struct cli_line_state;
+
+/**
+ * struct cli_undo_pos - saved state for a single undo/redo level
+ *
+ * Before any editing operation (insert, delete, kill, etc.), the entire
+ * buffer state is saved so it can be restored on undo. The buffer contents,
+ * cursor position, and line length are captured together.
+ *
+ * @buf: Complete copy of the edit buffer at the time of save
+ * @num: Cursor position (offset from start of buffer)
+ * @eol_num: Number of characters in the buffer (end-of-line position)
+ */
+struct cli_undo_pos {
+	struct abuf buf;
+	uint num;
+	uint eol_num;
+};
+
+/**
+ * struct cli_undo_state - state for undo/redo ring buffer
+ *
+ * This implements a ring buffer for storing undo or redo states. Each state
+ * consists of a complete copy of the edit buffer plus the cursor position.
+ * The ring buffer allows multiple levels of undo/redo up to alloc entries.
+ *
+ * When saving a new state, it is written at the @head index, then @head
+ * advances (wrapping at alloc). When restoring, @head moves back and the
+ * state at that index is restored. The @count tracks how many valid states
+ * are available for undo/redo.
+ *
+ * @pos: List of &struct cli_undo_pos entries
+ * @head: Index where the next state will be saved (0 to alloc-1)
+ * @count: Number of valid states available (0 to alloc)
+ */
+struct cli_undo_state {
+	struct alist pos;
+	uint head;
+	uint count;
+};
+
+/**
+ * struct cli_editor_state - state for enhanced editing features
+ *
+ * This is only available when CONFIG_CMDLINE_EDITOR is enabled.
+ *
+ * @putch: Output a character (NULL to use putc())
+ * @line_nav: Handle multi-line navigation (Ctrl-P/N)
+ * @multiline: true if input may contain multiple lines (enables
+ *	Ctrl-P/N for line navigation instead of history)
+ * @undo: Undo ring buffer state
+ * @redo: Redo ring buffer state
+ * @yank: Buffer for killed text (for Ctrl+Y yank)
+ * @yank_len: Length of killed text in yank buffer
+ */
+struct cli_editor_state {
+	/**
+	 * @putch: Output a character (NULL to use putc())
+	 *
+	 * @cls: CLI line state
+	 * @ch: Character to output
+	 */
+	void (*putch)(struct cli_line_state *cls, int ch);
+
+	/**
+	 * @line_nav: Handle multi-line navigation (Ctrl-P/N)
+	 *
+	 * @cls: CLI line state
+	 * @up: true for previous line, false for next
+	 * Return: new cursor position, or -ve if at boundary
+	 */
+	int (*line_nav)(struct cli_line_state *cls, bool up);
+
+	/**
+	 * @multiline: true if input may contain multiple lines (enables
+	 * Ctrl-P/N for line navigation instead of history)
+	 */
+	bool multiline;
+
+	/** @undo: Undo state (if CONFIG_CMDLINE_UNDO) */
+	struct cli_undo_state undo;
+
+	/** @redo: Redo state (if CONFIG_CMDLINE_UNDO) */
+	struct cli_undo_state redo;
+
+	/** @yank: Buffer for killed text (for Ctrl+Y yank) */
+	struct abuf yank;
+
+	/** @yank_len: Length of killed text in yank buffer */
+	uint yank_len;
+};
+
 /**
  * struct cli_line_state - state of the line editor
  *
@@ -34,15 +128,10 @@ struct cli_ch_state {
  * @history: true if history should be accessible
  * @cmd_complete: true if tab completion should be enabled (requires @prompt to
  *	be set)
- * @multiline: true if input may contain multiple lines (enables Ctrl-P/N for
- *	line navigation instead of history)
  * @buf: Buffer containing line
  * @prompt: Prompt for the line
- * @putch: Function to call to output a character (NULL to use putc())
- * @line_nav: Function to call for multi-line navigation (Ctrl-P/N). Called with
- *	@up true for previous line, false for next. Returns new cursor position,
- *	or -ve if at boundary
  * @priv: Private data for callbacks
+ * @ed: Editor state for enhanced features (if CONFIG_CMDLINE_EDITOR)
  */
 struct cli_line_state {
 	uint num;
@@ -51,13 +140,29 @@ struct cli_line_state {
 	bool insert;
 	bool history;
 	bool cmd_complete;
-	bool multiline;
 	char *buf;
 	const char *prompt;
-	void (*putch)(struct cli_line_state *cls, int ch);
-	int (*line_nav)(struct cli_line_state *cls, bool up);
 	void *priv;
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+	struct cli_editor_state ed;
+#endif
 };
+
+/**
+ * cli_editor() - Get the editor state from a line state
+ *
+ * @cls: CLI line state
+ * Return: Pointer to editor state, or NULL if CONFIG_CMDLINE_EDITOR is not
+ * enabled
+ */
+static inline struct cli_editor_state *cli_editor(struct cli_line_state *cls)
+{
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+	return &cls->ed;
+#else
+	return NULL;
+#endif
+}
 
 /**
  * Go into the command loop
@@ -289,6 +394,24 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar);
 void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size);
 
 /**
+ * cli_cread_init_undo() - Set up a new cread struct with undo support
+ *
+ * Like cli_cread_init() but also sets up the undo buffer.
+ *
+ * @cls: CLI line state
+ * @buf: Text buffer containing the initial text
+ * @buf_size: Buffer size, including nul terminator
+ */
+void cli_cread_init_undo(struct cli_line_state *cls, char *buf, uint buf_size);
+
+/**
+ * cli_cread_uninit() - Free resources allocated by cli_cread_init_undo()
+ *
+ * @cls: CLI line state
+ */
+void cli_cread_uninit(struct cli_line_state *cls);
+
+/**
  * cli_cread_add_initial() - Output initial buffer contents
  *
  * Called after cli_cread_init() to output the initial text in the buffer and
@@ -300,5 +423,94 @@ void cli_cread_add_initial(struct cli_line_state *cls);
 
 /** cread_print_hist_list() - Print the command-line history list */
 void cread_print_hist_list(void);
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+/**
+ * cread_save_undo() - Save current state for undo
+ *
+ * Saves the buffer contents and cursor position to the undo ring buffer.
+ * Each call pushes a new undo state that can be restored with Ctrl+Z.
+ * Also clears the redo buffer since a new edit invalidates redo history.
+ *
+ * @cls: CLI line state
+ */
+void cread_save_undo(struct cli_line_state *cls);
+
+/**
+ * cread_restore_undo() - Restore previous state from undo buffer
+ *
+ * Restores the buffer contents and cursor position from the most recent
+ * undo state. Multiple calls restore progressively older states. The
+ * current state is saved to the redo buffer before restoring.
+ *
+ * @cls: CLI line state
+ */
+void cread_restore_undo(struct cli_line_state *cls);
+
+/**
+ * cread_redo() - Redo previously undone change
+ *
+ * Restores the buffer contents and cursor position from the redo buffer.
+ * The current state is saved to the undo buffer before restoring.
+ *
+ * @cls: CLI line state
+ */
+void cread_redo(struct cli_line_state *cls);
+
+/**
+ * cread_save_yank() - Save killed text to yank buffer
+ *
+ * Saves the specified text so it can be yanked (pasted) later with Ctrl+Y.
+ *
+ * @cls: CLI line state
+ * @text: Text to save
+ * @len: Length of text
+ */
+void cread_save_yank(struct cli_line_state *cls, const char *text, uint len);
+
+/**
+ * cread_yank() - Insert yanked text at cursor position
+ *
+ * Inserts the previously killed text at the current cursor position.
+ *
+ * @cls: CLI line state
+ */
+void cread_yank(struct cli_line_state *cls);
+
+/**
+ * cread_clear_redo() - Clear the redo buffer
+ *
+ * Called when a new edit is made to invalidate the redo history. This should
+ * be called for any edit operation that modifies the buffer.
+ *
+ * @cls: CLI line state
+ */
+void cread_clear_redo(struct cli_line_state *cls);
+#else
+static inline void cread_save_undo(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_restore_undo(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_redo(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_save_yank(struct cli_line_state *cls, const char *text,
+				   uint len)
+{
+}
+
+static inline void cread_yank(struct cli_line_state *cls)
+{
+}
+
+static inline void cread_clear_redo(struct cli_line_state *cls)
+{
+}
+#endif
 
 #endif

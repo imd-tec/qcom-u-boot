@@ -11,12 +11,19 @@
 #include <cli.h>
 #include <expo.h>
 #include <log.h>
+#include <malloc.h>
 #include <menu.h>
 #include <video_console.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include "scene_internal.h"
+
+#ifdef CONFIG_CMDLINE_UNDO_COUNT
+#define UNDO_COUNT	CONFIG_CMDLINE_UNDO_COUNT
+#else
+#define UNDO_COUNT	64
+#endif
 
 int scene_txtin_init(struct scene_txtin *tin, uint size, uint line_chars)
 {
@@ -112,6 +119,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 			    struct scene_txtin *tin)
 {
 	struct cli_line_state *cls = &tin->cls;
+	struct cli_editor_state *ed = cli_editor(cls);
 	const bool open = obj->flags & SCENEOF_OPEN;
 	struct udevice *cons = scn->expo->cons;
 	void *ctx = tin->ctx;
@@ -121,7 +129,7 @@ int scene_txtin_render_deps(struct scene *scn, struct scene_obj *obj,
 	if (open) {
 		scene_render_obj(scn, tin->edit_id, ctx);
 
-		if (cls->multiline) {
+		if (ed->multiline) {
 			/* for multiline, set cursor position directly */
 			struct scene_obj_txt *txt;
 
@@ -160,6 +168,10 @@ static void scene_txtin_putch(struct cli_line_state *cls, int ch)
 
 void scene_txtin_close(struct scene *scn, struct scene_txtin *tin)
 {
+	struct cli_line_state *cls = &tin->cls;
+
+	cli_cread_uninit(cls);
+
 	/* cursor is not needed now */
 	vidconsole_readline_end(scn->expo->cons, tin->ctx);
 }
@@ -260,10 +272,11 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 		     struct scene_txtin *tin)
 {
 	struct cli_line_state *cls = &tin->cls;
+	struct cli_editor_state *ed = cli_editor(cls);
 	struct udevice *cons = scn->expo->cons;
 	struct scene_obj_txt *txt;
 	void *ctx;
-	int ret;
+	int ret, i;
 
 	ctx = tin->ctx;
 	if (!ctx) {
@@ -284,13 +297,34 @@ int scene_txtin_open(struct scene *scn, struct scene_obj *obj,
 
 	vidconsole_set_cursor_pos(cons, ctx, txt->obj.bbox.x0, txt->obj.bbox.y0);
 	vidconsole_entry_start(cons, ctx);
-	cli_cread_init(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
+	cli_cread_init_undo(cls, abuf_data(&tin->buf), abuf_size(&tin->buf));
 	cls->insert = true;
-	cls->putch = scene_txtin_putch;
+	ed->putch = scene_txtin_putch;
 	cls->priv = scn;
+
+	/* Initialise undo ring buffer */
+	alist_init_struct(&ed->undo.pos, struct cli_undo_pos);
+	for (i = 0; i < UNDO_COUNT; i++) {
+		struct cli_undo_pos *pos;
+
+		pos = alist_ensure(&ed->undo.pos, i, struct cli_undo_pos);
+		abuf_init_size(&pos->buf, abuf_size(&tin->buf));
+	}
+
+	/* Initialise redo ring buffer */
+	alist_init_struct(&ed->redo.pos, struct cli_undo_pos);
+	for (i = 0; i < UNDO_COUNT; i++) {
+		struct cli_undo_pos *pos;
+
+		pos = alist_ensure(&ed->redo.pos, i, struct cli_undo_pos);
+		abuf_init_size(&pos->buf, abuf_size(&tin->buf));
+	}
+
+	/* yank buffer is initialised by cli_cread_init_undo() above */
+
 	if (obj->type == SCENEOBJT_TEXTEDIT) {
-		cls->multiline = true;
-		cls->line_nav = scene_txtin_line_nav;
+		ed->multiline = true;
+		ed->line_nav = scene_txtin_line_nav;
 	}
 	cli_cread_add_initial(cls);
 
@@ -340,12 +374,37 @@ int scene_txtin_send_key(struct scene_obj *obj, struct scene_txtin *tin,
 			log_debug("menu quit\n");
 		}
 		break;
-	case BKEY_SELECT:
+	case BKEY_SAVE:
 		if (!open)
 			break;
+		/* Accept contents even in multiline mode */
 		event->type = EXPOACT_CLOSE;
 		event->select.id = obj->id;
 		scene_txtin_close(scn, tin);
+		break;
+	case BKEY_SELECT:
+		if (!open)
+			break;
+		if (obj->flags & SCENEOF_MULTILINE) {
+			char *buf = cls->buf;
+			int wlen = cls->eol_num - cls->num;
+
+			/* Insert newline at cursor position */
+			memmove(&buf[cls->num + 1], &buf[cls->num], wlen);
+			buf[cls->num] = '\n';
+			cls->num++;
+			cls->eol_num++;
+		} else {
+			event->type = EXPOACT_CLOSE;
+			event->select.id = obj->id;
+			scene_txtin_close(scn, tin);
+		}
+		break;
+	case BKEY_UP:
+		cread_line_process_ch(cls, CTL_CH('p'));
+		break;
+	case BKEY_DOWN:
+		cread_line_process_ch(cls, CTL_CH('n'));
 		break;
 	default:
 		cread_line_process_ch(cls, key);

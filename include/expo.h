@@ -321,6 +321,7 @@ enum scene_obj_align {
  * @SCENEOF_MANUAL: manually arrange the items associated with this object
  * @SCENEOF_DIRTY: object has been modified and needs to be redrawn
  * @SCENEOF_PASSWORD: textline input should show stars instead of characters
+ * @SCENEOF_MULTILINE: textedit allows multiline input (Enter adds newline)
  * @SCENEOF_LAST: used just as a check for the size of the flags mask
  */
 enum scene_obj_flags_t {
@@ -335,6 +336,7 @@ enum scene_obj_flags_t {
 	SCENEOF_MANUAL		= BIT(8),
 	SCENEOF_DIRTY		= BIT(9),
 	SCENEOF_PASSWORD	= BIT(10),
+	SCENEOF_MULTILINE	= BIT(11),
 
 	SCENEOF_LAST,	/* check for size of flags below */
 };
@@ -1180,6 +1182,70 @@ int expo_setup_theme(struct expo *exp, ofnode node);
  * Returns: 0 if OK, -ve on error
  */
 int expo_apply_theme(struct expo *exp, bool do_objs);
+
+/**
+ * struct editenv_info - Context for environment-variable editing
+ *
+ * @exp: Expo being used
+ * @scn: Scene in the expo
+ * @ted: Textedit object for editing
+ */
+struct editenv_info {
+	struct expo *exp;
+	struct scene *scn;
+	struct scene_obj_txtedit *ted;
+};
+
+/**
+ * expo_editenv_init() - Set up a new editenv expo
+ *
+ * @varname: Name of the variable to edit
+ * @value: Initial value (may be NULL)
+ * @info: Returns info about the editenv state
+ * Return: 0 if OK, -ve on error
+ */
+int expo_editenv_init(const char *varname, const char *value,
+		      struct editenv_info *info);
+
+/**
+ * expo_editenv_poll() - Poll for user input
+ *
+ * @info: Editenv info
+ * Return: 0 if editing is complete, -EAGAIN if more polling is needed,
+ *	-ECANCELED if user quit, other -ve on error
+ */
+int expo_editenv_poll(struct editenv_info *info);
+
+/**
+ * expo_editenv_uninit() - Free resources used by editenv
+ *
+ * @info: Editenv info
+ */
+void expo_editenv_uninit(struct editenv_info *info);
+
+/**
+ * expo_editenv_result() - Get the result string from editenv
+ *
+ * @info: Editenv info
+ * Return: Pointer to the edited string
+ */
+const char *expo_editenv_result(struct editenv_info *info);
+
+/**
+ * expo_editenv() - Edit an environment variable using expo
+ *
+ * Creates a simple expo with a textedit object to edit the variable.
+ * This is a convenience function that calls expo_editenv_init(),
+ * expo_editenv_poll() in a loop, and expo_editenv_uninit().
+ *
+ * @varname: Name of the variable to edit
+ * @value: Initial value (may be NULL)
+ * @buf: Buffer to receive the edited text
+ * @size: Size of buf
+ * Return: 0 if OK and text was edited, -ECANCELED if cancelled, other -ve on
+ *	error
+ */
+int expo_editenv(const char *varname, const char *value, char *buf, int size);
 
 /**
  * expo_build() - Build an expo from an FDT description

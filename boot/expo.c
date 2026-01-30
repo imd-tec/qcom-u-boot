@@ -498,10 +498,12 @@ static int poll_keys(struct expo *exp)
 
 	ichar = cli_ch_process(&exp->cch, 0);
 	if (!ichar) {
-		/* Check once for available input */
-		if (tstc()) {
+		/* Read all available input to keep up with key repeat */
+		while (tstc()) {
 			ch = getchar();
 			ichar = cli_ch_process(&exp->cch, ch);
+			if (ichar)
+				break;
 		}
 
 		if (!ch && get_timer(exp->last_key_ms) >= 10)

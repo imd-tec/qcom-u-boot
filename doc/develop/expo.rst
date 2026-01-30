@@ -366,6 +366,9 @@ type
     "textline"
         A line of text which can be edited
 
+    "textedit"
+        A multi-line text editor
+
     "box"
         A rectangle with a given line width (not filled)
 
@@ -445,6 +448,17 @@ max-chars:
 
     Specifies the maximum number of characters permitted to be in the textline.
     The user will be prevented from adding more.
+
+Textedit nodes have the same properties as textline nodes, with the following
+differences:
+
+- The editor supports multiple lines of text
+- Pressing Enter inserts a newline instead of closing the editor
+- Home/End move to start/end of the current line
+- Ctrl+K kills to end of the current line (not entire buffer)
+- Up/Down (Ctrl+P/N) navigate between lines
+
+See :doc:`../usage/cmdline` for a full list of editing keys.
 
 Box nodes have the following additional properties:
 
@@ -823,6 +837,13 @@ after failure), and ``-F`` (skip flat-tree tests). See
 For example, to watch an expo test render with a visible display::
 
     ./u-boot -T -l -V 500 --video_frames /tmp/good -c "ut bootstd expo_render_image"
+
+When using ``-V`` or with ``LOG_DEBUG`` enabled, some video tests call
+ut_check_video() to display a message at the top right corner of the screen
+identifying the current frame check. This helps identify which assertion is
+being displayed when debugging test failures. The message is automatically
+removed after the delay, so it does not affect the framebuffer checksums used by
+video tests.
 
 The :doc:`../usage/cmd/sb` ``grid`` subcommand can be used to overlay a grid on
 the display, to help with checking alignment of objects. The grid size defaults

@@ -87,6 +87,8 @@ void ut_uninit_state(struct unit_test_state *uts)
 		os_free(uts->fdt_copy);
 		os_free(uts->other_fdt);
 	}
+	/* video_ctx is freed when the vidconsole is unbound */
+	abuf_uninit(&uts->video_save);
 }
 
 /**

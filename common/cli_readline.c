@@ -79,8 +79,10 @@ static char *delete_char (char *buffer, char *p, int *colp, int *np, int plen)
  */
 static void cls_putch(struct cli_line_state *cls, int ch)
 {
-	if (CONFIG_IS_ENABLED(CLI_READLINE_CALLBACK) && cls->putch)
-		cls->putch(cls, ch);
+	struct cli_editor_state *ed = cli_editor(cls);
+
+	if (ed && ed->putch)
+		ed->putch(cls, ch);
 	else
 		putc(ch);
 }
@@ -110,6 +112,14 @@ static unsigned hist_num;
 static char hist_data[HIST_MAX][HIST_SIZE + 1];
 #endif
 static char *hist_list[HIST_MAX];
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+#ifdef CONFIG_CMDLINE_UNDO_COUNT
+#define UNDO_COUNT	CONFIG_CMDLINE_UNDO_COUNT
+#else
+#define UNDO_COUNT	64
+#endif
+#endif
 
 #define add_idx_minus_one() ((hist_add_idx == 0) ? hist_max : hist_add_idx-1)
 
@@ -229,13 +239,86 @@ void cread_print_hist_list(void)
 	}
 }
 
-#define BEGINNING_OF_LINE() {			\
-	while (cls->num) {			\
+#define GOTO_LINE_START(target) {		\
+	while (cls->num > (target)) {		\
 		cls_putch(cls, CTL_BACKSPACE);	\
 		cls->num--;			\
 	}					\
 }
 
+#define ERASE_TO(erase_to) {					\
+	if (cls->num < (erase_to)) {				\
+		uint wlen = (erase_to) - cls->num;		\
+								\
+		/* erase characters on screen */		\
+		printf("%*s", wlen, "");			\
+		while (wlen--)					\
+			cls_putch(cls, CTL_BACKSPACE);		\
+								\
+		/* remove characters from buffer */		\
+		memmove(&buf[cls->num], &buf[erase_to],		\
+			cls->eol_num - (erase_to) + 1);		\
+		cls->eol_num -= (erase_to) - cls->num;		\
+	}							\
+}
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+/**
+ * cread_start_of_line() - Move cursor to start of line
+ *
+ * In multiline mode, moves to the character after the previous newline.
+ * Otherwise moves to position 0.
+ *
+ * @cls: CLI line state
+ */
+static void cread_start_of_line(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	uint target = 0;
+
+	if (ed && ed->multiline) {
+		char *buf = cls->buf;
+		uint i;
+
+		/* find previous newline */
+		for (i = cls->num; i > 0; i--) {
+			if (buf[i - 1] == '\n') {
+				target = i;
+				break;
+			}
+		}
+	}
+	GOTO_LINE_START(target);
+}
+#define BEGINNING_OF_LINE() cread_start_of_line(cls)
+#else
+#define BEGINNING_OF_LINE() GOTO_LINE_START(0)
+#endif
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+static void cread_erase_to_eol(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	char *buf = cls->buf;
+	uint erase_to;
+
+	if (cls->num >= cls->eol_num)
+		return;
+
+	/*
+	 * In multiline mode, only erase to end of current line (next newline
+	 * or end of buffer)
+	 */
+	erase_to = cls->eol_num;
+	if (ed && ed->multiline) {
+		char *nl = strchr(&buf[cls->num], '\n');
+
+		if (nl)
+			erase_to = nl - buf;
+	}
+	ERASE_TO(erase_to);
+}
+#else
 static void cread_erase_to_eol(struct cli_line_state *cls)
 {
 	if (cls->num < cls->eol_num) {
@@ -245,14 +328,45 @@ static void cread_erase_to_eol(struct cli_line_state *cls)
 		} while (--cls->eol_num > cls->num);
 	}
 }
+#endif
 
-#define REFRESH_TO_EOL() {				\
-	if (cls->num < cls->eol_num) {			\
-		uint wlen = cls->eol_num - cls->num;	\
+#define GOTO_LINE_END(target) {				\
+	if (cls->num < (target)) {			\
+		uint wlen = (target) - cls->num;	\
 		cls_putnstr(cls, buf + cls->num, wlen);	\
-		cls->num = cls->eol_num;		\
+		cls->num = (target);			\
 	}						\
 }
+
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+/**
+ * cread_end_of_line() - Move cursor to end of line
+ *
+ * In multiline mode, moves to the next newline character.
+ * Otherwise moves to end of buffer.
+ *
+ * @cls: CLI line state
+ */
+static void cread_end_of_line(struct cli_line_state *cls)
+{
+	struct cli_editor_state *ed = cli_editor(cls);
+	char *buf = cls->buf;
+	uint target = cls->eol_num;
+
+	if (ed && ed->multiline) {
+		char *nl = strchr(&buf[cls->num], '\n');
+
+		if (nl)
+			target = nl - buf;
+	}
+	GOTO_LINE_END(target);
+}
+#define REFRESH_TO_EOL() cread_end_of_line(cls)
+#else
+#define REFRESH_TO_EOL() GOTO_LINE_END(cls->eol_num)
+#endif
+
+/* undo/redo/yank functions are in cli_undo.c when CMDLINE_EDITOR is enabled */
 
 static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 			   uint *num, uint *eol_num, char *buf, uint len)
@@ -267,6 +381,9 @@ static void cread_add_char(struct cli_line_state *cls, char ichar, int insert,
 		}
 		(*eol_num)++;
 	}
+
+	/* new edit invalidates redo history */
+	cread_clear_redo(cls);
 
 	if (insert) {
 		wlen = *eol_num - *num;
@@ -299,6 +416,7 @@ static void cread_add_str(struct cli_line_state *cls, char *str, int strsize,
 
 int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 {
+	struct cli_editor_state *ed;
 	char *buf = cls->buf;
 
 	/* ichar=0x0 when error occurs in U-Boot getc */
@@ -330,10 +448,42 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			cls->num--;
 		}
 		break;
+	case CTL_CH('r'):	/* backward-word */
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cls->num) {
+			uint pos = cls->num;
+
+			/* skip spaces before word */
+			while (pos > 0 && buf[pos - 1] == ' ')
+				pos--;
+			/* skip word characters */
+			while (pos > 0 && buf[pos - 1] != ' ')
+				pos--;
+			cls_putchars(cls, cls->num - pos, CTL_BACKSPACE);
+			cls->num = pos;
+		}
+		break;
+	case CTL_CH('t'):	/* forward-word */
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cls->num < cls->eol_num) {
+			uint pos = cls->num;
+
+			/* skip spaces after cursor */
+			while (pos < cls->eol_num && buf[pos] == ' ') {
+				cls_putch(cls, buf[pos]);
+				pos++;
+			}
+			/* skip word characters */
+			while (pos < cls->eol_num && buf[pos] != ' ') {
+				cls_putch(cls, buf[pos]);
+				pos++;
+			}
+			cls->num = pos;
+		}
+		break;
 	case CTL_CH('d'):
 		if (cls->num < cls->eol_num) {
 			uint wlen;
 
+			cread_save_undo(cls);
 			wlen = cls->eol_num - cls->num - 1;
 			if (wlen) {
 				memmove(&buf[cls->num], &buf[cls->num + 1],
@@ -348,9 +498,21 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			cls->eol_num--;
 		}
 		break;
-	case CTL_CH('k'):
+	case CTL_CH('k'): {
+		uint erase_to = cls->eol_num;
+
+		ed = cli_editor(cls);
+		if (ed && ed->multiline) {
+			char *nl = strchr(&buf[cls->num], '\n');
+
+			if (nl)
+				erase_to = nl - buf;
+		}
+		cread_save_undo(cls);
+		cread_save_yank(cls, &buf[cls->num], erase_to - cls->num);
 		cread_erase_to_eol(cls);
 		break;
+	}
 	case CTL_CH('e'):
 		REFRESH_TO_EOL();
 		break;
@@ -361,6 +523,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		if (cls->num) {
 			uint base, wlen;
 
+			cread_save_undo(cls);
 			for (base = cls->num - 1;
 			     base >= 0 && buf[base] == ' ';)
 				base--;
@@ -369,6 +532,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 
 			/* now delete chars from base to cls->num */
 			wlen = cls->num - base;
+			cread_save_yank(cls, &buf[base], wlen);
 			cls->eol_num -= wlen;
 			memmove(&buf[base], &buf[cls->num],
 				cls->eol_num - base + 1);
@@ -381,7 +545,29 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		}
 		break;
 	case CTL_CH('x'):
+		if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+			cread_save_undo(cls);
+			cread_save_yank(cls, buf, cls->eol_num);
+			BEGINNING_OF_LINE();
+			cread_erase_to_eol(cls);
+		}
+		break;
+	case CTL_CH('y'):
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+		cread_yank(cls);
+#endif
+		break;
+	case CTL_CH('z'):
+		cread_restore_undo(cls);
+		break;
+	case CTL_CH('g'):
+#if CONFIG_IS_ENABLED(CMDLINE_EDITOR)
+		cread_redo(cls);
+#endif
+		break;
 	case CTL_CH('u'):
+		cread_save_undo(cls);
+		cread_save_yank(cls, buf, cls->eol_num);
 		BEGINNING_OF_LINE();
 		cread_erase_to_eol(cls);
 		break;
@@ -391,6 +577,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		if (cls->num) {
 			uint wlen;
 
+			cread_save_undo(cls);
 			wlen = cls->eol_num - cls->num;
 			cls->num--;
 			memmove(&buf[cls->num], &buf[cls->num + 1], wlen);
@@ -405,10 +592,11 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 		break;
 	case CTL_CH('p'):
 	case CTL_CH('n'):
-		if (cls->multiline && cls->line_nav) {
+		ed = cli_editor(cls);
+		if (ed && ed->multiline && ed->line_nav) {
 			int new_num;
 
-			new_num = cls->line_nav(cls, ichar == CTL_CH('p'));
+			new_num = ed->line_nav(cls, ichar == CTL_CH('p'));
 			if (new_num < 0) {
 				getcmd_cbeep(cls);
 				break;
@@ -434,6 +622,8 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 				getcmd_cbeep(cls);
 				break;
 			}
+
+			cread_save_undo(cls);
 
 			/* nuke the current line */
 			/* first, go home */
@@ -462,6 +652,7 @@ int cread_line_process_ch(struct cli_line_state *cls, char ichar)
 			buf[cls->num] = '\0';
 			col = strlen(cls->prompt) + cls->eol_num;
 			num2 = cls->num;
+			cread_save_undo(cls);
 			if (cmd_auto_complete(cls->prompt, buf, &num2, &col)) {
 				col = num2 - cls->num;
 				cls->num += col;
@@ -491,6 +682,32 @@ void cli_cread_init(struct cli_line_state *cls, char *buf, uint buf_size)
 	cls->insert = true;
 	cls->buf = buf;
 	cls->len = buf_size;
+}
+
+void cli_cread_init_undo(struct cli_line_state *cls, char *buf, uint buf_size)
+{
+	cli_cread_init(cls, buf, buf_size);
+	if (CONFIG_IS_ENABLED(CMDLINE_UNDO)) {
+		struct cli_editor_state *ed = cli_editor(cls);
+
+		abuf_init_size(&ed->yank, buf_size);
+	}
+}
+
+void cli_cread_uninit(struct cli_line_state *cls)
+{
+	if (CONFIG_IS_ENABLED(CMDLINE_EDITOR)) {
+		struct cli_editor_state *ed = cli_editor(cls);
+		struct cli_undo_pos *pos;
+
+		alist_for_each(pos, &ed->undo.pos)
+			abuf_uninit(&pos->buf);
+		alist_uninit(&ed->undo.pos);
+		alist_for_each(pos, &ed->redo.pos)
+			abuf_uninit(&pos->buf);
+		alist_uninit(&ed->redo.pos);
+		abuf_uninit(&ed->yank);
+	}
 }
 
 void cli_cread_add_initial(struct cli_line_state *cls)

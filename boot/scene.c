@@ -110,6 +110,8 @@ void scene_obj_destroy(struct scene_obj *obj)
 	else if (obj->type == SCENEOBJT_TEXTLINE ||
 		 obj->type == SCENEOBJT_TEXTEDIT)
 		scene_txtin_destroy(obj->scene, scene_obj_txtin(obj));
+	if (obj->type == SCENEOBJT_TEXT)
+		alist_uninit(&((struct scene_obj_txt *)obj)->gen.lines);
 	free(obj->name);
 	free(obj);
 }

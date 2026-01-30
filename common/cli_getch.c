@@ -114,6 +114,12 @@ static int cli_ch_esc(struct cli_ch_state *cch, int ichar,
 			if (cch->esc_save[2] == '2')
 				act = ESC_SAVE;
 			break;
+		case ';':
+			/* Ctrl+arrow: ESC [ 1 ; */
+			if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) &&
+			    cch->esc_save[2] == '1')
+				act = ESC_SAVE;
+			break;
 		}
 		break;
 	case 4:
@@ -122,12 +128,46 @@ static int cli_ch_esc(struct cli_ch_state *cch, int ichar,
 		case '1':
 			act = ESC_SAVE;
 			break;		/* bracketed paste */
+		case '5':
+			/* Ctrl+arrow: ESC [ 1 ; 5 */
+			if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) &&
+			    cch->esc_save[3] == ';')
+				act = ESC_SAVE;
+			break;
+		case '6':
+			/* Ctrl+Shift+key: ESC [ 1 ; 6 */
+			if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) &&
+			    cch->esc_save[3] == ';')
+				act = ESC_SAVE;
+			break;
 		}
 		break;
 	case 5:
 		if (ichar == '~') {	/* bracketed paste */
 			ichar = 0;
 			act = ESC_CONVERTED;
+		}
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cch->esc_save[4] == '5') {
+			/* Ctrl+arrow: ESC [ 1 ; 5 D/C */
+			switch (ichar) {
+			case 'D':	/* Ctrl+<- key */
+				ichar = CTL_CH('r');
+				act = ESC_CONVERTED;
+				break;	/* pass to backward-word handler */
+			case 'C':	/* Ctrl+-> key */
+				ichar = CTL_CH('t');
+				act = ESC_CONVERTED;
+				break;	/* pass to forward-word handler */
+			}
+		}
+		if (CONFIG_IS_ENABLED(CMDLINE_EDITOR) && cch->esc_save[4] == '6') {
+			/* Ctrl+Shift+key: ESC [ 1 ; 6 x */
+			switch (ichar) {
+			case 'z':	/* Ctrl+Shift+Z: redo */
+				ichar = CTL_CH('g');
+				act = ESC_CONVERTED;
+				break;
+			}
 		}
 	}
 
