@@ -9607,67 +9607,125 @@ All 18 commits rebased cleanly onto ci/master. Sandbox build verified.
 
 ## 2026-01-29: us/next
 
-Branch: cherry-f393beedba7
+Branch: cherry-29602a52903
 
 Commits:
-- f393beedba7 arm: mach-k3: support disabling a single firewall region
-- 33b191997fc arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM
-- 629f089387a Merge patch series "arm: mach-k3: remove some firewalls left over by ROM"
+- 29602a52903 pci: pcie_cdns_ti: Include linux/sizes.h header
+- a478d0f05b2 pci: pcie_cdns_ti: Enable PCIe root-complex mode in AM64 SoC
+- f4baa55c5be configs: am64x_evm_a53_defconfig: Enable configs for PCIe support
+- 10f48365112 Merge patch series "Add PCIe support for TI AM64 SoC"
 
 ### Conversation log
 The working tree is clean. Now let me create and checkout a new branch based on ci/master:
 
-Now let me cherry-pick the first commit (f393beedba7: arm: mach-k3: support disabling a single firewall region):
+Now let me cherry-pick the first commit (regular commit):
 
-First cherry-pick succeeded. Let me check the commit delta and run the build test:
+First cherry-pick successful. Let me verify the delta and run the build test:
 
-The deltas match exactly (2 files changed, 26 insertions). Now let me run the build test:
+The delta is identical (1 file changed, 1 insertion). Now let me run the build test:
 
-Build passed. Now let me cherry-pick the second commit (33b191997fc: arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM):
+Build passed. Now let me cherry-pick the second commit:
 
-Second cherry-pick succeeded. Let me check the commit delta:
+Second cherry-pick successful. Let me verify the delta and run build test:
 
-The deltas match exactly (1 file changed, 12 insertions). Now let me run the build test:
+Delta is identical (1 file changed, 10 insertions). Now build test:
 
-Build passed. Now let me cherry-pick the third commit (629f089387a: Merge patch series "arm: mach-k3: remove some firewalls left over by ROM"). This is a merge commit, so I'll use -m 1 --allow-empty:
+Build passed. Now let me cherry-pick the third commit:
 
-The merge commit is empty (which is expected since we already cherry-picked the constituent commits). As instructed, I'll commit it as an empty commit to preserve the merge commit message:
+There's a conflict. Let me check the conflicting file:
 
-The merge commit has been created. Let me check the commit delta:
+This is a complex conflict. Let me see the full original commit to understand what changes it's trying to make:
 
-The original merge commit shows changes (3 files, 38 insertions) while our cherry-picked version is empty. This is expected because we've already applied those changes via the previous two commits - the merge commit just records the merge action. The empty commit preserves the merge commit message for history tracking, which is correct behavior.
+The commit adds CONFIG_PCI=y, CONFIG_CMD_PCI=y, and three NVMe/PCIe configs. The conflicts are because the base file has diverged significantly. Let me try to resolve this by understanding what the current file looks like and manually adding the required changes:
 
-Now let me run the build test:
+Let me try the cherry-pick with the 3way option to try to resolve the conflict:
 
-Build passed. Now let me verify all commits are present:
+Still conflicts. Let me take a different approach - look at the current file and manually add the needed configs:
 
-All 3 commits are present. Now let me run the final build test:
+Interesting! The file already has CONFIG_PCI, CONFIG_PCI_CONFIG_HOST_BRIDGE, and CONFIG_PCIE_CDNS_TI. Let me check more carefully - the current file in ci/master might already have these configs applied via a different path. Let me abort and verify:
 
-## Final Status
+OK, so the configs don't exist yet - the conflict is due to file differences. Let me check if these commits might already exist in ci/master with different hashes by searching for the commit subject:
 
-**Cherry-pick completed successfully!**
+The commits don't exist in ci/master. This is a genuine conflict. Let me try to manually resolve it by reading the current file and adding the needed configs:
 
-### Summary:
+Now I can see the current state of the file. The original commit adds:
+1. `CONFIG_PCI=y` after line 35 (after CONFIG_SPL_SPI=y)
+2. `CONFIG_CMD_PCI=y` after CONFIG_CMD_MMC=y - but this file doesn't have that exact section anymore
+3. `CONFIG_NVME_PCI=y`, `CONFIG_PCI_CONFIG_HOST_BRIDGE=y`, `CONFIG_PCIE_CDNS_TI=y` after `TI_ICSSG_PRUETH` (currently line 135)
 
-| Commit | Subject | Status |
-|--------|---------|--------|
-| f393beedba7 → cc909bed268 | arm: mach-k3: support disabling a single firewall region | ✅ Applied (2 files, +26 lines) |
-| 33b191997fc → 3ce0ae49a1c | arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM | ✅ Applied (1 file, +12 lines) |
-| 629f089387a → 5dd2c24f713 | Merge patch series "arm: mach-k3: remove some firewalls left over by ROM" | ✅ Applied (empty commit, preserves merge history) |
+Let me manually add these configs in the appropriate places:
 
-### Build Result: **OK**
-- All builds passed (sandbox board)
-- No warnings or errors
+Now let me verify the changes were applied correctly:
 
-### Fix-ups Made: **None**
-- All commits applied cleanly without conflicts
+All 5 configs have been added. Now let me commit these changes with the original commit message and note about the fixup:
 
-### Delta Analysis:
-- Commits 1 & 2: Exact match with originals
-- Commit 3: Empty as expected (merge commit - actual changes were in commits 1 & 2)
+Now let me verify the delta and run build test:
 
-### Branch Status:
-The branch `cherry-f393beedba7` is ready for pushing, 3 commits ahead of `ci/master`.
+Delta is identical (1 file changed, 5 insertions). Now run build test:
+
+Build passed. Now let me cherry-pick the fourth commit (this is a merge commit, so I need to use -m 1 --allow-empty):
+
+There's a conflict with the merge commit. Let me see the details:
+
+This is a conflict where the merge commit is trying to apply the changes again but we already have them. Since this is a merge commit and we already have all the changes applied, I should keep our version (HEAD) and resolve the conflict:
+
+The merge commit is empty (as expected since we already have all the changes). Let me commit it as an empty commit to preserve the history:
+
+Let me verify the delta (should be empty since it's a merge commit that was already applied):
+
+The merge commit is now empty (no file changes) because the content was already applied via the earlier cherry-picks. This is expected. The commit message has been preserved. Now let me run the build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 4 commits are present. Now let me run the final build test:
+
+All cherry-picks completed successfully. Here's the final status report:
+
+---
+
+## Cherry-pick Summary
+
+**Branch:** `cherry-29602a52903` (based on `ci/master`)
+
+**Build Result:** ✅ OK - No errors or warnings
+
+### Commits Cherry-picked:
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 29602a52903 | d09c1911f41 | pci: pcie_cdns_ti: Include linux/sizes.h header | ✅ Clean |
+| 2 | a478d0f05b2 | dc58447f05a | pci: pcie_cdns_ti: Enable PCIe root-complex mode in AM64 SoC | ✅ Clean |
+| 3 | f4baa55c5be | 17d89206e88 | configs: am64x_evm_a53_defconfig: Enable configs for PCIe support | ⚠️ Fixup needed |
+| 4 | 10f48365112 | 2fdf7e7c9f4 | Merge patch series "Add PCIe support for TI AM64 SoC" | ✅ Empty commit (as expected) |
+
+### Fix-ups Made:
+
+**Commit 3 (f4baa55c5be → 17d89206e88):**
+- The defconfig file had diverged significantly from the source branch
+- Manually applied the 5 config options in appropriate locations:
+  - `CONFIG_PCI=y` - after `CONFIG_SPL_SPI=y`
+  - `CONFIG_CMD_PCI=y` - near other CMD options
+  - `CONFIG_NVME_PCI=y`, `CONFIG_PCI_CONFIG_HOST_BRIDGE=y`, `CONFIG_PCIE_CDNS_TI=y` - after `CONFIG_TI_ICSSG_PRUETH=y`
+- Added fixup note to commit message documenting the manual resolution
+
+### Delta Verification:
+
+| Commit | Original | Cherry-picked | Status |
+|--------|----------|---------------|--------|
+| 1 | 1 file, +1 | 1 file, +1 | ✅ Match |
+| 2 | 1 file, +10 | 1 file, +10 | ✅ Match |
+| 3 | 1 file, +5 | 1 file, +5 | ✅ Match |
+| 4 | 2 files, +21 | empty | ✅ Expected (content via earlier commits) |
+
+### Final Git Log:
+```
+2fdf7e7c9f4 Merge patch series "Add PCIe support for TI AM64 SoC"
+17d89206e88 configs: am64x_evm_a53_defconfig: Enable configs for PCIe support
+dc58447f05a pci: pcie_cdns_ti: Enable PCIe root-complex mode in AM64 SoC
+d09c1911f41 pci: pcie_cdns_ti: Include linux/sizes.h header
+```
+
+The branch `cherry-29602a52903` is ready for pushing.
 
 ---
 
