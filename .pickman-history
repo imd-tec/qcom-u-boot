@@ -9812,3 +9812,149 @@ GitLab will automatically trigger a pipeline for the updated MR.
 
 ---
 
+## 2026-01-30: us/next
+
+Branch: cherry-d0969a6b64e
+
+Commits:
+- d0969a6b64e riscv: lib: Add a default implementation of board_fdt_blob_setup
+- 1ec65b26cf4 board: qemu: riscv: Remove duplicated board_fdt_blob_setup
+- 41cb90a27a7 board: starfive: Remove duplicated board_fdt_blob_setup
+- a7bc58409f5 board: sifive: Remove dead board_fdt_blob_setup
+- d1cea78af41 riscv: dts: k1: add pinctrl property in dts.
+- cffe38b7b3c config: Enable pinctrl in bananapi-f3
+- 107df8b3b16 MAINTAINERS: visionfive2: Add match N: starfive pattern
+- 5c8e1c46b16 configs: qemu-riscv raise CONFIG_NR_DRAM_BANKS
+- efe9c12322b riscv: dts: binman.dtsi: Switch to u-boot-nodtb entry for proper U-Boot
+- 97b433b4e30 riscv: dts: starfive: Prevent binman from relocating symbols in SPL
+- d3c597f08a5 riscv: Provide __image_copy_{start_end} symbols in linkerscript
+- ccb1769e854 configs: add jh7110-deepcomputing-fml13v01 to VF2 defconfig
+- d4bcf3b417f riscv: dts: jh7110: add DeepComputing FML13V01 device-tree
+- 3de6e675ed0 board: starfive: DeepComputing FML13V01 fdt selection
+- 26cd7afcce2 board: starfive: spl: support DeepComputing FML13V01
+- 9b0a451b9e1 doc: add DeepComputing FML13V01 documentation
+- 39b558c4164 doc: starfive: use consistent formatting
+- f0b86c4dd14 doc: starfive: use jh7110_common.rst
+- 95c1bb5f55d doc: jh7110: describe debug UART
+- 84028132aff doc: board: starfive: visionfive2: add missing format command to Flashing
+- 5ac699efe94 board: starfive: visionfive2: Order board detection logic to match config
+- 5a0a93a7684 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv
+
+### Conversation log
+Let me find the repository first:
+
+Good, I'm in a U-Boot repository. Let me create and checkout a new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks good. Let me run the build test:
+
+Build passes. Now cherry-pick the second commit:
+
+Third commit:
+
+Fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+There's a conflict. The file was deleted in ci/master but modified in the commit. Let me check what happened:
+
+The file `starfive-visionfive2-binman.dtsi` was deleted in ci/master. Let me check if it still exists in ci/master or if it was renamed/removed:
+
+So 373dd552b08 created the file. Let me check if ci/master has a different version of this file:
+
+The file doesn't exist in ci/master. Let me check what's the history of that file in ci/master:
+
+The file was never in ci/master. The commit 97b433b4e30 modifies a file that was created in a different branch but doesn't exist in ci/master. Let me check the current content of the file in the cherry-pick:
+
+This is the version with the change from 97b433b4e30. The change added `no-write-symbols;` to the `u-boot-spl` section. Since the file doesn't exist in ci/master's base but the commit creates it, I need to add this file:
+
+Wait, the file was created (27 insertions) instead of just adding 1 line. Let me check the delta:
+
+This is a significant delta - 27 insertions vs 1 insertion. The original commit only added 1 line to an existing file, but we created the entire file. This is problematic because the original commit depends on a previous commit that created the file (which is in us/next but not in ci/master).
+
+Let me check what the original file looked like before the commit:
+
+The file existed before the commit, and the commit just added `no-write-symbols;`. The problem is that the file doesn't exist in ci/master base. The current cherry-picked version includes the file WITH the change, which includes more code than the original commit intended.
+
+However, since this file is needed for the change to work and we've created it with the correct final content (including the `no-write-symbols;` line), this should be acceptable. The delta is large because we're also bringing in the prerequisite file content.
+
+Let me verify the file now has the key change:
+
+Good, the key change is present. Let me amend the commit to note the fix-up:
+
+Eleventh commit:
+
+Twelfth commit:
+
+Thirteenth commit:
+
+Fourteenth commit:
+
+Fifteenth commit:
+
+Sixteenth commit:
+
+Seventeenth commit:
+
+Eighteenth commit:
+
+Nineteenth commit:
+
+Twentieth commit:
+
+Twenty-first commit:
+
+Twenty-second and final commit - this is a merge commit marked as "maybe already applied as ad61e1d21a9". Let me first verify if it's the same commit:
+
+These are different commits - ad61e1d21a9 is a different merge commit with a different message and different merge resolution. Let me try to cherry-pick the original merge commit:
+
+I can see the conflict. The merge commit's content is adding duplicate entries that we already have from the previous cherry-picks. The HEAD version already has the correct changes from commit 5ac699efe94 (which we cherry-picked as commit 21). The merge conflict is showing duplicate code.
+
+Looking at the conflict, the HEAD version has the correct, complete implementation. The incoming version from the merge is adding duplicate/old code. Let me resolve this by keeping HEAD's version:
+
+The merge commit is now empty because all the changes it brings are already applied via the individual cherry-picks. As per instructions, we should preserve the merge commit with --allow-empty:
+
+Now let me verify all 22 commits are present and run the final build:
+
+All 22 commits are present. Now run the final build test:
+
+## Summary
+
+All 22 cherry-picks completed successfully.
+
+**Build Result:** ✅ OK - sandbox build passes
+
+**Fix-ups Made:**
+1. **Commit 10 (97b433b4e30)** - `riscv: dts: starfive: Prevent binman from relocating symbols in SPL`
+   - The file `starfive-visionfive2-binman.dtsi` was missing from ci/master base
+   - Created the full file (27 insertions) including the `no-write-symbols;` change
+   - Delta: 27 insertions vs original 1 insertion (prerequisite file was missing)
+   - Commit message amended with note about the fix-up
+
+2. **Commit 22 (5a0a93a7684)** - Merge commit `Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv`
+   - Merge conflict in `board/starfive/visionfive2/spl.c` due to duplicate code
+   - Resolved by keeping our version (all changes already applied via individual cherry-picks)
+   - Resulted in empty commit, preserved with `--allow-empty` as instructed
+   - Note added that all changes were already applied via individual cherry-picks
+
+**Commits with Concerning Deltas:**
+- Commit 10: Large delta due to missing prerequisite file in ci/master - acceptable as the final content is correct
+
+**Final State:**
+- Branch: `cherry-d0969a6b64e`
+- 22 commits ahead of `ci/master`
+- Ready for pushing
+
+---
+
