@@ -9605,3 +9605,69 @@ All 18 commits rebased cleanly onto ci/master. Sandbox build verified.
 
 ---
 
+## 2026-01-29: us/next
+
+Branch: cherry-f393beedba7
+
+Commits:
+- f393beedba7 arm: mach-k3: support disabling a single firewall region
+- 33b191997fc arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM
+- 629f089387a Merge patch series "arm: mach-k3: remove some firewalls left over by ROM"
+
+### Conversation log
+The working tree is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit (f393beedba7: arm: mach-k3: support disabling a single firewall region):
+
+First cherry-pick succeeded. Let me check the commit delta and run the build test:
+
+The deltas match exactly (2 files changed, 26 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (33b191997fc: arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM):
+
+Second cherry-pick succeeded. Let me check the commit delta:
+
+The deltas match exactly (1 file changed, 12 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (629f089387a: Merge patch series "arm: mach-k3: remove some firewalls left over by ROM"). This is a merge commit, so I'll use -m 1 --allow-empty:
+
+The merge commit is empty (which is expected since we already cherry-picked the constituent commits). As instructed, I'll commit it as an empty commit to preserve the merge commit message:
+
+The merge commit has been created. Let me check the commit delta:
+
+The original merge commit shows changes (3 files, 38 insertions) while our cherry-picked version is empty. This is expected because we've already applied those changes via the previous two commits - the merge commit just records the merge action. The empty commit preserves the merge commit message for history tracking, which is correct behavior.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Now let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Summary:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| f393beedba7 → cc909bed268 | arm: mach-k3: support disabling a single firewall region | ✅ Applied (2 files, +26 lines) |
+| 33b191997fc → 3ce0ae49a1c | arm: mach-k3: am625: remove any firewalls ROM has configured for HSRAM | ✅ Applied (1 file, +12 lines) |
+| 629f089387a → 5dd2c24f713 | Merge patch series "arm: mach-k3: remove some firewalls left over by ROM" | ✅ Applied (empty commit, preserves merge history) |
+
+### Build Result: **OK**
+- All builds passed (sandbox board)
+- No warnings or errors
+
+### Fix-ups Made: **None**
+- All commits applied cleanly without conflicts
+
+### Delta Analysis:
+- Commits 1 & 2: Exact match with originals
+- Commit 3: Empty as expected (merge commit - actual changes were in commits 1 & 2)
+
+### Branch Status:
+The branch `cherry-f393beedba7` is ready for pushing, 3 commits ahead of `ci/master`.
+
+---
+
