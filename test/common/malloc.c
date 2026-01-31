@@ -344,6 +344,10 @@ static int common_test_malloc_large(struct unit_test_state *uts)
 	int size = SZ_1M, before;
 	void *ptr;
 
+	/* Skip if heap is too small for a 1MB allocation */
+	if (TOTAL_MALLOC_LEN < SZ_2M)
+		return -EAGAIN;
+
 	before = get_alloced_size();
 
 	ptr = malloc(size);
