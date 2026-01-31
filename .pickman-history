@@ -10159,3 +10159,132 @@ Given that the build is fixed and the MR has been updated, this is acceptable. L
 
 ---
 
+## 2026-01-31: us/next
+
+Branch: cherry-1875c57db06
+
+Commits:
+- 1875c57db06 ARM: dts: sti: convert stih410-b2260 board to OF_UPSTREAM
+- c1ae34fe98c ARM: dts: stm32: convert stm23h7 boards to OF_UPSTREAM
+- ae5f4e2c6c1 ARM: dts: stm32: convert stm23f7 boards to OF_UPSTREAM
+- a893f01f951 ARM: dts: stm32: convert stm23f4 boards to OF_UPSTREAM
+- aaddc8986af ARM: dts: stm32: convert stm32mp13 board to OF_UPSTREAM
+- 35f90f76f45 ARM: dts: stm32: convert stm32mp15 board to OF_UPSTREAM
+- 69df7ff4b84 configs: stm32: introduce stm32mp15-odyssey_defconfig
+- 4cb12871b20 clk: stm32mp1: fix DSI clock setting
+- ad3cdc677dd ARM: stm32mp: add ETZPC system bus driver for STM32MP1
+- f63a30f1c0a ARM: dts: stm32: add ETZPC as a system bus for STM32MP1x boards
+- 63272cc474a stm32mp: fdt: remove ETZPC peripheral cleanup
+- 3cacb0dc870 ARM: dts: stm32: convert stm32mp2 board to OF_UPSTREAM
+- 26b84301865 ARM: stm32mp: add RIFSC system bus driver for STM32MP25
+- 76011d37cff configs: stm32mp25: add MMC support
+- 20fa4b41386 configs: stm32mp25: add bootcmd for stm32mp25 platform
+- f9fc2489957 arm: stm32mp: add boot_mode support for STM32MP25
+- 1b343e2603e board: st: stm32mp2: add env_get_location()
+- a3be0ccc474 board: st: stm32mp2: add mmc_get_env_dev()
+- 6ec23e9cc26 ARM: dts: stm32: add "u-boot,mmc-env-partition" for stm32mp257f-ev1-u-boot
+- 0272e50b55c board: st: stm32mp2: add led support
+- 331b4cecc2c board: st: stm32mp2: add user button support
+- 17f3cdd253a configs: stm32mp25: add support of NAND and NOR boot
+- a7f00c8adaf board: st: stm32mp2: change bootcmd for ST boards
+- 9231b6070be configs: stm32mp25: add USB host boot support
+- d54ed9bfd3c configs: stm32mp25: add PXE boot support
+- c65b4022672 ARM: dts: stm32: add sdmmc1 fixed clock for stm32mp257f-ev1-u-boot
+- 2662d1728d2 arm: stm32mp: increase EARLY_TLB_SIZE to 0x10000
+- 5ded6bac6c8 arm: stm32mp: disable console for UART serial boot
+- d1c0e6ac1c3 arm: stm32mp: implement new STM32MP25 revision ID system
+- d6c679cc777 arm: stm32mp: fix package IDs for stm32mp25
+- c3bf98f73d1 arm: stm32mp: cmd_stm32key: update command for stm32mp25x
+- 6c66779549b arm: stm32mp: add helper function stm32mp_is_closed()
+- 63e1a62fce3 arm: stm32mp: stm32prog: PTA BSEC is not supported on closed device
+- f54300f0bfe arm: stm32mp: stm32prog: add support rootfs-a for OTA
+- 9d679cc4adb configs: stm32mp25: enable DISTRO_DEFAULT and BOOTCOMMAND
+- 62ea9c329a0 board: starfive: visionfive2: Order board detection logic to match config
+- 6f4bd8edb8c Merge tag 'u-boot-stm32-20250428' of https://source.denx.de/u-boot/custodians/u-boot-stm
+
+### Conversation log
+Now let me start cherry-picking each commit in order. I'll do them one at a time to handle conflicts properly.
+
+The delta looks identical. Now let me run the build test.
+
+Build passed. Let me continue with the second commit.
+
+Delta looks good. Let me continue with commits 3-5 in parallel since they're independent.
+
+Now let me handle commit 36 which has a note about potentially being already applied:
+
+The commits are different - 845b5e43a7f is a pickman summary commit, not the same as 62ea9c329a0. Let me search for the actual content in ci/master:
+
+Let me compare with a5295f29f29:
+
+The commits are similar (same purpose) but have different content. Let me try to cherry-pick 62ea9c329a0 and see if it fails:
+
+Let me check the conflict and compare to see if the patch was already applied:
+
+The conflict is extremely minor - just whitespace/parenthesis differences that are essentially stylistic. The core functionality is already applied. Let me check the rest of the file:
+
+The conflicts are trivial whitespace/style changes. The code is functionally the same. Since the commit 62ea9c329a0 is essentially making style changes that conflict with how a5295f29f29 already styled them, I'll skip this cherry-pick as it's already applied (different style, same effect):
+
+Let me verify what I found - the commit was essentially already applied in a5295f29f29 with slightly different styling but the same intent. Let me proceed with the last commit:
+
+Now let me try the last commit - the merge commit:
+
+Now let me verify the final state:
+
+## Summary
+
+### Cherry-pick completed successfully with 36 commits applied.
+
+**Build Result:** ✅ OK (all builds passed)
+
+**Commits Applied (36 of 37 requested):**
+
+1. ✅ `1875c57db06` - ARM: dts: sti: convert stih410-b2260 board to OF_UPSTREAM
+2. ✅ `c1ae34fe98c` - ARM: dts: stm32: convert stm23h7 boards to OF_UPSTREAM
+3. ✅ `ae5f4e2c6c1` - ARM: dts: stm32: convert stm23f7 boards to OF_UPSTREAM
+4. ✅ `a893f01f951` - ARM: dts: stm32: convert stm23f4 boards to OF_UPSTREAM
+5. ✅ `aaddc8986af` - ARM: dts: stm32: convert stm32mp13 board to OF_UPSTREAM
+6. ✅ `35f90f76f45` - ARM: dts: stm32: convert stm32mp15 board to OF_UPSTREAM
+7. ✅ `69df7ff4b84` - configs: stm32: introduce stm32mp15-odyssey_defconfig
+8. ✅ `4cb12871b20` - clk: stm32mp1: fix DSI clock setting
+9. ✅ `ad3cdc677dd` - ARM: stm32mp: add ETZPC system bus driver for STM32MP1
+10. ✅ `f63a30f1c0a` - ARM: dts: stm32: add ETZPC as a system bus for STM32MP1x boards
+11. ✅ `63272cc474a` - stm32mp: fdt: remove ETZPC peripheral cleanup
+12. ✅ `3cacb0dc870` - ARM: dts: stm32: convert stm32mp2 board to OF_UPSTREAM
+13. ✅ `26b84301865` - ARM: stm32mp: add RIFSC system bus driver for STM32MP25
+14. ✅ `76011d37cff` - configs: stm32mp25: add MMC support
+15. ✅ `20fa4b41386` - configs: stm32mp25: add bootcmd for stm32mp25 platform
+16. ✅ `f9fc2489957` - arm: stm32mp: add boot_mode support for STM32MP25
+17. ✅ `1b343e2603e` - board: st: stm32mp2: add env_get_location()
+18. ✅ `a3be0ccc474` - board: st: stm32mp2: add mmc_get_env_dev()
+19. ✅ `6ec23e9cc26` - ARM: dts: stm32: add "u-boot,mmc-env-partition" for stm32mp257f-ev1-u-boot
+20. ✅ `0272e50b55c` - board: st: stm32mp2: add led support
+21. ✅ `331b4cecc2c` - board: st: stm32mp2: add user button support
+22. ✅ `17f3cdd253a` - configs: stm32mp25: add support of NAND and NOR boot
+23. ✅ `a7f00c8adaf` - board: st: stm32mp2: change bootcmd for ST boards
+24. ✅ `9231b6070be` - configs: stm32mp25: add USB host boot support
+25. ✅ `d54ed9bfd3c` - configs: stm32mp25: add PXE boot support
+26. ✅ `c65b4022672` - ARM: dts: stm32: add sdmmc1 fixed clock for stm32mp257f-ev1-u-boot
+27. ✅ `2662d1728d2` - arm: stm32mp: increase EARLY_TLB_SIZE to 0x10000
+28. ✅ `5ded6bac6c8` - arm: stm32mp: disable console for UART serial boot
+29. ✅ `d1c0e6ac1c3` - arm: stm32mp: implement new STM32MP25 revision ID system
+30. ✅ `d6c679cc777` - arm: stm32mp: fix package IDs for stm32mp25
+31. ✅ `c3bf98f73d1` - arm: stm32mp: cmd_stm32key: update command for stm32mp25x
+32. ✅ `6c66779549b` - arm: stm32mp: add helper function stm32mp_is_closed()
+33. ✅ `63e1a62fce3` - arm: stm32mp: stm32prog: PTA BSEC is not supported on closed device
+34. ✅ `f54300f0bfe` - arm: stm32mp: stm32prog: add support rootfs-a for OTA
+35. ✅ `9d679cc4adb` - configs: stm32mp25: enable DISTRO_DEFAULT and BOOTCOMMAND
+36. ⏭️ `62ea9c329a0` - **SKIPPED** - board: starfive: visionfive2: Order board detection logic to match config (Already applied as `a5295f29f29` with minor style differences)
+37. ✅ `6f4bd8edb8c` - Merge tag 'u-boot-stm32-20250428' (empty commit preserved)
+
+**Fix-ups made:** None
+
+**Commits skipped (already applied):**
+- `62ea9c329a0` - This commit was already applied as `a5295f29f29` in ci/master. The differences were purely stylistic (whitespace/parenthesis placement) with identical functional content.
+
+**Commits with concerning deltas:** None
+
+The branch `cherry-1875c57db06` is ready for pushing with 36 new commits on top of `ci/master`.
+
+---
+
