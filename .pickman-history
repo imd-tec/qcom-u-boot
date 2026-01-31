@@ -10285,6 +10285,110 @@ Now let me verify the final state:
 **Commits with concerning deltas:** None
 
 The branch `cherry-1875c57db06` is ready for pushing with 36 new commits on top of `ci/master`.
+Branch: cherry-2bee17dcaa5
+
+Commits:
+- 2bee17dcaa5 sunxi: H6: Remove useless DRAM timings parameter
+- 236c0d81249 sunxi: H6: DRAM: Constify function parameters
+- 7a087f5dddd sunxi: h6: dram: split dram_para struct
+- 923ad563741 sunxi: h6/h616: Reuse common DRAM infrastructure
+- 432e518ba70 sunxi: h616: defconfigs: enable eMMC
+- 16cfccda4db sunxi: enable MMU_PGPROT proper page table protection
+- db1481b9b86 power: regulator: Add a driver for the AXP PMIC drivevbus
+- 8ac7dc64470 sunxi: Enable PMIC drivevbus regulator support for USB supplies
+- 3d88f264f4c phy: sun4i-usb: Control supplies via the regulator uclass
+- 0e71b2ee157 sunxi: Remove obsolete USBx_VBUS_PIN Kconfig symbols
+- 01658ef333b gpio: axp: Remove virtual VBUS enable GPIO
+- af24fbb24a3 phy: sun4i-usb: Determine VBUS detection pin from devicetree
+- ab4c6364849 phy: sun4i-usb: Determine USB OTG detection pin from devicetree
+- d8aea14306f sunxi: Kconfig: Remove obsolete USBx_* pin symbols
+- 8fb6c9343db watchdog: sunxi: add A523 support
+- 5a9014a8ea3 sunxi: armv8: FEL: save and restore GICv3 registers
+- 1d26da5a6ab sunxi: armv8: FEL: save and restore SP_IRQ
+- 0453a1d9bb1 sunxi: clock: H6: drop usage of struct sunxi_ccm_reg
+- 0527f306724 sunxi: mmc: remove usage of struct sunxi_ccm_reg
+- a8c232c4307 sunxi: H616: dram: remove usage of struct sunxi_ccm_reg
+- c626eff09ae sunxi: H6: dram: remove usage of struct sunxi_ccm_reg
+- 5721a3c47ae sunxi: clock: H6: remove struct sunxi_ccm_reg
+- 90b74b3f51a sunxi: clock: H6: drop usage of struct sunxi_prcm_reg
+- 3389c572976 sunxi: H6/H616: dram: remove usage of struct sunxi_prcm_reg
+- 85e9882a17f sunxi: clock: H6: remove struct sunxi_prcm_reg
+- d2eef3a4a71 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sunxi
+
+### Conversation log
+Good, the repository is clean but we're on a different branch. Let me create a new branch from ci/master and start cherry-picking:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks identical. Let me run the build test:
+
+Build passed. Continue with the second commit:
+
+Continuing with commit 3:
+
+Continuing with commit 4:
+
+Now for the last commit, which is a merge commit that might be already applied. Let me first verify if it's already applied:
+
+The patches are quite different - different merge messages, different parent commits. The found hash (14923ff9270) is a different merge. Let me check what this merge commit (d2eef3a4a71) contains:
+
+The merge commit's second parent (85e9882a17fe) is the same as the previous commit we just cherry-picked. Since we've already picked all the changes from the commits leading up to the merge, this merge commit should effectively be empty when cherry-picked. Let me proceed:
+
+The cherry-pick results in an empty commit because all the changes are already applied. I need to commit it with --allow-empty to preserve the commit message:
+
+Now let me verify all 26 commits are present:
+
+All 26 commits are present. Now let me run the final build test:
+
+All done. Let me provide a final summary:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-2bee17dcaa5` (based on `ci/master`)
+
+**Build Result:** ✅ OK (sandbox build passed)
+
+**All 26 commits successfully cherry-picked:**
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 88108c05cf1 | sunxi: H6: Remove useless DRAM timings parameter |
+| 2 | e449915c7e3 | sunxi: H6: DRAM: Constify function parameters |
+| 3 | e08543e7d7b | sunxi: h6: dram: split dram_para struct |
+| 4 | 800d1697a20 | sunxi: h6/h616: Reuse common DRAM infrastructure |
+| 5 | 93671c6a91e | sunxi: h616: defconfigs: enable eMMC |
+| 6 | 205fc849e4f | sunxi: enable MMU_PGPROT proper page table protection |
+| 7 | 8059e0760a4 | power: regulator: Add a driver for the AXP PMIC drivevbus |
+| 8 | dcbc1b853af | sunxi: Enable PMIC drivevbus regulator support for USB supplies |
+| 9 | 46fabad511f | phy: sun4i-usb: Control supplies via the regulator uclass |
+| 10 | 382158d6e2c | sunxi: Remove obsolete USBx_VBUS_PIN Kconfig symbols |
+| 11 | fd3fd97c001 | gpio: axp: Remove virtual VBUS enable GPIO |
+| 12 | ae5cb985f0c | phy: sun4i-usb: Determine VBUS detection pin from devicetree |
+| 13 | 208c1a2cabb | phy: sun4i-usb: Determine USB OTG detection pin from devicetree |
+| 14 | f45125a12d3 | sunxi: Kconfig: Remove obsolete USBx_* pin symbols |
+| 15 | 55d690efd9f | watchdog: sunxi: add A523 support |
+| 16 | 6d7fee35a65 | sunxi: armv8: FEL: save and restore GICv3 registers |
+| 17 | 634505386a1 | sunxi: armv8: FEL: save and restore SP_IRQ |
+| 18 | c629f87c1f7 | sunxi: clock: H6: drop usage of struct sunxi_ccm_reg |
+| 19 | 4f1a7fe7a95 | sunxi: mmc: remove usage of struct sunxi_ccm_reg |
+| 20 | 4951e550d25 | sunxi: H616: dram: remove usage of struct sunxi_ccm_reg |
+| 21 | 46a7b29c00f | sunxi: H6: dram: remove usage of struct sunxi_ccm_reg |
+| 22 | 4de2d184047 | sunxi: clock: H6: remove struct sunxi_ccm_reg |
+| 23 | fd37c293f2b | sunxi: clock: H6: drop usage of struct sunxi_prcm_reg |
+| 24 | 17ae7bc9658 | sunxi: H6/H616: dram: remove usage of struct sunxi_prcm_reg |
+| 25 | feb995462d2 | sunxi: clock: H6: remove struct sunxi_prcm_reg |
+| 26 | 2864bac52e8 | Merge branch 'master' of .../u-boot-sunxi (empty commit - content already applied) |
+
+**Fix-ups:** None needed
+
+**Notes:**
+- Some commits had minor auto-merges in `arch/arm/Kconfig` and `arch/arm/mach-sunxi/Kconfig` (commits 6, 10, 14) which resolved cleanly
+- The final merge commit (d2eef3a4a71) resulted in an empty commit since all its content was already included via the individual cherry-picks - committed with `--allow-empty` to preserve the merge message
+- All deltas matched between original and cherry-picked commits
+
+**Concerning deltas:** None - all commits applied cleanly with identical file changes
+
+The branch `cherry-2bee17dcaa5` is ready for pushing.
 
 ---
 
