@@ -12,6 +12,18 @@ int tstc(void);
 #if !defined(CONFIG_XPL_BUILD) || CONFIG_IS_ENABLED(SERIAL)
 void putc(const char c);
 void puts(const char *s);
+
+/**
+ * putsn() - Output a string with specified length
+ *
+ * This outputs exactly @len characters from @s, regardless of any nul
+ * characters that may be present. This is useful for printing substrings
+ * or binary data with embedded nuls without allocating temporary buffers.
+ *
+ * @s: String to output (need not be nul-terminated)
+ * @len: Number of characters to output
+ */
+void putsn(const char *s, int len);
 #ifdef CONFIG_CONSOLE_FLUSH_SUPPORT
 void flush(void);
 #else

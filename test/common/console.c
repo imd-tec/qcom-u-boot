@@ -206,3 +206,51 @@ static int console_test_calc_lines_serial_tty(struct unit_test_state *uts)
 	return 0;
 }
 COMMON_TEST(console_test_calc_lines_serial_tty, 0);
+
+/* Test putsn() with basic string */
+static int console_test_putsn_basic(struct unit_test_state *uts)
+{
+	putsn("hello", 5);
+	ut_assertok(ut_check_console_line(uts, "hello"));
+	ut_assert_console_end();
+
+	return 0;
+}
+COMMON_TEST(console_test_putsn_basic, UTF_CONSOLE);
+
+/* Test putsn() with substring */
+static int console_test_putsn_substring(struct unit_test_state *uts)
+{
+	const char *str = "hello world";
+
+	putsn(str, 5);
+	ut_assertok(ut_check_console_line(uts, "hello"));
+	ut_assert_console_end();
+
+	return 0;
+}
+COMMON_TEST(console_test_putsn_substring, UTF_CONSOLE);
+
+/* Test putsn() with zero length */
+static int console_test_putsn_zero(struct unit_test_state *uts)
+{
+	putsn("test", 0);
+	ut_assert_console_end();
+
+	return 0;
+}
+COMMON_TEST(console_test_putsn_zero, UTF_CONSOLE);
+
+/* Test putsn() outputs exactly len characters */
+static int console_test_putsn_exact_len(struct unit_test_state *uts)
+{
+	const char *str = "hello world";
+
+	/* Output exactly 5 characters from a longer string */
+	putsn(str, 5);
+	ut_assertok(ut_check_console_line(uts, "hello"));
+	ut_assert_console_end();
+
+	return 0;
+}
+COMMON_TEST(console_test_putsn_exact_len, UTF_CONSOLE);
