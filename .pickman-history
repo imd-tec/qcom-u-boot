@@ -11009,3 +11009,78 @@ Let me run the final build test:
 
 ---
 
+## 2026-02-01: us/next
+
+Branch: cherry-a87b564018a
+
+Commits:
+- a87b564018a gpio: tegra_gpio: implement rfree operation
+- 68d1b0f84aa power: pmic: add the base MAX8907 PMIC support
+- 5204a362b8c power: regulator: max9807: add regulator support
+- 5f3588a94d2 sysreset: implement MAX9807 sysreset functions
+- 505dd922755 video: tegra: add 8-bit CPU driven protocol
+- 7eb99ba543c video: panel: add Hitachi TX10D07VM0BAA MIPI DSI panel driver
+- cb9c3024d1d video: panel: add LG LH400WV3-SD04 MIPI DSI panel driver
+- bf2d1902f4c video: backlight: add Skyworks/Analogictech AAT2870 led controller driver
+- 24e578cbac7 board: lg: star: add Optimus 2X P990 support
+- 94b395cc2db ARM: tegra: add PRAM Kconfig option
+- 71874085532 ARM: tegra: convert boards to use TEGRA_PRAM
+- 66c4ac31ca5 ARM: tegra: set default SYS_CONFIG_NAME from SoC Kconfig
+- d5b9b7aa039 ARM: tegra: drop CONFIG_DISABLE_SDMMC1_EARLY
+- ffd5d9cc272 Merge branch 'staging' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+Now let's cherry-pick the first commit:
+
+Build passed. Let's continue with the second commit:
+
+Now for the last commit - a merge commit. First, let me check if it's already applied as suggested:
+
+The merge commits have slightly different merge parents and commit messages, but they both merge the same series. Let me check if the parent commits match in content:
+
+The merge commit eb5d948e9ec is a different merge. Let me check if d5b9b7aa039 is already in ci/master via a different merge:
+
+The commits aren't already in ci/master. Let me cherry-pick the merge commit:
+
+The merge commit was created as empty (because all the changes were already cherry-picked individually). Let's run the final build test:
+
+All 14 commits (13 regular commits + 1 merge commit) have been successfully cherry-picked. Let me verify the count:
+
+All 14 commits are present.
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+### Build Result
+✅ **OK** - All builds passed with no warnings or errors
+
+### Commits Cherry-picked (14 total)
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | a87b564018a | gpio: tegra_gpio: implement rfree operation | ✅ Clean |
+| 2 | 68d1b0f84aa | power: pmic: add the base MAX8907 PMIC support | ✅ Clean |
+| 3 | 5204a362b8c | power: regulator: max9807: add regulator support | ✅ Clean |
+| 4 | 5f3588a94d2 | sysreset: implement MAX9807 sysreset functions | ✅ Clean |
+| 5 | 505dd922755 | video: tegra: add 8-bit CPU driven protocol | ✅ Auto-merged |
+| 6 | 7eb99ba543c | video: panel: add Hitachi TX10D07VM0BAA MIPI DSI panel driver | ✅ Auto-merged |
+| 7 | cb9c3024d1d | video: panel: add LG LH400WV3-SD04 MIPI DSI panel driver | ✅ Auto-merged |
+| 8 | bf2d1902f4c | video: backlight: add Skyworks/Analogictech AAT2870 led controller driver | ✅ Auto-merged |
+| 9 | 24e578cbac7 | board: lg: star: add Optimus 2X P990 support | ✅ Auto-merged |
+| 10 | 94b395cc2db | ARM: tegra: add PRAM Kconfig option | ✅ Clean |
+| 11 | 71874085532 | ARM: tegra: convert boards to use TEGRA_PRAM | ✅ Clean |
+| 12 | 66c4ac31ca5 | ARM: tegra: set default SYS_CONFIG_NAME from SoC Kconfig | ✅ Clean |
+| 13 | d5b9b7aa039 | ARM: tegra: drop CONFIG_DISABLE_SDMMC1_EARLY | ✅ Clean |
+| 14 | ffd5d9cc272 | Merge branch 'staging' (merge commit) | ✅ Empty (expected) |
+
+### Fix-ups Made
+None - all cherry-picks applied cleanly
+
+### Delta Concerns
+None - all commits matched their original deltas exactly
+
+### Branch Status
+Branch `cherry-a87b564018a` is ready for pushing, tracking `ci/master` and ahead by 14 commits.
+
+---
+
