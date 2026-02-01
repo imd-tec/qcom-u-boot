@@ -209,6 +209,15 @@ enum event_t {
 	EVT_BOOTM_FINAL,
 
 	/**
+	 * @EVT_OF_LIVE_BUILT:
+	 * This event is triggered immediately after the live device tree has been
+	 * built. This allows for machine specific fixups to be done to the live tree
+	 * (like disabling known-unsupported devices) before it is used. This
+	 * event is only available if OF_LIVE is enabled and is only used after relocation.
+	 */
+	EVT_OF_LIVE_BUILT,
+
+	/**
 	 * @EVT_COUNT:
 	 * This constants holds the maximum event number + 1 and is used when
 	 * looping over all event classes.
@@ -314,6 +323,15 @@ union event_data {
 	struct event_reserve_board {
 		ulong start_addr_sp;
 	} reserve_board;
+
+	/**
+	 * struct event_of_live_built - livetree has been built
+	 *
+	 * @root: The root node of the live device tree
+	 */
+	struct event_of_live_built {
+		struct device_node *root;
+	} of_live_built;
 };
 
 /**
