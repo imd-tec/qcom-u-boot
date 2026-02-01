@@ -721,13 +721,18 @@ static void pre_console_putc(const char c)
 	unmap_sysmem(buffer);
 }
 
-static void pre_console_puts(const char *s)
+static void pre_console_putsn(const char *s, int len)
 {
 	if (gd->precon_buf_idx < 0)
 		return;
 
-	while (*s)
+	while (len--)
 		pre_console_putc(*s++);
+}
+
+static void pre_console_puts(const char *s)
+{
+	pre_console_putsn(s, strlen(s));
 }
 
 static void print_pre_console_buffer(int flushpoint)
@@ -762,6 +767,7 @@ static void print_pre_console_buffer(int flushpoint)
 }
 #else
 static inline void pre_console_putc(const char c) {}
+static inline void pre_console_putsn(const char *s, int len) {}
 static inline void pre_console_puts(const char *s) {}
 static inline void print_pre_console_buffer(int flushpoint) {}
 #endif
