@@ -271,6 +271,7 @@ static int console_tstc(int file)
 }
 
 static void console_puts_pager(int file, const char *s);
+static void console_putsn_pager(int file, const char *s, int len);
 
 static void console_putc_pager(int file, const char c)
 {
@@ -355,18 +356,28 @@ static void console_puts(int file, bool use_pager, const char *s)
 	}
 }
 
+static void console_putsn_pager(int file, const char *s, int len)
+{
+	struct stdio_dev *dev;
+	int i;
+
+	for_each_console_dev(i, file, dev) {
+		if (dev->putsn)
+			dev->putsn(dev, s, len);
+		else if (dev->puts)
+			dev->puts(dev, s);
+		else
+			while (len--)
+				dev->putc(dev, *s++);
+	}
+}
+
 static void console_puts_pager(int file, const char *s)
 {
 	if (IS_ENABLED(CONFIG_CONSOLE_PAGER) && gd_pager()) {
 		console_puts(file, true, s);
 	} else {
-		struct stdio_dev *dev;
-		int i;
-
-		for_each_console_dev(i, file, dev) {
-			if (dev->puts != NULL)
-				dev->puts(dev, s);
-		}
+		console_putsn_pager(file, s, strlen(s));
 	}
 }
 
@@ -627,6 +638,12 @@ void fputs(int file, const char *s)
 {
 	if ((unsigned int)file < MAX_FILES)
 		console_puts_pager(file, s);
+}
+
+void fputsn(int file, const char *s, int len)
+{
+	if ((unsigned int)file < MAX_FILES)
+		console_putsn_pager(file, s, len);
 }
 
 #ifdef CONFIG_CONSOLE_FLUSH_SUPPORT

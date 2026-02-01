@@ -38,6 +38,18 @@ struct stdio_dev {
 	void (*putc)(struct stdio_dev *dev, const char c);
 	/* To put a string (accelerator) */
 	void (*puts)(struct stdio_dev *dev, const char *s);
+	/**
+	 * putsn() - Output a string with specified length
+	 *
+	 * This outputs exactly @len characters from @s, regardless of any nul
+	 * characters that may be present. This is an optional accelerator - if
+	 * NULL, the console will fall back to calling putc() in a loop.
+	 *
+	 * @dev: Device to output to
+	 * @s: String to output (need not be nul-terminated)
+	 * @len: Number of characters to output
+	 */
+	void (*putsn)(struct stdio_dev *dev, const char *s, int len);
 #ifdef CONFIG_CONSOLE_FLUSH_SUPPORT
 	/* To flush output queue */
 	void (*flush)(struct stdio_dev *dev);
