@@ -10726,3 +10726,60 @@ All 5 commits are present. Now let me run the final build test:
 
 ---
 
+## 2026-02-01: us/next
+
+Branch: cherry-c81d8efb514
+
+Commits:
+- c81d8efb514 mtd: ubi: Put MTD device after it is not used
+- 3f519d93c1e Merge tag 'ubifixes-for-2025.07-rc2' of https://source.denx.de/u-boot/custodians/u-boot-ubi
+
+### Conversation log
+The working tree is clean. Now let me create and checkout the new branch based on ci/master:
+
+Good. Now let me cherry-pick the first commit `c81d8efb514`:
+
+First cherry-pick succeeded. Let me verify the commit delta:
+
+Both show identical stats: `1 file changed, 1 insertion(+), 1 deletion(-)`. The delta is identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit. This one is a merge commit (identified by "Merge" in subject), so I'll use `-m 1 --allow-empty`:
+
+The merge commit is empty (the changes are already applied via the first cherry-pick). Since we must preserve merge commits, I'll commit it with `--allow-empty`:
+
+Good. Let me verify the commit delta for the merge commit:
+
+The original merge commit showed changes, but our cherry-picked version is empty. This is expected because the actual change was already applied by the first cherry-pick (c81d8efb514). The merge commit's purpose is to preserve the history tracking, which we've done. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present with `git log`:
+
+Both commits are present. Let me run the final build test:
+
+All done. Here's the final status report:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-c81d8efb514` (based on `ci/master`)
+
+### Commits Cherry-Picked (2 of 2):
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | c81d8efb514 | 2f07ec6d339 | mtd: ubi: Put MTD device after it is not used | ✅ OK |
+| 2 | 3f519d93c1e | 812ed2e500f | Merge tag 'ubifixes-for-2025.07-rc2' of ... | ✅ OK (empty) |
+
+### Build Result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Delta Analysis:
+- **Commit 1 (c81d8efb514):** Identical delta (1 file, +1/-1 line) ✅
+- **Commit 2 (3f519d93c1e):** Empty commit (expected - merge commit whose changes were already applied by commit 1) ✅
+
+### Fix-ups Made: None
+
+### Commits with Concerning Deltas: None
+
+The branch `cherry-c81d8efb514` is ready for pushing with 2 commits on top of `ci/master`.
+
+---
+
