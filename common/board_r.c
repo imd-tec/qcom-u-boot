@@ -623,7 +623,7 @@ static void initcall_run_r(void)
 #if CONFIG_IS_ENABLED(CONSOLE_RECORD)
 	INITCALL(console_record_init);
 #endif
-#if CONFIG_IS_ENABLED(SYS_NONCACHED_MEMORY)
+#if CONFIG_IS_ENABLED(SYS_HAS_NONCACHED_MEMORY)
 	INITCALL(noncached_init);
 #endif
 	INITCALL(initr_of_live);

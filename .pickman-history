@@ -10515,3 +10515,147 @@ The branch `cherry-05dc050059d` has 11 new commits on top of ci/master (10 funct
 
 ---
 
+## 2026-01-31: us/next
+
+Branch: cherry-c0ed43c2a93
+
+Commits:
+- c0ed43c2a93 drivers: spi: Fix data loss issue in QSPI
+- f59cb6a6970 Revert "mtd: spi-nor: Remove recently added SST special case"
+- a6da395b5d6 common: board: fix build condition of noncached memory initcall
+- aa96cda0a58 clk: fix crash on clk_set_rate clean rate cache
+- 98a898e5849 mtd: mtdpart: Support MTDPART_SIZ_FULL in fixed-partitions
+- a4af308e4ac uthread: doc: fix inline documentation
+- 24600fd0680 efi_loader: bootbin: do not load an initrd if none is provided
+- 485ab4c6aa6 efi_loader: fix typo initd_sz to initrd_sz
+- c00f08c20ad doc: ti: update bash code-block directives to prompt
+- 6f399d4116c doc: ti: k3: add language for code-block directive
+- ac3b51ef727 bootm: pass kernel load address not entry point for IH_OS_EFI
+- c0546426724 boot: let BOOTSTAGE_RECORD_COUNT default to 50
+- 152fa1b7fd6 Merge tag 'efi-2025-07-rc2' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+The repository is clean. Let me create and checkout a new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Deltas match. Let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Deltas match. Let me run the build test:
+
+Build passed. Third commit:
+
+Build passed. Fourth commit:
+
+Build passed. Fifth commit:
+
+Build passed. Sixth commit:
+
+Build passed. Now the seventh commit which may already be applied as 70a692335b3. Let me verify first:
+
+The patches are almost identical with only minor differences (line numbers and one small code difference with a cast). This commit is already applied. Let me skip it and note this.
+
+Now the eighth commit which may already be applied as 67e474cce0f:
+
+This is also a very similar patch (only commit hash and index lines differ). This commit is already applied. Let me continue with the ninth commit:
+
+Let me check the conflict:
+
+I can see the conflict. The local version has an extra line (`OPTEE_EXTRA_ARGS`), and the remote version uses the new format without `$` prefixes. Let me look at the full conflict context:
+
+I understand the conflict. The resolution should keep the extra line from HEAD but use the new format from the cherry-pick (without `$` prefix, with proper indentation). Let me resolve this:
+
+I need to resolve the conflict by combining both versions - keep the new format (without `$`, with proper indentation) but include the extra OPTEE_EXTRA_ARGS line from HEAD:
+
+Let me amend the commit message to note the fix-up:
+
+The deltas are very close (34 insertions/deletions vs 33 insertions/deletions) - the slight difference is due to the one extra line for OPTEE_EXTRA_ARGS. Let me run the build test:
+
+Build passed. Now tenth commit:
+
+Build passed. Eleventh commit:
+
+Build passed. Twelfth commit:
+
+Build passed. Now the last commit - the merge commit:
+
+Let me check the conflicts:
+
+I can see the conflicts. The merge commit is bringing in changes that overlap with what we already cherry-picked (the initrd patches and docs). Since the individual commits (24600fd0680, 485ab4c6aa6) were already verified as applied via 70a692335b3 and 67e474cce0f, and the merge commit is just bringing them together, let me resolve the conflicts:
+
+1. For j722s_evm.rst: keep HEAD (our version with OPTEE_EXTRA_ARGS)
+2. For efi_bootbin.c: the merge is bringing in functions we've already applied via individual commits - keep HEAD 
+3. For efi_helper.c: keep HEAD version (our version already has the fix applied)
+
+The merge commit results in an empty commit since all changes were already applied. As per instructions, we should commit it anyway with --allow-empty to preserve the merge commit message:
+
+Now let me verify all the cherry-picks with git log:
+
+I see we have 11 commits cherry-picked (10 individual + 1 merge). We skipped 2 commits (24600fd0680 and 485ab4c6aa6) because they were already applied via 70a692335b3 and 67e474cce0f. Let me verify the count:
+
+Expected 13 commits:
+1. c0ed43c2a93: ✓ Applied (00f4f882a34)
+2. f59cb6a6970: ✓ Applied (4e376467900)
+3. a6da395b5d6: ✓ Applied (a5a08533bef)
+4. aa96cda0a58: ✓ Applied (a18cf114b61)
+5. 98a898e5849: ✓ Applied (43d923a8d5e)
+6. a4af308e4ac: ✓ Applied (d80ead51017)
+7. 24600fd0680: ⏭ SKIPPED - Already applied as 70a692335b3
+8. 485ab4c6aa6: ⏭ SKIPPED - Already applied as 67e474cce0f
+9. c00f08c20ad: ✓ Applied (d17810aa6cb)
+10. 6f399d4116c: ✓ Applied (0971cb830c0)
+11. ac3b51ef727: ✓ Applied (cd1e9064def)
+12. c0546426724: ✓ Applied (4c276786d7c)
+13. 152fa1b7fd6: ✓ Applied (dcb1250bdaf) - Empty merge commit
+
+Now run the final build:
+
+Final build passed.
+
+## Summary
+
+### Cherry-pick Results
+
+**Branch:** `cherry-c0ed43c2a93` based on `ci/master`
+
+**Total Commits Requested:** 13
+
+**Commits Applied:** 11
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | c0ed43c2a93 | 00f4f882a34 | drivers: spi: Fix data loss issue in QSPI | ✓ Clean |
+| 2 | f59cb6a6970 | 4e376467900 | Revert "mtd: spi-nor: Remove recently added SST special case" | ✓ Clean |
+| 3 | a6da395b5d6 | a5a08533bef | common: board: fix build condition of noncached memory initcall | ✓ Clean |
+| 4 | aa96cda0a58 | a18cf114b61 | clk: fix crash on clk_set_rate clean rate cache | ✓ Clean |
+| 5 | 98a898e5849 | 43d923a8d5e | mtd: mtdpart: Support MTDPART_SIZ_FULL in fixed-partitions | ✓ Clean |
+| 6 | a4af308e4ac | d80ead51017 | uthread: doc: fix inline documentation | ✓ Clean |
+| 7 | 24600fd0680 | - | efi_loader: bootbin: do not load an initrd if none is provided | ⏭ Skipped - Already applied as 70a692335b3 |
+| 8 | 485ab4c6aa6 | - | efi_loader: fix typo initd_sz to initrd_sz | ⏭ Skipped - Already applied as 67e474cce0f |
+| 9 | c00f08c20ad | d17810aa6cb | doc: ti: update bash code-block directives to prompt | ⚠️ Conflict resolved |
+| 10 | 6f399d4116c | 0971cb830c0 | doc: ti: k3: add language for code-block directive | ✓ Clean |
+| 11 | ac3b51ef727 | cd1e9064def | bootm: pass kernel load address not entry point for IH_OS_EFI | ✓ Clean |
+| 12 | c0546426724 | 4c276786d7c | boot: let BOOTSTAGE_RECORD_COUNT default to 50 | ✓ Clean |
+| 13 | 152fa1b7fd6 | dcb1250bdaf | Merge tag 'efi-2025-07-rc2' | ✓ Empty merge (all changes already applied) |
+
+### Fix-ups Made
+1. **c00f08c20ad (doc: ti: update bash code-block directives to prompt):** Resolved conflict in `doc/board/ti/j722s_evm.rst` - kept the OPTEE_EXTRA_ARGS line with the new prompt format. Note added to commit message.
+
+2. **152fa1b7fd6 (Merge tag 'efi-2025-07-rc2'):** Empty merge commit - all changes were already applied via individual cherry-picks. Kept with --allow-empty to preserve commit message history.
+
+### Skipped Commits (Already Applied)
+- **24600fd0680** → Already present as **70a692335b3** (verified via patch comparison)
+- **485ab4c6aa6** → Already present as **67e474cce0f** (verified via patch comparison)
+
+### Build Result
+- **Status:** ✅ OK (no warnings or errors)
+- All builds passed after each cherry-pick and final verification build
+
+### Concerning Deltas
+- None - all deltas matched or had expected minor differences due to conflict resolutions
+
+The cherry-pick branch `cherry-c0ed43c2a93` is ready for pushing.
+
+---
+
