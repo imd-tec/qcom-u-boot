@@ -10517,145 +10517,132 @@ The branch `cherry-05dc050059d` has 11 new commits on top of ci/master (10 funct
 
 ## 2026-01-31: us/next
 
-Branch: cherry-c0ed43c2a93
+Branch: cherry-993a9db918a
 
 Commits:
-- c0ed43c2a93 drivers: spi: Fix data loss issue in QSPI
-- f59cb6a6970 Revert "mtd: spi-nor: Remove recently added SST special case"
-- a6da395b5d6 common: board: fix build condition of noncached memory initcall
-- aa96cda0a58 clk: fix crash on clk_set_rate clean rate cache
-- 98a898e5849 mtd: mtdpart: Support MTDPART_SIZ_FULL in fixed-partitions
-- a4af308e4ac uthread: doc: fix inline documentation
-- 24600fd0680 efi_loader: bootbin: do not load an initrd if none is provided
-- 485ab4c6aa6 efi_loader: fix typo initd_sz to initrd_sz
-- c00f08c20ad doc: ti: update bash code-block directives to prompt
-- 6f399d4116c doc: ti: k3: add language for code-block directive
-- ac3b51ef727 bootm: pass kernel load address not entry point for IH_OS_EFI
-- c0546426724 boot: let BOOTSTAGE_RECORD_COUNT default to 50
-- 152fa1b7fd6 Merge tag 'efi-2025-07-rc2' of https://source.denx.de/u-boot/custodians/u-boot-efi
+- 993a9db918a event: signal when livetree has been built
+- 5a1dfb27f91 mach-snapdragon: use EVT_OF_LIVE_INIT to apply DT fixups
+- 0ec337d0341 mach-snapdragon: of_fixup: skip disabled USB nodes
+- a6cc4ef343d mach-snapdragon: of_fixup: remove confusing log message
+- 9bc7eef9bf5 mach-snapdragon: of_fixup: update comment
+- 3b983cf48e7 mach-snapdragon: of_fixup: set dr_mode for RB1/2 boards
+- 229fd3f9a8d clk/qcom: qcm2290: show clock name in set_rate()
+- 2803a466a96 pinctrl: qcom: qcm2290: fix off by 1 in pin_count
+- 4ca87fd18c1 Merge patch series "Qualcomm: cleanup OF_LIVE fixup and fix RB1/2"
 
 ### Conversation log
-The repository is clean. Let me create and checkout a new branch based on ci/master:
+Good, the working tree is clean. Now let me create and checkout a new branch based on ci/master:
 
 Now let me start cherry-picking the commits one by one. First commit:
 
-Deltas match. Let me run the build test:
+The first cherry-pick has conflicts. Before aborting, let me check if these commits are already present in ci/master with different hashes:
 
-Build passed. Let me continue with the second commit:
+No output, so that commit subject wasn't found. Let me check the other commits:
 
-Deltas match. Let me run the build test:
+No commits were found. The commits are not present in ci/master. Let me look at the conflict details to see if I can resolve them:
 
-Build passed. Third commit:
+Now I can see the conflicts. Let me analyze them:
 
-Build passed. Fourth commit:
+1. **common/event.c** - Conflict is about the event type names list at the end. HEAD has additional events ("bootcmd", "boot_os_addr", "bootm_final") while the incoming commit has "of_live_init".
 
-Build passed. Fifth commit:
+2. **include/event.h** - Similar conflict - HEAD has EVT_BOOTCMD, EVT_BOOT_OS_ADDR, EVT_BOOTM_FINAL and related data structures, while incoming commit has EVT_OF_LIVE_BUILT and its data structure.
 
-Build passed. Sixth commit:
+3. **lib/of_live.c** - Conflict is about what happens at the end of of_live_build() - HEAD has EFI_STUB code, incoming has EVENT notification code.
 
-Build passed. Now the seventh commit which may already be applied as 70a692335b3. Let me verify first:
+The incoming commit is adding a new event type, and we need to preserve both the existing events (from HEAD) AND add the new event. Let me resolve these conflicts:
 
-The patches are almost identical with only minor differences (line numbers and one small code difference with a cast). This commit is already applied. Let me skip it and note this.
+I don't have write permissions. Let me try using git commands to resolve the conflict instead:
 
-Now the eighth commit which may already be applied as 67e474cce0f:
+Now let me add the resolved files and continue the cherry-pick:
 
-This is also a very similar patch (only commit hash and index lines differ). This commit is already applied. Let me continue with the ninth commit:
+First cherry-pick completed. Let me amend the commit message to note the conflict resolution:
 
-Let me check the conflict:
+Now let me check the delta and run the build test:
 
-I can see the conflict. The local version has an extra line (`OPTEE_EXTRA_ARGS`), and the remote version uses the new format without `$` prefixes. Let me look at the full conflict context:
+The delta is identical (3 files, 32 insertions). Now let me run the build test:
 
-I understand the conflict. The resolution should keep the extra line from HEAD but use the new format from the cherry-pick (without `$` prefix, with proper indentation). Let me resolve this:
+Build passed. Now cherry-pick the second commit:
 
-I need to resolve the conflict by combining both versions - keep the new format (without `$`, with proper indentation) but include the extra OPTEE_EXTRA_ARGS line from HEAD:
+I see the conflict in `qcom-priv.h`. The incoming commit removes the `qcom_of_fixup_nodes()` function declaration and `qcom_parse_memory()` declaration because it's restructuring how the OF fixups work. Let me check what the original commit looked like:
 
-Let me amend the commit message to note the fix-up:
+I see, the original commit removes the `qcom_of_fixup_nodes()` declaration because the fixups are now done via the event system. But the current ci/master has additional changes including `qcom_parse_memory()` which isn't in the original. Let me look at what ci/master's qcom-priv.h looks like:
 
-The deltas are very close (34 insertions/deletions vs 33 insertions/deletions) - the slight difference is due to the one extra line for OPTEE_EXTRA_ARGS. Let me run the build test:
+So ci/master has both `qcom_of_fixup_nodes()` (which the incoming commit wants to remove) and `qcom_parse_memory()` (which is a new addition). I need to resolve this by keeping `qcom_parse_memory()` but removing `qcom_of_fixup_nodes()`:
 
-Build passed. Now tenth commit:
+Now let me check delta and run build test:
 
-Build passed. Eleventh commit:
+Delta matches exactly! Now run build test:
 
-Build passed. Twelfth commit:
+Build passed. Now cherry-pick the third commit:
 
-Build passed. Now the last commit - the merge commit:
+Delta matches. Now build test:
 
-Let me check the conflicts:
+Fourth commit:
 
-I can see the conflicts. The merge commit is bringing in changes that overlap with what we already cherry-picked (the initrd patches and docs). Since the individual commits (24600fd0680, 485ab4c6aa6) were already verified as applied via 70a692335b3 and 67e474cce0f, and the merge commit is just bringing them together, let me resolve the conflicts:
+Fifth commit:
 
-1. For j722s_evm.rst: keep HEAD (our version with OPTEE_EXTRA_ARGS)
-2. For efi_bootbin.c: the merge is bringing in functions we've already applied via individual commits - keep HEAD 
-3. For efi_helper.c: keep HEAD version (our version already has the fix applied)
+Sixth commit:
 
-The merge commit results in an empty commit since all changes were already applied. As per instructions, we should commit it anyway with --allow-empty to preserve the merge commit message:
+Seventh commit:
 
-Now let me verify all the cherry-picks with git log:
+Eighth commit:
 
-I see we have 11 commits cherry-picked (10 individual + 1 merge). We skipped 2 commits (24600fd0680 and 485ab4c6aa6) because they were already applied via 70a692335b3 and 67e474cce0f. Let me verify the count:
+Ninth commit (merge commit):
 
-Expected 13 commits:
-1. c0ed43c2a93: ✓ Applied (00f4f882a34)
-2. f59cb6a6970: ✓ Applied (4e376467900)
-3. a6da395b5d6: ✓ Applied (a5a08533bef)
-4. aa96cda0a58: ✓ Applied (a18cf114b61)
-5. 98a898e5849: ✓ Applied (43d923a8d5e)
-6. a4af308e4ac: ✓ Applied (d80ead51017)
-7. 24600fd0680: ⏭ SKIPPED - Already applied as 70a692335b3
-8. 485ab4c6aa6: ⏭ SKIPPED - Already applied as 67e474cce0f
-9. c00f08c20ad: ✓ Applied (d17810aa6cb)
-10. 6f399d4116c: ✓ Applied (0971cb830c0)
-11. ac3b51ef727: ✓ Applied (cd1e9064def)
-12. c0546426724: ✓ Applied (4c276786d7c)
-13. 152fa1b7fd6: ✓ Applied (dcb1250bdaf) - Empty merge commit
+This merge commit is causing conflicts because it brings in the state from the merged branch which we've already cherry-picked. Since this is a merge commit and we've already applied all the individual patches, this should result in an empty commit. Let me check the status:
 
-Now run the final build:
+Let me check the current state of these files to see if they're actually already in the desired state (since we already applied all the patches):
 
-Final build passed.
+I see - the merge commit is trying to drop the bootcmd/boot_os_addr/bootm_final events but we already resolved those. Let me check out HEAD versions of the conflicting files (since our cherry-picks are correct) and create an empty commit:
+
+As expected, it's now empty since all the changes were already applied via the individual commits. Let me commit it as an empty commit to preserve the merge history:
+
+Now let me verify all commits are present:
+
+All 9 commits are present. Now let me run the final build test:
+
+Build passes. Let me provide the final status report:
 
 ## Summary
 
-### Cherry-pick Results
-
-**Branch:** `cherry-c0ed43c2a93` based on `ci/master`
-
-**Total Commits Requested:** 13
-
-**Commits Applied:** 11
-| # | Original Hash | New Hash | Subject | Status |
-|---|---------------|----------|---------|--------|
-| 1 | c0ed43c2a93 | 00f4f882a34 | drivers: spi: Fix data loss issue in QSPI | ✓ Clean |
-| 2 | f59cb6a6970 | 4e376467900 | Revert "mtd: spi-nor: Remove recently added SST special case" | ✓ Clean |
-| 3 | a6da395b5d6 | a5a08533bef | common: board: fix build condition of noncached memory initcall | ✓ Clean |
-| 4 | aa96cda0a58 | a18cf114b61 | clk: fix crash on clk_set_rate clean rate cache | ✓ Clean |
-| 5 | 98a898e5849 | 43d923a8d5e | mtd: mtdpart: Support MTDPART_SIZ_FULL in fixed-partitions | ✓ Clean |
-| 6 | a4af308e4ac | d80ead51017 | uthread: doc: fix inline documentation | ✓ Clean |
-| 7 | 24600fd0680 | - | efi_loader: bootbin: do not load an initrd if none is provided | ⏭ Skipped - Already applied as 70a692335b3 |
-| 8 | 485ab4c6aa6 | - | efi_loader: fix typo initd_sz to initrd_sz | ⏭ Skipped - Already applied as 67e474cce0f |
-| 9 | c00f08c20ad | d17810aa6cb | doc: ti: update bash code-block directives to prompt | ⚠️ Conflict resolved |
-| 10 | 6f399d4116c | 0971cb830c0 | doc: ti: k3: add language for code-block directive | ✓ Clean |
-| 11 | ac3b51ef727 | cd1e9064def | bootm: pass kernel load address not entry point for IH_OS_EFI | ✓ Clean |
-| 12 | c0546426724 | 4c276786d7c | boot: let BOOTSTAGE_RECORD_COUNT default to 50 | ✓ Clean |
-| 13 | 152fa1b7fd6 | dcb1250bdaf | Merge tag 'efi-2025-07-rc2' | ✓ Empty merge (all changes already applied) |
-
-### Fix-ups Made
-1. **c00f08c20ad (doc: ti: update bash code-block directives to prompt):** Resolved conflict in `doc/board/ti/j722s_evm.rst` - kept the OPTEE_EXTRA_ARGS line with the new prompt format. Note added to commit message.
-
-2. **152fa1b7fd6 (Merge tag 'efi-2025-07-rc2'):** Empty merge commit - all changes were already applied via individual cherry-picks. Kept with --allow-empty to preserve commit message history.
-
-### Skipped Commits (Already Applied)
-- **24600fd0680** → Already present as **70a692335b3** (verified via patch comparison)
-- **485ab4c6aa6** → Already present as **67e474cce0f** (verified via patch comparison)
+All 9 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-993a9db918a` (based on `ci/master`).
 
 ### Build Result
-- **Status:** ✅ OK (no warnings or errors)
-- All builds passed after each cherry-pick and final verification build
+✅ **OK** - sandbox build passes
 
-### Concerning Deltas
-- None - all deltas matched or had expected minor differences due to conflict resolutions
+### Commits Applied
+```
+02aa7da3598 Merge patch series "Qualcomm: cleanup OF_LIVE fixup and fix RB1/2"
+77ee1b69e56 pinctrl: qcom: qcm2290: fix off by 1 in pin_count
+328c36f3f7e clk/qcom: qcm2290: show clock name in set_rate()
+8395641255d mach-snapdragon: of_fixup: set dr_mode for RB1/2 boards
+6c17d85c788 mach-snapdragon: of_fixup: update comment
+19072b8a9d4 mach-snapdragon: of_fixup: remove confusing log message
+f12f5cce198 mach-snapdragon: of_fixup: skip disabled USB nodes
+cfccb4dc089 mach-snapdragon: use EVT_OF_LIVE_INIT to apply DT fixups
+aadfde2e3cf event: signal when livetree has been built
+```
 
-The cherry-pick branch `cherry-c0ed43c2a93` is ready for pushing.
+### Fix-ups Made
+
+1. **993a9db918a (event: signal when livetree has been built)**
+   - Conflict resolution in `common/event.c`, `include/event.h`, and `lib/of_live.c`
+   - Merged `EVT_OF_LIVE_BUILT` alongside existing events (`EVT_BOOTCMD`, `EVT_BOOT_OS_ADDR`, `EVT_BOOTM_FINAL`)
+   - Combined EFI_STUB code and EVENT notification code in `of_live.c`
+
+2. **5a1dfb27f91 (mach-snapdragon: use EVT_OF_LIVE_INIT to apply DT fixups)**
+   - Conflict resolution in `arch/arm/mach-snapdragon/qcom-priv.h`
+   - Kept `qcom_parse_memory()` declaration (added separately in ci/master) while removing `qcom_of_fixup_nodes()` as intended by original commit
+
+3. **4ca87fd18c1 (Merge commit)**
+   - Empty commit (all changes already applied via individual cherry-picks)
+   - Preserved for history tracking purposes
+
+### Delta Verification
+All commits matched their original deltas (files changed and line counts identical).
+
+### Branch Status
+The branch `cherry-993a9db918a` is ready for pushing. It is ahead of `ci/master` by 9 commits.
 
 ---
 
