@@ -589,7 +589,7 @@ static void vidconsole_putc(struct stdio_dev *sdev, const char ch)
 	}
 }
 
-static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
+static void vidconsole_putsn(struct stdio_dev *sdev, const char *s, int len)
 {
 	struct udevice *dev = sdev->priv;
 	struct vidconsole_priv *priv = dev_get_uclass_priv(dev);
@@ -597,12 +597,12 @@ static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
 
 	if (priv->quiet)
 		return;
-	ret = vidconsole_put_string(dev, NULL, s);
+	ret = vidconsole_put_stringn(dev, NULL, s, len);
 	if (ret) {
 #ifdef DEBUG
 		char str[30];
 
-		snprintf(str, sizeof(str), "[vc err: puts %d]", ret);
+		snprintf(str, sizeof(str), "[vc err: putsn %d]", ret);
 		console_puts_select_stderr(true, str);
 #endif
 	}
@@ -612,6 +612,11 @@ static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
 		console_puts_select_stderr(true, "[vc err: video_sync]");
 #endif
 	}
+}
+
+static void vidconsole_puts(struct stdio_dev *sdev, const char *s)
+{
+	vidconsole_putsn(sdev, s, strlen(s));
 }
 
 void vidconsole_list_fonts(struct udevice *dev)
@@ -950,6 +955,7 @@ static int vidconsole_post_probe(struct udevice *dev)
 	sdev->flags = DEV_FLAGS_OUTPUT | DEV_FLAGS_DM;
 	sdev->putc = vidconsole_putc;
 	sdev->puts = vidconsole_puts;
+	sdev->putsn = vidconsole_putsn;
 	sdev->priv = dev;
 
 	return stdio_register(sdev);
