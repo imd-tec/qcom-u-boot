@@ -43,12 +43,11 @@ static void console_record_putc(const char c)
 	}
 }
 
-static void console_record_puts(const char *s)
+static void console_record_putsn(const char *s, int len)
 {
 	if (!(gd->flags & GD_FLG_RECORD))
 		return;
 	if (gd->console_out.start) {
-		int len = strlen(s);
 		int written;
 
 		written = membuf_put((struct membuf *)&gd->console_out, s, len);
@@ -57,6 +56,11 @@ static void console_record_puts(const char *s)
 			gd->console_out_ovf += len - written;
 		}
 	}
+}
+
+static void console_record_puts(const char *s)
+{
+	console_record_putsn(s, strlen(s));
 }
 
 static int console_record_getc(void)
@@ -81,6 +85,10 @@ static int console_record_tstc(void)
 }
 #else
 static void console_record_putc(char c)
+{
+}
+
+static void __maybe_unused console_record_putsn(const char *s, int len)
 {
 }
 
