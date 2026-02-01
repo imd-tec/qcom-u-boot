@@ -10903,6 +10903,109 @@ All **15 commits** have been successfully cherry-picked from `us/next` to branch
 - None
 
 The branch `cherry-fd3202153a2` is ready for pushing.
+Branch: cherry-81191427a4e
+
+Commits:
+- 81191427a4e eth: Support E1000E I225-V
+- 03f5101ff50 Add HOST_ARCH detection for armv5tel and armv6l
+- f717d798bec bootm: improve error message when gzip decompression buffer is too small
+- 03fb08d4aef env: Introduce support for MTD
+- 252cd205300 Makefile: Strip leading spaces when preprocessing generated_defconfig
+- 0352eab7d37 cmd: spawn: reject 0 as an invalid job ID
+- 1750ba44d57 configs: phycore_am62x_a53_defconfig: Remove CONFIG_SYS_BOOTM_LEN
+- 1c26f91a224 firmware: ti_sci: Add Initialization of dev_info head node
+- 4ba2fe14f2c fs: exfat: Use strncpy() and bail on too long filenames
+- 4d3b5c679bc fs: exfat: Inhibit unused exfat_humanize_bytes() and exfat_print_info()
+- ea2c6df4785 mtd: spi-nor-core: Fixup SNOR_F_IO_MODE_EN_VOLATILE for MT35X
+- 46b3580c594 mtd: spi-nor: Send write disable cmd after every write enable
+- 13d1bd5bbbf mips: octeon: remove unused middle expression
+- 3b6760ddeb4 bootstd: Rework BLK dependency
+- e75070a8f46 include: env: phytec: k3_net: Remove net_apply_extensions
+- ad2ae4d2b25 include: env: phytec: k3_net: Use get_cmd
+- fd446b0c844 board: phytec: phycore_am62ax: Update Environment
+- 48db49b0977 Merge patch series "include: env: phytec: k3_net: Remove net_apply_extensions"
+
+### Conversation log
+The repository is on a different branch. Let me checkout ci/master and create the new branch:
+
+Now let me verify the branch is set up correctly and start cherry-picking the commits. First, let me check the commits exist in us/next:
+
+Good, the commit exists. Let me start cherry-picking the commits one by one. First commit:
+
+Good, deltas match. Let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Deltas match. Build test:
+
+Good. Now the third commit which may already be applied:
+
+The patches are essentially the same (only line numbers differ). This commit is already applied. Let me skip it:
+
+Now the fourth commit - env: Introduce support for MTD:
+
+Good. Fifth commit - Makefile: Strip leading spaces:
+
+Now check for the bootstd commit that might be already applied:
+
+The patches are essentially the same - only the commit hash and index lines differ. This commit is already applied as 947dadf8a9b. Let me skip it:
+
+Now the final commit, which is a merge commit:
+
+The merge commit results in an empty commit because all the changes were already cherry-picked in the previous commits. Let me commit it as an empty commit to preserve the merge history:
+
+The merge commit was cherry-picked as empty (expected since we already applied the individual commits). Now let me run the build verification and check the commit log:
+
+Let me verify the count of cherry-picked commits:
+
+We have 16 commits cherry-picked (out of 18 requested). 2 commits were skipped because they were already applied:
+- f717d798bec (already applied as e6ba997fe6c)
+- 3b6760ddeb4 (already applied as 947dadf8a9b)
+
+Let me run the final build test:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-81191427a4e` (based on `ci/master`)
+
+**Build Result:** ✅ OK - sandbox build passed
+
+**Commits Cherry-Picked:** 16 commits (from 18 requested)
+
+### Commits Applied Successfully:
+| Hash | Subject |
+|------|---------|
+| bee110c2cde | eth: Support E1000E I225-V |
+| 1c88db5f037 | Add HOST_ARCH detection for armv5tel and armv6l |
+| 8ba852cd663 | env: Introduce support for MTD |
+| 883112f307f | Makefile: Strip leading spaces when preprocessing generated_defconfig |
+| f83b36c8e65 | cmd: spawn: reject 0 as an invalid job ID |
+| f17a54d3b98 | configs: phycore_am62x_a53_defconfig: Remove CONFIG_SYS_BOOTM_LEN |
+| eb3775fe978 | firmware: ti_sci: Add Initialization of dev_info head node |
+| 5e37fa02013 | fs: exfat: Use strncpy() and bail on too long filenames |
+| 2a55aada801 | fs: exfat: Inhibit unused exfat_humanize_bytes() and exfat_print_info() |
+| d24288819d4 | mtd: spi-nor-core: Fixup SNOR_F_IO_MODE_EN_VOLATILE for MT35X |
+| 775086f36b0 | mtd: spi-nor: Send write disable cmd after every write enable |
+| b998f6f0f7a | mips: octeon: remove unused middle expression |
+| 0a5c2e227c4 | include: env: phytec: k3_net: Remove net_apply_extensions |
+| 0220b7e9f58 | include: env: phytec: k3_net: Use get_cmd |
+| c8b207a5d9d | board: phytec: phycore_am62ax: Update Environment |
+| 1957b006051 | Merge patch series "include: env: phytec: k3_net: Remove net_apply_extensions" (empty) |
+
+### Commits Skipped (Already Applied):
+| Original Hash | Already Applied As | Subject |
+|---------------|-------------------|---------|
+| f717d798bec | e6ba997fe6c | bootm: improve error message when gzip decompression buffer is too small |
+| 3b6760ddeb4 | 947dadf8a9b | bootstd: Rework BLK dependency |
+
+**Fix-ups Made:** None required
+
+**Commits with Concerning Deltas:** None - all commit deltas matched their originals
+
+**Notes:**
+- The merge commit 48db49b0977 was applied as an empty commit (expected, since the individual commits were already cherry-picked)
+- All cherry-picks applied cleanly with no conflicts requiring manual resolution
+- The branch is ready for pushing
 
 ---
 
