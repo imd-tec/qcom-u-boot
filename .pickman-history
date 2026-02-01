@@ -10646,3 +10646,106 @@ The branch `cherry-993a9db918a` is ready for pushing. It is ahead of `ci/master`
 
 ---
 
+## 2026-01-31: us/next
+
+Branch: cherry-ef4d9621376
+
+Commits:
+- ef4d9621376 board: beagle: beagley-ai: Add pattern match for MAINTAINERS
+- 6f478ce788e arch: arm: dts: k3-am67a-beagley-ai-u-boot: Mark main_gpio1 as bootph-all
+- d096ff98c88 beagle: beagley-ai: env: Set up the boot devices and boot methods
+- b522c3031e3 beagle: beagley-ai: env: Setup scripts for LED control
+- ca248770390 beagle: beagley-ai: env: Enable DFU env options
+- 4786f89c122 configs: am67a_beagley_ai*: Use saveddefconfig
+- 208ac0681ed configs:am67a_beagley_ai*: Drop un-necessary config options
+- f8924c373bf configs: am67a_beagley_ai_a53: Enable additional features
+- 9f5f9965960 doc: beagle: Add BeagleY-AI documentation
+- 4b033d47c4f configs: am64x_evm_a53: Enable MMC UHS modes
+- 510f2502475 board: ti: am33xx: Add support for BeagleBoard Green Eco
+- 78c0f7e3eb0 arm: mach-k3: use CFG_MAX_MEM_SIZE
+- c492a55fe40 arm: dts: k3: binman: Fix DM firmware selection
+- 0b78c275626 Merge patch series "board: beagle: beagley-ai: Cleanups and stdboot"
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Let me verify the delta and run the build test:
+
+Deltas match. Now run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Deltas match. Build test:
+
+Build passed. Now commit 3:
+
+Both passed. Commit 4:
+
+Both passed. Commit 5:
+
+Both passed. Commit 6:
+
+Both passed. Commit 7:
+
+Both passed. Commit 8:
+
+Both passed. Commit 9:
+
+Both passed. Commit 10:
+
+Both passed. Commit 11:
+
+Both passed. Commit 12:
+
+Both passed. Commit 13:
+
+Both passed. Now commit 14 - this is a merge commit, so I need to use -m 1 --allow-empty:
+
+The merge commit is empty (as expected since it's a merge), but I need to keep it. Let me commit it with --allow-empty:
+
+All 14 commits have been cherry-picked. Now let me verify with git log:
+
+All 14 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**All 14 commits successfully cherry-picked to branch `cherry-ef4d9621376`**
+
+### Build Result: ✅ OK
+No warnings or errors.
+
+### Commits Applied (in order):
+1. `ab514b77ac5` - board: beagle: beagley-ai: Add pattern match for MAINTAINERS
+2. `c2d5766cb7c` - arch: arm: dts: k3-am67a-beagley-ai-u-boot: Mark main_gpio1 as bootph-all
+3. `a286cc90e53` - beagle: beagley-ai: env: Set up the boot devices and boot methods
+4. `66e02449593` - beagle: beagley-ai: env: Setup scripts for LED control
+5. `444c8fa6c0f` - beagle: beagley-ai: env: Enable DFU env options
+6. `5083f4761dc` - configs: am67a_beagley_ai*: Use saveddefconfig
+7. `fd33970f916` - configs:am67a_beagley_ai*: Drop un-necessary config options
+8. `84ce13ec23a` - configs: am67a_beagley_ai_a53: Enable additional features
+9. `a7b7347edf8` - doc: beagle: Add BeagleY-AI documentation
+10. `4df7a9e23fc` - configs: am64x_evm_a53: Enable MMC UHS modes
+11. `cff648327ab` - board: ti: am33xx: Add support for BeagleBoard Green Eco
+12. `3f3f52a629c` - arm: mach-k3: use CFG_MAX_MEM_SIZE
+13. `abc92b5b33f` - arm: dts: k3: binman: Fix DM firmware selection
+14. `157ca75e921` - Merge patch series "board: beagle: beagley-ai: Cleanups and stdboot" (empty merge commit, preserved for history)
+
+### Fix-ups Made: None
+All cherry-picks applied cleanly with expected deltas.
+
+### Concerning Deltas: None
+All commits showed identical file changes and line counts between original and cherry-picked versions.
+
+### Auto-merges (resolved automatically by git):
+- Commit 9: `doc/board/ti/k3.rst`
+- Commit 10: `configs/am64x_evm_a53_defconfig`
+- Commit 11: Multiple config files and include/configs/am335x_evm.h
+- Commit 12: `arch/arm/mach-k3/common.c`
+- Commit 13: `arch/arm/dts/k3-am67a-beagley-ai-u-boot.dtsi`
+
+The branch `cherry-ef4d9621376` is ready for pushing.
+
+---
+
