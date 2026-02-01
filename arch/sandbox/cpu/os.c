@@ -827,10 +827,14 @@ void os_putc(int ch)
 	os_write(1, &ch, 1);
 }
 
+void os_putsn(const char *str, int len)
+{
+	os_write(1, str, len);
+}
+
 void os_puts(const char *str)
 {
-	while (*str)
-		os_putc(*str++);
+	os_putsn(str, strlen(str));
 }
 
 void os_flush(void)
