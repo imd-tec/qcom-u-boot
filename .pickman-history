@@ -10783,3 +10783,126 @@ The branch `cherry-c81d8efb514` is ready for pushing with 2 commits on top of `c
 
 ---
 
+## 2026-02-01: us/next
+
+Branch: cherry-fd3202153a2
+
+Commits:
+- fd3202153a2 config_distro_bootcmd: make possible to substitute 'part list' in distro_bootcmd
+- d0d0b6a25ca ARM: stm32: env: Enable scan and start for AB schema on STM32MP15 DHSOM
+- ff99c909426 ARM: dts: stm32: add bootph-all for dsi node in stm32f769-disco-u-boot
+- 653c9537e75 ARM: dts: add stm32f769-disco-mb1166-reva09
+- a755a1e0ebf video: support FRIDA FRD400B25025-A-CTK
+- 8eb84278c67 configs: stm32f769-disco: support FRD400B25025-A-CTK display
+- 1fa9718047b board: st: common: fix dfu alt buffer clearing
+- 20afca89ed5 net: dwc_eth_qos: add support of stm32mp2 platform
+- 20e24fb8e5d configs: stm32f769-disco_spl: Fix console cmdline
+- d2ed0c17d7c configs: stm32f746-disco_spl: Fix console cmdline
+- 72246de5dbb configs: stm32f769-disco: Fix console cmdline
+- 7a880cb4ec5 configs: stm32f729-discovery: Fix console cmdline
+- 4664943f0e4 configs: stm32746-eval_spl: Fix console cmdline
+- 9b74f86b683 configs: stm32746-eval: Fix console cmdline
+- 9cf090e8874 Merge tag 'u-boot-stm32-20250505' of https://source.denx.de/u-boot/custodians/u-boot-stm
+
+### Conversation log
+Good, the repository is clean and the new branch is created. Let me start cherry-picking the commits one by one.
+
+Delta looks good. Now let me run the build test:
+
+Build passed. Continue to the next commit:
+
+Delta looks good. Build test:
+
+Build passed. Continue to commit 3:
+
+Now commit 4 which has "maybe already applied as 6bb92fcf7d2". Let me verify first:
+
+These are completely different commits - 6bb92fcf7d2 is a huge "Squashed 'dts/upstream/'" merge commit, not the same as the stm32f769 DTS commit. Let me check if the actual commit 653c9537e75 is already applied with a different hash:
+
+The grep returned the wrong commit. Let me search more specifically:
+
+Let me check what files commit 653c9537e75 touches:
+
+File doesn't exist in ci/master yet. Let me try the cherry-pick:
+
+Commit 5:
+
+Commit 6:
+
+Commit 7:
+
+Commit 8:
+
+Commit 9:
+
+Commit 10:
+
+Commit 11 (maybe already applied as 702025856df):
+
+These are completely different commits - 702025856df is a "pickman: Record cherry-pick" commit. Let me search for the actual commit in ci/master:
+
+Found it. Let me compare:
+
+These patches are different - the original 72246de5dbb touches `stm32f746-disco_defconfig` while 371d69652cf touches `stm32f769-disco_defconfig`. Looking at the subject "Fix console cmdline" on stm32f769-disco, let me see what files the original actually touches:
+
+So the commit 72246de5dbb is titled "configs: stm32f769-disco" but actually modifies `stm32f746-disco_defconfig`. Let me proceed with the cherry-pick:
+
+Commit 12:
+
+Commit 13:
+
+Commit 14:
+
+Commit 15 (merge commit):
+
+The merge commit is empty (as expected since we already cherry-picked all the individual commits). Let me commit it with --allow-empty:
+
+The merge commit was committed as empty (which is expected since we already applied all the changes). Let me run the final build test:
+
+Now let me verify all 15 commits are present:
+
+All 15 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All **15 commits** have been successfully cherry-picked from `us/next` to branch `cherry-fd3202153a2`:
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | fd3202153a2 | config_distro_bootcmd: make possible to substitute 'part list' in distro_bootcmd | ✅ OK |
+| 2 | d0d0b6a25ca | ARM: stm32: env: Enable scan and start for AB schema on STM32MP15 DHSOM | ✅ OK |
+| 3 | ff99c909426 | ARM: dts: stm32: add bootph-all for dsi node in stm32f769-disco-u-boot | ✅ OK |
+| 4 | 653c9537e75 | ARM: dts: add stm32f769-disco-mb1166-reva09 | ✅ OK (not already applied) |
+| 5 | a755a1e0ebf | video: support FRIDA FRD400B25025-A-CTK | ✅ OK (auto-merged) |
+| 6 | 8eb84278c67 | configs: stm32f769-disco: support FRD400B25025-A-CTK display | ✅ OK |
+| 7 | 1fa9718047b | board: st: common: fix dfu alt buffer clearing | ✅ OK |
+| 8 | 20afca89ed5 | net: dwc_eth_qos: add support of stm32mp2 platform | ✅ OK |
+| 9 | 20e24fb8e5d | configs: stm32f769-disco_spl: Fix console cmdline | ✅ OK |
+| 10 | d2ed0c17d7c | configs: stm32f746-disco_spl: Fix console cmdline | ✅ OK |
+| 11 | 72246de5dbb | configs: stm32f769-disco: Fix console cmdline | ✅ OK (not same as 702025856df) |
+| 12 | 7a880cb4ec5 | configs: stm32f729-discovery: Fix console cmdline | ✅ OK |
+| 13 | 4664943f0e4 | configs: stm32746-eval_spl: Fix console cmdline | ✅ OK |
+| 14 | 9b74f86b683 | configs: stm32746-eval: Fix console cmdline | ✅ OK |
+| 15 | 9cf090e8874 | Merge tag 'u-boot-stm32-20250505' | ✅ OK (empty merge) |
+
+### Build Result
+- **Status**: OK (no warnings/errors)
+- All 15 builds passed
+
+### Notes
+- **Commit 4** (653c9537e75): The suggested hash 6bb92fcf7d2 was a completely different commit (DTS subtree squash), so the cherry-pick proceeded normally.
+- **Commit 11** (72246de5dbb): The suggested hash 702025856df was a "pickman: Record cherry-pick" commit, not the same commit. The actual subject "configs: stm32f769-disco: Fix console cmdline" existed as 371d69652cf but modifies different files (stm32f769 vs stm32f746), so this is a different commit and was cherry-picked.
+- **Commit 15** (merge commit): Committed as empty commit using `--allow-empty` since all individual changes were already cherry-picked.
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None
+
+The branch `cherry-fd3202153a2` is ready for pushing.
+
+---
+
