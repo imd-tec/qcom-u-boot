@@ -392,6 +392,18 @@ void serial_setbrg(void);
 void serial_putc(const char ch);
 void serial_putc_raw(const char ch);
 void serial_puts(const char *str);
+
+/**
+ * serial_putsn() - Write a string with specified length to the serial console
+ *
+ * This outputs exactly @len characters from @str, regardless of any nul
+ * characters that may be present. This is useful for printing substrings or
+ * binary data that may contain embedded nuls.
+ *
+ * @str: String to output (need not be nul-terminated)
+ * @len: Number of characters to output
+ */
+void serial_putsn(const char *str, int len);
 #if defined(CONFIG_CONSOLE_FLUSH_SUPPORT) && CONFIG_IS_ENABLED(DM_SERIAL)
 void serial_flush(void);
 #else

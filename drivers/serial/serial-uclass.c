@@ -309,6 +309,34 @@ static void _serial_puts(struct udevice *dev, const char *str)
 	} while (*str);
 }
 
+static void _serial_putsn(struct udevice *dev, const char *str, size_t len)
+{
+	struct dm_serial_ops *ops = serial_get_ops(dev);
+
+	if (!CONFIG_IS_ENABLED(SERIAL_PUTS) || !ops->puts) {
+		while (len--)
+			_serial_putc(dev, *str++);
+		return;
+	}
+
+	while (len) {
+		const char *newline = memchr(str, '\n', len);
+		size_t seg_len = newline ? newline - str : len;
+
+		if (__serial_puts(dev, str, seg_len))
+			return;
+
+		if (newline && __serial_puts(dev, "\r\n", 2))
+			return;
+
+		if (IS_ENABLED(CONFIG_CONSOLE_FLUSH_ON_NEWLINE) && newline)
+			_serial_flush(dev);
+
+		str += seg_len + !!newline;
+		len -= seg_len + !!newline;
+	}
+}
+
 static int __serial_getc(struct udevice *dev)
 {
 	struct dm_serial_ops *ops = serial_get_ops(dev);
@@ -389,6 +417,12 @@ void serial_puts(const char *str)
 {
 	if (gd->cur_serial_dev)
 		_serial_puts(gd->cur_serial_dev, str);
+}
+
+void serial_putsn(const char *str, int len)
+{
+	if (gd->cur_serial_dev)
+		_serial_putsn(gd->cur_serial_dev, str, len);
 }
 
 #ifdef CONFIG_CONSOLE_FLUSH_SUPPORT

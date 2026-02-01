@@ -88,3 +88,23 @@ static int dm_test_serial(struct unit_test_state *uts)
 	return 0;
 }
 DM_TEST(dm_test_serial, UTF_SCAN_FDT);
+
+/* Test serial_putsn() function */
+static int dm_test_serial_putsn(struct unit_test_state *uts)
+{
+	const char *test_str = "testing string";
+	size_t test_len = 4;
+	size_t start, written;
+
+	/* Test that serial_putsn() writes the correct number of characters */
+	sandbox_serial_endisable(false);
+	start = sandbox_serial_written();
+	serial_putsn(test_str, test_len);
+	sandbox_serial_endisable(true);
+
+	written = sandbox_serial_written() - start;
+	ut_asserteq(test_len, written);
+
+	return 0;
+}
+DM_TEST(dm_test_serial_putsn, UTF_SCAN_FDT);
