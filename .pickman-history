@@ -10648,104 +10648,81 @@ The branch `cherry-993a9db918a` is ready for pushing. It is ahead of `ci/master`
 
 ## 2026-01-31: us/next
 
-Branch: cherry-ef4d9621376
+Branch: cherry-b011053450f
 
 Commits:
-- ef4d9621376 board: beagle: beagley-ai: Add pattern match for MAINTAINERS
-- 6f478ce788e arch: arm: dts: k3-am67a-beagley-ai-u-boot: Mark main_gpio1 as bootph-all
-- d096ff98c88 beagle: beagley-ai: env: Set up the boot devices and boot methods
-- b522c3031e3 beagle: beagley-ai: env: Setup scripts for LED control
-- ca248770390 beagle: beagley-ai: env: Enable DFU env options
-- 4786f89c122 configs: am67a_beagley_ai*: Use saveddefconfig
-- 208ac0681ed configs:am67a_beagley_ai*: Drop un-necessary config options
-- f8924c373bf configs: am67a_beagley_ai_a53: Enable additional features
-- 9f5f9965960 doc: beagle: Add BeagleY-AI documentation
-- 4b033d47c4f configs: am64x_evm_a53: Enable MMC UHS modes
-- 510f2502475 board: ti: am33xx: Add support for BeagleBoard Green Eco
-- 78c0f7e3eb0 arm: mach-k3: use CFG_MAX_MEM_SIZE
-- c492a55fe40 arm: dts: k3: binman: Fix DM firmware selection
-- 0b78c275626 Merge patch series "board: beagle: beagley-ai: Cleanups and stdboot"
+- b011053450f arm: dts: k3-j784s4-r5-evm: Add the PMIC ESM node
+- 29e1d5f9382 arm: dts: k3-am69-r5-evm: Add the PMIC ESM node
+- 61c6d134868 board: ti: j784s4: Initialize the ESM & PMIC ESM
+- 8de75de3e45 configs: j784s4_evm_r5: Enable ESM related configs
+- 0c8a89d252c Merge patch series "k3-j784s4*: Enable ESMs and related PMIC"
 
 ### Conversation log
-The repository is clean. Now let me create and checkout the new branch based on ci/master:
+The working tree is clean. Now let me create and checkout the new branch based on ci/master:
 
 Now let me cherry-pick the first commit:
 
-Let me verify the delta and run the build test:
+First cherry-pick succeeded. Let me verify the delta and run the build test:
 
-Deltas match. Now run the build test:
+The delta is identical (1 file changed, 7 insertions). Now let me run the build test:
 
 Build passed. Now let me cherry-pick the second commit:
 
-Deltas match. Build test:
+Second cherry-pick succeeded. Let me verify the delta and run the build test:
 
-Build passed. Now commit 3:
+Delta is identical (1 file changed, 7 insertions). Now let me run the build test:
 
-Both passed. Commit 4:
+Build passed. Now let me cherry-pick the third commit:
 
-Both passed. Commit 5:
+Third cherry-pick succeeded. Let me verify the delta and run the build test:
 
-Both passed. Commit 6:
+Delta is identical (1 file changed, 24 insertions). Now let me run the build test:
 
-Both passed. Commit 7:
+Build passed. Now let me cherry-pick the fourth commit:
 
-Both passed. Commit 8:
+Fourth cherry-pick succeeded (with auto-merge). Let me verify the delta and run the build test:
 
-Both passed. Commit 9:
+Delta is identical (1 file changed, 5 insertions). Now let me run the build test:
 
-Both passed. Commit 10:
+Build passed. Now let me cherry-pick the fifth commit, which is a merge commit (identified by "Merge" in subject):
 
-Both passed. Commit 11:
+The merge commit is empty because all the changes were already applied via the individual commits. Let me commit it as an empty commit to preserve the history:
 
-Both passed. Commit 12:
+The merge commit has been preserved. Let me verify the delta and run the build test:
 
-Both passed. Commit 13:
+The merge commit was cherry-picked as an empty commit (expected since all changes were already applied in the previous commits). The original merge had 4 files changed with 43 insertions, which is the sum of all the previous commits. Let me run the build test:
 
-Both passed. Now commit 14 - this is a merge commit, so I need to use -m 1 --allow-empty:
+Build passed. Now let me verify all 5 commits are present:
 
-The merge commit is empty (as expected since it's a merge), but I need to keep it. Let me commit it with --allow-empty:
+All 5 commits are present. Now let me run the final build test:
 
-All 14 commits have been cherry-picked. Now let me verify with git log:
+## Final Status
 
-All 14 commits are present. Let me run the final build test:
+**All 5 commits successfully cherry-picked!**
 
-## Final Status Report
-
-**All 14 commits successfully cherry-picked to branch `cherry-ef4d9621376`**
+### Commits cherry-picked:
+| Original Hash | New Hash | Subject |
+|---------------|----------|---------|
+| b011053450f | e53272320b7 | arm: dts: k3-j784s4-r5-evm: Add the PMIC ESM node |
+| 29e1d5f9382 | 5747e36691b | arm: dts: k3-am69-r5-evm: Add the PMIC ESM node |
+| 61c6d134868 | e9d4f72d16f | board: ti: j784s4: Initialize the ESM & PMIC ESM |
+| 8de75de3e45 | 8026b14fb2c | configs: j784s4_evm_r5: Enable ESM related configs |
+| 0c8a89d252c | 9fceeb032c5 | Merge patch series "k3-j784s4*: Enable ESMs and related PMIC" |
 
 ### Build Result: ✅ OK
-No warnings or errors.
-
-### Commits Applied (in order):
-1. `ab514b77ac5` - board: beagle: beagley-ai: Add pattern match for MAINTAINERS
-2. `c2d5766cb7c` - arch: arm: dts: k3-am67a-beagley-ai-u-boot: Mark main_gpio1 as bootph-all
-3. `a286cc90e53` - beagle: beagley-ai: env: Set up the boot devices and boot methods
-4. `66e02449593` - beagle: beagley-ai: env: Setup scripts for LED control
-5. `444c8fa6c0f` - beagle: beagley-ai: env: Enable DFU env options
-6. `5083f4761dc` - configs: am67a_beagley_ai*: Use saveddefconfig
-7. `fd33970f916` - configs:am67a_beagley_ai*: Drop un-necessary config options
-8. `84ce13ec23a` - configs: am67a_beagley_ai_a53: Enable additional features
-9. `a7b7347edf8` - doc: beagle: Add BeagleY-AI documentation
-10. `4df7a9e23fc` - configs: am64x_evm_a53: Enable MMC UHS modes
-11. `cff648327ab` - board: ti: am33xx: Add support for BeagleBoard Green Eco
-12. `3f3f52a629c` - arm: mach-k3: use CFG_MAX_MEM_SIZE
-13. `abc92b5b33f` - arm: dts: k3: binman: Fix DM firmware selection
-14. `157ca75e921` - Merge patch series "board: beagle: beagley-ai: Cleanups and stdboot" (empty merge commit, preserved for history)
+- All builds passed (no warnings or errors)
 
 ### Fix-ups Made: None
-All cherry-picks applied cleanly with expected deltas.
+- All commits applied cleanly
 
-### Concerning Deltas: None
-All commits showed identical file changes and line counts between original and cherry-picked versions.
+### Delta Verification: ✅ All OK
+- All commits had identical deltas between original and cherry-picked versions
+- The merge commit (0c8a89d252c) was cherry-picked as an empty commit, which is expected since all changes were already applied via the individual commits
 
-### Auto-merges (resolved automatically by git):
-- Commit 9: `doc/board/ti/k3.rst`
-- Commit 10: `configs/am64x_evm_a53_defconfig`
-- Commit 11: Multiple config files and include/configs/am335x_evm.h
-- Commit 12: `arch/arm/mach-k3/common.c`
-- Commit 13: `arch/arm/dts/k3-am67a-beagley-ai-u-boot.dtsi`
-
-The branch `cherry-ef4d9621376` is ready for pushing.
+### Notes:
+- The merge commit was preserved using `--allow-empty` as instructed
+- The branch `cherry-b011053450f` is ready for pushing
+- Branch is 5 commits ahead of `ci/master`
 
 ---
 
