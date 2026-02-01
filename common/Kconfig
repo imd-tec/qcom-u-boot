@@ -54,6 +54,15 @@ config CONSOLE_RECORD_IN_SIZE
 	  The buffer is allocated immediately after the malloc() region is
 	  ready.
 
+config CONSOLE_PUTSN
+	bool "Enable putsn() function for length-based output"
+	default y if SANDBOX
+	help
+	  Enable the putsn() function which outputs a string with a
+	  specified length without requiring nul-termination. This is
+	  useful for printing substrings or binary data without
+	  allocating temporary buffers.
+
 config SYS_CBSIZE
 	int "Console input buffer size"
 	default 2048 if ARCH_TEGRA || ARCH_VERSAL || ARCH_ZYNQ || ARCH_ZYNQMP || \
