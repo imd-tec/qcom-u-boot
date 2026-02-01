@@ -10392,3 +10392,77 @@ The branch `cherry-2bee17dcaa5` is ready for pushing.
 
 ---
 
+## 2026-01-31: us/next
+
+Branch: cherry-72bc04b8744
+
+Commits:
+- 72bc04b8744 arm: apple: rtkit: Add support for AP power & syslogs
+- 89cb15788a1 arm: apple: rtkit: Add default buffer handlers
+- 7bac7f5f012 arm: apple: rtkit: Add a generic RTKit helper driver
+- 082789a4f7a arm: apple: rtkit: Add OSLog buffer support
+- fe593cc8ed9 arm: apple: rtkit: Add endpoint field to buffers
+- 4a55e7f0311 arm: apple: rtkit: Support allocating OSLog out of SRAM in helper
+- 6d159cf2720 Merge patch series "Apple RTKit improvements"
+
+### Conversation log
+Good, the working tree is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Let me compare the delta and run the build:
+
+The deltas match exactly (2 files, 112 insertions, 38 deletions). Now let me run the build test:
+
+Build passed. Let me cherry-pick the second commit:
+
+Deltas match (1 file, 15 insertions, 1 deletion). Build test:
+
+Build passed. Cherry-pick the third commit:
+
+Deltas match (3 files, 100 insertions). Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Deltas match (1 file, 56 insertions, 13 deletions). Build test:
+
+Build passed. Cherry-pick the fifth commit:
+
+Deltas match (2 files, 2 insertions). Build test:
+
+Build passed. Cherry-pick the sixth commit:
+
+Deltas match (1 file, 49 insertions, 1 deletion). Build test:
+
+Build passed. Now cherry-pick the seventh and final commit (the merge commit - needs -m 1 --allow-empty):
+
+The merge commit is empty (as expected since all the individual commits are already applied). Let me commit it with --allow-empty:
+
+Now let me verify all 7 commits are present:
+
+All 7 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Build result:** ✅ OK (sandbox builds successfully)
+
+**Cherry-picks completed:** All 7 commits successfully cherry-picked
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 72bc04b8744 | 98988a1923a | arm: apple: rtkit: Add support for AP power & syslogs | ✅ |
+| 2 | 89cb15788a1 | 3fcebe04dc2 | arm: apple: rtkit: Add default buffer handlers | ✅ |
+| 3 | 7bac7f5f012 | d3ab76c6862 | arm: apple: rtkit: Add a generic RTKit helper driver | ✅ |
+| 4 | 082789a4f7a | d7b121f3d7a | arm: apple: rtkit: Add OSLog buffer support | ✅ |
+| 5 | fe593cc8ed9 | f4fbb0cb2c4 | arm: apple: rtkit: Add endpoint field to buffers | ✅ |
+| 6 | 4a55e7f0311 | 1a2a42d76f6 | arm: apple: rtkit: Support allocating OSLog out of SRAM in helper | ✅ |
+| 7 | 6d159cf2720 | cbba4f1f3e0 | Merge patch series "Apple RTKit improvements" | ✅ (empty) |
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None - all deltas matched exactly
+
+**Branch ready for pushing:** `cherry-72bc04b8744` (7 commits ahead of ci/master)
+
+---
+
