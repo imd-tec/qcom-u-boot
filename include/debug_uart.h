@@ -84,6 +84,17 @@ void printch(int ch);
 void printascii(const char *str);
 
 /**
+ * printasciin() - Output a string with specified length to the debug UART
+ *
+ * This outputs exactly @len characters from @str, regardless of any nul
+ * characters that may be present.
+ *
+ * @str:	String to output (need not be nul-terminated)
+ * @len:	Number of characters to output
+ */
+void printasciin(const char *str, int len);
+
+/**
  * printhex2() - Output a 2-digit hex value
  *
  * @value:	Value to output
@@ -148,6 +159,12 @@ void printdec(unsigned int value);
 	void printascii(const char *str) \
 	{ \
 		while (*str) \
+			_printch(*str++); \
+	} \
+\
+	void printasciin(const char *str, int len) \
+	{ \
+		while (len--) \
 			_printch(*str++); \
 	} \
 \
