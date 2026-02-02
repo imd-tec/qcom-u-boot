@@ -38,4 +38,19 @@ void ulib_uninit(void);
  */
 const char *ulib_get_version(void);
 
+/**
+ * ulib_putsn() - Write a string with specified length
+ *
+ * This outputs exactly @len characters from @s, regardless of any nul
+ * characters that may be present. This is useful for printing substrings
+ * or binary data with embedded nuls.
+ *
+ * If CONFIG_CONSOLE_PUTSN is enabled, this calls putsn() directly.
+ * Otherwise, it outputs characters one at a time using putc().
+ *
+ * @s: String to output (need not be nul-terminated)
+ * @len: Number of characters to output
+ */
+void ulib_putsn(const char *s, int len);
+
 #endif
