@@ -11497,3 +11497,74 @@ Rebased onto latest ci/master to incorporate 12 new commits.
 
 ---
 
+## 2026-02-01: us/next
+
+Branch: cherry-2dbd9101b99
+
+Commits:
+- 2dbd9101b99 cyclic: make cyclic_unregister() idempotent
+- 5265143ac73 cyclic: make cyclic_register safe to call on already-registered info
+- 6f0a3cd7bcd cyclic: document new guarantees for cyclic_(un)register
+- 126a88d49bc Merge tag 'u-boot-watchdog-20250516' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+### Conversation log
+The repository has an untracked file but nothing staged. Let me proceed with creating the new branch from ci/master.
+
+Good. Now let me cherry-pick the first commit (regular commit):
+
+First cherry-pick succeeded. Let me check the delta and run the build test:
+
+Deltas match perfectly: 1 file changed, 15 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me check the delta:
+
+Deltas match perfectly: 1 file changed, 2 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked. Let me check the delta:
+
+Deltas match perfectly: 1 file changed, 13 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit results in an empty commit (all changes are already present from the previous cherry-picks). This is expected - I need to commit the empty commit to preserve the merge commit message:
+
+Now let me verify the commit delta:
+
+The cherry-picked merge commit is empty (no stat output), which is expected since the actual changes were already applied via the previous commits. The original merge commit brought in the changes from the cyclic commits. Let me run the build test:
+
+Build passed. Now let me verify all 4 commits are present:
+
+All 4 commits are present. Let me run the final build test to verify everything works together:
+
+## Final Status Report
+
+**Cherry-pick operation completed successfully!**
+
+### Summary
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 2dbd9101b99 → 71601d2f1df | cyclic: make cyclic_unregister() idempotent | ✅ OK |
+| 2 | 5265143ac73 → 75169a3bfce | cyclic: make cyclic_register safe to call on already-registered info | ✅ OK |
+| 3 | 6f0a3cd7bcd → 054755de346 | cyclic: document new guarantees for cyclic_(un)register | ✅ OK |
+| 4 | 126a88d49bc → fb0ba2893d2 | Merge tag 'u-boot-watchdog-20250516' | ✅ OK (empty commit - expected) |
+
+### Build Result
+**OK** - All builds passed with no warnings or errors.
+
+### Fix-ups Made
+None - all cherry-picks applied cleanly without conflicts.
+
+### Delta Analysis
+- Commits 1-3: Deltas matched exactly (same files, same line counts)
+- Commit 4 (merge): Empty commit as expected - the actual changes were already included via commits 1-3
+
+### Branch Status
+Branch `cherry-2dbd9101b99` is ready for pushing with 4 commits ahead of `ci/master`.
+
+---
+
