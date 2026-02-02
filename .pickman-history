@@ -11499,72 +11499,128 @@ Rebased onto latest ci/master to incorporate 12 new commits.
 
 ## 2026-02-01: us/next
 
-Branch: cherry-2dbd9101b99
+Branch: cherry-4cb72436403
 
 Commits:
-- 2dbd9101b99 cyclic: make cyclic_unregister() idempotent
-- 5265143ac73 cyclic: make cyclic_register safe to call on already-registered info
-- 6f0a3cd7bcd cyclic: document new guarantees for cyclic_(un)register
-- 126a88d49bc Merge tag 'u-boot-watchdog-20250516' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+- 4cb72436403 efi_loader: Disable ANSI output for tests
+- 9effbe1548f CI, docs: Install test/py/requirements.txt as well
+- 4fde49c317e doc: pytest: Use globing for test files
+- 2bac578c5ab test: allow multiple config options in buildconfigspec
+- 22abd882c3d test: allow testing with NET_LWIP=y
+- eeb5ff1a468 Merge tag 'efi-2025-07-rc3-2' of https://source.denx.de/u-boot/custodians/u-boot-efi
 
 ### Conversation log
-The repository has an untracked file but nothing staged. Let me proceed with creating the new branch from ci/master.
+Let me find the U-Boot repository:
 
-Good. Now let me cherry-pick the first commit (regular commit):
+Good, I'm in the U-Boot directory. Let me check the git status:
 
-First cherry-pick succeeded. Let me check the delta and run the build test:
+The repo has untracked files but is otherwise clean. Now let me create and checkout the new branch based on ci/master:
 
-Deltas match perfectly: 1 file changed, 15 insertions. Let me run the build test:
+Now let me first verify if commit 9effbe1548f is already applied as f60242a69d6:
 
-Build passed. Now let me cherry-pick the second commit:
+The patches show minor differences (just line numbers and context) - the actual changes are the same. This commit is already applied. Let me update the todo and proceed:
 
-Second commit cherry-picked. Let me check the delta:
+Now let's cherry-pick the first commit (4cb72436403):
 
-Deltas match perfectly: 1 file changed, 2 insertions. Let me run the build test:
+There's a conflict. Before aborting, let me check if this commit is already applied in ci/master:
 
-Build passed. Now let me cherry-pick the third commit:
+No result, so this commit is not already applied. Let me see the conflict:
 
-Third commit cherry-picked. Let me check the delta:
+Let me see the conflict area:
 
-Deltas match perfectly: 1 file changed, 13 insertions. Let me run the build test:
+Let me see the original commit to understand the intent:
 
-Build passed. Now let me cherry-pick the fourth commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+I can see the conflict. The original uses `query_console_serial()` but ci/master has been refactored to use `serial_query_size()`. Let me check what function is currently in ci/master:
 
-The merge commit results in an empty commit (all changes are already present from the previous cherry-picks). This is expected - I need to commit the empty commit to preserve the merge commit message:
+I see. The ci/master version uses `serial_query_size()` instead of `query_console_serial()`. I need to resolve this conflict by adapting the original commit's logic to work with the new function. The intent is to skip ANSI when `no_ansi` is set:
 
-Now let me verify the commit delta:
+I understand the conflict. The original code had `query_console_serial()` but ci/master uses `serial_query_size()`. I need to resolve by adding the `no_ansi` check while using the new function. The resolved version should skip the serial query when `no_ansi` is set:
 
-The cherry-picked merge commit is empty (no stat output), which is expected since the actual changes were already applied via the previous commits. The original merge commit brought in the changes from the cyclic commits. Let me run the build test:
+Let me try using sed to resolve the conflict:
 
-Build passed. Now let me verify all 4 commits are present:
+Good, no conflict markers. Let me verify the resolution looks correct:
 
-All 4 commits are present. Let me run the final build test to verify everything works together:
+The resolution looks correct. Now let me add the file and continue the cherry-pick:
 
-## Final Status Report
+Now I need to amend the commit message to note the resolution. Let me do that:
 
-**Cherry-pick operation completed successfully!**
+Now let me check the commit delta and run the build test:
 
-### Summary
+The deltas match (2 files, 37 insertions, 10 deletions vs 2 files, 37 insertions, 9 deletions - the difference is just 1 deletion related to the conflict resolution). Now let me run the build test:
 
-| # | Commit | Subject | Status |
-|---|--------|---------|--------|
-| 1 | 2dbd9101b99 → 71601d2f1df | cyclic: make cyclic_unregister() idempotent | ✅ OK |
-| 2 | 5265143ac73 → 75169a3bfce | cyclic: make cyclic_register safe to call on already-registered info | ✅ OK |
-| 3 | 6f0a3cd7bcd → 054755de346 | cyclic: document new guarantees for cyclic_(un)register | ✅ OK |
-| 4 | 126a88d49bc → fb0ba2893d2 | Merge tag 'u-boot-watchdog-20250516' | ✅ OK (empty commit - expected) |
+Build passed. Now let's update the todo and cherry-pick the second commit (skipping 9effbe1548f since it's already applied as f60242a69d6):
 
-### Build Result
-**OK** - All builds passed with no warnings or errors.
+Let me verify the delta:
+
+Deltas match. Let me run the build test:
+
+Build passed. Now let's cherry-pick the next commit:
+
+Let me verify the delta:
+
+Deltas match perfectly. Let me run the build test:
+
+Build passed. Now let's cherry-pick the next commit:
+
+Deltas match perfectly. Let me run the build test:
+
+Build passed. Now let's cherry-pick the merge commit:
+
+There's a conflict in lib/efi_loader/efi_console.c. Let me see the conflict:
+
+This is basically the same conflict as before (due to the merge commit re-introducing the same changes). We already resolved this - we should keep our resolution (HEAD):
+
+Good. Now let me continue the cherry-pick:
+
+The merge commit was applied. Let me amend the commit message to note the resolution and also verify the delta:
+
+The deltas are different as expected - the original merge commit shows 11 files because it's a merge of the entire series. Our cherry-picked version only shows the incremental changes since the other commits were already cherry-picked individually (which is expected behavior for a merge commit cherry-pick with -m 1). Let me run the build test:
+
+Build passed. Now let me verify all commits and run the final build:
+
+I see 5 commits from the cherry-pick (we skipped 9effbe1548f as it was already applied). Let me verify the branch status:
+
+We have 5 commits cherry-picked (6 requested minus 1 skipped because it was already applied). Let me run the final build test:
+
+Build passed. Let me update the todo list and provide a summary:
+
+## Final Status Summary
+
+### Build Result: ✅ OK
+All builds passed with no warnings or errors.
+
+### Cherry-Pick Summary
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 4cb72436403 | efi_loader: Disable ANSI output for tests | ✅ Applied with conflict resolution |
+| 9effbe1548f | CI, docs: Install test/py/requirements.txt | ⏭️ **SKIPPED** - already applied as f60242a69d6 |
+| 4fde49c317e | doc: pytest: Use globing for test files | ✅ Applied cleanly |
+| 2bac578c5ab | test: allow multiple config options in buildconfigspec | ✅ Applied cleanly |
+| 22abd882c3d | test: allow testing with NET_LWIP=y | ✅ Applied cleanly |
+| eeb5ff1a468 | Merge tag 'efi-2025-07-rc3-2' | ✅ Applied with conflict resolution |
 
 ### Fix-ups Made
-None - all cherry-picks applied cleanly without conflicts.
 
-### Delta Analysis
-- Commits 1-3: Deltas matched exactly (same files, same line counts)
-- Commit 4 (merge): Empty commit as expected - the actual changes were already included via commits 1-3
+1. **4cb72436403 (efi_loader: Disable ANSI output for tests)**
+   - Conflict in `lib/efi_loader/efi_console.c`
+   - Resolution: Adapted to use `serial_query_size()` (ci/master's version) instead of `query_console_serial()` (original commit's version), while preserving the `no_ansi` logic
+
+2. **eeb5ff1a468 (Merge tag 'efi-2025-07-rc3-2')**
+   - Same conflict in `lib/efi_loader/efi_console.c`
+   - Resolution: Kept existing `serial_query_size()` adaptation
+
+### Commits with Concerning Deltas
+- The merge commit (eeb5ff1a468) shows different delta because cherry-picking a merge with `-m 1` only brings in the incremental changes compared to the first parent. The original merge shows 11 files changed because it's a merge of the entire series; our cherry-picked version shows only 1 file (the only file that changed relative to what we already had).
 
 ### Branch Status
-Branch `cherry-2dbd9101b99` is ready for pushing with 4 commits ahead of `ci/master`.
+```
+Branch: cherry-4cb72436403
+Base: ci/master
+5 commits ahead of ci/master
+```
+
+The branch is ready for pushing.
 
 ---
 
