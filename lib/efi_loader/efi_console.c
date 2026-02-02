@@ -32,6 +32,17 @@ struct cout_mode {
 
 __maybe_unused static struct efi_object uart_obj;
 
+/*
+ * suppress emission of ANSI escape-characters for use by unit tests. Leave it
+ * as 0 for the default behaviour
+ */
+static bool no_ansi;
+
+void efi_console_set_ansi(bool allow_ansi)
+{
+	no_ansi = !allow_ansi;
+}
+
 static struct cout_mode efi_cout_modes[] = {
 	/* EFI Mode 0 is 80x25 and always present */
 	{
@@ -231,13 +242,6 @@ static int __maybe_unused query_vidconsole(int *rows, int *cols)
 	return 0;
 }
 
-/**
- * efi_setup_console_size() - update the mode table.
- *
- * By default the only mode available is 80x25. If the console has at least 50
- * lines, enable mode 80x50. If we can query the console size and it is neither
- * 80x25 nor 80x50, set it as an additional mode.
- */
 void efi_setup_console_size(void)
 {
 	int rows = 25, cols = 80;
@@ -245,8 +249,12 @@ void efi_setup_console_size(void)
 
 	if (IS_ENABLED(CONFIG_VIDEO))
 		ret = query_vidconsole(&rows, &cols);
-	if (ret && IS_ENABLED(CONFIG_DM_SERIAL))
-		ret = serial_query_size(&rows, &cols);
+	if (ret) {
+		if (no_ansi)
+			ret = 0;
+		else if (IS_ENABLED(CONFIG_DM_SERIAL))
+			ret = serial_query_size(&rows, &cols);
+	}
 	if (ret)
 		return;
 
