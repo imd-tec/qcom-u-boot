@@ -291,6 +291,35 @@ static void console_putc_pager(int file, const char c)
 }
 
 /**
+ * console_putsn_select() - Output a string with length to console devices
+ *
+ * @file: File number to output to (e,g, stdout, see stdio.h)
+ * @serial_only: true to output only to serial, false to output to everything
+ *	else
+ * @s: String to output
+ * @len: Length of string to output
+ */
+static void console_putsn_select(int file, bool serial_only, const char *s,
+				 int len)
+{
+	struct stdio_dev *sdev;
+	int i;
+	struct stdio_dev *dev;
+
+	for_each_console_dev(i, file, dev) {
+		bool is_serial = console_dev_is_serial(dev);
+
+		if (serial_only == is_serial) {
+			sdev = dev;
+			if (CONFIG_IS_ENABLED(CONSOLE_PUTSN) && sdev->putsn)
+				sdev->putsn(sdev, s, len);
+			else if (sdev->puts)
+				sdev->puts(sdev, s);
+		}
+	}
+}
+
+/**
  * console_puts_select() - Output a string to all console devices
  *
  * @file: File number to output to (e,g, stdout, see stdio.h)
@@ -300,21 +329,18 @@ static void console_putc_pager(int file, const char c)
  */
 static void console_puts_select(int file, bool serial_only, const char *s)
 {
-	int i;
-	struct stdio_dev *dev;
+	console_putsn_select(file, serial_only, s, strlen(s));
+}
 
-	for_each_console_dev(i, file, dev) {
-		bool is_serial = console_dev_is_serial(dev);
-
-		if (dev->puts && serial_only == is_serial)
-			dev->puts(dev, s);
-	}
+void err_putsn(bool serial_only, const char *s, int len)
+{
+	if (gd->flags & GD_FLG_DEVINIT)
+		console_putsn_select(stderr, serial_only, s, len);
 }
 
 void err_puts(bool serial_only, const char *s)
 {
-	if (gd->flags & GD_FLG_DEVINIT)
-		console_puts_select(stderr, serial_only, s);
+	err_putsn(serial_only, s, strlen(s));
 }
 
 int err_printf(bool serial_only, const char *fmt, ...)
@@ -330,7 +356,7 @@ int err_printf(bool serial_only, const char *fmt, ...)
 	 */
 	ret = vscnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
-	err_puts(serial_only, buf);
+	err_putsn(serial_only, buf, ret);
 
 	return ret;
 }
@@ -472,11 +498,24 @@ static inline void console_putc_pager(int file, const char c)
 	stdio_devices[file]->putc(stdio_devices[file], c);
 }
 
+static inline void console_putsn_select(int file, bool serial_only,
+					const char *s, int len)
+{
+	struct stdio_dev *sdev;
+
+	if ((gd->flags & GD_FLG_DEVINIT) &&
+	    serial_only == console_dev_is_serial(stdio_devices[file])) {
+		sdev = stdio_devices[file];
+		if (CONFIG_IS_ENABLED(CONSOLE_PUTSN) && sdev->putsn)
+			sdev->putsn(sdev, s, len);
+		else
+			sdev->puts(sdev, s);
+	}
+}
+
 void console_puts_select(int file, bool serial_only, const char *s)
 {
-	if ((gd->flags & GD_FLG_DEVINIT) &&
-	    serial_only == console_dev_is_serial(stdio_devices[file]))
-		stdio_devices[file]->puts(stdio_devices[file], s);
+	console_putsn_select(file, serial_only, s, strlen(s));
 }
 
 static inline void console_puts_pager(int file, const char *s)
