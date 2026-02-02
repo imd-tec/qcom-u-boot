@@ -441,14 +441,12 @@ static int console_truetype_putc_xy(struct udevice *dev, void *vctx, uint x,
 			last_cp = pos->cp;
 		kern = stbtt_GetCodepointKernAdvance(font, last_cp, cp);
 		if (_DEBUG) {
-			console_printf_select_stderr(true, "kern %c (%02x)",
-						     last_cp, last_cp);
+			err_printf(true, "kern %c (%02x)", last_cp, last_cp);
 		}
 		xpos += met->scale * kern;
 	}
 	if (_DEBUG) {
-		console_printf_select_stderr(true, " %c (%02x)\n",
-					     cp >= ' ' ? cp : ' ', cp);
+		err_printf(true, " %c (%02x)\n", cp >= ' ' ? cp : ' ', cp);
 	}
 
 	/*

@@ -122,7 +122,7 @@ static void vidconsole_newline(struct udevice *dev, struct vidconsole_ctx *ctx)
 	ret = video_sync(dev->parent, false);
 	if (ret) {
 #ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
+		err_puts(true, "[vc err: video_sync]");
 #endif
 	}
 }
@@ -333,7 +333,7 @@ static void vidconsole_escape_char(struct udevice *dev,
 			ret = video_sync(dev->parent, false);
 			if (ret) {
 #ifdef DEBUG
-				console_puts_select_stderr(true, "[vc err: video_sync]");
+				err_puts(true, "[vc err: video_sync]");
 #endif
 			}
 			ctx->ycur = 0;
@@ -460,11 +460,10 @@ static int vidconsole_output_glyph(struct udevice *dev,
 {
 	int ret;
 
-	if (_DEBUG) {
-		console_printf_select_stderr(true,
-				     "glyph last_ch '%c': ch '%c' (%02x): ",
-				     ctx->last_ch, ch >= ' ' ? ch : ' ', ch);
-	}
+	if (_DEBUG)
+		err_printf(true, "glyph last_ch '%c': ch '%c' (%02x): ",
+			   ctx->last_ch, ch >= ' ' ? ch : ' ', ch);
+
 	/*
 	 * Failure of this function normally indicates an unsupported
 	 * colour depth. Check this and return an error to help with
@@ -578,13 +577,13 @@ static void vidconsole_putc(struct stdio_dev *sdev, const char ch)
 	ret = vidconsole_put_char(dev, NULL, ch);
 	if (ret) {
 #ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: putc]");
+		err_puts(true, "[vc err: putc]");
 #endif
 	}
 	ret = video_sync(dev->parent, false);
 	if (ret) {
 #ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
+		err_puts(true, "[vc err: video_sync]");
 #endif
 	}
 }
@@ -603,13 +602,13 @@ static void vidconsole_putsn(struct stdio_dev *sdev, const char *s, int len)
 		char str[30];
 
 		snprintf(str, sizeof(str), "[vc err: putsn %d]", ret);
-		console_puts_select_stderr(true, str);
+		err_puts(true, str);
 #endif
 	}
 	ret = video_sync(dev->parent, false);
 	if (ret) {
 #ifdef DEBUG
-		console_puts_select_stderr(true, "[vc err: video_sync]");
+		err_puts(true, "[vc err: video_sync]");
 #endif
 	}
 }

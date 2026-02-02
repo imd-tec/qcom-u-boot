@@ -311,13 +311,13 @@ static void console_puts_select(int file, bool serial_only, const char *s)
 	}
 }
 
-void console_puts_select_stderr(bool serial_only, const char *s)
+void err_puts(bool serial_only, const char *s)
 {
 	if (gd->flags & GD_FLG_DEVINIT)
 		console_puts_select(stderr, serial_only, s);
 }
 
-int console_printf_select_stderr(bool serial_only, const char *fmt, ...)
+int err_printf(bool serial_only, const char *fmt, ...)
 {
 	char buf[CONFIG_SYS_PBSIZE];
 	va_list args;
@@ -330,7 +330,7 @@ int console_printf_select_stderr(bool serial_only, const char *fmt, ...)
 	 */
 	ret = vscnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
-	console_puts_select_stderr(serial_only, buf);
+	err_puts(serial_only, buf);
 
 	return ret;
 }
