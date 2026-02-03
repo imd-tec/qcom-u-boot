@@ -418,6 +418,15 @@ Examples:
     # Set environment variables
     - export TOOLPATH="--toolpath ${pwd}/build-sandbox/tools --toolpath /opt/coreboot"
     - export PATH=/opt/qemu/bin:${PATH}
+  after_script:
+    - cp -v build-*/*.{html,css} . 2>/dev/null || true
+    - rm -rf /tmp/venv
+  artifacts:
+    when: always
+    paths:
+      - "*.html"
+      - "*.css"
+    expire_in: 1 week
 
 Check make check:
   extends: .python_check_template
