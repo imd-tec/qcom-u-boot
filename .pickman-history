@@ -11680,3 +11680,167 @@ The branch `cherry-72ba30aeccf` is ready for pushing with all 2 commits from `us
 
 ---
 
+## 2026-02-02: us/next
+
+Branch: cherry-14a4792a71d
+
+Commits:
+- 14a4792a71d riscv: image: Add new image type for RV64
+- 027a3168285 riscv: Select appropriate image type
+- 37b0b22d8b7 booti/bootm: riscv: Verify image arch type
+- 60163080949 riscv: dts: binman.dtsi: Drop filename property for proper U-Boot
+- 307666be28d riscv: Access gd with inline assembly when building with LTO or Clang
+- fa317411ba5 riscv: insn-def.h: Fix header guard
+- 97833f4cf6f riscv: starfive: jh7110: move uart0 clock frequency to config header
+- 8b43f4a7bed riscv: dts: jh7110: remove redundant parent nodes
+- bbf5f79bba0 riscv: dts: jh7110: override syscrg assigned clock rates with defaults
+- 3dbff9eecc8 riscv: lib: Split out support for T-Head cache management operations
+- acf9384d8cc configs: th1520_lpi4a: Add UART clock frequency
+- 5fe9ced3552 riscv: cpu: Add TH1520 CPU support
+- 05240d541a4 ram: thead: Add initial DDR controller support for TH1520
+- 976b90f9dac riscv: dts: th1520: Preserve necessary devices for SPL
+- 17582da96c3 riscv: dts: lichee-module-4a: Preserve memory node for SPL
+- 64735e56aa0 riscv: dts: th1520: Add DRAM controller
+- 19ec61b3e6c riscv: dts: th1520: Add binman configuration
+- 38ed760bc90 board: thead: licheepi4a: Enable SPL support
+- e1bd3b44454 doc: thead: lpi4a: Update documentation
+- ce8f49ece23 riscv: cpu: th1520: Initialize IOPMPs in SPL
+- e6bfa6fc94f clk: thead: Port clock controller driver of TH1520 SoC
+- 1d759cc0ad2 riscv: cpu: th1520: Select clock driver
+- ff6e20c32ff riscv: dts: th1520: Complete clock tree
+- 8f85a7345ed Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv
+
+### Conversation log
+
+
+I'll start by checking the repository state and then proceed with the cherry-pick operation.
+
+Good, I'm in the U-Boot repo. The working tree is clean (just an untracked file). Let me create the new branch and start cherry-picking.
+
+Now let me first check if the merge commit (last one) is already applied, and verify the branch has the source commits available.
+
+The merge commit has a "maybe already applied" match. Let me verify it, and also check if the first few commits are already in ci/master.
+
+The merge commit 53a22a4001c is a different commit (it's a pickman merge, not the original). Let me check if the individual commits are already in ci/master by checking the first few.
+
+Good - the first 3 commits are NOT in ci/master. Let me check a few more and then start cherry-picking.
+
+All 24 commits exist. Now let me verify the merge commit comparison more carefully and then start cherry-picking.
+
+Commit 1 done, delta matches, build passes. Now I'll use a task agent to handle the bulk of the remaining cherry-picks efficiently.
+
+Commit 2 ✓. Continuing:
+
+Commit 3 ✓. Continuing with commits 4-6:
+
+Commit 4 ✓. Continuing:
+
+Commit 5 ✓. Continuing with 6:
+
+Commit 6 ✓. Commits 7-9:
+
+Commit 7 ✓. Continuing:
+
+Commit 8 ✓. Continuing:
+
+Commit 9 ✓. Continuing with 10-12:
+
+Commit 10 ✓. Continuing:
+
+Commit 11 ✓. Continuing with commit 12:
+
+Conflict in commit 12. Let me check the conflict:
+
+Simple conflict - HEAD doesn't have k230/th1520 lines, the incoming commit adds them. Let me resolve it:
+
+Good, no conflict markers. Let me verify the resolution looks correct:
+
+Looks correct - alphabetically ordered. Now let me check if there are other unmerged files and complete the cherry-pick:
+
+Now let me amend the commit to note the fixup, then check delta and build:
+
+Build fails because k230/Kconfig doesn't exist in this tree. The conflict resolution was incorrect - the original commit only added `th1520`, not `k230`. The `k230` line was from a different commit in the source branch. Let me fix this:
+
+I see - in the original, `k230` already existed and only `th1520` was added. In our tree, `k230` doesn't exist. So I should only add `th1520`, not `k230`. Let me fix:
+
+Good - only th1520 added. Now continue:
+
+Now amend with fixup note:
+
+Commit 12 ✓ (with conflict resolution). Now continuing with commits 13-24:
+
+Commit 13 ✓. Continuing with 14-17:
+
+Commit 14 ✓. Continuing:
+
+Commit 15 ✓. Continuing:
+
+Commit 16 ✓. Continuing:
+
+Commit 17 ✓. Continuing with 18-20:
+
+Commit 18 ✓. Continuing:
+
+Commit 19 ✓. Continuing with 20-22:
+
+Commit 20 ✓. Continuing:
+
+Commit 21 ✓. Continuing with 22-24:
+
+Commit 22 ✓. Continuing with 23:
+
+Commit 23 ✓. Now the last one - the merge commit (#24):
+
+Same conflict as before - k230 doesn't exist in our tree. Since this merge should result in an empty commit (all changes already applied), let me just take the HEAD version:
+
+As expected, the merge is empty since all changes were already cherry-picked. Let me commit it with --allow-empty:
+
+All 24 commits cherry-picked! Now let me do the final verification:
+
+All 24 commits are present and the final build passes. Let me update the todo list:
+
+## Final Status Report
+
+**Branch:** `cherry-14a4792a71d` (based on `ci/master`)
+**Build result:** ✅ OK - sandbox builds clean
+
+### All 24 commits cherry-picked successfully:
+
+| # | Hash (new) | Subject | Status |
+|---|-----------|---------|--------|
+| 1 | 063dbb35fd5 | riscv: image: Add new image type for RV64 | ✅ Clean |
+| 2 | ce2741b7dcb | riscv: Select appropriate image type | ✅ Clean |
+| 3 | 6846f3445a1 | booti/bootm: riscv: Verify image arch type | ✅ Clean |
+| 4 | 0ef1be849fd | riscv: dts: binman.dtsi: Drop filename property | ✅ Clean |
+| 5 | 16b0537dee8 | riscv: Access gd with inline assembly (LTO/Clang) | ✅ Clean |
+| 6 | 680a6ad97f8 | riscv: insn-def.h: Fix header guard | ✅ Clean |
+| 7 | ece6a59dc83 | riscv: starfive: jh7110: move uart0 clock freq | ✅ Clean |
+| 8 | 7a3d3d9b949 | riscv: dts: jh7110: remove redundant parent nodes | ✅ Clean |
+| 9 | 2398e953c8b | riscv: dts: jh7110: override syscrg clock rates | ✅ Clean |
+| 10 | 0336bd95d3a | riscv: lib: Split out T-Head cache mgmt ops | ✅ Clean |
+| 11 | 70c7cdae3d5 | configs: th1520_lpi4a: Add UART clock frequency | ✅ Clean |
+| 12 | 8d803970462 | riscv: cpu: Add TH1520 CPU support | ⚠️ **Fixup** |
+| 13 | 3d4f71285fe | ram: thead: Add initial DDR controller for TH1520 | ✅ Clean |
+| 14 | ece904124b8 | riscv: dts: th1520: Preserve devices for SPL | ✅ Clean |
+| 15 | 462fb8d7b84 | riscv: dts: lichee-module-4a: Preserve memory SPL | ✅ Clean |
+| 16 | 7afecf5ab1b | riscv: dts: th1520: Add DRAM controller | ✅ Clean |
+| 17 | 5f146ce00ab | riscv: dts: th1520: Add binman configuration | ✅ Clean |
+| 18 | 8b32e43b2c6 | board: thead: licheepi4a: Enable SPL support | ✅ Clean |
+| 19 | 6b7ad38c825 | doc: thead: lpi4a: Update documentation | ✅ Clean |
+| 20 | aeba94d5d4b | riscv: cpu: th1520: Initialize IOPMPs in SPL | ✅ Clean |
+| 21 | 1825d0705cd | clk: thead: Port clock controller driver TH1520 | ✅ Clean |
+| 22 | 151f78a7971 | riscv: cpu: th1520: Select clock driver | ✅ Clean |
+| 23 | c73833c7b15 | riscv: dts: th1520: Complete clock tree | ✅ Clean |
+| 24 | 1f3624e4487 | Merge branch 'master' of u-boot-riscv | ✅ Empty (expected) |
+
+### Fix-ups made:
+- **Commit 12** (`5fe9ced3552` → `8d803970462`): Resolved conflict in `arch/riscv/Kconfig` — the original commit assumed `k230/Kconfig` was already present (from an earlier commit in the source branch not in this series). Only added the `th1520/Kconfig` entry since `k230` doesn't exist in `ci/master`.
+
+### Concerning deltas:
+- None. All commit deltas matched their originals exactly (except commit 12 which has 1 extra line due to the k230 context difference).
+
+### Merge commit (24):
+- Cherry-picked with `-m 1 --allow-empty`. Resulted in an empty commit as expected since all individual changes were already applied by the preceding cherry-picks.
+
+---
+
