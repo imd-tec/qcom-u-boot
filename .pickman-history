@@ -11844,3 +11844,81 @@ All 24 commits are present and the final build passes. Let me update the todo li
 
 ---
 
+
+---
+
+## 2026-02-02: us/next
+
+Branch: cherry-72ba30aeccf
+
+Commits:
+- 72ba30aeccf mmc: cv1800b: Fix build without MMC_SUPPORTS_TUNING
+- a3e09b24ffd Merge tag 'mmc-2025-05-20' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+
+### Conversation log
+The repository is mostly clean (only an untracked file). Now let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (regular commit, not a merge):
+
+First cherry-pick succeeded. Now let me verify the commit delta:
+
+The deltas match exactly (1 file changed, 4 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit. This one is a merge commit (identified by "Merge" in the subject), so I need to use the special flags:
+
+The merge commit results in an empty commit (which is expected since the changes were likely already applied to ci/master through the first commit). The instructions say to ALWAYS include merge commits with --allow-empty. Let me commit it:
+
+Merge commit preserved. Let me verify the commit delta:
+
+The cherry-picked merge commit is empty (no files changed) because the first commit `72ba30aeccf` already applied the changes. This is expected behavior - the merge commit is preserved for history tracking purposes.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits with git log:
+
+All 2 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Branch: `cherry-72ba30aeccf`
+
+### Commits cherry-picked (2 of 2):
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | `72ba30aeccf` | `cf6d950af88` | mmc: cv1800b: Fix build without MMC_SUPPORTS_TUNING |
+| 2 | `a3e09b24ffd` | `1aa740fe48c` | Merge tag 'mmc-2025-05-20' of https://source.denx.de/u-boot/custodians/u-boot-mmc |
+
+### Build result: ✅ OK
+- No warnings or errors
+
+### Fix-ups made: None
+
+### Commits with concerning deltas: 
+- Commit 2 (`a3e09b24ffd`): The merge commit was applied as an empty commit (as expected). The original merge commit had 1 file changed with 4 insertions, but since the first commit (`72ba30aeccf`) was already cherry-picked, the merge commit's content was already in the tree. The empty commit was preserved using `--allow-empty` to maintain the commit history tracking.
+
+### Summary:
+The branch `cherry-72ba30aeccf` is ready for pushing with all 2 commits from `us/next` successfully cherry-picked.
+
+---
+
+## 2026-02-02: us/next
+
+Branch: cherry-f7cddc4c6f4
+
+Commits:
+- f7cddc4c6f4 arm: imx: imx8m: soc: fix the macro name
+- 4c82eeab984 arm: imx: imx8m: soc: replace ifdef by IS_ENABLED()
+- e761a77cdb9 arm: dts: imx6ulz-bsh-smm-m2-u-boot: Drop soc node
+- fcf2a415a97 configs: imx6ulz_smm_m2: Add board watchdog reset configuration
+- 31899c52bde arm: dts: imx6ulz-bsh-smm-m2: Fix reset using wdt-reboot driver
+- b0454fc1ca2 ARM: dts: imx93-phycore: Migrate to OF_UPSTREAM
+- 8acea298bb8 spl: Kconfig: support U-Boot load from raw NAND
+- 24d98fa63bb imx: spl_imx_romapi: support raw NAND sector
+- dce71922df3 configs: imx8mn_bsh_smm_s2: load U-Boot from raw NAND
+- ce3f23404c1 board: bsh: imx8mn_bsh_smm_s2/s2pro: enlarge CONFIG_SPL_SYS_MALLOC_F_LEN
+- c42c6a108b5 board: bsh: imx8mn_bsh_smm_s2/s2pro: let clock system enable UART clock
+- c1ccc4c0f3f board: freescale: imx8mn_evk: let clock system enable UART clock
+- da6547acb8e board: bsh: imx6ulz_smm_m2: Match SPL DDR settings to DCD table
+- 8c2987396ab board: bsh: imx6ulz_smm_m2: Add support for 256 MiB DRAM
