@@ -386,6 +386,19 @@ void os_putc(int ch);
 void os_puts(const char *str);
 
 /**
+ * os_putsn() - write a string with length to controlling OS terminal
+ *
+ * This bypasses the U-Boot console support and writes directly to the OS
+ * stdout file descriptor.
+ *
+ * Outputs exactly @len characters from @str, regardless of any nul characters.
+ *
+ * @str:	String to write (need not be nul-terminated)
+ * @len:	Number of characters to write
+ */
+void os_putsn(const char *str, int len);
+
+/**
  * os_flush() - flush controlling OS terminal
  *
  * This bypasses the U-Boot console support and flushes directly the OS

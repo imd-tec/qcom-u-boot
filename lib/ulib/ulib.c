@@ -6,6 +6,7 @@
  * Written by Simon Glass <simon.glass@canonical.com>
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <version.h>
 #include <asm/global_data.h>
@@ -35,4 +36,13 @@ void ulib_uninit(void)
 const char *ulib_get_version(void)
 {
 	return version_string;
+}
+
+void ulib_putsn(const char *s, int len)
+{
+	if (CONFIG_IS_ENABLED(CONSOLE_PUTSN))
+		putsn(s, len);
+	else
+		while (len--)
+			putc(*s++);
 }

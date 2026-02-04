@@ -159,7 +159,22 @@ static inline bool console_record_isempty(void)
 int console_announce_r(void);
 
 /**
- * console_puts_select_stderr() - Output a string to selected console devices
+ * err_putsn() - Output a string with length to selected console devices
+ *
+ * This writes to stderr only. It is useful for outputting errors when the
+ * length is already known.
+ *
+ * Outputs exactly @len characters from @s, regardless of any nul characters.
+ *
+ * @serial_only: true to output only to serial, false to output to everything
+ *	else
+ * @s: String to output (need not be nul-terminated)
+ * @len: Number of characters to output
+ */
+void err_putsn(bool serial_only, const char *s, int len);
+
+/**
+ * err_puts() - Output a string to selected console devices
  *
  * This writes to stderr only. It is useful for outputting errors
  *
@@ -167,10 +182,10 @@ int console_announce_r(void);
  *	else
  * @s: String to output
  */
-void console_puts_select_stderr(bool serial_only, const char *s);
+void err_puts(bool serial_only, const char *s);
 
 /**
- * console_printf_select_stderr() - Output a formatted string to selected devs
+ * err_printf() - Output a formatted string to selected devs
  *
  * This writes to stderr only. It is useful for outputting errors. Note that it
  * uses its own buffer, separate from the print buffer, to allow printing
@@ -181,7 +196,7 @@ void console_puts_select_stderr(bool serial_only, const char *s);
  * @fmt: Printf format string, followed by format arguments
  * Return: number of characters written
  */
-int console_printf_select_stderr(bool serial_only, const char *fmt, ...)
+int err_printf(bool serial_only, const char *fmt, ...)
 		__attribute__ ((format (__printf__, 2, 3)));
 
 /**
