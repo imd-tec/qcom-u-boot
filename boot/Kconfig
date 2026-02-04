@@ -690,6 +690,27 @@ config BOOTMETH_EXTLINUX_LOCALBOOT
 	  This attempts to find a kernel and initrd on the disk and boot it,
 	  in the case where there is no "localcmd" in the environment.
 
+config BOOTMETH_BLS
+	bool "Bootdev support for Boot Loader Specification (BLS) Type #1"
+	select PXE_UTILS
+	default y if SANDBOX
+	help
+	  Enables support for Boot Loader Specification (BLS) Type #1 entries.
+	  This makes bootdevs look for '*.conf' files in 'loader/entries/'
+	  directories on each filesystem they scan.
+
+	  BLS is a standard for boot entry configuration used by Fedora, RHEL,
+	  and other distributions. Each .conf file describes a single boot
+	  entry with fields like kernel path, initrd, and boot options.
+
+	  The specification is here:
+
+	    https://uapi-group.org/specifications/specs/boot_loader_specification/
+
+	  This supports standard BLS fields (title, linux, initrd, options,
+	  devicetree) and works with U-Boot FIT images using the path#config
+	  syntax.
+
 config BOOTMETH_EFI
 	bool "Bootdev support for EFI boot"
 	depends on EFI_BINARY_EXEC
