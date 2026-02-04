@@ -6,6 +6,7 @@ Use U-Boot
 
    spl_boot
    blkmap
+   bls
    console
    dfu
    environment

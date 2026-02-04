@@ -29,7 +29,7 @@ obj-$(CONFIG_$(PHASE_)BOOTSTD_PROG) += prog_boot.o
 
 obj-$(CONFIG_$(PHASE_)BOOTMETH_EXTLINUX) += ext_pxe_common.o bootmeth_extlinux.o
 obj-$(CONFIG_$(PHASE_)BOOTMETH_EXTLINUX_PXE) += ext_pxe_common.o bootmeth_pxe.o
-obj-$(CONFIG_$(PHASE_)BOOTMETH_BLS) += bls_parse.o
+obj-$(CONFIG_$(PHASE_)BOOTMETH_BLS) += bls_parse.o bootmeth_bls.o
 obj-$(CONFIG_$(PHASE_)BOOTMETH_EFI) += bootmeth_efi.o
 obj-$(CONFIG_$(PHASE_)BOOTMETH_CROS) += bootmeth_cros.o
 obj-$(CONFIG_$(PHASE_)BOOTMETH_FEL) += bootmeth_fel.o

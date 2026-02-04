@@ -30,6 +30,7 @@ enum {
 
 static const char *const bootflow_img[BFI_COUNT - BFI_FIRST] = {
 	"extlinux_cfg",
+	"bls_cfg",
 	"logo",
 	"efi",
 	"cmdline",

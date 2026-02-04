@@ -135,6 +135,7 @@ struct bootflow {
  * bootflow_img[]
  *
  * @BFI_EXTLINUX_CFG: extlinux configuration-file
+ * @BFI_BLS_CFG: Boot Loader Specification (BLS) configuration-file
  * @BFI_LOGO: logo image
  * @BFI_EFI: EFI PE image
  * @BFI_CMDLINE: OS command-line string
@@ -145,6 +146,7 @@ struct bootflow {
 enum bootflow_img_t {
 	BFI_FIRST = IH_TYPE_COUNT,
 	BFI_EXTLINUX_CFG = BFI_FIRST,
+	BFI_BLS_CFG,
 	BFI_LOGO,
 	BFI_EFI,
 	BFI_CMDLINE,
