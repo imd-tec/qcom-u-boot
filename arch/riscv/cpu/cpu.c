@@ -17,6 +17,7 @@
 #include <asm/system.h>
 
 #include <asm/cache.h>
+#include <asm/global_data.h>
 #include <dm/uclass-internal.h>
 #include <linux/bitops.h>
 
@@ -218,4 +219,9 @@ __weak int cleanup_before_linux(void)
 	cache_flush();
 
 	return 0;
+}
+
+void arch_setup_gd(gd_t *new_gd)
+{
+	set_gd(new_gd);
 }
