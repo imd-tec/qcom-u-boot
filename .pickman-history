@@ -11844,7 +11844,6 @@ All 24 commits are present and the final build passes. Let me update the todo li
 
 ---
 
-
 ---
 
 ## 2026-02-02: us/next
@@ -21704,6 +21703,128 @@ The merge base is now `b8194f2fce3` which is the HEAD of `ci/master`. The rebase
 Post this reply to the MR:
 
 > Rebased onto latest master (b8194f2fce3). All 19 commits rebased cleanly with no conflicts. Deltas verified identical, sandbox build passes.
+
+## 2026-02-04: us/next
+
+Branch: cherry-7c52bca8121
+
+Commits:
+- 7c52bca8121 env: mtd: fix usability with NAND flashes
+- ba57d85e771 EXT4: add CRC16 dependency
+- ab0e1c11a9e board: total_Compute: enable bloblist for SPL handoff
+- ec3ce603cd9 fs: fs_devread should log error when read outside partition
+- df2ed552f0b ext4fs: Fix: Read outside partition error
+- f4bbd7b9faa efi_loader: Separate device path into its own header
+- f139fbe64b0 efi: Include device-path functions in the EFI API docs
+- 162a6b3df34 efi: Rename END to EFI_DP_END
+- 29c449ccb5b x86: efi_loader: Ensure the SMBIOS tables are sent via EFI
+- f8949b1d1d0 efi_loader: Run dhcp if an http boot option is selected
+- 92da174fc63 Merge tag 'efi-2025-07-rc3-3' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+Let me find the repository first:
+
+Good, I'm already in the u-boot directory. Let me check the git status:
+
+The repository has uncommitted state from a previous cherry-pick. Let me clean this up and create a fresh branch from ci/master:
+
+Good. Now let me start the cherry-pick process. First, let me verify the current state:
+
+Now let me cherry-pick the first commit:
+
+Let me verify the delta and run the build test:
+
+The delta looks good (same files, same line counts). Now let me run the build test:
+
+Build passed. Now let me proceed to the second commit:
+
+There's a conflict. Let me check if this commit might already be applied and see what the conflict is:
+
+I see the conflict. The ci/master has `depends on !FS_EXT4L` but the commit wants to add `select CRC16`. These are not conflicting changes - we need both. Let me resolve this:
+
+Let me verify the delta and run the build:
+
+Delta looks good (same file, same line count). Now build test:
+
+Build passed. Now amend the commit to note the fix-up made:
+
+Now let me cherry-pick the third commit:
+
+Let me verify the delta:
+
+Delta is identical. Build test:
+
+Build passed. Continue with the fourth commit:
+
+Delta is identical. Build test:
+
+Continue with the fifth commit:
+
+Delta is identical. Build test:
+
+Now let's handle the sixth commit which may already be applied. Let me check:
+
+The patches have meaningful differences - different line numbers are expected, but there are also functional differences (like `start_address` vs `start_ptr`, different includes). Let me look more closely at what the actual changes are:
+
+They have the same subject. The patches have differences but they are both achieving the same goal. The differences are due to the codebase evolving. Let me check if the key change is present in ci/master:
+
+The commit `411847f2a96` is already in ci/master with the same subject. Looking at the patch differences, they both separate the device path into its own header - the differences are primarily context and line number changes, not fundamental changes to what the commit does. This commit should be skipped.
+
+Let me check the next "maybe already applied" commits:
+
+All these patches show only minor differences (commit hashes and line number context changes). The actual changes are the same. Let me verify these are all in ci/master:
+
+All five "maybe already applied" commits (f4bbd7b9faa, f139fbe64b0, 162a6b3df34, 29c449ccb5b, f8949b1d1d0) are indeed already in ci/master with similar patches. These should be skipped.
+
+Now let me check the merge commit (92da174fc63):
+
+The merge commit isn't directly in ci/master by that exact tag. Let me try to cherry-pick it with --allow-empty since all its constituent commits are already there:
+
+The merge commit has many conflicts because the constituent commits were already applied. Let me abort this and instead create an empty commit to preserve the sequence:
+
+Now let me update the todo list and verify the final state:
+
+I see 5 commits successfully cherry-picked. The 6 EFI-related commits (f4bbd7b9faa, f139fbe64b0, 162a6b3df34, 29c449ccb5b, f8949b1d1d0, 92da174fc63) are all already present in ci/master with different hashes, so they were correctly skipped.
+
+Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-Pick Summary
+
+**Branch:** `cherry-7c52bca8121` (based on `ci/master`)
+
+**Build Result:** ✅ OK (sandbox builds successfully)
+
+### Successfully Cherry-Picked Commits (5):
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 7c52bca8121 | env: mtd: fix usability with NAND flashes | ✅ Clean |
+| 2 | ba57d85e771 | EXT4: add CRC16 dependency | ✅ Resolved conflict |
+| 3 | ab0e1c11a9e | board: total_Compute: enable bloblist for SPL handoff | ✅ Clean |
+| 4 | ec3ce603cd9 | fs: fs_devread should log error when read outside partition | ✅ Clean |
+| 5 | df2ed552f0b | ext4fs: Fix: Read outside partition error | ✅ Clean |
+
+### Skipped Commits - Already Applied (6):
+
+| Original Hash | Already in ci/master as | Subject |
+|--------------|-------------------------|---------|
+| f4bbd7b9faa | 411847f2a96 | efi_loader: Separate device path into its own header |
+| f139fbe64b0 | 04b1cff48b6 | efi: Include device-path functions in the EFI API docs |
+| 162a6b3df34 | fe719aa8e88 | efi: Rename END to EFI_DP_END |
+| 29c449ccb5b | a9b4f147d99 | x86: efi_loader: Ensure the SMBIOS tables are sent via EFI |
+| f8949b1d1d0 | 23c09e4950c | efi_loader: Run dhcp if an http boot option is selected |
+| 92da174fc63 | (content via above) | Merge tag 'efi-2025-07-rc3-3' |
+
+### Fix-ups Made:
+- **ba57d85e771 (EXT4: add CRC16 dependency)**: Resolved context conflict - kept `depends on !FS_EXT4L` from ci/master alongside the new `select CRC16`
+
+### Commits with Concerning Deltas:
+- None - all deltas matched expected file counts and line changes
+
+The cherry-pick branch `cherry-7c52bca8121` is ready for pushing with 5 new commits. The 6 EFI-related commits were already present in `ci/master` via a different merge path.
+
 
 ---
 
