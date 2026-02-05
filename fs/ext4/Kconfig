@@ -1,6 +1,7 @@
 config FS_EXT4
 	bool "Enable ext4 filesystem support"
 	depends on !FS_EXT4L
+	select CRC16
 	help
 	  This provides support for reading images from the ext4 filesystem.
 	  ext4 is a widely used general-purpose filesystem for Linux.
