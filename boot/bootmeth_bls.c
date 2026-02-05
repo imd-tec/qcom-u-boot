@@ -125,25 +125,39 @@ static int bls_to_pxe_label(struct bootflow *bflow,
 		goto err;
 	}
 
-	/* Extract kernel, initrd and FDT from the bootflow images */
+	/* Extract kernel, initrds and FDT from the bootflow images */
 	alist_for_each(img, &bflow->images) {
-		char **fieldp;
+		char *fname;
 
-		if (img->type == (enum bootflow_img_t)IH_TYPE_KERNEL)
-			fieldp = &label->kernel;
-		else if (img->type == (enum bootflow_img_t)IH_TYPE_RAMDISK)
-			fieldp = &label->initrd;
-		else if (img->type == (enum bootflow_img_t)IH_TYPE_FLATDT)
-			fieldp = &label->fdt;
-		else
-			continue;
+		fname = strdup(img->fname);
+		if (!fname) {
+			ret = -ENOMEM;
+			goto err;
+		}
 
-		if (!*fieldp) {
-			*fieldp = strdup(img->fname);
-			if (!*fieldp) {
+		switch ((int)img->type) {
+		case IH_TYPE_KERNEL:
+			if (!label->kernel)
+				label->kernel = fname;
+			else
+				free(fname);
+			break;
+		case IH_TYPE_RAMDISK:
+			if (!alist_add(&label->initrds, fname)) {
+				free(fname);
 				ret = -ENOMEM;
 				goto err;
 			}
+			break;
+		case IH_TYPE_FLATDT:
+			if (!label->fdt)
+				label->fdt = fname;
+			else
+				free(fname);
+			break;
+		default:
+			free(fname);
+			break;
 		}
 	}
 

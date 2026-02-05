@@ -107,6 +107,8 @@ static struct pxe_label *label_create(void)
 		return NULL;
 	memset(label, 0, sizeof(struct pxe_label));
 	alist_init_struct(&label->files, struct pxe_file);
+	if (IS_ENABLED(CONFIG_PXE_INITRD_LIST))
+		alist_init(&label->initrds, sizeof(char *), 4);
 
 	return label;
 }
@@ -121,7 +123,15 @@ void label_destroy(struct pxe_label *label)
 	free(label->kernel);
 	free(label->config);
 	free(label->append);
-	free(label->initrd);
+	if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+		const char **initrd;
+
+		alist_for_each(initrd, &label->initrds)
+			free((void *)*initrd);
+		alist_uninit(&label->initrds);
+	} else {
+		free(label->initrd);
+	}
 	free(label->fdt);
 	free(label->fdtdir);
 	alist_for_each(file, &label->files)
@@ -579,6 +589,7 @@ static int parse_label(char **c, struct pxe_menu *cfg, const char *limit)
 	struct token t;
 	int len;
 	char *s = *c;
+	char *initrd_path;
 	struct pxe_label *label;
 	int err;
 
@@ -612,26 +623,57 @@ static int parse_label(char **c, struct pxe_menu *cfg, const char *limit)
 			break;
 		case T_APPEND:
 			err = parse_sliteral(c, &label->append, limit);
-			if (label->initrd)
-				break;
+			if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+				if (label->initrds.count)
+					break;
+			} else {
+				if (label->initrd)
+					break;
+			}
 			s = strstr(label->append, "initrd=");
 			if (!s)
 				break;
 			s += 7;
 			len = (int)(strchr(s, ' ') - s);
-			label->initrd = malloc(len + 1);
-			strlcpy(label->initrd, s, len);
-			label->initrd[len] = '\0';
+			initrd_path = malloc(len + 1);
+			if (!initrd_path) {
+				err = -ENOMEM;
+				break;
+			}
+			strlcpy(initrd_path, s, len + 1);
+			if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+				if (!alist_add(&label->initrds, initrd_path)) {
+					free(initrd_path);
+					err = -ENOMEM;
+					break;
+				}
+			} else {
+				label->initrd = initrd_path;
+			}
+			err = label_add_file(label, initrd_path, PFT_INITRD);
 
 			break;
 		case T_INITRD:
-			if (!label->initrd) {
-				err = parse_sliteral(c, &label->initrd, limit);
-				if (err < 0)
+			if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+				if (label->initrds.count)
 					break;
-				err = label_add_file(label, label->initrd,
-						     PFT_INITRD);
+			} else {
+				if (label->initrd)
+					break;
 			}
+			err = parse_sliteral(c, &initrd_path, limit);
+			if (err < 0)
+				break;
+			if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+				if (!alist_add(&label->initrds, initrd_path)) {
+					free(initrd_path);
+					err = -ENOMEM;
+					break;
+				}
+			} else {
+				label->initrd = initrd_path;
+			}
+			err = label_add_file(label, initrd_path, PFT_INITRD);
 			break;
 		case T_FDT:
 			if (!label->fdt) {

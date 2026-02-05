@@ -39,7 +39,9 @@
  * @kernel: the path to the kernel file to use for this label
  * @config: FIT configuration to use (after '#'), or NULL if none
  * @append: kernel command line to use when booting this label
- * @initrd: path to the initrd to use for this label.
+ * @initrd: path to single initrd (used if !CONFIG_PXE_INITRD_LIST)
+ * @initrds: list of initrd paths (alist of char *) (used if
+ * CONFIG_PXE_INITRD_LIST)
  * @fdt: path to FDT to use
  * @fdtdir: path to FDT directory to use
  * @files: list of files to load (alist of struct pxe_file)
@@ -60,6 +62,7 @@ struct pxe_label {
 	char *config;
 	char *append;
 	char *initrd;
+	struct alist initrds;
 	char *fdt;
 	char *fdtdir;
 	struct alist files;
