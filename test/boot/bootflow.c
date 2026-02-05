@@ -36,6 +36,7 @@ DECLARE_GLOBAL_DATA_PTR;
 extern U_BOOT_DRIVER(bootmeth_android);
 extern U_BOOT_DRIVER(bootmeth_cros);
 extern U_BOOT_DRIVER(bootmeth_2script);
+extern U_BOOT_DRIVER(bootmeth_2bls);
 
 /* Use this as the vendor for EFI to tell the app to exit boot services */
 static u16 __efi_runtime_data test_vendor[] = u"U-Boot testing";
@@ -682,6 +683,13 @@ static int prep_mmc_bootdev(struct unit_test_state *uts, const char *mmc_dev,
 		ut_assertok(uclass_first_device_err(UCLASS_BOOTSTD, &bootstd));
 		ut_assertok(device_bind(bootstd, DM_DRIVER_REF(bootmeth_android),
 					"android", 0, ofnode_null(), &dev));
+	}
+
+	/* Enable the BLS bootmeth if needed */
+	if (IS_ENABLED(CONFIG_BOOTMETH_BLS) && bind_cros_android) {
+		ut_assertok(uclass_first_device_err(UCLASS_BOOTSTD, &bootstd));
+		ut_assertok(device_bind(bootstd, DM_DRIVER_REF(bootmeth_2bls),
+					"bls", 0, ofnode_null(), &dev));
 	}
 
 	/* Change the order to include the device */
@@ -1809,3 +1817,49 @@ static int bootflow_cmd_info_encrypted(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(bootflow_cmd_info_encrypted, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Check 'bootflow scan' finds a BLS bootflow */
+static int bootflow_cmd_bls(struct unit_test_state *uts)
+{
+	struct bootstd_priv *std;
+	const char **old_order;
+
+	ut_assertok(prep_mmc_bootdev(uts, "mmc15", true, &old_order));
+	ut_assertok(run_command("bootflow scan", 0));
+	ut_assert_console_end();
+
+	/* Restore the order used by the device tree */
+	ut_assertok(bootstd_get_priv(&std));
+	free(std->bootdev_order);
+	std->bootdev_order = old_order;
+
+	ut_assertok(run_command("bootflow list", 0));
+	ut_assert_nextline("Showing all bootflows");
+	ut_assert_nextline("Seq  Method       State   Uclass    Part  E  Name                      Filename");
+	ut_assert_nextlinen("---");
+	ut_assert_nextlinen("  0  extlinux");
+	ut_assert_nextline("  1  bls          ready   mmc          1     mmc15.bootdev.part_1      /loader/entry.conf");
+	ut_assert_nextlinen("---");
+	ut_assert_nextline("(2 bootflows, 2 valid)");
+	ut_assert_console_end();
+
+	/* Select the BLS bootflow and check info */
+	ut_assertok(run_command("bootflow select 1", 0));
+	ut_assert_console_end();
+	ut_assertok(run_command("bootflow info", 0));
+	ut_assert_nextline("Name:      mmc15.bootdev.part_1");
+	ut_assert_nextline("Device:    mmc15.bootdev");
+	ut_assert_nextline("Block dev: mmc15.blk");
+	ut_assert_nextline("Method:    bls");
+	ut_assert_nextline("State:     ready");
+	ut_assert_nextline("Partition: 1");
+	if (IS_ENABLED(CONFIG_BLK_LUKS))
+		ut_assert_nextline("Encrypted: no");
+	ut_assert_nextline("Subdir:    (none)");
+	ut_assert_nextline("Filename:  /loader/entry.conf");
+	ut_assert_skip_to_line("Error:     0");
+	ut_assert_console_end();
+
+	return 0;
+}
+BOOTSTD_TEST(bootflow_cmd_bls, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);

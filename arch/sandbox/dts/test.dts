@@ -1296,6 +1296,13 @@
 		filename = "mmc14.img";
 	};
 
+	/* This is used for BLS tests */
+	mmc15 {
+		status = "disabled";
+		compatible = "sandbox,mmc";
+		filename = "mmc15.img";
+	};
+
 	pch {
 		compatible = "sandbox,pch";
 	};
