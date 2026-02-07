@@ -22014,3 +22014,56 @@ Successfully pushed. Let me verify the final state:
 
 ---
 
+## 2026-02-06: us/next
+
+Branch: cherry-ec7b49c4108
+
+Commits:
+- ec7b49c4108 i2c: designware_i2c Return -ETIMEDOUT for timeout errors
+- 716422b3d83 Merge tag 'i2cfixes-for-2025.07-rc4' of https://source.denx.de/u-boot/custodians/u-boot-i2c
+
+### Conversation log
+The repository is clean (no staged or uncommitted changes, just an untracked file which is fine). Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (regular commit):
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The delta is identical: 1 file changed, 19 insertions(+), 11 deletions(-). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit. This is a merge commit (identified by "Merge" in subject), so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (the changes were already applied through the first commit), but per instructions we must preserve it with `--allow-empty`. Let me commit it:
+
+Now let me verify the delta for the merge commit and run the build test:
+
+The cherry-picked merge commit is empty (which is expected since the change was already applied via the first commit), while the original merge commit shows the delta. This is normal behavior for merge commits when cherry-picked - the actual changes were already applied by the individual commit. Let me run the build test:
+
+Build passed. Now let me verify the commits with `git log`:
+
+All 2 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**All cherry-picks completed successfully!**
+
+### Commits Applied:
+1. `6c6e870e6a4` - i2c: designware_i2c Return -ETIMEDOUT for timeout errors (cherry-picked from `ec7b49c4108`)
+2. `f03f069915c` - Merge tag 'i2cfixes-for-2025.07-rc4' of https://source.denx.de/u-boot/custodians/u-boot-i2c (cherry-picked from `716422b3d83`)
+
+### Build Result: **OK** ✓
+- No warnings or errors
+
+### Fix-ups Made:
+- None required
+
+### Commits with Concerning Deltas:
+- None. The first commit had identical delta (1 file changed, 19 insertions, 11 deletions)
+- The merge commit is empty as expected (the actual changes were already applied via the first commit ec7b49c4108)
+
+### Branch Status:
+- Branch `cherry-ec7b49c4108` is ready for pushing
+- Contains 2 new commits ahead of `ci/master`
+
+---
+
