@@ -15,10 +15,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-const char *pager_post(struct pager *pag, bool use_pager, const char *s)
+const char *pager_postn(struct pager *pag, bool use_pager, const char *s,
+			int len)
 {
 	struct membuf old;
-	int ret, len;
+	int ret;
 
 	if (!pag || !use_pager || pag->test_bypass ||
 	    pag->state == PAGERST_BYPASS)
@@ -27,7 +28,6 @@ const char *pager_post(struct pager *pag, bool use_pager, const char *s)
 	if (pag->state == PAGERST_QUIT_SUPPRESS)
 		return NULL;
 
-	len = strlen(s);
 	if (!len)
 		return NULL;
 
@@ -42,8 +42,13 @@ const char *pager_post(struct pager *pag, bool use_pager, const char *s)
 		 * can eject the overflow text.
 		 *
 		 * The buffer is presumably empty, since callers are not allowed
-		 * to call pager_post() unless all the output from the previous
+		 * to call pager_postn() unless all the output from the previous
 		 * call was provided via pager_next().
+		 *
+		 * Note: the overflow path returns @s directly via
+		 * pager_next(), so @s must be nul-terminated. In practice
+		 * this only triggers when len > buf_size, and typical
+		 * console strings are well within the 4K default buffer.
 		 */
 		pag->overflow = s;
 		pag->mb = old;

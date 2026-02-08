@@ -361,11 +361,11 @@ int err_printf(bool serial_only, const char *fmt, ...)
 	return ret;
 }
 
-static void console_puts(int file, bool use_pager, const char *s)
+static void console_putsn(int file, bool use_pager, const char *s, int len)
 {
 	int key = 0;
 
-	for (s = pager_post(gd_pager(), use_pager, s); s;
+	for (s = pager_postn(gd_pager(), use_pager, s, len); s;
 	     s = pager_next(gd_pager(), use_pager, key)) {
 		struct stdio_dev *dev;
 		int i;
@@ -384,13 +384,8 @@ static void console_puts(int file, bool use_pager, const char *s)
 
 static void console_putsn_pager(int file, const char *s, int len)
 {
-	if (IS_ENABLED(CONFIG_CONSOLE_PAGER) && gd_pager()) {
-		/*
-		 * Pager only works with nul-terminated strings, so output
-		 * character by character for length-based strings
-		 */
-		while (len--)
-			console_putc_pager(file, *s++);
+	if (IS_ENABLED(CONFIG_CONSOLE_PAGER) && pager_active(gd_pager())) {
+		console_putsn(file, true, s, len);
 	} else {
 		struct stdio_dev *dev;
 		int i;
@@ -409,11 +404,10 @@ static void console_putsn_pager(int file, const char *s, int len)
 
 static void console_puts_pager(int file, const char *s)
 {
-	if (IS_ENABLED(CONFIG_CONSOLE_PAGER) && gd_pager()) {
-		console_puts(file, true, s);
-	} else {
+	if (IS_ENABLED(CONFIG_CONSOLE_PAGER) && gd_pager())
+		console_putsn(file, true, s, strlen(s));
+	else
 		console_putsn_pager(file, s, strlen(s));
-	}
 }
 
 #ifdef CONFIG_CONSOLE_FLUSH_SUPPORT
