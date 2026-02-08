@@ -1021,8 +1021,13 @@ static int truetype_measure(struct udevice *dev, const char *name, uint size,
 		return log_msg_ret("sel", ret);
 
 	bbox->valid = false;
-	if (!*text)
+	if (!*text) {
+		bbox->x0 = 0;
+		bbox->y0 = 0;
+		bbox->x1 = 0;
+		bbox->y1 = 0;
 		return 0;
+	}
 
 	limit = -1;
 	if (pixel_limit != -1)

@@ -665,3 +665,22 @@ static int pager_test_quit_keypress(struct unit_test_state *uts)
 	return 0;
 }
 COMMON_TEST(pager_test_quit_keypress, 0);
+
+/* Test pager with non-nul-terminated string using explicit length */
+static int pager_test_non_nul_terminated(struct unit_test_state *uts)
+{
+	struct pager *pag;
+	/* "Hello" followed by other data - not nul-terminated at offset 5 */
+	static const char data[] = "HelloWorld";
+
+	ut_assertok(pager_init(&pag, 20, 1024));
+
+	/* Post only the first 5 bytes */
+	ut_asserteq_str("Hello", pager_postn(pag, true, data, 5));
+	ut_assertnull(pager_next(pag, true, 0));
+
+	pager_uninit(pag);
+
+	return 0;
+}
+COMMON_TEST(pager_test_non_nul_terminated, 0);

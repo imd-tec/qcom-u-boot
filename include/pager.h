@@ -12,6 +12,7 @@
 #include <abuf.h>
 #include <membuf.h>
 #include <linux/sizes.h>
+#include <linux/string.h>
 
 #define PAGER_BUF_SIZE	SZ_4K
 
@@ -52,9 +53,14 @@ enum pager_state {
  * permit passing a string length, only a string, which means that strings must
  * be nul-terminated. The termination is handled automatically by the pager.
  *
- * If the text passed to pager_post() is too large for @buf then all the next
+ * If the text passed to pager_postn() is too large for @buf then all the next
  * will be written at once, without any paging, in the next call to
  * pager_next().
+ *
+ * The membuf @mb is initialised one byte smaller than the abuf @buf, so the
+ * last byte of @buf is always available for writing a nul terminator. This
+ * means pager_next() can safely terminate the returned string without
+ * overflowing the underlying allocation.
  *
  * The membuf @mb is only used to feed out text in chunks, with a pager message
  * (and a keypress wait) inserted between each chunk.
@@ -85,12 +91,12 @@ struct pager {
 #if CONFIG_IS_ENABLED(CONSOLE_PAGER)
 
 /**
- * pager_post() - Add text to the input buffer for later handling
+ * pager_postn() - Add text to the input buffer for later handling
  *
  * If @use_pager the text is added to the pager buffer and fed out a screenful
- * at a time. This function calls pager_post() after storing the text.
+ * at a time. This function calls pager_postn() after storing the text.
  *
- * After calling pager_post(), if it returns anything other than NULL, you must
+ * After calling pager_postn(), if it returns anything other than NULL, you must
  * repeatedly call pager_next() until it returns NULL, otherwise text may be
  * lost
  *
@@ -99,10 +105,28 @@ struct pager {
  * @pag: Pager to use, may be NULL
  * @use_pager: Whether or not to use the pager functionality
  * @s: Text to add
+ * @len: Length of @s in bytes
  * Return: text which should be sent to output, or NULL if there is no more.
  * If !@use_pager this just returns @s and does not affect the pager state
  */
-const char *pager_post(struct pager *pag, bool use_pager, const char *s);
+const char *pager_postn(struct pager *pag, bool use_pager, const char *s,
+			int len);
+
+/**
+ * pager_post() - Add a nul-terminated string to the pager input buffer
+ *
+ * Convenience wrapper around pager_postn() for nul-terminated strings.
+ *
+ * @pag: Pager to use, may be NULL
+ * @use_pager: Whether or not to use the pager functionality
+ * @s: Nul-terminated text to add
+ * Return: text which should be sent to output, or NULL if there is no more
+ */
+static inline const char *pager_post(struct pager *pag, bool use_pager,
+				     const char *s)
+{
+	return pager_postn(pag, use_pager, s, strlen(s));
+}
 
 /**
  * pager_next() - Returns the next screenful of text to show
@@ -126,6 +150,21 @@ const char *pager_post(struct pager *pag, bool use_pager, const char *s);
  * If !@use_pager this just returns NULL and does not affect the pager state
  */
 const char *pager_next(struct pager *pag, bool use_pager, int ch);
+
+/**
+ * pager_active() - check if pager needs to process output
+ *
+ * Returns true only when the pager is genuinely active and needs to
+ * process output (not bypassed or in test bypass mode).
+ *
+ * @pag: Pager to check, may be NULL
+ * Return: true if the pager is active
+ */
+static inline bool pager_active(struct pager *pag)
+{
+	return pag && !pag->test_bypass &&
+	       pag->state != PAGERST_BYPASS;
+}
 
 /**
  * pager_set_bypass() - put the pager into bypass mode
@@ -181,6 +220,12 @@ void pager_clear_quit(struct pager *pag);
 void pager_uninit(struct pager *pag);
 
 #else
+static inline const char *pager_postn(struct pager *pag, bool use_pager,
+				      const char *s, int len)
+{
+	return s;
+}
+
 static inline const char *pager_post(struct pager *pag, bool use_pager,
 				     const char *s)
 {
@@ -190,6 +235,11 @@ static inline const char *pager_post(struct pager *pag, bool use_pager,
 static inline const char *pager_next(struct pager *pag, bool use_pager, int ch)
 {
 	return NULL;
+}
+
+static inline bool pager_active(struct pager *pag)
+{
+	return false;
 }
 
 static inline bool pager_set_bypass(struct pager *pag, bool bypass)

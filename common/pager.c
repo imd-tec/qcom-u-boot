@@ -15,10 +15,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-const char *pager_post(struct pager *pag, bool use_pager, const char *s)
+const char *pager_postn(struct pager *pag, bool use_pager, const char *s,
+			int len)
 {
 	struct membuf old;
-	int ret, len;
+	int ret;
 
 	if (!pag || !use_pager || pag->test_bypass ||
 	    pag->state == PAGERST_BYPASS)
@@ -27,7 +28,6 @@ const char *pager_post(struct pager *pag, bool use_pager, const char *s)
 	if (pag->state == PAGERST_QUIT_SUPPRESS)
 		return NULL;
 
-	len = strlen(s);
 	if (!len)
 		return NULL;
 
@@ -42,8 +42,13 @@ const char *pager_post(struct pager *pag, bool use_pager, const char *s)
 		 * can eject the overflow text.
 		 *
 		 * The buffer is presumably empty, since callers are not allowed
-		 * to call pager_post() unless all the output from the previous
+		 * to call pager_postn() unless all the output from the previous
 		 * call was provided via pager_next().
+		 *
+		 * Note: the overflow path returns @s directly via
+		 * pager_next(), so @s must be nul-terminated. In practice
+		 * this only triggers when len > buf_size, and typical
+		 * console strings are well within the 4K default buffer.
 		 */
 		pag->overflow = s;
 		pag->mb = old;
@@ -96,7 +101,7 @@ const char *pager_next(struct pager *pag, bool use_pager, int key)
 		return NULL;
 	}
 
-	ret = membuf_getraw(&pag->mb, pag->buf.size - 1, false, &str);
+	ret = membuf_getraw(&pag->mb, pag->buf.size, false, &str);
 	if (!ret) {
 		if (pag->overflow) {
 			const char *oflow = pag->overflow;
@@ -242,11 +247,14 @@ int pager_init(struct pager **pagp, int page_len, int buf_size)
 		return log_msg_ret("pah", -ENOMEM);
 
 	/*
-	 * nul-terminate the buffer, which will come in handy if we need to
-	 * return up to the last byte
+	 * Pre-fill the last byte with nul. The membuf is initialised one byte
+	 * smaller than the abuf, so this byte is never used by the membuf.
+	 * pager_next() writes a nul terminator at the end of the returned
+	 * string, which always falls within the abuf since the membuf cannot
+	 * fill the last byte.
 	 */
 	((char *)pag->buf.data)[buf_size - 1] = '\0';
-	membuf_init(&pag->mb, pag->buf.data, buf_size);
+	membuf_init(&pag->mb, pag->buf.data, buf_size - 1);
 	*pagp = pag;
 
 	return 0;
