@@ -22477,3 +22477,136 @@ The cherry-pick branch is ready for pushing.
 
 ---
 
+## 2026-02-08: us/next
+
+Branch: cherry-b62e422d6e6
+
+Commits:
+- b62e422d6e6 mmc: Kconfig: Really correct dependencies SDHCI ADMA options
+- 02a2cbfee83 imx91: Drop OF_UPSTREAM
+- 461f357fa9f board: var-som-mx8mn: Fix alloc space exhausted in SPL
+- c36ab3256c8 toradex-smarc-imx8mp: add SPL_STACK size and SPL_HAVE_INIT_STACK
+- ef82e45c2ef test/py: Use the correct fixture name in exception handler
+- 2ab10ed2399 test/py: Correct handling of exceptions
+- 3507e6208f3 sandbox: solve undefined reference to pthread_kill symbol
+- 0cd85170cfb configs: rpi: set NR_DRAM_BANKS to 8 to accommodate RAM on 16GB models
+- f8cb3fde935 arm: dts: rockchip: Fix eMMC write on RK3528
+- c5afa1fef49 Merge tag 'rpi-2025.07-rc4' of https://source.denx.de/u-boot/custodians/u-boot-raspberrypi
+
+### Conversation log
+Let me find the u-boot repository:
+
+Now let me start cherry-picking the commits one by one.
+
+**Commit 1: b62e422d6e6 - mmc: Kconfig: Really correct dependencies SDHCI ADMA options**
+
+Commit 1 looks good. Now let me run the build test:
+
+Build passed. Now commit 2:
+
+**Commit 2: 02a2cbfee83 - imx91: Drop OF_UPSTREAM**
+
+Commit 2 looks good. Build test:
+
+Build passed. Now commit 3:
+
+**Commit 3: 461f357fa9f - board: var-som-mx8mn: Fix alloc space exhausted in SPL**
+
+Commit 3 looks good. Build test:
+
+Build passed. Now commit 4:
+
+**Commit 4: c36ab3256c8 - toradex-smarc-imx8mp: add SPL_STACK size and SPL_HAVE_INIT_STACK**
+
+Commit 4 looks good. Build test:
+
+Build passed. Now commit 5 (maybe already applied):
+
+**Commit 5: ef82e45c2ef - test/py: Use the correct fixture name in exception handler (maybe already applied as fbe277d992d)**
+
+First, let me compare the original and potential existing commit:
+
+The patches are essentially identical - same changes, just different commit hashes and minor metadata. The commit is already applied. Let me skip this one.
+
+Now commit 6 (maybe already applied):
+
+**Commit 6: 2ab10ed2399 - test/py: Correct handling of exceptions (maybe already applied as 838b1a2931a)**
+
+This commit is also already applied (only metadata differs). Let me skip this one.
+
+Now commit 7:
+
+**Commit 7: 3507e6208f3 - sandbox: solve undefined reference to pthread_kill symbol**
+
+There's a conflict. Let me check what the conflict looks like:
+
+I can see the conflict. HEAD has the PLATFORM_LIBS line as `-lrt`, and the incoming commit wants `-lrt -lpthread`. I also see that HEAD has extra content for backtrace and gprof that needs to be preserved. Let me resolve this by keeping the backtrace/gprof sections and adding `-lpthread`:
+
+Let me try using bash to resolve the conflict:
+
+Now let me amend the commit to note the conflict resolution:
+
+Good, the delta is the same. Build test:
+
+Build passed. Now commit 8:
+
+**Commit 8: 0cd85170cfb - configs: rpi: set NR_DRAM_BANKS to 8 to accommodate RAM on 16GB models**
+
+Commit 8 looks good. Build test:
+
+Build passed. Now commit 9:
+
+**Commit 9: f8cb3fde935 - arm: dts: rockchip: Fix eMMC write on RK3528**
+
+Commit 9 looks good. Build test:
+
+Build passed. Now commit 10 (merge commit):
+
+**Commit 10: c5afa1fef49 - Merge tag 'rpi-2025.07-rc4'**
+
+The merge commit is empty because the content was already applied. Let me commit it anyway as instructed:
+
+The merge commit was applied empty because its content was already included. Build test:
+
+All cherry-picks complete. Let me verify the log:
+
+Now let me run the final build test:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+
+All builds passed successfully.
+
+### Summary of Cherry-Picks (8 commits applied out of 10 requested)
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | b62e422d6e6 | mmc: Kconfig: Really correct dependencies SDHCI ADMA options | ✅ Applied |
+| 2 | 02a2cbfee83 | imx91: Drop OF_UPSTREAM | ✅ Applied |
+| 3 | 461f357fa9f | board: var-som-mx8mn: Fix alloc space exhausted in SPL | ✅ Applied |
+| 4 | c36ab3256c8 | toradex-smarc-imx8mp: add SPL_STACK size and SPL_HAVE_INIT_STACK | ✅ Applied |
+| 5 | ef82e45c2ef | test/py: Use the correct fixture name in exception handler | ⏭️ Skipped - Already applied as fbe277d992d |
+| 6 | 2ab10ed2399 | test/py: Correct handling of exceptions | ⏭️ Skipped - Already applied as 838b1a2931a |
+| 7 | 3507e6208f3 | sandbox: solve undefined reference to pthread_kill symbol | ✅ Applied (with conflict resolution) |
+| 8 | 0cd85170cfb | configs: rpi: set NR_DRAM_BANKS to 8 to accommodate RAM on 16GB models | ✅ Applied |
+| 9 | f8cb3fde935 | arm: dts: rockchip: Fix eMMC write on RK3528 | ✅ Applied |
+| 10 | c5afa1fef49 | Merge tag 'rpi-2025.07-rc4' | ✅ Applied (empty - content already included) |
+
+### Fix-ups Made
+1. **Commit 3507e6208f3** (sandbox: pthread_kill): Resolved conflict in `arch/sandbox/config.mk`. Kept the existing BACKTRACE and GPROF sections while adding `-lpthread` to the `PLATFORM_LIBS` line. Note added to commit message: `[Resolved conflict: kept BACKTRACE/GPROF sections while adding -lpthread]`
+
+### Skipped Commits (Already Applied)
+- **ef82e45c2ef** → Already present as **fbe277d992d** (identical changes, only metadata differs)
+- **2ab10ed2399** → Already present as **838b1a2931a** (identical changes, only metadata differs)
+
+### Commits with Notes
+- **c5afa1fef49** (Merge commit): Applied as empty commit because the actual content (0cd85170cfb) was already cherry-picked just before it.
+
+### Branch Ready for Pushing
+```
+cherry-b62e422d6e6
+```
+
+---
+
