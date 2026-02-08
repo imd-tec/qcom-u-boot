@@ -22610,3 +22610,66 @@ cherry-b62e422d6e6
 
 ---
 
+## 2026-02-08: us/next
+
+Branch: cherry-aa2efc584a4
+
+Commits:
+- aa2efc584a4 dfu: fix dev_part_str for file operations
+- e6eca9ea645 usb: gadget: musb: Fix duplicate ops assignment in ti_musb_peripheral
+- 17012e3068d Merge tag 'u-boot-dfu-20250616' of https://source.denx.de/u-boot/custodians/u-boot-dfu
+
+### Conversation log
+The repository is clean. Now let me create a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build:
+
+The commit deltas match exactly (2 files, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+Deltas match exactly (1 file, 1 deletion). Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit. This is a merge commit (identified by "Merge" in subject), so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (as expected, since the individual commits were already cherry-picked). Let me commit it as empty:
+
+Third cherry-pick succeeded as an empty commit. Let me verify and run the build:
+
+The merge commit is now empty as expected (the changes were already applied by the individual cherry-picks). Let me run the build:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick operation completed successfully!**
+
+### Summary
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| aa2efc584a4 | dfu: fix dev_part_str for file operations | ✅ Cherry-picked |
+| e6eca9ea645 | usb: gadget: musb: Fix duplicate ops assignment in ti_musb_peripheral | ✅ Cherry-picked |
+| 17012e3068d | Merge tag 'u-boot-dfu-20250616' | ✅ Cherry-picked (empty) |
+
+### Details
+
+- **Build result**: ✅ OK - All builds passed
+- **Fix-ups made**: None needed
+- **Commits with concerning deltas**: None - all commit deltas matched perfectly
+- **Branch**: `cherry-aa2efc584a4` is ready for pushing
+- **New commits**:
+  - `e7daeb629ec` - dfu: fix dev_part_str for file operations
+  - `f71b2c7522b` - usb: gadget: musb: Fix duplicate ops assignment in ti_musb_peripheral
+  - `bddb2aa9d49` - Merge tag 'u-boot-dfu-20250616' (empty commit preserving merge history)
+
+The merge commit resulted in an empty commit as expected, since the individual changes were already applied by cherry-picking the component commits first. The `--allow-empty` flag was used to preserve the merge commit message for tracking history.
+
+---
+
