@@ -22510,3 +22510,110 @@ The branch `cherry-79d9ac8b13e` is ready for pushing and is 17 commits ahead of 
 
 ---
 
+### Review: 2026-02-08
+
+Branch: cherry-79d9ac8b13e
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct working directory:
+
+Good, I'm already in the u-boot directory. Let me checkout the branch and fetch the latest ci/master:
+
+I can see the branch has 17 cherry-picked commits plus a pickman metadata commit. Let me check what the difference is between the current merge-base and the latest ci/master:
+
+There are 5 new commits on ci/master. Now I need to save the pre-rebase state of each commit for delta comparison, then rebase:
+
+Let me capture the stats for all commits before rebase:
+
+There seems to be an issue with the for loop. Let me try a different approach:
+
+Good, I have all the pre-rebase stats. Now let me check if there's a pickman commit that should NOT be rebased (it's a metadata commit):
+
+This is a pickman metadata commit and should be included in the rebase (using --keep-empty). Now let me do the rebase:
+
+Rebase completed successfully! Now let me verify the rebased commits and compare deltas:
+
+All 18 commits (17 cherry-picks + 1 pickman commit) rebased successfully. Now let me verify the deltas for each commit:
+
+All deltas match the pre-rebase state exactly:
+- Commit 1: 1 file, +1/-1 ✓
+- Commit 2: 1 file, +1/-1 ✓
+- Commit 3: 1 file, +1 ✓
+- Commit 4: 1 file, +20 ✓
+- Commit 5: 1 file, +2/-2 ✓
+- Commit 6: 1 file, -1 ✓
+- Commit 7: 1 file, +1 ✓
+- Commit 8: 1 file, +1 ✓
+- Commit 9: 1 file, +1 ✓
+- Commit 10: 1 file, +1 ✓
+- Commit 11: 1 file, +4/-1 ✓
+- Commit 12: 1 file, +8 ✓
+- Commit 13: 2 files, +11/-6 ✓
+- Commit 14: 1 file, +3 ✓
+- Commit 15: 7 files, +51 ✓
+- Commit 16: 1 file, +1/-1 ✓
+- Commit 17: Empty ✓
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing version branches and create the v2 branch:
+
+No existing version branches. Let me create the v2 branch:
+
+The push failed because it uses --force-with-lease and the remote has changed. Let me fetch and check what happened:
+
+I see - the remote branch doesn't have the pickman commit that we have locally. The rebase was done on a local branch that had the pickman commit. Let me check the current local state vs remote:
+
+The remote doesn't have the pickman commit. The --force-with-lease check failed because it's comparing against a stale reference. Let me retry the push now that we've fetched:
+
+The issue is with --force-with-lease. The remote was at a state with just 17 commits (no pickman) and we're trying to push 18 commits (with pickman). The force-with-lease is comparing incorrectly. Let me check the pickman command:
+
+The push was successful. Let me verify the final state:
+
+The branch is now rebased on top of the latest ci/master (be5ed32ab46).
+
+## Summary
+
+**Rebase completed successfully!**
+
+### What was done:
+1. Checked out branch `cherry-79d9ac8b13e`
+2. Fetched latest `ci/master` (5 new commits: be5ed32ab46..d4bc62ec1c5)
+3. Rebased 18 commits (17 cherry-picks + 1 pickman metadata commit) onto `ci/master`
+4. Verified all commit deltas match pre-rebase state exactly
+5. Ran sandbox build test - **PASSED**
+6. Created local backup branch `cherry-79d9ac8b13e-v2`
+7. Force pushed to remote `cherry-79d9ac8b13e` to update MR !531
+
+### Commit deltas verified (all unchanged):
+| # | Commit | Subject | Delta |
+|---|--------|---------|-------|
+| 1 | 8c846a27eb2 | arm: uniphier: Change _debug_uart_putc function to inline | 1 file, +1/-1 |
+| 2 | 63bd81b604c | efi: stub: Change _debug_uart_putc function to inline | 1 file, +1/-1 |
+| 3 | ce5dec534e4 | ram: rockchip: Fix dependency of RAM_ROCKCHIP_DEBUG | 1 file, +1 |
+| 4 | 17ff78cba8b | debug_uart: Replace debug functions with dummies | 1 file, +20 |
+| 5 | b54005a58b7 | rockchip: px30: Weaken dependency TPL/SPL serial | 1 file, +2/-2 |
+| 6 | 7d61224c3e8 | rockchip: px30: Fix hard dependency to DEBUG_UART_BOARD_INIT | 1 file, -1 |
+| 7 | a65d9d20520 | configs: ringneck-px30: enable exFAT support | 1 file, +1 |
+| 8 | 03d9395f675 | configs: jaguar-rk3588: enable exFAT support | 1 file, +1 |
+| 9 | e4af0a3d668 | configs: tiger-rk3588: enable exFAT support | 1 file, +1 |
+| 10 | 26d037c370e | configs: puma-rk3399: enable exFAT support | 1 file, +1 |
+| 11 | 65921578c7e | rockchip: io-domain: Add debug logging | 1 file, +4/-1 |
+| 12 | e039f198e64 | rockchip: io-domain: Add CONFIG_SPL_ROCKCHIP_IODOMAIN | 1 file, +8 |
+| 13 | d901bf6b279 | regulator: rk8xx: Add CONFIG_SPL_REGULATOR_RK8XX | 2 files, +11/-6 |
+| 14 | 191fb172a5b | rockchip: rk3399-nanopi-4: Allow MMC driver to control SD regulators | 1 file, +3 |
+| 15 | 6406c85a879 | rockchip: rk3399-nanopi-4: Enable IO-domain driver in SPL | 7 files, +51 |
+| 16 | 8aec0eadf46 | power: rk8xx: fix swapped mask and value in init registers for RK806 | 1 file, +1/-1 |
+| 17 | 81200395080 | Merge tag 'u-boot-rockchip-20250606' | Empty (as expected) |
+| 18 | 10862b0596c | pickman: Record cherry-pick of 17 commits from us/next | Metadata only |
+
+### MR Reply:
+```
+Rebased onto latest master (be5ed32ab46). Build passes. All commit deltas unchanged.
+```
+
+---
+
