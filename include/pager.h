@@ -57,6 +57,11 @@ enum pager_state {
  * will be written at once, without any paging, in the next call to
  * pager_next().
  *
+ * The membuf @mb is initialised one byte smaller than the abuf @buf, so the
+ * last byte of @buf is always available for writing a nul terminator. This
+ * means pager_next() can safely terminate the returned string without
+ * overflowing the underlying allocation.
+ *
  * The membuf @mb is only used to feed out text in chunks, with a pager message
  * (and a keypress wait) inserted between each chunk.
  *

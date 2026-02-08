@@ -101,7 +101,7 @@ const char *pager_next(struct pager *pag, bool use_pager, int key)
 		return NULL;
 	}
 
-	ret = membuf_getraw(&pag->mb, pag->buf.size - 1, false, &str);
+	ret = membuf_getraw(&pag->mb, pag->buf.size, false, &str);
 	if (!ret) {
 		if (pag->overflow) {
 			const char *oflow = pag->overflow;
@@ -247,11 +247,14 @@ int pager_init(struct pager **pagp, int page_len, int buf_size)
 		return log_msg_ret("pah", -ENOMEM);
 
 	/*
-	 * nul-terminate the buffer, which will come in handy if we need to
-	 * return up to the last byte
+	 * Pre-fill the last byte with nul. The membuf is initialised one byte
+	 * smaller than the abuf, so this byte is never used by the membuf.
+	 * pager_next() writes a nul terminator at the end of the returned
+	 * string, which always falls within the abuf since the membuf cannot
+	 * fill the last byte.
 	 */
 	((char *)pag->buf.data)[buf_size - 1] = '\0';
-	membuf_init(&pag->mb, pag->buf.data, buf_size);
+	membuf_init(&pag->mb, pag->buf.data, buf_size - 1);
 	*pagp = pag;
 
 	return 0;
