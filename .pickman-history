@@ -22385,3 +22385,128 @@ The branch is now:
 
 ---
 
+## 2026-02-08: us/next
+
+Branch: cherry-79d9ac8b13e
+
+Commits:
+- 79d9ac8b13e arm: uniphier: Change _debug_uart_putc function to inline
+- c1f9995d822 efi: stub: Change _debug_uart_putc function to inline
+- 6773a46f113 ram: rockchip: Fix dependency of RAM_ROCKCHIP_DEBUG
+- 0fb68337f24 debug_uart: Replace debug functions with dummies if CONFIG_DEBUG_UART is not set
+- 80bac234302 rockchip: px30: Weaken dependency TPL/SPL serial
+- ac86ee45eea rockchip: px30: Fix hard dependency to DEBUG_UART_BOARD_INIT
+- fd11e10c96d configs: ringneck-px30: enable exFAT support
+- 41edb09cd0a configs: jaguar-rk3588: enable exFAT support
+- 369e86a98ab configs: tiger-rk3588: enable exFAT support
+- 4aa110d73ee configs: puma-rk3399: enable exFAT support
+- 81a26131bdf rockchip: io-domain: Add debug logging for regulators during probe
+- 83b1d04765d rockchip: io-domain: Add CONFIG_SPL_ROCKCHIP_IODOMAIN
+- f8f865ec0b1 regulator: rk8xx: Add CONFIG_SPL_REGULATOR_RK8XX
+- 2abd7fff9eb rockchip: rk3399-nanopi-4: Allow MMC driver to control SD regulators
+- 210ab4f60df rockchip: rk3399-nanopi-4: Enable IO-domain driver in SPL
+- b8101af3ce5 power: rk8xx: fix swapped mask and value in init registers for RK806
+- a854c12062c Merge tag 'u-boot-rockchip-20250606' of https://source.denx.de/u-boot/custodians/u-boot-rockchip
+
+### Conversation log
+The repository is clean (only untracked files). Let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Let me verify the delta and run the build test:
+
+Delta looks identical (1 file, 1 insertion, 1 deletion). Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Interesting - the file changed is different (lib/efi_client/stub_x86.c vs lib/efi/efi_stub.c), but both are 1 file, 1 insertion, 1 deletion. This appears to be due to file reorganization in the codebase. Let me verify this is correct:
+
+The auto-merge handled the file rename correctly - the same function change (`static void` → `static inline void`) was applied to the equivalent file in the renamed location. Let me run the build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Delta is identical. Build test:
+
+Cherry-pick commit 4:
+
+Delta identical. Build test:
+
+Cherry-pick commit 5:
+
+Delta identical. Build test:
+
+Cherry-pick commit 6:
+
+Delta identical. Build test:
+
+Cherry-pick commit 7:
+
+Delta identical. Build test:
+
+Cherry-pick commit 8:
+
+Cherry-pick commit 9:
+
+Cherry-pick commit 10:
+
+Cherry-pick commit 11:
+
+Cherry-pick commit 12:
+
+Cherry-pick commit 13:
+
+Cherry-pick commit 14:
+
+Cherry-pick commit 15:
+
+Cherry-pick commit 16:
+
+Now cherry-pick commit 17 (the merge commit):
+
+The merge commit is empty (expected since all changes were cherry-picked individually). Let me commit it with --allow-empty as instructed:
+
+The merge commit is empty in our cherry-pick (as expected since we cherry-picked the individual commits before) but the original merge commit shows all the combined changes. Let me run the build test and then verify the final log:
+
+Now verify the git log shows all 17 commits:
+
+All 17 commits are present. Now run the final build test:
+
+## Final Status Report
+
+All 17 commits have been successfully cherry-picked onto branch `cherry-79d9ac8b13e`.
+
+### Build Result
+✅ **OK** - sandbox build passes with no errors or warnings.
+
+### Cherry-picked Commits (in order)
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 9e62d7dee80 | arm: uniphier: Change _debug_uart_putc function to inline |
+| 2 | 6af3272b0a7 | efi: stub: Change _debug_uart_putc function to inline |
+| 3 | db27a0bce43 | ram: rockchip: Fix dependency of RAM_ROCKCHIP_DEBUG |
+| 4 | 3f16e2a5342 | debug_uart: Replace debug functions with dummies if CONFIG_DEBUG_UART is not set |
+| 5 | 3cf6ea82e4e | rockchip: px30: Weaken dependency TPL/SPL serial |
+| 6 | fe644429b28 | rockchip: px30: Fix hard dependency to DEBUG_UART_BOARD_INIT |
+| 7 | 3cac4000a23 | configs: ringneck-px30: enable exFAT support |
+| 8 | 50600e40df4 | configs: jaguar-rk3588: enable exFAT support |
+| 9 | 66e391ebeba | configs: tiger-rk3588: enable exFAT support |
+| 10 | c74cb82b293 | configs: puma-rk3399: enable exFAT support |
+| 11 | 4a1a543776e | rockchip: io-domain: Add debug logging for regulators during probe |
+| 12 | 41d91c165f2 | rockchip: io-domain: Add CONFIG_SPL_ROCKCHIP_IODOMAIN |
+| 13 | f4a847ba039 | regulator: rk8xx: Add CONFIG_SPL_REGULATOR_RK8XX |
+| 14 | 1130b9810de | rockchip: rk3399-nanopi-4: Allow MMC driver to control SD regulators |
+| 15 | 206b5410fd9 | rockchip: rk3399-nanopi-4: Enable IO-domain driver in SPL |
+| 16 | 4c3ea23fcca | power: rk8xx: fix swapped mask and value in init registers for RK806 |
+| 17 | 698a12bd8ed | Merge tag 'u-boot-rockchip-20250606' (empty - commits already applied) |
+
+### Fix-ups Made
+**None** - All commits applied cleanly with no manual intervention required.
+
+### Commits with Concerning Deltas
+- **Commit #2 (efi: stub)**: The file changed is `lib/efi_client/stub_x86.c` in the cherry-picked version vs `lib/efi/efi_stub.c` in the original. This is due to file reorganization in the codebase. The auto-merge correctly applied the same `static void` → `static inline void` change to the equivalent function in the renamed file. The change is semantically correct.
+
+### Branch Status
+The branch `cherry-79d9ac8b13e` is ready for pushing and is 17 commits ahead of `ci/master`.
+
+---
+
