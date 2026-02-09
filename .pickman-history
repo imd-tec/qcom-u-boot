@@ -22717,3 +22717,152 @@ The branch `cherry-668b2d791d9` is ready for pushing with 2 commits ahead of `ci
 
 ---
 
+## 2026-02-09: us/next
+
+Branch: cherry-410d59095a9
+
+Commits:
+- 410d59095a9 arm: kirkwood: fix freeze on boot
+- fb4a488eb91 Prepare v2025.07-rc5
+- f3ee5872bf6 tools: imx8image: Fix the value passed to dcd_skip of build_container()
+- 903eb123236 i2c: mux: Fix the crash when the i2c-arbitrator node is present
+- 661bafa182e cmd: add "config" command dependency on gzip
+- 757227777b6 log: Fix the compilation error for emergency log
+- 6ef9a89c1da common/spl: Revert fix potential out of buffer access in spl_fit_get_image_name function
+- 79f8f31d58d common/spl: guard against buffer overflow in spl_fit_get_image_name()
+- 5ac65a48510 Merge patch series "spl: fix error handling in spl_fit_get_image_name()"
+
+### Conversation log
+Let me find the correct repository location:
+
+Good, the repository is at `/scratch/sglass/u-boot`. The working tree is clean. Now let me create the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+Cherry-pick 1 succeeded. Now let me verify the delta and run the build test:
+
+The deltas match (1 file, 4 insertions). Now run the build test:
+
+Build passed. Now cherry-pick commit 2:
+
+There's a conflict on the first cherry-pick. Let me check if these commits are already present in ci/master with different hashes:
+
+Most searches returned empty. Let me try more targeted searches for the commits:
+
+The search results show that ci/master has rc4, not rc5 yet. Let me check what the actual difference is between us/next and ci/master for these commits:
+
+I can see ci/master is actively tracking us/next, but the specific commits I need to cherry-pick are not at the top of us/next (they're older). Let me verify these specific commits exist in us/next:
+
+All commits exist. Now let me look for these commits in ci/master by checking their content. First, let me reset the branch and try again with better conflict resolution:
+
+Commit 1 done: delta matches, build passes. Now commit 2 (this had conflicts):
+
+Let me examine the conflicts:
+
+I can see the conflicts. This is a "Prepare v2025.07-rc5" commit being applied to a codebase that's already at v2026.02. The version numbers in HEAD (2026.02) are newer than what the commit expects (2025.07-rc5). This suggests the commit is not appropriate for this branch. Let me check if this is about backporting release candidate fixes or if there's a different issue.
+
+Looking at the Makefile:
+- HEAD (ci/master): VERSION = 2026, PATCHLEVEL = 02, EXTRAVERSION = (empty)
+- The commit wants to set EXTRAVERSION = -rc5 for v2025.07
+
+This doesn't make sense - we shouldn't be setting an rc5 extraversion on a v2026.02 release. Let me check what the original commit's context is:
+
+The original commit was in the context of v2025.07-rc5. The ci/master branch is at v2026.02 - which is a much later version. This "Prepare v2025.07-rc5" commit doesn't apply cleanly because the base version is different.
+
+Since this is a version-bumping commit that doesn't make sense for the target branch (which is already on a later version), I should resolve it by keeping the current version (v2026.02) and not applying the rc5 extraversion. Let me resolve the conflicts:
+
+Good, no conflict markers. Let me verify the files look correct:
+
+Good, conflicts resolved. Now let me add the files and continue the cherry-pick. Since this commit effectively becomes a no-op (we kept the existing content), the cherry-pick will result in an empty commit, but I need to preserve the commit for history:
+
+Now let me verify and build:
+
+Commit 2 done (empty commit with note). Build passes. Now commit 3:
+
+Deltas match. Build test:
+
+Commit 3 done. Build passes. Now commit 4:
+
+Deltas match. Build test:
+
+Commit 4 done. Build passes. Now commit 5:
+
+Deltas match. Build test:
+
+Commit 5 done. Build passes. Now commit 6:
+
+Deltas match. Build test:
+
+Build failure! The log: Fix compilation error commit introduced a bug - it references `log_emer` which doesn't exist. Let me check what the change was:
+
+I see - the commit renames `log_emer` to `log_emerg`, but there's code in `fs/jbd2/` that uses `log_emer`. This means there's a dependency issue - some code needs to be updated along with this change, or there's a missing commit. Let me check if the jbd2 code uses log_emerg or log_emer:
+
+Found it! There's a reference in `include/linux/printk.h` line 38 that still uses `log_emer`. This needs to be updated as well. Let me check if the original commit series includes another fix for this:
+
+The original commit only changes `include/log.h` but there's another reference in `include/linux/printk.h` that was apparently added later in ci/master. This is a conflict between the commit being cherry-picked and changes already in ci/master.
+
+Let me check when the printk.h file got that line:
+
+I see! This is a conflict in naming convention:
+- commit `3b51642751c` in ci/master changed `log_emerg` to `log_emer` in printk.h 
+- commit `757227777b6` (the one we're cherry-picking) changes `log_emer` to `log_emerg` in log.h
+
+These two commits conflict with each other - they have opposite naming conventions!
+
+The commit we're cherry-picking (`757227777b6`) wants to use `log_emerg`, but ci/master has already settled on `log_emer`.
+
+Since ci/master has a commit that specifically uses `log_emer`, I need to fix the cherry-picked commit to maintain compatibility. I'll need to also update `printk.h` to use `log_emerg`:
+
+I need to fix `printk.h` line 38 to use `log_emerg` instead of `log_emer`. This is a necessary fix-up for the cherry-pick:
+
+Now let me amend the commit and add a note:
+
+Now let me build again:
+
+Build passes now. Commit 6 done with fix-up. Now commit 7:
+
+Deltas match. Build test:
+
+Commit 7 done. Build passes. Now commit 8:
+
+Deltas match. Build test:
+
+Commit 8 done. Build passes. Now commit 9 (merge commit):
+
+All 9 commits cherry-picked. Now verify with log and final build:
+
+All 9 commits present. Final build test:
+
+Build passes. Let me provide a final summary:
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-410d59095a9` based on `ci/master`
+
+**All 9 commits successfully cherry-picked:**
+
+| # | Original Hash | Subject | Status | Notes |
+|---|--------------|---------|--------|-------|
+| 1 | 410d59095a9 | arm: kirkwood: fix freeze on boot | ✅ OK | Clean cherry-pick |
+| 2 | fb4a488eb91 | Prepare v2025.07-rc5 | ✅ OK | Empty commit - version bump not applicable to v2026.02 |
+| 3 | f3ee5872bf6 | tools: imx8image: Fix the value passed to dcd_skip of build_container() | ✅ OK | Clean cherry-pick |
+| 4 | 903eb123236 | i2c: mux: Fix the crash when the i2c-arbitrator node is present | ✅ OK | Clean cherry-pick |
+| 5 | 661bafa182e | cmd: add "config" command dependency on gzip | ✅ OK | Clean cherry-pick |
+| 6 | 757227777b6 | log: Fix the compilation error for emergency log | ✅ OK (fix-up) | **Fix-up required:** Also updated `include/linux/printk.h` to use `log_emerg` instead of `log_emer` |
+| 7 | 6ef9a89c1da | common/spl: Revert fix potential out of buffer access in spl_fit_get_image_name function | ✅ OK | Clean cherry-pick |
+| 8 | 79f8f31d58d | common/spl: guard against buffer overflow in spl_fit_get_image_name() | ✅ OK | Clean cherry-pick |
+| 9 | 5ac65a48510 | Merge patch series "spl: fix error handling in spl_fit_get_image_name()" | ✅ OK | Empty merge commit (constituent commits cherry-picked individually) |
+
+**Build result:** ✅ OK (sandbox builds successfully)
+
+**Fix-ups made:**
+1. **Commit 6 (log: Fix the compilation error for emergency log):** Added `include/linux/printk.h` change to use `log_emerg` instead of `log_emer`. This was necessary because ci/master had a commit (3b51642751c) that used `log_emer` in printk.h, which conflicts with the original commit's rename from `log_emer` to `log_emerg` in log.h.
+
+**Empty commits:**
+- Commit 2 (Prepare v2025.07-rc5): Version bump not applicable - ci/master is already at v2026.02
+- Commit 9 (Merge commit): Empty as the constituent commits were cherry-picked individually
+
+**Branch status:** Ready for pushing - `cherry-410d59095a9` is ahead of `ci/master` by 9 commits
+
+---
+
