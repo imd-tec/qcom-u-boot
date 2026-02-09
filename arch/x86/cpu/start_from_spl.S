@@ -38,18 +38,34 @@ _start:
 use_existing_stack:
 	mov	%esp, %eax
 2:
+#ifdef CONFIG_X86_NO_REGPARM
+	push	%eax
+	call	board_init_f_alloc_reserve
+	add	$4, %esp
+	mov	%eax, %esp
+	push	%eax
+	call	board_init_f_init_reserve
+	add	$4, %esp
+#else
 	call	board_init_f_alloc_reserve
 	mov	%eax, %esp
 
 	call	board_init_f_init_reserve
+#endif
 
 #ifdef CONFIG_DEBUG_UART
 	call	debug_uart_init
 #endif
 
 	call	x86_cpu_reinit_f
+#ifdef CONFIG_X86_NO_REGPARM
+	push	$0
+	call	board_init_f
+	add	$4, %esp
+#else
 	xorl	%eax, %eax
 	call	board_init_f
+#endif
 	call	board_init_f_r
 
 	/* Should not return here */
@@ -64,10 +80,13 @@ board_init_f_r_trampoline:
 	 * adjustments have been made. It is now time to jump into the in-RAM
 	 * copy of U-Boot
 	 *
-	 * %eax = Address of top of new stack
+	 * %eax = Address of top of new stack (or 4(%esp) without regparm)
 	 */
 
 	/* Stack grows down from top of SDRAM */
+#ifdef CONFIG_X86_NO_REGPARM
+	movl	4(%esp), %eax
+#endif
 	movl	%eax, %esp
 
 	/* Re-enter U-Boot by calling board_init_f_r() */

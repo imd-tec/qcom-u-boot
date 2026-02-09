@@ -354,9 +354,15 @@ asm(".globl irq_common_entry\n" \
 	"pushl %esi\n" \
 	"pushl %edx\n" \
 	"pushl %ecx\n" \
-	"pushl %ebx\n" \
-	"mov   %esp, %eax\n" \
+	"pushl %ebx\n"
+#ifdef CONFIG_X86_NO_REGPARM
+	"pushl %esp\n" \
 	"call irq_llsr\n" \
+	"addl $4, %esp\n"
+#else
+	"mov   %esp, %eax\n" \
+	"call irq_llsr\n"
+#endif
 	"popl %ebx\n" \
 	"popl %ecx\n" \
 	"popl %edx\n" \

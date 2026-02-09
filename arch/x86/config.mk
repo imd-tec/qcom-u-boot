@@ -83,7 +83,9 @@ LDSCRIPT := $(LDSCRIPT_EFI)
 else
 
 ifeq ($(IS_32BIT),y)
+ifndef CONFIG_X86_NO_REGPARM
 PLATFORM_CPPFLAGS += -mregparm=3
+endif
 endif
 KBUILD_LDFLAGS += --emit-relocs
 LDFLAGS_FINAL += --gc-sections $(if $(CONFIG_XPL_BUILD),,-pie)
