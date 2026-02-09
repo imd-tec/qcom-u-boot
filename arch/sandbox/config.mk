@@ -8,7 +8,7 @@ ifeq ($(CONFIG_BACKTRACE),y)
 GCC_LIB_DIR := $(shell $(CC) -print-file-name=)
 PLATFORM_LIBS += -L$(GCC_LIB_DIR) -lbacktrace
 endif
-PLATFORM_LIBS += -lrt
+PLATFORM_LIBS += -lrt -lpthread
 
 ifdef GPROF
 PLATFORM_LIBS += -pg
