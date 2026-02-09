@@ -1025,6 +1025,23 @@ class TestNextMerges(unittest.TestCase):
         database.Database.instances.clear()
         command.TEST_RESULT = None
 
+    def _make_simple_merge_mock(self, log_output):
+        """Create a mock handler for merges with no sub-merges"""
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            # Initial merge listing
+            if '--reverse' in cmd and '--format=%H|%h|%s' in cmd:
+                return command.CommandResult(stdout=log_output)
+            # Sub-merge detection: no sub-merges
+            if '--first-parent' in cmd and '--merges' in cmd:
+                return command.CommandResult(stdout='')
+            # Parent lookup for detect_sub_merges
+            if 'rev-parse' in cmd:
+                return command.CommandResult(
+                    stdout='parent1\nparent2\n')
+            return command.CommandResult(stdout='')
+        return mock_git
+
     def test_next_merges(self):
         """Test next-merges shows upcoming merges"""
         # Add source to database
@@ -1037,20 +1054,19 @@ class TestNextMerges(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with merge commits
         log_output = (
             'aaa111|aaa111a|Merge branch feature-1\n'
             'bbb222|bbb222b|Merge branch feature-2\n'
             'ccc333|ccc333c|Merge branch feature-3\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        command.TEST_RESULT = self._make_simple_merge_mock(log_output)
 
         args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         output = stdout.getvalue()
-        self.assertIn('Next 3 merges from us/next:', output)
+        self.assertIn('3 from 3 first-parent', output)
         self.assertIn('1. aaa111a Merge branch feature-1', output)
         self.assertIn('2. bbb222b Merge branch feature-2', output)
         self.assertIn('3. ccc333c Merge branch feature-3', output)
@@ -1067,23 +1083,72 @@ class TestNextMerges(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with merge commits
         log_output = (
             'aaa111|aaa111a|Merge branch feature-1\n'
             'bbb222|bbb222b|Merge branch feature-2\n'
             'ccc333|ccc333c|Merge branch feature-3\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        command.TEST_RESULT = self._make_simple_merge_mock(log_output)
 
         args = argparse.Namespace(cmd='next-merges', source='us/next', count=2)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         output = stdout.getvalue()
-        self.assertIn('Next 2 merges from us/next:', output)
+        self.assertIn('2 from 2 first-parent', output)
         self.assertIn('1. aaa111a', output)
         self.assertIn('2. bbb222b', output)
         self.assertNotIn('3. ccc333c', output)
+
+    def test_next_merges_expands_mega_merge(self):
+        """Test next-merges expands mega-merges into sub-merges"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            cmd_str = ' '.join(cmd)
+            # Initial merge listing - one mega-merge
+            if '--reverse' in cmd and '--format=%H|%h|%s' in cmd:
+                return command.CommandResult(
+                    stdout='mega111|mega111a|Merge branch next\n')
+            # Parent lookup
+            if 'rev-parse' in cmd and '^@' in cmd_str:
+                return command.CommandResult(
+                    stdout='first_parent\nsecond_parent\n')
+            # Sub-merge detection on second parent chain
+            if ('--first-parent' in cmd and '--merges' in cmd
+                    and '--format=%H' in cmd):
+                return command.CommandResult(
+                    stdout='sub_aaa\nsub_bbb\n')
+            # Sub-merge detail lookup
+            if 'log' in cmd and '-1' in cmd and '--format=%h|%s' in cmd:
+                if 'sub_aaa' in cmd_str:
+                    return command.CommandResult(
+                        stdout='sub_aaa1|Merge feature-A\n')
+                if 'sub_bbb' in cmd_str:
+                    return command.CommandResult(
+                        stdout='sub_bbb1|Merge feature-B\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('2 from 1 first-parent', output)
+        self.assertIn('mega111a Merge branch next', output)
+        self.assertIn('2 sub-merges', output)
+        self.assertIn('1. sub_aaa1 Merge feature-A', output)
+        self.assertIn('2. sub_bbb1 Merge feature-B', output)
 
     def test_next_merges_no_merges(self):
         """Test next-merges with no merges remaining"""
@@ -1496,16 +1561,24 @@ class TestPushBranch(unittest.TestCase):
         with mock.patch.object(gitlab, 'get_push_url',
                                return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
+                mock_output.side_effect = [
+                    None,  # fetch succeeds
+                    'abc123def\n',  # rev-parse returns OID
+                    None,  # push succeeds
+                ]
                 result = gitlab.push_branch('ci', 'test-branch', force=True)
 
         self.assertTrue(result)
-        # Should fetch first, then push with --force-with-lease
+        # Should fetch, rev-parse, then push with --force-with-lease
         calls = mock_output.call_args_list
-        self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci',
-                                             'test-branch'))
-        push_args = calls[1][0]
-        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch',
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[0], mock.call(
+            'git', 'fetch', 'ci',
+            '+refs/heads/test-branch:refs/remotes/ci/test-branch'))
+        self.assertEqual(calls[1], mock.call(
+            'git', 'rev-parse', 'refs/remotes/ci/test-branch'))
+        push_args = calls[2][0]
+        self.assertIn('--force-with-lease=test-branch:abc123def',
                       push_args)
 
     def test_push_branch_force_no_remote_ref(self):
@@ -3477,6 +3550,330 @@ class TestDoCommitSourceResolveError(unittest.TestCase):
         self.assertIn('Could not resolve', stderr.getvalue())
 
 
+class TestRewind(unittest.TestCase):
+    """Tests for rewind command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_rewind_source_not_found(self):
+        """Test rewind with unknown source."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='rewind', source='unknown', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+    def test_rewind_dry_run(self):
+        """Test rewind dry run shows what would happen without executing."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('commit_a', source_id, 'Commit A', 'Author')
+            dbs.commit_add('commit_b', source_id, 'Commit B', 'Author')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='commit_a\ncommit_b\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('dry run', output)
+        self.assertIn('prev1234', output)
+        self.assertIn('2', output)  # 2 commits to delete
+        self.assertIn('--force', output)
+
+        # Verify database was NOT modified
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'current_hash')
+            self.assertIsNotNone(dbs.commit_get('commit_a'))
+            self.assertIsNotNone(dbs.commit_get('commit_b'))
+            dbs.close()
+
+    def test_rewind_one_merge(self):
+        """Test rewinding by one merge with --force."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            source_id = dbs.source_get_id('us/next')
+            # Add some commits that should be deleted
+            dbs.commit_add('commit_a', source_id, 'Commit A', 'Author')
+            dbs.commit_add('commit_b', source_id, 'Commit B', 'Author')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='commit_a\ncommit_b\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('prev1234', output)
+        self.assertIn('Deleted 2 commit(s)', output)
+
+        # Verify source was updated
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'prev_hash')
+            # Commits should be deleted
+            self.assertIsNone(dbs.commit_get('commit_a'))
+            self.assertIsNone(dbs.commit_get('commit_b'))
+            dbs.close()
+
+    def test_rewind_shows_mr_details(self):
+        """Test rewind shows MR numbers, titles and URLs."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='abc1234ffffff\ndef5678aaaaaa\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(
+                    stdout='  ci/cherry-abc1234f\n'
+                           '  ci/cherry-other99\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        mock_mrs = [
+            gitlab.PickmanMr(
+                iid=541, title='[pickman] Some cherry-pick',
+                web_url='https://gitlab.com/proj/-/merge_requests/541',
+                source_branch='cherry-abc1234f',
+                description='desc'),
+            gitlab.PickmanMr(
+                iid=540, title='[pickman] Unrelated MR',
+                web_url='https://gitlab.com/proj/-/merge_requests/540',
+                source_branch='cherry-zzz9999',
+                description='desc'),
+        ]
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                               return_value=mock_mrs):
+            with terminal.capture() as (stdout, _):
+                ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('!541', output)
+        self.assertIn('[pickman] Some cherry-pick', output)
+        self.assertIn('merge_requests/541', output)
+        # Unrelated MR should not appear
+        self.assertNotIn('!540', output)
+        self.assertIn('MRs to delete', output)
+
+    def test_rewind_shows_branches_when_api_unavailable(self):
+        """Test rewind falls back to branch names when GitLab unavailable."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='abc1234ffffff\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(
+                    stdout='  ci/cherry-abc1234f\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        # GitLab API returns None (unavailable)
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                               return_value=None):
+            with terminal.capture() as (stdout, _):
+                ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('cherry-abc1234f', output)
+        self.assertIn('Branches to check', output)
+
+    def test_rewind_two_merges(self):
+        """Test rewinding by two merges with --force."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'mid_hash|mid12345|Middle merge\n'
+                           'old_hash|old12345|Old merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(stdout='')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=2,
+                                  force=True, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('old12345', stdout.getvalue())
+
+        # Verify source was updated to old_hash
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'old_hash')
+            dbs.close()
+
+    def test_rewind_not_enough_merges(self):
+        """Test rewind fails when not enough merges in history."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                # Only one merge (the current position)
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn('Not enough merges', stderr.getvalue())
+
+    def test_parse_rewind(self):
+        """Test parsing rewind command."""
+        args = pickman.parse_args(['rewind', 'us/next'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.count, 1)
+        self.assertFalse(args.force)
+        self.assertEqual(args.remote, 'ci')
+
+    def test_parse_rewind_with_count(self):
+        """Test parsing rewind command with count."""
+        args = pickman.parse_args(['rewind', 'us/next', '-c', '3'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.count, 3)
+
+    def test_parse_rewind_with_force(self):
+        """Test parsing rewind command with --force."""
+        args = pickman.parse_args(['rewind', 'us/next', '-c', '2', '-f'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.count, 2)
+        self.assertTrue(args.force)
+
+
 class TestDoPushBranch(unittest.TestCase):
     """Tests for do_push_branch command."""
 
@@ -4369,8 +4766,8 @@ class TestDoPick(unittest.TestCase):
                                       push=False)
 
             def run_git_handler(args):
-                if '--verify' in args:
-                    raise ValueError('branch not found')
+                if 'branch' in args and '--list' in args:
+                    return ''  # Branch doesn't exist
                 return 'main'
 
             with mock.patch.object(control, 'get_commits_for_pick',

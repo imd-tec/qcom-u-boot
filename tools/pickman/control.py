@@ -1124,9 +1124,46 @@ def do_next_merges(args, dbs):
         if len(merges) >= count:
             break
 
-    tout.info(f'Next {len(merges)} merges from {source}:')
-    for i, (_, chash, subject) in enumerate(merges, 1):
-        tout.info(f'  {i}. {chash} {subject}')
+    # Build display list, expanding mega-merges into sub-merges
+    # Each entry is (chash, subject, is_mega, sub_list) where sub_list
+    # is a list of (chash, subject) for mega-merge sub-merges
+    display = []
+    total_sub = 0
+    for commit_hash, chash, subject in merges:
+        sub_merges = detect_sub_merges(commit_hash)
+        if sub_merges:
+            sub_list = []
+            for sub_hash in sub_merges:
+                try:
+                    info = run_git(
+                        ['log', '-1', '--format=%h|%s', sub_hash])
+                    parts = info.strip().split('|', 1)
+                    sub_chash = parts[0]
+                    sub_subject = parts[1] if len(parts) > 1 else ''
+                except Exception:  # pylint: disable=broad-except
+                    sub_chash = sub_hash[:11]
+                    sub_subject = '(unknown)'
+                sub_list.append((sub_chash, sub_subject))
+            display.append((chash, subject, True, sub_list))
+            total_sub += len(sub_list)
+        else:
+            display.append((chash, subject, False, None))
+
+    n_items = total_sub + len(merges) - len(
+        [d for d in display if d[2]])
+    tout.info(f'Next merges from {source} '
+              f'({n_items} from {len(merges)} first-parent):')
+    idx = 1
+    for chash, subject, is_mega, sub_list in display:
+        if is_mega:
+            tout.info(f'  {chash} {subject} '
+                      f'({len(sub_list)} sub-merges):')
+            for sub_chash, sub_subject in sub_list:
+                tout.info(f'    {idx}. {sub_chash} {sub_subject}')
+                idx += 1
+        else:
+            tout.info(f'  {idx}. {chash} {subject}')
+            idx += 1
 
     return 0
 
@@ -1446,12 +1483,9 @@ def prepare_apply(dbs, source, branch):
         branch_name = f'cherry-{commits[0].chash}'
 
     # Delete branch if it already exists
-    try:
-        run_git(['rev-parse', '--verify', branch_name])
+    if run_git(['branch', '--list', branch_name]).strip():
         tout.info(f'Deleting existing branch {branch_name}')
         run_git(['branch', '-D', branch_name])
-    except Exception:  # pylint: disable=broad-except
-        pass  # Branch doesn't exist, which is fine
 
     if info.merge_found:
         tout.info(f'Applying next set from {source} ({len(commits)} commits):')
@@ -1589,8 +1623,10 @@ def execute_apply(dbs, source, commits, branch_name, args, advance_to=None):  # 
     # Verify the branch actually exists - agent may have aborted and deleted it
     if success:
         try:
-            run_git(['rev-parse', '--verify', branch_name])
+            exists = run_git(['branch', '--list', branch_name]).strip()
         except Exception:  # pylint: disable=broad-except
+            exists = ''
+        if not exists:
             tout.warning(f'Branch {branch_name} does not exist - '
                          'agent may have aborted')
             success = False
@@ -1693,12 +1729,9 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
         branch_name = f'pick-{commits[0].chash}'
 
     # Delete branch if it already exists
-    try:
-        run_git(['rev-parse', '--verify', branch_name])
+    if run_git(['branch', '--list', branch_name]).strip():
         tout.info(f'Deleting existing branch {branch_name}')
         run_git(['branch', '-D', branch_name])
-    except Exception:  # pylint: disable=broad-except
-        pass  # Branch doesn't exist, which is fine
 
     tout.info(f'Cherry-picking {len(commits)} commit(s):')
     tout.info(f'  Branch: {branch_name}')
@@ -1717,8 +1750,10 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
     # Verify the branch actually exists - agent may have aborted and deleted it
     if success:
         try:
-            run_git(['rev-parse', '--verify', branch_name])
+            exists = run_git(['branch', '--list', branch_name]).strip()
         except Exception:  # pylint: disable=broad-except
+            exists = ''
+        if not exists:
             tout.warning(f'Branch {branch_name} does not exist - '
                          'agent may have aborted')
             success = False
@@ -1797,6 +1832,154 @@ def do_commit_source(args, dbs):
     short_old = old_commit[:12]
     short_new = full_hash[:12]
     tout.info(f"Updated '{source}': {short_old} -> {short_new}")
+
+    return 0
+
+
+def do_rewind(args, dbs):
+    """Rewind the source position back by N merges
+
+    By default performs a dry run, showing what would happen. Use --force
+    to actually execute the rewind.
+
+    Walks back N merges on the first-parent chain from the current source
+    position, deletes the commits in that range from the database, and
+    resets the source to the earlier position.
+
+    Args:
+        args (Namespace): Parsed arguments with 'source', 'count', 'force'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    source = args.source
+    count = args.count
+    force = args.force
+
+    current = dbs.source_get(source)
+    if not current:
+        tout.error(f"Source '{source}' not found in database")
+        return 1
+
+    # We need to find merges *before* current. Use ancestry instead.
+    try:
+        out = run_git([
+            'log', '--first-parent', '--merges', '--format=%H|%h|%s',
+            f'-{count + 1}', current
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not read merge history for {current[:12]}')
+        return 1
+
+    if not out:
+        tout.error('No merges found in history')
+        return 1
+
+    # Parse merges - first line is current (or nearest merge), last is target
+    merges = []
+    for line in out.strip().split('\n'):
+        if not line:
+            continue
+        parts = line.split('|', 2)
+        merges.append((parts[0], parts[1], parts[2] if len(parts) > 2 else ''))
+
+    if len(merges) < 2:
+        tout.error(f'Not enough merges to rewind by {count}')
+        return 1
+
+    # The target is count merges back from the first entry
+    target_idx = min(count, len(merges) - 1)
+    target_hash = merges[target_idx][0]
+    target_chash = merges[target_idx][1]
+    target_subject = merges[target_idx][2]
+
+    # Get all commits in the range target..current
+    try:
+        range_hashes = run_git([
+            'rev-list', f'{target_hash}..{current}'
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not list commits in range '
+                   f'{target_hash[:12]}..{current[:12]}')
+        return 1
+
+    # Count commits that exist in the database
+    db_commits = []
+    if range_hashes:
+        for chash in range_hashes.strip().split('\n'):
+            if chash and dbs.commit_get(chash):
+                db_commits.append(chash)
+
+    # Find cherry-pick branches that match commits in the range.
+    # List all ci/cherry-* remote branches, then check if the hash in
+    # the branch name matches any commit in the rewound range.
+    mr_branches = []
+    if range_hashes:
+        hash_set = set(range_hashes.strip().split('\n'))
+        try:
+            branch_out = run_git(
+                ['branch', '-r', '--list', f'{args.remote}/cherry-*'])
+        except Exception:  # pylint: disable=broad-except
+            branch_out = ''
+        remote_prefix = f'{args.remote}/'
+        for line in branch_out.strip().split('\n'):
+            branch = line.strip()
+            if not branch:
+                continue
+            # Branch is like 'ci/cherry-abc1234'; extract the hash part
+            short = branch.removeprefix(f'{remote_prefix}cherry-')
+            # Check if any commit in the range starts with this hash
+            for chash in hash_set:
+                if chash.startswith(short):
+                    mr_branches.append(
+                        branch.removeprefix(remote_prefix))
+                    break
+
+    # Look up MR details from GitLab for matching branches
+    matched_mrs = []
+    if mr_branches:
+        mrs = gitlab_api.get_open_pickman_mrs(args.remote)
+        if mrs:
+            branch_set = set(mr_branches)
+            for merge_req in mrs:
+                if merge_req.source_branch in branch_set:
+                    matched_mrs.append(merge_req)
+
+    # Show what would happen (or what is happening)
+    current_short = current[:12]
+    prefix = '' if force else '[dry run] '
+    tout.info(f"{prefix}Rewind '{source}': "
+              f'{current_short} -> {target_chash}')
+    tout.info(f'  Target: {target_chash} {target_subject}')
+    tout.info(f'  Merges being rewound:')
+    for i in range(target_idx):
+        tout.info(f'    {merges[i][1]} {merges[i][2]}')
+    tout.info(f'  Commits to delete from database: {len(db_commits)}')
+
+    if matched_mrs:
+        tout.info(f'  MRs to delete on GitLab:')
+        for merge_req in matched_mrs:
+            tout.info(f'    !{merge_req.iid}: {merge_req.title}')
+            tout.info(f'      {merge_req.web_url}')
+    elif mr_branches:
+        tout.info(f'  Branches to check for MRs:')
+        for branch in mr_branches:
+            tout.info(f'    {branch}')
+
+    if not force:
+        tout.info('Use --force to execute this rewind')
+        return 0
+
+    # Delete commits from database
+    for chash in db_commits:
+        dbs.commit_delete(chash)
+
+    # Update source position
+    dbs.source_set(source, target_hash)
+    dbs.commit()
+
+    tout.info(f'  Deleted {len(db_commits)} commit(s) from database')
 
     return 0
 
@@ -2071,6 +2254,10 @@ def process_merged_mrs(remote, source, dbs):
                          f"MR !{merge_req.iid}")
             continue
 
+        # Skip if already at this position
+        if full_hash == current:
+            continue
+
         # Check if this commit is newer than current (current is ancestor of it)
         try:
             # Is current an ancestor of last_hash? (meaning last_hash is newer)
@@ -2225,6 +2412,7 @@ COMMANDS = {
     'poll': do_poll,
     'push-branch': do_push_branch,
     'review': do_review,
+    'rewind': do_rewind,
     'step': do_step,
     'test': do_test,
 }

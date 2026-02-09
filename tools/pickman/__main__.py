@@ -100,6 +100,16 @@ def add_main_commands(subparsers):
     review_cmd.add_argument('-r', '--remote', default='ci',
                             help='Git remote (default: ci)')
 
+    rewind_cmd = subparsers.add_parser(
+        'rewind', help='Rewind source position back by N merges')
+    rewind_cmd.add_argument('source', help='Source branch name')
+    rewind_cmd.add_argument('-c', '--count', type=int, default=1,
+                            help='Number of merges to rewind (default: 1)')
+    rewind_cmd.add_argument('-f', '--force', action='store_true',
+                            help='Actually execute (default is dry run)')
+    rewind_cmd.add_argument('-r', '--remote', default='ci',
+                            help='Git remote for MR lookup (default: ci)')
+
     step_cmd = subparsers.add_parser('step',
                                      help='Create MR if none pending')
     step_cmd.add_argument('source', help='Source branch name')
