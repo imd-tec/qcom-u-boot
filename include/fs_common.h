@@ -5,7 +5,7 @@
 #ifndef _FS_COMMON_H
 #define _FS_COMMON_H
 
-#include <rtc.h>
+#include <rtc_def.h>
 
 /**
  * @FS_TYPE_VIRTIO: virtio-fs for access to the host filesystem from QEMU
