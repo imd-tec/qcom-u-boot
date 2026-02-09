@@ -22673,3 +22673,47 @@ The merge commit resulted in an empty commit as expected, since the individual c
 
 ---
 
+Branch: cherry-668b2d791d9
+
+Commits:
+- 668b2d791d9 arm64: renesas: Move early SPL stack into System RAM SRAM on R-Car V4H boards
+- a0f6bcd6472 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The delta matches exactly. Now let's run the build test.
+
+Build succeeded. Now let's cherry-pick the second commit (a merge commit). First, let me check if it's already applied as indicated.
+
+The patches are different - different merge parents, different authors, different dates, and different commit messages. Let me check what the actual content of the merge commits brings in to understand if the underlying changes are the same.
+
+The merges bring in different content. The original merge (a0f6bcd6472) only brings in commit 668b2d791d9, which we've already cherry-picked. Let me check if the commit 668b2d791d9 is already in ci/master.
+
+The first commit (668b2d791d9) is not in ci/master yet, so we've successfully cherry-picked it. The merge commit (a0f6bcd6472) only brings in that same commit, so since we've already cherry-picked 668b2d791d9, we still need to cherry-pick the merge commit for history tracking purposes.
+
+The merge commit is empty because we already cherry-picked its content (668b2d791d9). As instructed, we need to preserve the merge commit for history tracking.
+
+The cherry-picked commit is empty (as expected since the content was already applied via the first cherry-pick), but the original merge brought in the 2 file changes. This is expected behavior - the merge commit message is preserved for history tracking.
+
+## Final Status Report
+
+**Branch:** `cherry-668b2d791d9` (based on `ci/master`)
+
+**Commits cherry-picked (2 of 2):**
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 668b2d791d9 | arm64: renesas: Move early SPL stack into System RAM SRAM on R-Car V4H boards | ✅ Applied cleanly |
+| 2 | a0f6bcd6472 | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh | ✅ Applied (empty - content already in commit #1) |
+
+**Build result:** ✅ OK (sandbox builds successfully)
+
+**Fix-ups made:** None
+
+**Concerning deltas:** None - the merge commit (a0f6bcd6472) was expected to be empty since it only brought in 668b2d791d9, which we cherry-picked first.
+
+**Note on "maybe already applied" check:** Compared a0f6bcd6472 with 08c25fd3821 - they are **different commits** (different merge parents, different content merged). The original merge only brought in 1 commit (668b2d791d9), while 08c25fd3821 brought in 8 different commits. Therefore, the cherry-pick of a0f6bcd6472 was still performed to preserve history.
+
+The branch `cherry-668b2d791d9` is ready for pushing with 2 commits ahead of `ci/master`.
+
+---
+
