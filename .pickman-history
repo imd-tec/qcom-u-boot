@@ -22945,3 +22945,101 @@ The branch `cherry-5f732b4bb09` is ready for pushing with 5 commits ahead of `ci
 
 ---
 
+## 2026-02-09: us/next
+
+Branch: cherry-cfa00751b05
+
+Commits:
+- cfa00751b05 cmd/cat.c: Add missing include
+- 720e0c0f1a1 ext4fs.c: Add missing include
+- a367817c9a7 fat.c: Add missing include
+- 4c26de2eea6 fs.h: Switch to using rtc_def.h
+- aea684a0c31 strim: Sync up with Linux version
+- 13223f8ea1e test: Add a test for strim()
+- 0bc9b288fab Merge tag 'dm-pull-16may25' of git://git.denx.de/u-boot-dm into next
+
+### Conversation log
+The repository is in a clean state (no uncommitted changes). Let me create the new branch and start cherry-picking.
+
+Now let me cherry-pick the first commit:
+
+First commit delta looks good - 1 file changed, 1 insertion matches. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Delta looks good. Now build test:
+
+Build passed. Now the third commit:
+
+Delta looks good. Build test:
+
+Build passed. Now the fourth commit:
+
+There's a conflict. Let me check the conflicting file:
+
+This is a significant conflict. The `include/fs.h` file has been significantly restructured in `ci/master`. The original commit is trying to add `#include <rtc_def.h>` but the file has been completely rewritten. Let me see what the original commit was actually trying to do:
+
+The original commit just changes `#include <rtc.h>` to `#include <rtc_def.h>`. Let me check the current state of the include/fs.h file in ci/master to see if the rtc header is even present:
+
+The file has been completely restructured. It doesn't include `<rtc.h>` anymore - it includes `<fs_common.h>` instead. Let me check if the `rtc_def.h` or `rtc.h` include is in `fs_common.h`:
+
+I see! The `fs_common.h` file has `#include <rtc.h>`. So the same change should be applied there instead. The intent of the original commit is to use `rtc_def.h` instead of `rtc.h`. Let me abort this cherry-pick and try to apply the change to the correct file:
+
+Now let me apply the equivalent change to `fs_common.h`:
+
+Now let me apply the equivalent change to `fs_common.h`:
+
+Now let me commit this with a modified message indicating the adaptation:
+
+Now let me build test:
+
+Build passed. Now the fifth commit (strim), which may already be applied as 9319aac1295. Let me verify first:
+
+I see 236387a98f4 "strim: Sync up with Linux version" in ci/master. Let me compare the patches:
+
+The patches are identical except for the commit hash! This means the commit was already applied. Let me skip this one.
+
+Now let me check the sixth commit (test for strim), which may already be applied as 9eea8e5ed48:
+
+Also identical! Both strim commits are already applied. Now let me cherry-pick the merge commit (the last one):
+
+The merge commit is empty (the changes were already incorporated). Let me commit it as empty to preserve the history:
+
+Now let me run build test:
+
+Build passed. Let me verify the final log:
+
+Now let me run the final build test:
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+### Final Status
+
+**Build Result:** ✅ OK (no warnings/errors)
+
+### Commits Applied (5 of 7):
+
+| # | Original Hash | Status | Notes |
+|---|--------------|--------|-------|
+| 1 | cfa00751b05 | ✅ Applied | cmd/cat.c: Add missing include |
+| 2 | 720e0c0f1a1 | ✅ Applied | ext4fs.c: Add missing include |
+| 3 | a367817c9a7 | ✅ Applied | fat.c: Add missing include |
+| 4 | 4c26de2eea6 | ✅ Applied with fix-up | fs.h → fs_common.h adaptation (file was refactored in ci/master) |
+| 5 | aea684a0c31 | ⏭️ Skipped | Already applied as 236387a98f4 (identical patch) |
+| 6 | 13223f8ea1e | ⏭️ Skipped | Already applied as 9eea8e5ed48 (identical patch) |
+| 7 | 0bc9b288fab | ✅ Applied (empty) | Merge commit preserved for history |
+
+### Fix-ups Made:
+
+1. **Commit 4c26de2eea6**: The original commit modified `include/fs.h` to change `#include <rtc.h>` to `#include <rtc_def.h>`. However, in ci/master, `fs.h` was refactored and this include was moved to `include/fs_common.h`. The change was applied to `fs_common.h` instead, with a note added to the commit message.
+
+### Commits with Concerning Deltas:
+- None. All applied commits had matching deltas.
+
+### Branch Status:
+The branch `cherry-cfa00751b05` is ready for pushing, containing 5 new commits on top of `ci/master`.
+
+---
+
