@@ -23076,3 +23076,105 @@ All builds passed. Let me provide the final status report:
 
 ---
 
+## 2026-02-09: us/next
+
+Branch: cherry-44340456475
+
+Commits:
+- 44340456475 net: tftp: don't call stop callback from UDP handler
+- bab54f5942c net: phy: Do not do CL22 phy reset before ethernet phy driver probe
+- 39b815d02d7 Merge tag 'v2025.07-rc3' into next
+
+### Conversation log
+The repository is clean (only untracked files present). Let me proceed with creating and checking out a new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick the first commit (the regular commit for net: tftp):
+
+First commit cherry-picked successfully. Now let me check the commit delta and run the build test:
+
+The commit deltas match exactly (2 files changed, 4 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify the delta and run build test:
+
+Deltas match exactly. Running build test:
+
+Build passed. Now let me cherry-pick the third commit which is a merge commit (it has "Merge" in the subject):
+
+There are conflicts. Following the instructions, since this is the first cherry-pick that fails with conflicts, I need to check if these commits might already be present in ci/master with different hashes. Let me first check the status and then verify:
+
+No match for the merge commit in ci/master with that exact subject. Let me check for related content. Since this is a merge of v2025.07-rc3, let me check if that tag is already included in ci/master:
+
+The tag isn't directly an ancestor. Let me also check if the first two commits exist in ci/master with different hashes:
+
+The first two commits don't seem to exist in ci/master either. This is a genuine conflict situation that cannot be auto-resolved because the merge commit brings in many changes from v2025.07-rc3 that conflict with the current ci/master state.
+
+Let me check the conflicting files to understand the complexity:
+
+Good, the abort worked and we're back to having 2 commits cherry-picked. The third commit (the merge commit) has extensive conflicts in 12 files across:
+- Makefile
+- arch/riscv/Kconfig
+- cmd/efidebug.c
+- configs/imx95_19x19_evk_defconfig
+- configs/imxrt1170-evk_defconfig
+- doc/develop/release_cycle.rst
+- fs/ext4/Kconfig
+- include/efi_device_path.h
+- lib/efi_loader/efi_bootmgr.c
+- lib/efi_loader/efi_console.c
+- lib/efi_loader/efi_device_path.c
+- lib/efi_loader/efi_helper.c
+
+These are complex conflicts involving many subsystems (EFI loader, kernel configs, architecture code). Following the instructions, I need to abort and report this issue since it cannot be auto-resolved.
+
+Let me verify what we have so far and check if we need to reset to a clean state:
+
+We have successfully cherry-picked 2 out of 3 commits. The third commit (the merge commit) has too many conflicts to be automatically resolved.
+
+**Summary Report:**
+
+## Cherry-Pick Status
+
+### Successfully Cherry-Picked Commits (2 of 3):
+1. **44340456475** → `650e04cf8f4` - "net: tftp: don't call stop callback from UDP handler"
+   - Delta: Matches exactly (2 files, +4/-2 lines)
+   - Build: ✅ PASSED
+
+2. **bab54f5942c** → `022db06b4ba` - "net: phy: Do not do CL22 phy reset before ethernet phy driver probe"
+   - Delta: Matches exactly (1 file, -2 lines)
+   - Build: ✅ PASSED
+
+### Failed Cherry-Pick (1 of 3):
+3. **39b815d02d7** - "Merge tag 'v2025.07-rc3' into next"
+   - Status: ❌ **CONFLICT - Cannot auto-resolve**
+   - This is a large merge commit with conflicts in **12 files**:
+     - `Makefile`
+     - `arch/riscv/Kconfig`
+     - `cmd/efidebug.c`
+     - `configs/imx95_19x19_evk_defconfig`
+     - `configs/imxrt1170-evk_defconfig`
+     - `doc/develop/release_cycle.rst`
+     - `fs/ext4/Kconfig`
+     - `include/efi_device_path.h`
+     - `lib/efi_loader/efi_bootmgr.c`
+     - `lib/efi_loader/efi_console.c`
+     - `lib/efi_loader/efi_device_path.c`
+     - `lib/efi_loader/efi_helper.c`
+
+### Build Result:
+- Final build status: ✅ **PASSED** (with 2 commits)
+
+### Fix-ups Made:
+- None required
+
+### Commits with Concerning Deltas:
+- None (both successful cherry-picks had identical deltas)
+
+### Current Branch State:
+Branch `cherry-44340456475` has 2 commits ahead of `ci/master`. The merge commit could not be cherry-picked due to extensive conflicts across multiple subsystems (EFI loader, RISC-V architecture, build configs, and documentation).
+
+**Manual resolution required** for the merge commit `39b815d02d7`. The conflicts span critical areas of the codebase including EFI loader implementation, architecture configuration, and defconfigs.
+
+---
+
