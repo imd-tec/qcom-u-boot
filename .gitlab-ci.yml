@@ -664,6 +664,12 @@ qemu-x86_64 test.py:
     TEST_PY_TEST_SPEC: "not sleep"
   <<: *buildman_and_testpy_dfn
 
+qemu-x86_64_nospl test.py:
+  variables:
+    TEST_PY_BD: "qemu-x86_64_nospl"
+    TEST_PY_TEST_SPEC: "not sleep"
+  <<: *buildman_and_testpy_dfn
+
 qemu-xtensa-dc233c test.py:
   variables:
     TEST_PY_BD: "qemu-xtensa-dc233c"
