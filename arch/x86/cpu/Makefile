@@ -7,7 +7,11 @@
 # Daniel Engström, Omicron Ceti AB, daniel@omicron.se.
 
 ifeq ($(CONFIG_$(PHASE_)X86_64),y)
+ifeq ($(CONFIG_$(PHASE_)X86_16BIT_INIT),y)
+extra-y	= start_from_32.o
+else
 extra-y	= start64.o
+endif
 else
 ifeq ($(CONFIG_$(PHASE_)X86_16BIT_INIT),y)
 extra-y	= start.o

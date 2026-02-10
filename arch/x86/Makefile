@@ -2,7 +2,11 @@
 
 ifeq ($(CONFIG_EFI_APP),)
 ifdef CONFIG_$(PHASE_)X86_64
+ifeq ($(CONFIG_$(PHASE_)X86_16BIT_INIT),y)
+head-y := arch/x86/cpu/start_from_32.o
+else
 head-y := arch/x86/cpu/start64.o
+endif
 else
 ifeq ($(CONFIG_$(PHASE_)X86_16BIT_INIT),y)
 head-y := arch/x86/cpu/start.o
