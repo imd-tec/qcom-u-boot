@@ -208,7 +208,7 @@ config TPL_X86_16BIT_INIT
 config X86_32BIT_INIT
 	bool
 	depends on X86_RESET_VECTOR
-	default y if X86_RESET_VECTOR && !SPL
+	default y if X86_RESET_VECTOR && !SPL && !X86_64
 	help
 	  This is enabled when 32-bit init is in U-Boot proper
 
