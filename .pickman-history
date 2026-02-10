@@ -22947,99 +22947,132 @@ The branch `cherry-5f732b4bb09` is ready for pushing with 5 commits ahead of `ci
 
 ## 2026-02-09: us/next
 
-Branch: cherry-cfa00751b05
+Branch: cherry-0a006371578
 
 Commits:
-- cfa00751b05 cmd/cat.c: Add missing include
-- 720e0c0f1a1 ext4fs.c: Add missing include
-- a367817c9a7 fat.c: Add missing include
-- 4c26de2eea6 fs.h: Switch to using rtc_def.h
-- aea684a0c31 strim: Sync up with Linux version
-- 13223f8ea1e test: Add a test for strim()
-- 0bc9b288fab Merge tag 'dm-pull-16may25' of git://git.denx.de/u-boot-dm into next
+- 0a006371578 arm: cpu: armv7m: add ENTRY/ENDPROC macros
+- 1e24e84db41 tiny-printf: Handle formatting of %p with an extra Kconfig
+- fdd2af2c138 board: phytec: phycore_am62x: Update environment for fitboot
+- 04c1a5b0d60 board: phytec: phycore_am64x: Update environment for fitboot
+- e423e35d0d0 board: phytec: phycore_am6xx: Set bootmeths & boot_targets environment
+- 7fbadff8a7d configs: phycore_am6xx: Default BOOTCOMMAND to standard boot
+- 5900a2db4b7 board: phytec: common: k3: Update boot_targets at runtime
+- cd48860fec9 board: phytec: common: k3: Factor out mac address setup
+- 1385e4be42d configs: phycore_am6xx_a53_defconfig: Enable BOOTDEV_SPI_FLASH
+- df8dbc87a25 configs: verdin-am62: Drop unused or redundant config options
+- d47af3aff5f arm: dts: k3: require mandatory firmware in binman
+- 1bf21212976 clk: mediatek: add dummy clk enable/disable ops for apmixedsys clocks
+- 86acdce2ba8 common: add config for board_init() call
+- ef305ceff9c cmd: ximg: handle Z_BUF_ERROR explicitly in GZIP decompression
+- c867045eef1 net: Enhancements for dhcp option 209
+- e6bca3305bb net: bootp: BOOTP/DHCPv4 retransmission improvements
+- 2111bd7e93a net: bootp: add config option BOOTP_RANDOM_XID
+- da24eb55327 Merge patch series "BOOTP/DHCPv4 enhancements"
 
 ### Conversation log
-The repository is in a clean state (no uncommitted changes). Let me create the new branch and start cherry-picking.
+The repository has untracked files but no uncommitted changes. The untracked file is fine. Let me proceed with creating the new branch based on ci/master.
 
-Now let me cherry-pick the first commit:
+Branch created successfully. Now let me start cherry-picking the commits one at a time. First commit:
 
-First commit delta looks good - 1 file changed, 1 insertion matches. Now let me run the build test:
+**Commit 1: 0a006371578 - arm: cpu: armv7m: add ENTRY/ENDPROC macros**
 
-Build passed. Now let me cherry-pick the second commit:
+Commit looks good (same file, same lines changed). Now let's run the build test:
 
-Delta looks good. Now build test:
+Build passed. **Commit 2: 1e24e84db41 - tiny-printf: Handle formatting of %p with an extra Kconfig**
 
-Build passed. Now the third commit:
+Build passed. **Commit 3: fdd2af2c138 - board: phytec: phycore_am62x: Update environment for fitboot**
 
-Delta looks good. Build test:
+Build passed. **Commit 4: 04c1a5b0d60 - board: phytec: phycore_am64x: Update environment for fitboot**
 
-Build passed. Now the fourth commit:
+Build passed. **Commit 5: e423e35d0d0 - board: phytec: phycore_am6xx: Set bootmeths & boot_targets environment**
 
-There's a conflict. Let me check the conflicting file:
+Build passed. **Commit 6: 7fbadff8a7d - configs: phycore_am6xx: Default BOOTCOMMAND to standard boot**
 
-This is a significant conflict. The `include/fs.h` file has been significantly restructured in `ci/master`. The original commit is trying to add `#include <rtc_def.h>` but the file has been completely rewritten. Let me see what the original commit was actually trying to do:
+Build passed. **Commit 7: 5900a2db4b7 - board: phytec: common: k3: Update boot_targets at runtime**
 
-The original commit just changes `#include <rtc.h>` to `#include <rtc_def.h>`. Let me check the current state of the include/fs.h file in ci/master to see if the rtc header is even present:
+Build passed. **Commit 8: cd48860fec9 - board: phytec: common: k3: Factor out mac address setup**
 
-The file has been completely restructured. It doesn't include `<rtc.h>` anymore - it includes `<fs_common.h>` instead. Let me check if the `rtc_def.h` or `rtc.h` include is in `fs_common.h`:
+Build passed. **Commit 9: 1385e4be42d - configs: phycore_am6xx_a53_defconfig: Enable BOOTDEV_SPI_FLASH**
 
-I see! The `fs_common.h` file has `#include <rtc.h>`. So the same change should be applied there instead. The intent of the original commit is to use `rtc_def.h` instead of `rtc.h`. Let me abort this cherry-pick and try to apply the change to the correct file:
+Build passed. **Commit 10: df8dbc87a25 - configs: verdin-am62: Drop unused or redundant config options**
 
-Now let me apply the equivalent change to `fs_common.h`:
+Build passed. **Commit 11: d47af3aff5f - arm: dts: k3: require mandatory firmware in binman**
 
-Now let me apply the equivalent change to `fs_common.h`:
+Build passed. **Commit 12: 1bf21212976 - clk: mediatek: add dummy clk enable/disable ops for apmixedsys clocks**
 
-Now let me commit this with a modified message indicating the adaptation:
+Build passed. **Commit 13: 86acdce2ba8 - common: add config for board_init() call**
 
-Now let me build test:
+Build passed. **Commit 14: ef305ceff9c - cmd: ximg: handle Z_BUF_ERROR explicitly in GZIP decompression**
 
-Build passed. Now the fifth commit (strim), which may already be applied as 9319aac1295. Let me verify first:
+Build passed. **Commit 15: c867045eef1 - net: Enhancements for dhcp option 209**
 
-I see 236387a98f4 "strim: Sync up with Linux version" in ci/master. Let me compare the patches:
+Build passed. **Commit 16: e6bca3305bb - net: bootp: BOOTP/DHCPv4 retransmission improvements**
 
-The patches are identical except for the commit hash! This means the commit was already applied. Let me skip this one.
+Build passed. **Commit 17: 2111bd7e93a - net: bootp: add config option BOOTP_RANDOM_XID**
 
-Now let me check the sixth commit (test for strim), which may already be applied as 9eea8e5ed48:
+There's a conflict. Let me examine it:
 
-Also identical! Both strim commits are already applied. Now let me cherry-pick the merge commit (the last one):
+This is a simple conflict - we need to add the `BOOTP_RANDOM_XID` config option, and close the `CMD_BOOTP` endif. Let me look at more context to understand the proper placement:
 
-The merge commit is empty (the changes were already incorporated). Let me commit it as empty to preserve the history:
+Let me find the exact location of the conflict in the file:
 
-Now let me run build test:
+I understand the conflict. The original commit expected `if CMD_DHCP6` to come right after the new config option but in our version, we have `endif  # CMD_BOOTP`. The resolution is to add the `BOOTP_RANDOM_XID` config and then close with `endif  # CMD_BOOTP`. Let me fix this:
 
-Build passed. Let me verify the final log:
+Let me amend the commit to add a note about the fix-up:
 
-Now let me run the final build test:
+Same files and line counts. Let me run the build test:
 
-## Summary
+Build passed. **Commit 18 (MERGE COMMIT): da24eb55327 - Merge patch series "BOOTP/DHCPv4 enhancements"**
 
-**Cherry-pick completed successfully!**
+I see the conflict. The merge brings in `CMD_DHCP6` stuff which should have been there already, but our base doesn't have it. We want to keep our HEAD version (keeping the `endif # CMD_BOOTP` and `config CMD_PCAP`) since the DHCP6 content doesn't belong here - this is a merge commit that should ideally be empty since all its component patches have already been applied.
 
-### Final Status
+This is expected - the merge commit is empty because all its component patches have already been applied. We need to commit it anyway to preserve the merge commit history:
 
-**Build Result:** ✅ OK (no warnings/errors)
+Now let me verify all 18 commits are present:
 
-### Commits Applied (5 of 7):
+All 18 commits are present. Now let me run the final build test:
 
-| # | Original Hash | Status | Notes |
-|---|--------------|--------|-------|
-| 1 | cfa00751b05 | ✅ Applied | cmd/cat.c: Add missing include |
-| 2 | 720e0c0f1a1 | ✅ Applied | ext4fs.c: Add missing include |
-| 3 | a367817c9a7 | ✅ Applied | fat.c: Add missing include |
-| 4 | 4c26de2eea6 | ✅ Applied with fix-up | fs.h → fs_common.h adaptation (file was refactored in ci/master) |
-| 5 | aea684a0c31 | ⏭️ Skipped | Already applied as 236387a98f4 (identical patch) |
-| 6 | 13223f8ea1e | ⏭️ Skipped | Already applied as 9eea8e5ed48 (identical patch) |
-| 7 | 0bc9b288fab | ✅ Applied (empty) | Merge commit preserved for history |
+All builds passed. Let me provide the final status report:
+
+## Cherry-Pick Status Report
+
+### Build Result: ✅ OK (no warnings or errors)
+
+### All 18 Commits Successfully Cherry-Picked:
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | 0a006371578 | arm: cpu: armv7m: add ENTRY/ENDPROC macros | ✅ Clean |
+| 2 | 1e24e84db41 | tiny-printf: Handle formatting of %p with an extra Kconfig | ✅ Clean (auto-merged) |
+| 3 | fdd2af2c138 | board: phytec: phycore_am62x: Update environment for fitboot | ✅ Clean |
+| 4 | 04c1a5b0d60 | board: phytec: phycore_am64x: Update environment for fitboot | ✅ Clean |
+| 5 | e423e35d0d0 | board: phytec: phycore_am6xx: Set bootmeths & boot_targets environment | ✅ Clean |
+| 6 | 7fbadff8a7d | configs: phycore_am6xx: Default BOOTCOMMAND to standard boot | ✅ Clean (auto-merged) |
+| 7 | 5900a2db4b7 | board: phytec: common: k3: Update boot_targets at runtime | ✅ Clean |
+| 8 | cd48860fec9 | board: phytec: common: k3: Factor out mac address setup | ✅ Clean |
+| 9 | 1385e4be42d | configs: phycore_am6xx_a53_defconfig: Enable BOOTDEV_SPI_FLASH | ✅ Clean (auto-merged) |
+| 10 | df8dbc87a25 | configs: verdin-am62: Drop unused or redundant config options | ✅ Clean (auto-merged) |
+| 11 | d47af3aff5f | arm: dts: k3: require mandatory firmware in binman | ✅ Clean |
+| 12 | 1bf21212976 | clk: mediatek: add dummy clk enable/disable ops for apmixedsys clocks | ✅ Clean |
+| 13 | 86acdce2ba8 | common: add config for board_init() call | ✅ Clean (auto-merged) |
+| 14 | ef305ceff9c | cmd: ximg: handle Z_BUF_ERROR explicitly in GZIP decompression | ✅ Clean |
+| 15 | c867045eef1 | net: Enhancements for dhcp option 209 | ✅ Clean (auto-merged) |
+| 16 | e6bca3305bb | net: bootp: BOOTP/DHCPv4 retransmission improvements | ✅ Clean (auto-merged) |
+| 17 | 2111bd7e93a | net: bootp: add config option BOOTP_RANDOM_XID | ⚠️ Fixed conflict |
+| 18 | da24eb55327 | Merge patch series "BOOTP/DHCPv4 enhancements" | ✅ Empty (expected) |
 
 ### Fix-ups Made:
 
-1. **Commit 4c26de2eea6**: The original commit modified `include/fs.h` to change `#include <rtc.h>` to `#include <rtc_def.h>`. However, in ci/master, `fs.h` was refactored and this include was moved to `include/fs_common.h`. The change was applied to `fs_common.h` instead, with a note added to the commit message.
+1. **Commit 17 (2111bd7e93a)**: Resolved conflict in `cmd/Kconfig` - the new `BOOTP_RANDOM_XID` config option was placed within the `CMD_BOOTP` block before `endif` marker.
 
-### Commits with Concerning Deltas:
-- None. All applied commits had matching deltas.
+2. **Commit 18 (da24eb55327)**: Merge commit resulted in an empty commit (as expected) because all component patches were already applied. Committed with `--allow-empty` to preserve the merge commit message and history.
 
-### Branch Status:
-The branch `cherry-cfa00751b05` is ready for pushing, containing 5 new commits on top of `ci/master`.
+### Deltas: All commits matched expected deltas (same files, same line counts)
+
+### Branch Ready for Push:
+- Branch name: `cherry-0a006371578`  
+- Based on: `ci/master`
+- Contains: 18 new commits
 
 ---
 
