@@ -10,6 +10,7 @@
 #ifndef __ASSEMBLY__
 
 #include <linux/types.h>
+#include <asm/msr-index.h>
 #include <asm/processor.h>
 #include <asm/mrccache.h>
 #include <asm/u-boot.h>
@@ -137,9 +138,8 @@ struct arch_global_data {
 #include <asm-generic/global_data.h>
 
 #ifndef __ASSEMBLY__
-# if defined(CONFIG_EFI_APP) || CONFIG_IS_ENABLED(X86_64)
+# if defined(CONFIG_EFI_APP)
 
-/* TODO(sjg@chromium.org): Consider using a fixed register for gd on x86_64 */
 #define gd global_data_ptr
 
 static inline void set_gd(volatile gd_t *gd_ptr)
@@ -165,6 +165,28 @@ static inline notrace gd_t *get_fs_gd_ptr(void)
 }
 
 #define gd	get_fs_gd_ptr()
+
+#if CONFIG_IS_ENABLED(X86_64)
+/*
+ * On x86_64, use MSR_FS_BASE to hold the address of gd->arch.gd_addr, mirroring
+ * how 32-bit x86 uses the FS segment descriptor base.  This avoids the need for
+ * a writable global_data_ptr variable, which would require the .data section to
+ * be in RAM before relocation.
+ */
+static inline void set_gd(volatile gd_t *gd_ptr)
+{
+	gd_t *p = (gd_t *)gd_ptr;
+	unsigned long addr;
+
+	p->arch.gd_addr = p;
+	addr = (unsigned long)&p->arch.gd_addr;
+	asm volatile("wrmsr" : :
+		"c" (MSR_FS_BASE),
+		"a" ((unsigned int)addr),
+		"d" ((unsigned int)(addr >> 32))
+		: "memory");
+}
+#endif
 
 #define DECLARE_GLOBAL_DATA_PTR
 # endif
