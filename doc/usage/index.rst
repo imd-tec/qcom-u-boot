@@ -139,6 +139,7 @@ Shell commands
    cmd/source
    cmd/tcpm
    cmd/temperature
+   cmd/test
    cmd/tkey
    cmd/tftpput
    cmd/trace
