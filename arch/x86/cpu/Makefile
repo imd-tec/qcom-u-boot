@@ -26,6 +26,17 @@ endif
 
 extra-$(CONFIG_$(PHASE_)X86_16BIT_INIT) += resetvec.o start16.o
 
+ifdef CONFIG_$(PHASE_)X86_64
+# The 16-bit startup code must be assembled as 32-bit since the 64-bit
+# linker cannot handle 16-bit relocations in a PIE binary.  These
+# objects are not linked into the 64-bit u-boot; instead their sections
+# are extracted to binary files for binman to place.
+AFLAGS_REMOVE_start16.o := -march=core2 -m64
+AFLAGS_start16.o := -march=i386 -m32
+AFLAGS_REMOVE_resetvec.o := -march=core2 -m64
+AFLAGS_resetvec.o := -march=i386 -m32
+endif
+
 obj-y	+= cpu.o
 ifndef CONFIG_TPL_BUILD
 obj-y	+= cpu_x86.o

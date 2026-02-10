@@ -20,8 +20,10 @@ endif
 endif
 endif # EFI
 
+ifndef CONFIG_$(PHASE_)X86_64
 head-$(CONFIG_$(PHASE_)X86_16BIT_INIT) += arch/x86/cpu/start16.o
 head-$(CONFIG_$(PHASE_)X86_16BIT_INIT) += arch/x86/cpu/resetvec.o
+endif
 
 libs-y += arch/x86/cpu/
 libs-y += arch/x86/lib/
