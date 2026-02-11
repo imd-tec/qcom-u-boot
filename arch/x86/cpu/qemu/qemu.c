@@ -108,14 +108,16 @@ void qemu_chipset_init(void)
 	}
 }
 
-#if CONFIG_IS_ENABLED(X86_32BIT_INIT)
+#if CONFIG_IS_ENABLED(X86_32BIT_INIT) || CONFIG_IS_ENABLED(X86_16BIT_INIT)
 int arch_cpu_init(void)
 {
 	post_code(POST_CPU_INIT);
 
 	return x86_cpu_init_f();
 }
+#endif
 
+#if CONFIG_IS_ENABLED(X86_32BIT_INIT)
 int checkcpu(void)
 {
 	return 0;

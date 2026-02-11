@@ -97,6 +97,7 @@ struct elf_rela {
 static __efi_runtime_data struct efi_mem_desc *efi_virtmap;
 static __efi_runtime_data efi_uintn_t efi_descriptor_count;
 static __efi_runtime_data efi_uintn_t efi_descriptor_size;
+static __efi_runtime_data ulong efi_relocaddr;
 
 /*
  * EFI runtime code lives in two stages. In the first stage, U-Boot and an EFI
@@ -684,7 +685,7 @@ static __efi_runtime void efi_relocate_runtime_table(ulong offset)
 	void **pos;
 
 	/* Relocate the runtime services pointers */
-	patchoff = offset - gd->relocaddr;
+	patchoff = offset - efi_relocaddr;
 	for (pos = (void **)&efi_runtime_services.get_time;
 	     pos <= (void **)&efi_runtime_services.query_variable_info; ++pos) {
 		if (*pos)
@@ -721,6 +722,18 @@ void efi_runtime_relocate(ulong offset, struct efi_mem_desc *map)
 	if (gd_ulib())
 		return;
 
+	/*
+	 * Cache gd->relocaddr for use by the EFI runtime services after
+	 * the OS has taken over. On architectures where 'gd' is accessed
+	 * through a register (ARM, RISC-V, x86_64), it becomes invalid
+	 * once the OS overwrites that register.
+	 *
+	 * The first call (map == NULL) comes from board_r.c during
+	 * U-Boot init, when gd is still valid.
+	 */
+	if (!map)
+		efi_relocaddr = gd->relocaddr;
+
 #ifdef IS_RELA
 	struct elf_rela *rel = (void *)__efi_runtime_rel_start;
 #else
@@ -734,7 +747,7 @@ void efi_runtime_relocate(ulong offset, struct efi_mem_desc *map)
 		ulong *p;
 		ulong newaddr;
 
-		p = (void*)((ulong)rel->offset - base) + gd->relocaddr;
+		p = (void *)((ulong)rel->offset - base) + efi_relocaddr;
 
 		/*
 		 * The runtime services table is updated in
@@ -910,7 +923,7 @@ static efi_status_t EFIAPI efi_set_virtual_address_map(
 		map = (void*)virtmap + (descriptor_size * i);
 		if (map->type == EFI_RUNTIME_SERVICES_CODE) {
 			ulong new_offset = map->virtual_start -
-					   map->physical_start + gd->relocaddr;
+					   map->physical_start + efi_relocaddr;
 
 			efi_relocate_runtime_table(new_offset);
 			efi_runtime_relocate(new_offset, map);

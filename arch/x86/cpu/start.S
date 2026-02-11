@@ -134,10 +134,20 @@ car_init_ret:
 	 */
 #endif
 	/* Set up global data */
+#ifdef CONFIG_X86_NO_REGPARM
+	push	%esp
+	call	board_init_f_alloc_reserve
+	add	$4, %esp
+	mov	%eax, %esp
+	push	%eax
+	call	board_init_f_init_reserve
+	add	$4, %esp
+#else
 	mov	%esp, %eax
 	call	board_init_f_alloc_reserve
 	mov	%eax, %esp
 	call	board_init_f_init_reserve
+#endif
 
 #ifdef CONFIG_DEBUG_UART
 	call	debug_uart_init
@@ -171,10 +181,16 @@ skip_hob:
 
 	/* Set parameter to board_init_f() to boot flags */
 	post_code(POST_START_DONE)
-	xorl	%eax, %eax
 
 	/* Enter, U-Boot! */
+#ifdef CONFIG_X86_NO_REGPARM
+	push	$0
 	call	board_init_f
+	add	$4, %esp
+#else
+	xorl	%eax, %eax
+	call	board_init_f
+#endif
 
 	/* indicate (lack of) progress */
 	movw	$0x85, %ax
@@ -188,10 +204,13 @@ board_init_f_r_trampoline:
 	 * RAM, BSS has been cleared and relocation adjustments have been
 	 * made. It is now time to jump into the in-RAM copy of U-Boot
 	 *
-	 * %eax = Address of top of new stack
+	 * %eax = Address of top of new stack (or 4(%esp) without regparm)
 	 */
 
 	/* Stack grows down from top of SDRAM */
+#ifdef CONFIG_X86_NO_REGPARM
+	movl	4(%esp), %eax
+#endif
 	movl	%eax, %esp
 
 	/* See if we need to disable CAR */

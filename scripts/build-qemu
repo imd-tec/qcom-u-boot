@@ -49,6 +49,8 @@ def parse_args():
                         help='Run qboot instead of U-Boot')
     parser.add_argument('-x', '--xpl', action='store_true',
                         help='Use xPL image rather than U-Boot proper')
+    parser.add_argument('-X', '--no-spl', action='store_true',
+                        help='Use no-SPL build (x86_64 only)')
     parser.add_argument('-T', '--tkey', action='store_true',
                         help='Enable TKey USB passthrough for testing')
     parser.add_argument(
@@ -162,8 +164,13 @@ class BuildQemu:
             if args.tkey:
                 # Pass through TKey USB device to QEMU
                 self.qemu_extra.extend(['-device', 'usb-host,vendorid=0x1207,productid=0x8887'])
+            if args.no_spl and self.helper.bitness != 64:
+                raise ValueError('-X/--no-spl requires 64-bit mode (cannot be used with -w)')
             if self.helper.bitness == 64:
-                self.board = 'qemu-x86_64'
+                if args.no_spl:
+                    self.board = 'qemu-x86_64_nospl'
+                else:
+                    self.board = 'qemu-x86_64'
                 self.helper.qemu = 'qemu-system-x86_64'
         else:
             raise ValueError(f"Invalid arch '{args.arch}'")

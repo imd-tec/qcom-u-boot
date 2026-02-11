@@ -44,9 +44,11 @@ config X86_RUN_64BIT_NO_SPL
 	bool "64-bit"
 	select X86_64
 	help
-          Build U-Boot as a 64-bit binary without SPL. As U-Boot enters
-          in 64-bit mode, the assumption is that the silicon is fully
-          initialized (MP, page tables, etc.).
+	  Build U-Boot as a single 64-bit binary without SPL. If the
+	  board selects X86_RESET_VECTOR, the binary includes 16-bit
+	  and 32-bit startup code that transitions to 64-bit mode
+	  before running any C code. Otherwise U-Boot enters directly
+	  in 64-bit mode (e.g. when launched from coreboot).
 
 endchoice
 
@@ -208,7 +210,7 @@ config TPL_X86_16BIT_INIT
 config X86_32BIT_INIT
 	bool
 	depends on X86_RESET_VECTOR
-	default y if X86_RESET_VECTOR && !SPL
+	default y if X86_RESET_VECTOR && !SPL && !X86_64
 	help
 	  This is enabled when 32-bit init is in U-Boot proper
 
@@ -749,6 +751,20 @@ config X86_HARDFP
 	  needed, it can be enabled using this option. This adjusts the
 	  start-up code for 64-bit mode and changes the compiler options for
 	  64-bit to enable SSE.
+
+config X86_NO_REGPARM
+	bool "Disable register parameters (regparm=3)"
+	depends on !X86_64
+	help
+	  By default, U-Boot on 32-bit x86 uses -mregparm=3 to pass the first
+	  three function arguments in registers (EAX, EDX, ECX) rather than on
+	  the stack. This is more efficient but can cause issues with debugging
+	  tools or when interfacing with code that expects the standard calling
+	  convention.
+
+	  Select this option to disable regparm and use the standard i386
+	  calling convention where all arguments are passed on the stack. This
+	  may be useful for debugging or for running in certain emulators.
 
 config HAVE_ITSS
 	bool "Enable ITSS"

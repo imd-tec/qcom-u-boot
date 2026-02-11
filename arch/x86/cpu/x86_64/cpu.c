@@ -61,6 +61,8 @@ int x86_cpu_reinit_f(void)
 
 int x86_cpu_init_f(void)
 {
+	gd->arch.has_mtrr = true;
+
 	return 0;
 }
 

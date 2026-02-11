@@ -1694,16 +1694,6 @@ quiet_cmd_ldr = LD      $@
 cmd_ldr = $(LD) $(LDFLAGS_$(@F)) \
 	       $(filter-out FORCE,$^) -o $@
 
-ifdef CONFIG_X86
-OBJCOPYFLAGS_u-boot-x86-start16.bin := -O binary -j .start16
-u-boot-x86-start16.bin: u-boot FORCE
-	$(call if_changed,objcopy)
-
-OBJCOPYFLAGS_u-boot-x86-reset16.bin := -O binary -j .resetvec
-u-boot-x86-reset16.bin: u-boot FORCE
-	$(call if_changed,objcopy)
-
-endif # CONFIG_X86
 
 OBJCOPYFLAGS_u-boot-app.efi := $(OBJCOPYFLAGS_EFI)
 u-boot-app.efi: u-boot dts/dt.dtb FORCE

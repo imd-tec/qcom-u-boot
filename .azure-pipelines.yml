@@ -486,6 +486,9 @@ stages:
         qemu_x86_64:
           TEST_PY_BD: "qemu-x86_64"
           TEST_PY_TEST_SPEC: "not sleep"
+        qemu_x86_64_nospl:
+          TEST_PY_BD: "qemu-x86_64_nospl"
+          TEST_PY_TEST_SPEC: "not sleep"
         qemu_xtensa_dc233c:
           TEST_PY_BD: "qemu-xtensa-dc233c"
           TEST_PY_TEST_SPEC: "not sleep and not efi"
