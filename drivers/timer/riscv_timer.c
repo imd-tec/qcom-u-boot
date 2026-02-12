@@ -15,8 +15,12 @@
 #include <dm.h>
 #include <errno.h>
 #include <fdt_support.h>
+#include <mapmem.h>
 #include <timer.h>
 #include <asm/csr.h>
+#include <asm/global_data.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 static u64 notrace riscv_timer_get_count(struct udevice *dev)
 {
@@ -87,6 +91,15 @@ static int riscv_timer_probe(struct udevice *dev)
 	if (!rate && gd->fdt_blob) {
 		rate = fdt_getprop_u32_default(gd->fdt_blob,
 					       "/cpus", "timebase-frequency", 0);
+	}
+
+	/* For EFI apps, try the firmware-provided FDT */
+	if (!rate && IS_ENABLED(CONFIG_EFI_APP) &&
+	    gd_firmware_fdt_addr()) {
+		void *fw_fdt = map_sysmem(gd_firmware_fdt_addr(), 0);
+
+		rate = fdt_getprop_u32_default(fw_fdt, "/cpus",
+					       "timebase-frequency", 0);
 	}
 
 	uc_priv->clock_rate = rate;

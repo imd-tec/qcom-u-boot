@@ -563,6 +563,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_set_smbios_start(addr)
 #endif
 
+#ifdef CONFIG_RISCV
+#define gd_firmware_fdt_addr()		gd->arch.firmware_fdt_addr
+#define gd_set_firmware_fdt_addr(addr)	gd->arch.firmware_fdt_addr = addr
+#else
+#define gd_firmware_fdt_addr()		0UL
+#define gd_set_firmware_fdt_addr(addr)
+#endif
+
 #if CONFIG_IS_ENABLED(MULTI_DTB_FIT)
 #define gd_multi_dtb_fit()	gd->multi_dtb_fit
 #define gd_set_multi_dtb_fit(_dtb)	gd->multi_dtb_fit = _dtb
