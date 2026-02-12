@@ -24,8 +24,12 @@ SIGNAL_SUCCESS = 'success'
 SIGNAL_APPLIED = 'already_applied'
 SIGNAL_CONFLICT = 'conflict'
 
+# Maximum buffer size for agent responses
+MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 10MB
+
 # Commits that need special handling (regenerate instead of cherry-pick)
-# These run savedefconfig on all boards and depend on target branch Kconfig state
+# These run savedefconfig on all boards and depend on target branch
+# Kconfig state
 QCONFIG_SUBJECTS = [
     'configs: Resync with savedefconfig',
 ]
@@ -218,6 +222,7 @@ this means the series was already applied via a different path. In this case:
     options = ClaudeAgentOptions(
         allowed_tools=['Bash', 'Read', 'Grep'],
         cwd=repo_path,
+        max_buffer_size=MAX_BUFFER_SIZE,
     )
 
     tout.info(f'Starting Claude agent to cherry-pick {len(commits)} commits...')
@@ -481,6 +486,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote,
     options = ClaudeAgentOptions(
         allowed_tools=['Bash', 'Read', 'Grep', 'Edit', 'Write'],
         cwd=repo_path,
+        max_buffer_size=MAX_BUFFER_SIZE,
     )
 
     tout.info(f'Starting Claude agent to {task_desc}...')

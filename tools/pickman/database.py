@@ -364,6 +364,14 @@ class Database:  # pylint: disable=too-many-public-methods
             'UPDATE pcommit SET mergereq_id = ? WHERE chash = ?',
             (mergereq_id, chash))
 
+    def commit_delete(self, chash):
+        """Delete a commit from the database
+
+        Args:
+            chash (str): Commit hash to delete
+        """
+        self.execute('DELETE FROM pcommit WHERE chash = ?', (chash,))
+
     # mergereq functions
 
     # pylint: disable-next=too-many-arguments

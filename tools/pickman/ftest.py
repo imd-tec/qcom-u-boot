@@ -951,8 +951,14 @@ class TestNextSet(unittest.TestCase):
 
         def mock_git(pipe_list):
             cmd = pipe_list[0] if pipe_list else []
+            if '--first-parent' in cmd and '--merges' in cmd:
+                # detect_sub_merges: no sub-merges
+                return command.CommandResult(stdout='')
             if '--first-parent' in cmd:
                 return command.CommandResult(stdout=fp_log_output)
+            if 'rev-parse' in cmd:
+                # detect_sub_merges: return two parents (it's a merge)
+                return command.CommandResult(stdout='bbb222\nddd444\n')
             return command.CommandResult(stdout=full_log_output)
 
         command.TEST_RESULT = mock_git
@@ -1019,6 +1025,23 @@ class TestNextMerges(unittest.TestCase):
         database.Database.instances.clear()
         command.TEST_RESULT = None
 
+    def _make_simple_merge_mock(self, log_output):
+        """Create a mock handler for merges with no sub-merges"""
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            # Initial merge listing
+            if '--reverse' in cmd and '--format=%H|%h|%s' in cmd:
+                return command.CommandResult(stdout=log_output)
+            # Sub-merge detection: no sub-merges
+            if '--first-parent' in cmd and '--merges' in cmd:
+                return command.CommandResult(stdout='')
+            # Parent lookup for detect_sub_merges
+            if 'rev-parse' in cmd:
+                return command.CommandResult(
+                    stdout='parent1\nparent2\n')
+            return command.CommandResult(stdout='')
+        return mock_git
+
     def test_next_merges(self):
         """Test next-merges shows upcoming merges"""
         # Add source to database
@@ -1031,20 +1054,19 @@ class TestNextMerges(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with merge commits
         log_output = (
             'aaa111|aaa111a|Merge branch feature-1\n'
             'bbb222|bbb222b|Merge branch feature-2\n'
             'ccc333|ccc333c|Merge branch feature-3\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        command.TEST_RESULT = self._make_simple_merge_mock(log_output)
 
         args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         output = stdout.getvalue()
-        self.assertIn('Next 3 merges from us/next:', output)
+        self.assertIn('3 from 3 first-parent', output)
         self.assertIn('1. aaa111a Merge branch feature-1', output)
         self.assertIn('2. bbb222b Merge branch feature-2', output)
         self.assertIn('3. ccc333c Merge branch feature-3', output)
@@ -1061,23 +1083,72 @@ class TestNextMerges(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        # Mock git log with merge commits
         log_output = (
             'aaa111|aaa111a|Merge branch feature-1\n'
             'bbb222|bbb222b|Merge branch feature-2\n'
             'ccc333|ccc333c|Merge branch feature-3\n'
         )
-        command.TEST_RESULT = command.CommandResult(stdout=log_output)
+        command.TEST_RESULT = self._make_simple_merge_mock(log_output)
 
         args = argparse.Namespace(cmd='next-merges', source='us/next', count=2)
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
         output = stdout.getvalue()
-        self.assertIn('Next 2 merges from us/next:', output)
+        self.assertIn('2 from 2 first-parent', output)
         self.assertIn('1. aaa111a', output)
         self.assertIn('2. bbb222b', output)
         self.assertNotIn('3. ccc333c', output)
+
+    def test_next_merges_expands_mega_merge(self):
+        """Test next-merges expands mega-merges into sub-merges"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            cmd_str = ' '.join(cmd)
+            # Initial merge listing - one mega-merge
+            if '--reverse' in cmd and '--format=%H|%h|%s' in cmd:
+                return command.CommandResult(
+                    stdout='mega111|mega111a|Merge branch next\n')
+            # Parent lookup
+            if 'rev-parse' in cmd and '^@' in cmd_str:
+                return command.CommandResult(
+                    stdout='first_parent\nsecond_parent\n')
+            # Sub-merge detection on second parent chain
+            if ('--first-parent' in cmd and '--merges' in cmd
+                    and '--format=%H' in cmd):
+                return command.CommandResult(
+                    stdout='sub_aaa\nsub_bbb\n')
+            # Sub-merge detail lookup
+            if 'log' in cmd and '-1' in cmd and '--format=%h|%s' in cmd:
+                if 'sub_aaa' in cmd_str:
+                    return command.CommandResult(
+                        stdout='sub_aaa1|Merge feature-A\n')
+                if 'sub_bbb' in cmd_str:
+                    return command.CommandResult(
+                        stdout='sub_bbb1|Merge feature-B\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='next-merges', source='us/next', count=10)
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('2 from 1 first-parent', output)
+        self.assertIn('mega111a Merge branch next', output)
+        self.assertIn('2 sub-merges', output)
+        self.assertIn('1. sub_aaa1 Merge feature-A', output)
+        self.assertIn('2. sub_bbb1 Merge feature-B', output)
 
     def test_next_merges_no_merges(self):
         """Test next-merges with no merges remaining"""
@@ -1208,11 +1279,9 @@ class TestGetNextCommits(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'unknown')
-            self.assertIsNone(commits)
-            self.assertFalse(merge_found)
-            self.assertIn('not found', error)
+            info, err = control.get_next_commits(dbs, 'unknown')
+            self.assertIsNone(info)
+            self.assertIn('not found', err)
             dbs.close()
 
     def test_get_next_commits_with_merge(self):
@@ -1237,19 +1306,24 @@ class TestGetNextCommits(unittest.TestCase):
 
             def mock_git(pipe_list):
                 cmd = pipe_list[0] if pipe_list else []
+                if '--first-parent' in cmd and '--merges' in cmd:
+                    # detect_sub_merges: no sub-merges
+                    return command.CommandResult(stdout='')
                 if '--first-parent' in cmd:
                     return command.CommandResult(stdout=fp_log_output)
+                if 'rev-parse' in cmd:
+                    # detect_sub_merges: return parents
+                    return command.CommandResult(stdout='aaa111\nccc333\n')
                 return command.CommandResult(stdout=full_log_output)
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'us/next')
-            self.assertIsNone(error)
-            self.assertTrue(merge_found)
-            self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].chash, 'aaa111a')
-            self.assertEqual(commits[1].chash, 'bbb222b')
+            info, err = control.get_next_commits(dbs, 'us/next')
+            self.assertIsNone(err)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 2)
+            self.assertEqual(info.commits[0].chash, 'aaa111a')
+            self.assertEqual(info.commits[1].chash, 'bbb222b')
             dbs.close()
 
 
@@ -1487,16 +1561,24 @@ class TestPushBranch(unittest.TestCase):
         with mock.patch.object(gitlab, 'get_push_url',
                                return_value=TEST_SHORT_OAUTH_URL):
             with mock.patch.object(command, 'output') as mock_output:
+                mock_output.side_effect = [
+                    None,  # fetch succeeds
+                    'abc123def\n',  # rev-parse returns OID
+                    None,  # push succeeds
+                ]
                 result = gitlab.push_branch('ci', 'test-branch', force=True)
 
         self.assertTrue(result)
-        # Should fetch first, then push with --force-with-lease
+        # Should fetch, rev-parse, then push with --force-with-lease
         calls = mock_output.call_args_list
-        self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0], mock.call('git', 'fetch', 'ci',
-                                             'test-branch'))
-        push_args = calls[1][0]
-        self.assertIn('--force-with-lease=refs/remotes/ci/test-branch',
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[0], mock.call(
+            'git', 'fetch', 'ci',
+            '+refs/heads/test-branch:refs/remotes/ci/test-branch'))
+        self.assertEqual(calls[1], mock.call(
+            'git', 'rev-parse', 'refs/remotes/ci/test-branch'))
+        push_args = calls[2][0]
+        self.assertIn('--force-with-lease=test-branch:abc123def',
                       push_args)
 
     def test_push_branch_force_no_remote_ref(self):
@@ -2870,11 +2952,10 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'us/next')
-            self.assertIsNone(error)
-            self.assertFalse(merge_found)
-            self.assertEqual(len(commits), 2)
+            info, err = control.get_next_commits(dbs, 'us/next')
+            self.assertIsNone(err)
+            self.assertFalse(info.merge_found)
+            self.assertEqual(len(info.commits), 2)
             dbs.close()
 
     def test_get_next_commits_skips_db_commits(self):
@@ -2897,13 +2978,12 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'us/next')
-            self.assertIsNone(error)
-            self.assertFalse(merge_found)
+            info, err = control.get_next_commits(dbs, 'us/next')
+            self.assertIsNone(err)
+            self.assertFalse(info.merge_found)
             # Only second commit should be returned (first is in DB)
-            self.assertEqual(len(commits), 1)
-            self.assertEqual(commits[0].chash, 'bbb222b')
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.commits[0].chash, 'bbb222b')
             dbs.close()
 
     def test_get_next_commits_all_in_db(self):
@@ -2928,12 +3008,11 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'us/next')
-            self.assertIsNone(error)
-            self.assertFalse(merge_found)
+            info, err = control.get_next_commits(dbs, 'us/next')
+            self.assertIsNone(err)
+            self.assertFalse(info.merge_found)
             # No commits should be returned (all in DB)
-            self.assertEqual(len(commits), 0)
+            self.assertEqual(len(info.commits), 0)
             dbs.close()
 
     def test_get_next_commits_skips_processed_merge(self):
@@ -2971,30 +3050,460 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
                 'merge2|merge2m|Author 4|Second merge|ccc333 side2\n'
             )
 
-            call_count = [0]
-
-            # pylint: disable=unused-argument
             def mock_git(pipe_list):
-                call_count[0] += 1
-                # First call: get first-parent log
-                if call_count[0] == 1:
+                cmd = pipe_list[0] if pipe_list else []
+                if '--first-parent' in cmd and '--merges' in cmd:
+                    # detect_sub_merges: no sub-merges
+                    return command.CommandResult(stdout='')
+                if '--first-parent' in cmd:
                     return command.CommandResult(stdout=fp_log)
-                # Second call: get commits for first merge
-                if call_count[0] == 2:
+                if 'rev-parse' in cmd:
+                    # detect_sub_merges: return parents for merges
+                    return command.CommandResult(stdout='aaa111\nside1\n')
+                # Determine which merge range by checking the cmd args
+                cmd_str = ' '.join(cmd)
+                if 'merge1' in cmd_str and 'abc123' in cmd_str:
                     return command.CommandResult(stdout=merge1_log)
-                # Third call: get commits for second merge
+                if 'merge2' in cmd_str and 'merge1' in cmd_str:
+                    return command.CommandResult(stdout=merge2_log)
                 return command.CommandResult(stdout=merge2_log)
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, error = control.get_next_commits(dbs,
-                                                                   'us/next')
-            self.assertIsNone(error)
-            self.assertTrue(merge_found)
+            info, err = control.get_next_commits(dbs, 'us/next')
+            self.assertIsNone(err)
+            self.assertTrue(info.merge_found)
             # Should return commits from second merge (first was skipped)
+            self.assertEqual(len(info.commits), 2)
+            self.assertEqual(info.commits[0].chash, 'ccc333c')
+            self.assertEqual(info.commits[1].chash, 'merge2m')
+            dbs.close()
+
+
+class TestDetectSubMerges(unittest.TestCase):
+    """Tests for detect_sub_merges function."""
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        command.TEST_RESULT = None
+
+    def test_not_a_merge(self):
+        """Test detect_sub_merges returns empty for non-merge commit."""
+        # Single parent means not a merge
+        command.TEST_RESULT = command.CommandResult(stdout='abc123\n')
+        result = control.detect_sub_merges('abc123')
+        self.assertEqual(result, [])
+
+    def test_no_sub_merges(self):
+        """Test detect_sub_merges returns empty when no sub-merges exist."""
+        call_count = [0]
+
+        def mock_git(pipe_list):  # pylint: disable=unused-argument
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # rev-parse ^@ returns two parents (it's a merge)
+                return command.CommandResult(stdout='parent1\nparent2\n')
+            # log --merges returns empty (no sub-merges)
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+        result = control.detect_sub_merges('merge123')
+        self.assertEqual(result, [])
+
+    def test_found_sub_merges(self):
+        """Test detect_sub_merges finds sub-merges."""
+        call_count = [0]
+
+        def mock_git(pipe_list):  # pylint: disable=unused-argument
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # rev-parse ^@ returns two parents
+                return command.CommandResult(stdout='parent1\nparent2\n')
+            # log --merges returns sub-merge hashes
+            return command.CommandResult(
+                stdout='sub_merge1\nsub_merge2\nsub_merge3\n')
+
+        command.TEST_RESULT = mock_git
+        result = control.detect_sub_merges('mega_merge')
+        self.assertEqual(result, ['sub_merge1', 'sub_merge2', 'sub_merge3'])
+
+    def test_error_handling(self):
+        """Test detect_sub_merges returns empty on git error."""
+        def mock_git_fail(**_kwargs):
+            raise command.CommandExc('git error', command.CommandResult())
+
+        command.TEST_RESULT = mock_git_fail
+        result = control.detect_sub_merges('bad_hash')
+        self.assertEqual(result, [])
+
+
+class TestDecomposeMegaMerge(unittest.TestCase):
+    """Tests for decompose_mega_merge function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_first_batch_mainline(self):
+        """Test decompose returns mainline commits first."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # rev-parse ^@ for mega-merge parents
+                    return command.CommandResult(
+                        stdout='first_parent\nsecond_parent\n')
+                if call_count[0] == 2:
+                    # log -1 for mega-merge subject/author (pre-add)
+                    return command.CommandResult(
+                        stdout='Mega merge subject|Author\n')
+                if call_count[0] == 3:
+                    # Mainline commits (prev..first_parent)
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Mainline commit|base\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            commits, advance_to = control.decompose_mega_merge(
+                dbs, 'base', 'mega_hash', ['sub1', 'sub2'])
+
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0].chash, 'aaa1')
+            self.assertEqual(advance_to, 'first_parent')
+            dbs.close()
+
+    def test_sub_merge_batch(self):
+        """Test decompose returns sub-merge batch when mainline is done."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # rev-parse ^@ for mega-merge parents
+                    return command.CommandResult(
+                        stdout='first_parent\nsecond_parent\n')
+                if call_count[0] == 2:
+                    # log -1 for mega-merge subject/author
+                    return command.CommandResult(
+                        stdout='Mega merge|Author\n')
+                if call_count[0] == 3:
+                    # Mainline commits - empty (already processed)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Sub-merge 1 commits
+                    return command.CommandResult(
+                        stdout='bbb|bbb1|B|Sub commit 1|first_parent\n'
+                               'ccc|ccc1|C|Sub commit 2|bbb\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            commits, advance_to = control.decompose_mega_merge(
+                dbs, 'base', 'mega_hash', ['sub1', 'sub2'])
+
             self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].chash, 'ccc333c')
-            self.assertEqual(commits[1].chash, 'merge2m')
+            self.assertEqual(commits[0].chash, 'bbb1')
+            self.assertIsNone(advance_to)
+            dbs.close()
+
+    def test_skips_processed_sub_merge(self):
+        """Test decompose skips sub-merges already in database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            # Add sub-merge 1 commits to database
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('bbb', source_id, 'Sub commit 1', 'B',
+                           status='applied')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return command.CommandResult(
+                        stdout='first_parent\nsecond_parent\n')
+                if call_count[0] == 2:
+                    return command.CommandResult(
+                        stdout='Mega merge|Author\n')
+                if call_count[0] == 3:
+                    # Mainline - empty
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Sub-merge 1 commits (already in DB)
+                    return command.CommandResult(
+                        stdout='bbb|bbb1|B|Sub commit 1|first_parent\n')
+                if call_count[0] == 5:
+                    # Sub-merge 2 commits (not in DB)
+                    return command.CommandResult(
+                        stdout='ddd|ddd1|D|Sub commit 3|sub1\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            commits, advance_to = control.decompose_mega_merge(
+                dbs, 'base', 'mega_hash', ['sub1', 'sub2'])
+
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0].chash, 'ddd1')
+            self.assertIsNone(advance_to)
+            dbs.close()
+
+    def test_all_done(self):
+        """Test decompose returns empty when all sub-merges are processed."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            # Add all commits to database
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('bbb', source_id, 'Sub commit 1', 'B',
+                           status='applied')
+            dbs.commit_add('ddd', source_id, 'Sub commit 2', 'D',
+                           status='applied')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=too-many-return-statements,unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return command.CommandResult(
+                        stdout='first_parent\nsecond_parent\n')
+                if call_count[0] == 2:
+                    return command.CommandResult(
+                        stdout='Mega merge|Author\n')
+                if call_count[0] == 3:
+                    # Mainline - empty
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Sub-merge 1
+                    return command.CommandResult(
+                        stdout='bbb|bbb1|B|Sub commit 1|first_parent\n')
+                if call_count[0] == 5:
+                    # Sub-merge 2
+                    return command.CommandResult(
+                        stdout='ddd|ddd1|D|Sub commit 2|sub1\n')
+                if call_count[0] == 6:
+                    # Remainder - empty
+                    return command.CommandResult(stdout='')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            commits, advance_to = control.decompose_mega_merge(
+                dbs, 'base', 'mega_hash', ['sub1', 'sub2'])
+
+            self.assertEqual(len(commits), 0)
+            self.assertIsNone(advance_to)
+            dbs.close()
+
+
+class TestGetNextCommitsMegaMerge(unittest.TestCase):
+    """Tests for get_next_commits with mega-merges."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_returns_sub_batch(self):
+        """Test get_next_commits returns sub-merge batch for mega-merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=too-many-return-statements,unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # First-parent log shows one mega-merge
+                    return command.CommandResult(
+                        stdout='mega|mega1|A|Merge branch next|'
+                               'base second_parent\n')
+                if call_count[0] == 2:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nsecond_parent\n')
+                if call_count[0] == 3:
+                    # detect_sub_merges: log --merges (found sub-merges)
+                    return command.CommandResult(stdout='sub1\n')
+                if call_count[0] == 4:
+                    # decompose: rev-parse ^@ for mega-merge
+                    return command.CommandResult(
+                        stdout='base\nsecond_parent\n')
+                if call_count[0] == 5:
+                    # decompose: log -1 for mega-merge info
+                    return command.CommandResult(
+                        stdout='Mega merge|Author\n')
+                if call_count[0] == 6:
+                    # decompose: mainline commits (empty)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 7:
+                    # decompose: sub-merge 1 commits
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Sub commit|base\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, err = control.get_next_commits(dbs, 'us/next')
+
+            self.assertIsNone(err)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.commits[0].chash, 'aaa1')
+            # Sub-merge batch: advance_to should be None
+            self.assertIsNone(info.advance_to)
+            dbs.close()
+
+    def test_all_done_advances_past(self):
+        """Test get_next_commits advances past fully-processed mega-merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            # Add all sub-merge commits to database
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('aaa', source_id, 'Sub commit', 'A',
+                           status='applied')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=too-many-return-statements,unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # First-parent log shows mega-merge
+                    return command.CommandResult(
+                        stdout='mega|mega1|A|Merge branch next|'
+                               'base second_parent\n')
+                if call_count[0] == 2:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nsecond_parent\n')
+                if call_count[0] == 3:
+                    # detect_sub_merges: log --merges
+                    return command.CommandResult(stdout='sub1\n')
+                if call_count[0] == 4:
+                    # decompose: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nsecond_parent\n')
+                if call_count[0] == 5:
+                    # decompose: log -1 for mega-merge info
+                    return command.CommandResult(
+                        stdout='Mega merge|Author\n')
+                if call_count[0] == 6:
+                    # decompose: mainline (empty)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 7:
+                    # decompose: sub-merge 1 (in DB)
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Sub commit|base\n')
+                if call_count[0] == 8:
+                    # decompose: remainder (empty)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 9:
+                    # Remaining commits after mega-merge (empty)
+                    return command.CommandResult(stdout='')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, err = control.get_next_commits(dbs, 'us/next')
+
+            self.assertIsNone(err)
+            self.assertFalse(info.merge_found)
+            self.assertEqual(len(info.commits), 0)
+            # Should advance past the mega-merge
+            self.assertEqual(info.advance_to, 'mega')
+            dbs.close()
+
+    def test_normal_merge_returns_advance_to(self):
+        """Test get_next_commits returns advance_to for normal merges."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # First-parent log shows a normal merge
+                    return command.CommandResult(
+                        stdout='merge1|m1|A|Merge branch feat|'
+                               'base side1\n')
+                if call_count[0] == 2:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nside1\n')
+                if call_count[0] == 3:
+                    # detect_sub_merges: log --merges (no sub-merges)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Commits for this merge
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Commit 1|base\n'
+                               'merge1|m1|A|Merge branch feat|'
+                               'base side1\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, err = control.get_next_commits(dbs, 'us/next')
+
+            self.assertIsNone(err)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 2)
+            # Normal merge: advance_to is the merge hash
+            self.assertEqual(info.advance_to, 'merge1')
             dbs.close()
 
 
@@ -3039,6 +3548,330 @@ class TestDoCommitSourceResolveError(unittest.TestCase):
             ret = control.do_commit_source(args, None)
         self.assertEqual(ret, 1)
         self.assertIn('Could not resolve', stderr.getvalue())
+
+
+class TestRewind(unittest.TestCase):
+    """Tests for rewind command."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_rewind_source_not_found(self):
+        """Test rewind with unknown source."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        args = argparse.Namespace(cmd='rewind', source='unknown', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn("Source 'unknown' not found", stderr.getvalue())
+
+    def test_rewind_dry_run(self):
+        """Test rewind dry run shows what would happen without executing."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            source_id = dbs.source_get_id('us/next')
+            dbs.commit_add('commit_a', source_id, 'Commit A', 'Author')
+            dbs.commit_add('commit_b', source_id, 'Commit B', 'Author')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='commit_a\ncommit_b\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('dry run', output)
+        self.assertIn('prev1234', output)
+        self.assertIn('2', output)  # 2 commits to delete
+        self.assertIn('--force', output)
+
+        # Verify database was NOT modified
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'current_hash')
+            self.assertIsNotNone(dbs.commit_get('commit_a'))
+            self.assertIsNotNone(dbs.commit_get('commit_b'))
+            dbs.close()
+
+    def test_rewind_one_merge(self):
+        """Test rewinding by one merge with --force."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            source_id = dbs.source_get_id('us/next')
+            # Add some commits that should be deleted
+            dbs.commit_add('commit_a', source_id, 'Commit A', 'Author')
+            dbs.commit_add('commit_b', source_id, 'Commit B', 'Author')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='commit_a\ncommit_b\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('prev1234', output)
+        self.assertIn('Deleted 2 commit(s)', output)
+
+        # Verify source was updated
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'prev_hash')
+            # Commits should be deleted
+            self.assertIsNone(dbs.commit_get('commit_a'))
+            self.assertIsNone(dbs.commit_get('commit_b'))
+            dbs.close()
+
+    def test_rewind_shows_mr_details(self):
+        """Test rewind shows MR numbers, titles and URLs."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='abc1234ffffff\ndef5678aaaaaa\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(
+                    stdout='  ci/cherry-abc1234f\n'
+                           '  ci/cherry-other99\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        mock_mrs = [
+            gitlab.PickmanMr(
+                iid=541, title='[pickman] Some cherry-pick',
+                web_url='https://gitlab.com/proj/-/merge_requests/541',
+                source_branch='cherry-abc1234f',
+                description='desc'),
+            gitlab.PickmanMr(
+                iid=540, title='[pickman] Unrelated MR',
+                web_url='https://gitlab.com/proj/-/merge_requests/540',
+                source_branch='cherry-zzz9999',
+                description='desc'),
+        ]
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                               return_value=mock_mrs):
+            with terminal.capture() as (stdout, _):
+                ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('!541', output)
+        self.assertIn('[pickman] Some cherry-pick', output)
+        self.assertIn('merge_requests/541', output)
+        # Unrelated MR should not appear
+        self.assertNotIn('!540', output)
+        self.assertIn('MRs to delete', output)
+
+    def test_rewind_shows_branches_when_api_unavailable(self):
+        """Test rewind falls back to branch names when GitLab unavailable."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'prev_hash|prev1234|Previous merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(
+                    stdout='abc1234ffffff\n')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(
+                    stdout='  ci/cherry-abc1234f\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=False, remote='ci')
+        # GitLab API returns None (unavailable)
+        with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                               return_value=None):
+            with terminal.capture() as (stdout, _):
+                ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        output = stdout.getvalue()
+        self.assertIn('cherry-abc1234f', output)
+        self.assertIn('Branches to check', output)
+
+    def test_rewind_two_merges(self):
+        """Test rewinding by two merges with --force."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n'
+                           'mid_hash|mid12345|Middle merge\n'
+                           'old_hash|old12345|Old merge\n')
+            if 'rev-list' in cmd:
+                return command.CommandResult(stdout='')
+            if 'branch' in cmd and '--list' in cmd:
+                return command.CommandResult(stdout='')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=2,
+                                  force=True, remote='ci')
+        with terminal.capture() as (stdout, _):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 0)
+        self.assertIn('old12345', stdout.getvalue())
+
+        # Verify source was updated to old_hash
+        database.Database.instances.clear()
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            self.assertEqual(dbs.source_get('us/next'), 'old_hash')
+            dbs.close()
+
+    def test_rewind_not_enough_merges(self):
+        """Test rewind fails when not enough merges in history."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'current_hash')
+            dbs.commit()
+            dbs.close()
+
+        database.Database.instances.clear()
+
+        def mock_git(pipe_list):
+            cmd = pipe_list[0] if pipe_list else []
+            if '--merges' in cmd:
+                # Only one merge (the current position)
+                return command.CommandResult(
+                    stdout='current_hash|current1|Current merge\n')
+            return command.CommandResult(stdout='')
+
+        command.TEST_RESULT = mock_git
+
+        args = argparse.Namespace(cmd='rewind', source='us/next', count=1,
+                                  force=True, remote='ci')
+        with terminal.capture() as (_, stderr):
+            ret = control.do_pickman(args)
+        self.assertEqual(ret, 1)
+        self.assertIn('Not enough merges', stderr.getvalue())
+
+    def test_parse_rewind(self):
+        """Test parsing rewind command."""
+        args = pickman.parse_args(['rewind', 'us/next'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.count, 1)
+        self.assertFalse(args.force)
+        self.assertEqual(args.remote, 'ci')
+
+    def test_parse_rewind_with_count(self):
+        """Test parsing rewind command with count."""
+        args = pickman.parse_args(['rewind', 'us/next', '-c', '3'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.source, 'us/next')
+        self.assertEqual(args.count, 3)
+
+    def test_parse_rewind_with_force(self):
+        """Test parsing rewind command with --force."""
+        args = pickman.parse_args(['rewind', 'us/next', '-c', '2', '-f'])
+        self.assertEqual(args.cmd, 'rewind')
+        self.assertEqual(args.count, 2)
+        self.assertTrue(args.force)
 
 
 class TestDoPushBranch(unittest.TestCase):
@@ -3195,7 +4028,8 @@ class TestProcessMergedMrs(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            dbs.source_set('us/next', 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+            dbs.source_set('us/next',
+                              'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
             dbs.commit()
 
             merged_mrs = [gitlab.PickmanMr(
@@ -3282,7 +4116,8 @@ Date:   Mon Jan 15 10:30:00 2024 -0600
     def test_calc_ratio_different_files(self):
         """Test delta ratio calculation for different files."""
         orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
-        cherry_stats = control.GitStat(3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
+        cherry_stats = control.GitStat(
+            3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
 
         ratio = control.calc_ratio(orig_stats, cherry_stats)
         self.assertGreater(ratio, 0.0)
@@ -3639,9 +4474,9 @@ class TestGetCommitsForPick(unittest.TestCase):
             'bbb222|bbb222b|Author2|Second commit'
         )
 
-        commits, error = control.get_commits_for_pick('abc123..def456')
+        commits, err = control.get_commits_for_pick('abc123..def456')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 2)
         self.assertEqual(commits[0].hash, 'aaa111')
         self.assertEqual(commits[0].chash, 'aaa111a')
@@ -3656,20 +4491,20 @@ class TestGetCommitsForPick(unittest.TestCase):
         """Test empty commit range returns error."""
         mock_run_git.return_value = ''
 
-        commits, error = control.get_commits_for_pick('abc123..abc123')
+        commits, err = control.get_commits_for_pick('abc123..abc123')
 
         self.assertEqual(commits, [])
-        self.assertIn('No commits found', error)
+        self.assertIn('No commits found', err)
 
     @mock.patch('pickman.control.run_git')
     def test_commit_range_invalid(self, mock_run_git):
         """Test invalid commit range returns error."""
         mock_run_git.side_effect = Exception('bad revision')
 
-        commits, error = control.get_commits_for_pick('invalid..range')
+        commits, err = control.get_commits_for_pick('invalid..range')
 
         self.assertIsNone(commits)
-        self.assertIn('Invalid commit range', error)
+        self.assertIn('Invalid commit range', err)
 
     @mock.patch('pickman.control.run_git')
     def test_single_commit_non_merge(self, mock_run_git):
@@ -3681,9 +4516,9 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('abc123')
+        commits, err = control.get_commits_for_pick('abc123')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 1)
         self.assertEqual(commits[0].hash, 'abc123full')
         self.assertEqual(commits[0].subject, 'Single commit')
@@ -3704,9 +4539,9 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('merge123')
+        commits, err = control.get_commits_for_pick('merge123')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 2)
         self.assertEqual(commits[0].hash, 'ccc333')
         self.assertEqual(commits[1].hash, 'ddd444')
@@ -3721,29 +4556,29 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('merge123')
+        commits, err = control.get_commits_for_pick('merge123')
 
         self.assertEqual(commits, [])
-        self.assertIn('No commits found in merge', error)
+        self.assertIn('No commits found in merge', err)
 
     @mock.patch('pickman.control.run_git')
     def test_invalid_single_commit(self, mock_run_git):
         """Test invalid single commit returns error."""
         mock_run_git.side_effect = Exception('unknown revision')
 
-        commits, error = control.get_commits_for_pick('badcommit')
+        commits, err = control.get_commits_for_pick('badcommit')
 
         self.assertIsNone(commits)
-        self.assertIn('Invalid commit', error)
+        self.assertIn('Invalid commit', err)
 
     @mock.patch('pickman.control.run_git')
     def test_subject_with_separator(self, mock_run_git):
         """Test commit subject containing pipe character."""
         mock_run_git.return_value = 'aaa111|aaa111a|Author|Subject|with|pipes'
 
-        commits, error = control.get_commits_for_pick('abc..def')
+        commits, err = control.get_commits_for_pick('abc..def')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(commits[0].subject, 'Subject|with|pipes')
 
 
@@ -3862,8 +4697,9 @@ class TestDoPick(unittest.TestCase):
                                    return_value=(commits, None)):
                 with mock.patch.object(control, 'run_git',
                                        return_value='main'):
-                    with mock.patch.object(control.agent, 'cherry_pick_commits',
-                                           return_value=(True, 'log')) as mock_agent:
+                    with mock.patch.object(
+                            control.agent, 'cherry_pick_commits',
+                            return_value=(True, 'log')) as mock_agent:
                         ret = control.do_pick(args, dbs)
 
             # Verify agent was called with correct branch name
@@ -3930,8 +4766,8 @@ class TestDoPick(unittest.TestCase):
                                       push=False)
 
             def run_git_handler(args):
-                if '--verify' in args:
-                    raise Exception('branch not found')
+                if 'branch' in args and '--list' in args:
+                    return ''  # Branch doesn't exist
                 return 'main'
 
             with mock.patch.object(control, 'get_commits_for_pick',

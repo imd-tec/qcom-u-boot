@@ -79,6 +79,33 @@ CheckResult = namedtuple('CheckResult', [
 CommitInfo = namedtuple('CommitInfo',
                         ['hash', 'chash', 'subject', 'author'])
 
+# Named tuple for simplified commit data passed to agent
+# hash: Full SHA-1 commit hash (40 characters)
+# chash: Abbreviated commit hash (typically 7-8 characters)
+# subject: First line of commit message (commit subject)
+# applied_as: Short hash if potentially already applied, None otherwise
+AgentCommit = namedtuple('AgentCommit',
+                         ['hash', 'chash', 'subject', 'applied_as'])
+
+# Named tuple for get_next_commits() result
+#
+# commits: list of CommitInfo to cherry-pick
+# merge_found: True if these commits came from a merge on the source branch
+# advance_to: hash to advance the source position to, or None to stay put
+NextCommitsInfo = namedtuple('NextCommitsInfo',
+                             ['commits', 'merge_found', 'advance_to'])
+
+# Named tuple for prepare_apply() result
+#
+# commits: list of AgentCommit to cherry-pick
+# branch_name: name of the branch to create for the MR
+# original_branch: branch name before any conflict suffix
+# merge_found: True if these commits came from a merge on the source branch
+# advance_to: hash to advance the source position to, or None to stay put
+ApplyInfo = namedtuple('ApplyInfo',
+                       ['commits', 'branch_name', 'original_branch',
+                        'merge_found', 'advance_to'])
+
 
 def parse_log_output(log_output, has_parents=False):
     """Parse git log output to extract CommitInfo tuples
@@ -106,19 +133,6 @@ def parse_log_output(log_output, has_parents=False):
             subject = '|'.join(parts[3:])
         commits.append(CommitInfo(commit_hash, chash, subject, author))
     return commits
-
-# Named tuple for simplified commit data passed to agent
-# hash: Full SHA-1 commit hash (40 characters)
-# chash: Abbreviated commit hash (typically 7-8 characters)
-# subject: First line of commit message (commit subject)
-# applied_as: Short hash if potentially already applied, None otherwise
-AgentCommit = namedtuple('AgentCommit',
-                         ['hash', 'chash', 'subject', 'applied_as'])
-
-# Named tuple for prepare_apply result
-ApplyInfo = namedtuple('ApplyInfo',
-                       ['commits', 'branch_name', 'original_branch',
-                        'merge_found'])
 
 
 def run_git(args):
@@ -542,6 +556,34 @@ def check_already_applied(commits, target_branch='ci/master'):
     return new_commits, applied
 
 
+def build_applied_map(commits):
+    """Build a mapping of commit hashes to their applied counterparts
+
+    Checks which commits have already been applied to the target branch
+    and returns a dict mapping original hashes to the applied hashes.
+
+    Args:
+        commits (list): List of CommitInfo tuples to check
+
+    Returns:
+        dict: Mapping of original commit hash to applied commit hash
+    """
+    _, applied = check_already_applied(commits)
+
+    applied_map = {}
+    if applied:
+        for c in applied:
+            escaped_subject = c.subject.replace('"', '\\"')
+            result = run_git(['log', '--oneline', 'ci/master',
+                             f'--grep={escaped_subject}', '-1'])
+            if result.strip():
+                applied_hash = result.split()[0]
+                applied_map[c.hash] = applied_hash
+        tout.info(f'Found {len(applied)} potentially already applied'
+                  ' commit(s)')
+    return applied_map
+
+
 def show_commit_diff(res, no_colour=False):
     """Show the difference between original and cherry-picked commit patches
 
@@ -705,52 +747,37 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
-def get_next_commits(dbs, source):
-    """Get the next set of commits to cherry-pick from a source
+def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
+    """Find the first merge with unprocessed commits
 
-    Finds commits between the last cherry-picked commit and the next merge
-    commit on the first-parent (mainline) chain of the source branch.
-    Skips merges whose commits are already tracked in the database (from
-    pending MRs).
+    Walks through the merge hashes in order, looking for one that has
+    commits not yet tracked in the database. Decomposes mega-merges
+    (merges containing sub-merges) into individual batches.
 
     Args:
         dbs (Database): Database instance
+        last_commit (str): Hash of the last cherry-picked commit
         source (str): Source branch name
+        merge_hashes (list): List of merge commit hashes to check
 
     Returns:
-        tuple: (commits, merge_found, error_msg) where:
-            commits: list of CommitInfo tuples
-            merge_found: bool, True if stopped at a merge commit
-            error_msg: str or None, error message if failed
+        NextCommitsInfo: Info about the next commits to process
     """
-    # Get the last cherry-picked commit from database
-    last_commit = dbs.source_get(source)
-
-    if not last_commit:
-        return None, False, f"Source '{source}' not found in database"
-
-    # Get all first-parent commits to find merges
-    fp_output = run_git([
-        'log', '--reverse', '--first-parent', '--format=%H|%h|%an|%s|%P',
-        f'{last_commit}..{source}'
-    ])
-
-    if not fp_output:
-        return [], False, None
-
-    # Build list of merge hashes on the first-parent chain
-    merge_hashes = []
-    for line in fp_output.split('\n'):
-        if not line:
-            continue
-        parts = line.split('|')
-        parents = parts[-1].split()
-        if len(parents) > 1:
-            merge_hashes.append(parts[0])
-
-    # Try each merge in order until we find one with unprocessed commits
     prev_commit = last_commit
+    skipped_merges = False
     for merge_hash in merge_hashes:
+        # Check for mega-merge (contains sub-merges)
+        sub_merges = detect_sub_merges(merge_hash)
+        if sub_merges:
+            commits, advance_to = decompose_mega_merge(
+                dbs, prev_commit, merge_hash, sub_merges)
+            if commits:
+                return NextCommitsInfo(commits, True, advance_to)
+            # All sub-merges done, skip past this mega-merge
+            prev_commit = merge_hash
+            skipped_merges = True
+            continue
+
         # Get all commits from prev_commit to this merge
         log_output = run_git([
             'log', '--reverse', '--format=%H|%h|%an|%s|%P',
@@ -763,13 +790,15 @@ def get_next_commits(dbs, source):
 
         # Parse commits, filtering out those already in database
         all_commits = parse_log_output(log_output, has_parents=True)
-        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+        commits = [c for c in all_commits
+                   if not dbs.commit_get(c.hash)]
 
         if commits:
-            return commits, True, None
+            return NextCommitsInfo(commits, True, merge_hash)
 
         # All commits in this merge are processed, skip to next
         prev_commit = merge_hash
+        skipped_merges = True
 
     # No merges with unprocessed commits, check remaining commits
     log_output = run_git([
@@ -778,12 +807,60 @@ def get_next_commits(dbs, source):
     ])
 
     if not log_output:
-        return [], False, None
+        # If we skipped merges, advance past them
+        advance_to = prev_commit if skipped_merges else None
+        return NextCommitsInfo([], False, advance_to)
 
     all_commits = parse_log_output(log_output, has_parents=True)
     commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
-    return commits, False, None
+    return NextCommitsInfo(commits, False, None)
+
+
+def get_next_commits(dbs, source):
+    """Get the next set of commits to cherry-pick from a source
+
+    Finds commits between the last cherry-picked commit and the next merge
+    commit on the first-parent (mainline) chain of the source branch.
+    Skips merges whose commits are already tracked in the database (from
+    pending MRs). Decomposes mega-merges (merges containing sub-merges)
+    into individual sub-merge batches.
+
+    Args:
+        dbs (Database): Database instance
+        source (str): Source branch name
+
+    Returns:
+        tuple: (NextCommitsInfo, error_msg) where error_msg is None
+            on success
+    """
+    # Get the last cherry-picked commit from database
+    last_commit = dbs.source_get(source)
+
+    if not last_commit:
+        return None, f"Source '{source}' not found in database"
+
+    # Get all first-parent commits to find merges
+    fp_output = run_git([
+        'log', '--reverse', '--first-parent', '--format=%H|%h|%an|%s|%P',
+        f'{last_commit}..{source}'
+    ])
+
+    if not fp_output:
+        return NextCommitsInfo([], False, None), None
+
+    # Build list of merge hashes on the first-parent chain
+    merge_hashes = []
+    for line in fp_output.split('\n'):
+        if not line:
+            continue
+        parts = line.split('|')
+        parents = parts[-1].split()
+        if len(parents) > 1:
+            merge_hashes.append(parts[0])
+
+    return find_unprocessed_commits(
+        dbs, last_commit, source, merge_hashes), None
 
 
 def get_commits_for_pick(commit_spec):
@@ -802,7 +879,7 @@ def get_commits_for_pick(commit_spec):
             on success
     """
     commits = None
-    error = None
+    err = None
 
     if '..' in commit_spec:
         # Commit range format: hash1..hash2
@@ -814,9 +891,9 @@ def get_commits_for_pick(commit_spec):
             if log_output:
                 commits = parse_log_output(log_output)
             else:
-                commits, error = [], f"No commits found in range: {commit_spec}"
+                commits, err = [], f"No commits found in range: {commit_spec}"
         except Exception:  # pylint: disable=broad-except
-            error = f"Invalid commit range: {commit_spec}"
+            err = f"Invalid commit range: {commit_spec}"
     else:
         # Single commit - check if it's a merge
         try:
@@ -839,11 +916,135 @@ def get_commits_for_pick(commit_spec):
                     commits = parse_log_output(log_output)
                 else:
                     commits = []
-                    error = f"No commits found in merge: {commit_spec}"
+                    err = f"No commits found in merge: {commit_spec}"
         except Exception:  # pylint: disable=broad-except
-            error = f"Invalid commit: {commit_spec}"
+            err = f"Invalid commit: {commit_spec}"
 
-    return commits, error
+    return commits, err
+
+
+def detect_sub_merges(merge_hash):
+    """Check if a merge commit contains sub-merges
+
+    Examines the second parent's first-parent chain to find merge commits
+    (sub-merges) within a larger merge.
+
+    Args:
+        merge_hash (str): Hash of the merge commit to check
+
+    Returns:
+        list: List of sub-merge hashes in chronological order, or empty
+            list if not a merge or has no sub-merges
+    """
+    # Get parents of the merge
+    try:
+        parents = run_git(['rev-parse', f'{merge_hash}^@'])
+    except command.CommandExc:
+        return []
+
+    parent_list = parents.strip().split('\n')
+    if len(parent_list) < 2:
+        return []
+
+    first_parent = parent_list[0]
+    second_parent = parent_list[1]
+
+    # Find merges on the second parent's first-parent chain
+    try:
+        out = run_git([
+            'log', '--reverse', '--first-parent', '--merges',
+            '--format=%H', f'^{first_parent}', second_parent
+        ])
+    except command.CommandExc:
+        return []
+
+    if not out:
+        return []
+
+    return [line for line in out.split('\n') if line]
+
+
+def decompose_mega_merge(dbs, prev_commit, merge_hash, sub_merges):
+    """Return the next unprocessed batch from a mega-merge
+
+    Handles three phases:
+    1. Mainline commits before the merge (prev_commit..merge^1)
+    2. Sub-merge batches (one at a time, skipping processed ones)
+    3. Remainder commits after the last sub-merge
+
+    Pre-adds the mega-merge commit itself to DB as 'skipped' so it does
+    not appear as an orphan commit.
+
+    Args:
+        dbs (Database): Database instance
+        prev_commit (str): Hash of the last processed commit
+        merge_hash (str): Hash of the mega-merge commit
+        sub_merges (list): List of sub-merge hashes in chronological order
+
+    Returns:
+        tuple: (commits, advance_to) where:
+            commits: list of CommitInfo tuples for the next batch
+            advance_to: hash to advance source to, or None to stay put
+    """
+    parents = run_git(['rev-parse', f'{merge_hash}^@']).strip().split('\n')
+    first_parent = parents[0]
+    second_parent = parents[1]
+
+    # Pre-add the mega-merge commit itself as skipped
+    if not dbs.commit_get(merge_hash):
+        source_id = None
+        sources = dbs.source_get_all()
+        if sources:
+            source_id = dbs.source_get_id(sources[0][0])
+        if source_id:
+            info = run_git(['log', '-1', '--format=%s|%an', merge_hash])
+            parts = info.split('|', 1)
+            subject = parts[0]
+            author = parts[1] if len(parts) > 1 else ''
+            dbs.commit_add(merge_hash, source_id, subject, author,
+                           status='skipped')
+            dbs.commit()
+
+    # Phase 1: mainline commits before the merge
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'{prev_commit}..{first_parent}'
+    ])
+    if log_output:
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+        if commits:
+            return commits, first_parent
+
+    # Phase 2: sub-merge batches
+    prev_sub = first_parent
+    for sub_hash in sub_merges:
+        # Get commits for this sub-merge
+        log_output = run_git([
+            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+            f'^{prev_sub}', sub_hash
+        ])
+        if log_output:
+            all_commits = parse_log_output(log_output, has_parents=True)
+            commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+            if commits:
+                return commits, None
+        prev_sub = sub_hash
+
+    # Phase 3: remainder after the last sub-merge
+    last_sub = sub_merges[-1] if sub_merges else first_parent
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'^{last_sub}', second_parent
+    ])
+    if log_output:
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+        if commits:
+            return commits, None
+
+    # All done
+    return [], None
 
 
 def do_next_set(args, dbs):
@@ -857,23 +1058,24 @@ def do_next_set(args, dbs):
         int: 0 on success, 1 if source not found
     """
     source = args.source
-    commits, merge_found, error = get_next_commits(dbs, source)
+    info, err = get_next_commits(dbs, source)
 
-    if error:
-        tout.error(error)
+    if err:
+        tout.error(err)
         return 1
 
-    if not commits:
+    if not info.commits:
         tout.info('No new commits to cherry-pick')
         return 0
 
-    if merge_found:
-        tout.info(f'Next set from {source} ({len(commits)} commits):')
+    if info.merge_found:
+        tout.info(f'Next set from {source} '
+                  f'({len(info.commits)} commits):')
     else:
-        tout.info(f'Remaining commits from {source} ({len(commits)} commits, '
-                  'no merge found):')
+        tout.info(f'Remaining commits from {source} '
+                  f'({len(info.commits)} commits, no merge found):')
 
-    for commit in commits:
+    for commit in info.commits:
         tout.info(f'  {commit.chash} {commit.subject}')
 
     return 0
@@ -922,9 +1124,46 @@ def do_next_merges(args, dbs):
         if len(merges) >= count:
             break
 
-    tout.info(f'Next {len(merges)} merges from {source}:')
-    for i, (_, chash, subject) in enumerate(merges, 1):
-        tout.info(f'  {i}. {chash} {subject}')
+    # Build display list, expanding mega-merges into sub-merges
+    # Each entry is (chash, subject, is_mega, sub_list) where sub_list
+    # is a list of (chash, subject) for mega-merge sub-merges
+    display = []
+    total_sub = 0
+    for commit_hash, chash, subject in merges:
+        sub_merges = detect_sub_merges(commit_hash)
+        if sub_merges:
+            sub_list = []
+            for sub_hash in sub_merges:
+                try:
+                    info = run_git(
+                        ['log', '-1', '--format=%h|%s', sub_hash])
+                    parts = info.strip().split('|', 1)
+                    sub_chash = parts[0]
+                    sub_subject = parts[1] if len(parts) > 1 else ''
+                except Exception:  # pylint: disable=broad-except
+                    sub_chash = sub_hash[:11]
+                    sub_subject = '(unknown)'
+                sub_list.append((sub_chash, sub_subject))
+            display.append((chash, subject, True, sub_list))
+            total_sub += len(sub_list)
+        else:
+            display.append((chash, subject, False, None))
+
+    n_items = total_sub + len(merges) - len(
+        [d for d in display if d[2]])
+    tout.info(f'Next merges from {source} '
+              f'({n_items} from {len(merges)} first-parent):')
+    idx = 1
+    for chash, subject, is_mega, sub_list in display:
+        if is_mega:
+            tout.info(f'  {chash} {subject} '
+                      f'({len(sub_list)} sub-merges):')
+            for sub_chash, sub_subject in sub_list:
+                tout.info(f'    {idx}. {sub_chash} {sub_subject}')
+                idx += 1
+        else:
+            tout.info(f'  {idx}. {chash} {subject}')
+            idx += 1
 
     return 0
 
@@ -1214,15 +1453,25 @@ def prepare_apply(dbs, source, branch):
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    commits, merge_found, error = get_next_commits(dbs, source)
+    info, err = get_next_commits(dbs, source)
 
-    if error:
-        tout.error(error)
+    if err:
+        tout.error(err)
         return None, 1
 
-    if not commits:
+    if not info.commits:
+        # If advance_to is set, advance source past fully-processed merges
+        if info.advance_to:
+            dbs.source_set(source, info.advance_to)
+            dbs.commit()
+            tout.info(f"Advanced source '{source}' to "
+                      f'{info.advance_to[:12]}')
+            # Retry with updated position
+            return prepare_apply(dbs, source, branch)
         tout.info('No new commits to cherry-pick')
         return None, 0
+
+    commits = info.commits
 
     # Save current branch to return to later
     original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -1234,14 +1483,11 @@ def prepare_apply(dbs, source, branch):
         branch_name = f'cherry-{commits[0].chash}'
 
     # Delete branch if it already exists
-    try:
-        run_git(['rev-parse', '--verify', branch_name])
+    if run_git(['branch', '--list', branch_name]).strip():
         tout.info(f'Deleting existing branch {branch_name}')
         run_git(['branch', '-D', branch_name])
-    except Exception:  # pylint: disable=broad-except
-        pass  # Branch doesn't exist, which is fine
 
-    if merge_found:
+    if info.merge_found:
         tout.info(f'Applying next set from {source} ({len(commits)} commits):')
     else:
         tout.info(f'Applying remaining commits from {source} '
@@ -1252,12 +1498,13 @@ def prepare_apply(dbs, source, branch):
         tout.info(f'  {commit.chash} {commit.subject}')
     tout.info('')
 
-    return ApplyInfo(commits, branch_name, original_branch, merge_found), 0
+    return ApplyInfo(commits, branch_name, original_branch,
+                     info.merge_found, info.advance_to), 0
 
 
 # pylint: disable=too-many-arguments
 def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
-                           signal_commit):
+                           signal_commit, advance_to=None):
     """Handle the case where commits are already applied to the target branch
 
     Creates an MR with [skip] prefix to record the attempt and updates the
@@ -1271,6 +1518,9 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
         conv_log (str): Conversation log from the agent
         args (Namespace): Parsed arguments with 'push', 'remote', 'target'
         signal_commit (str): Last commit hash from signal file
+        advance_to (str): Hash to advance source to, or None to use last
+            commit. If explicitly None (sub-merge batch), source is not
+            advanced.
 
     Returns:
         int: 0 on success, 1 on failure
@@ -1282,11 +1532,20 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
         dbs.commit_set_status(commit.hash, 'skipped')
     dbs.commit()
 
-    # Update source position to the last commit (or signal_commit if provided)
-    last_hash = signal_commit if signal_commit else commits[-1].hash
-    dbs.source_set(source, last_hash)
-    dbs.commit()
-    tout.info(f"Updated source '{source}' to {last_hash[:12]}")
+    # Update source position
+    if advance_to is not None:
+        dbs.source_set(source, advance_to)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {advance_to[:12]}")
+    elif signal_commit:
+        dbs.source_set(source, signal_commit)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {signal_commit[:12]}")
+    else:
+        last_hash = commits[-1].hash
+        dbs.source_set(source, last_hash)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {last_hash[:12]}")
 
     # Push and create MR with [skip] prefix if requested
     if args.push:
@@ -1321,7 +1580,7 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
     return 0
 
 
-def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=too-many-locals
+def execute_apply(dbs, source, commits, branch_name, args, advance_to=None):  # pylint: disable=too-many-locals
     """Execute the apply operation: run agent, update database, push MR
 
     Args:
@@ -1330,26 +1589,15 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
         commits (list): List of CommitInfo namedtuples
         branch_name (str): Branch name for cherry-picks
         args (Namespace): Parsed arguments with 'push', 'remote', 'target'
+        advance_to (str): Hash to advance source to after success, or None
+            to skip source advancement (sub-merge batch)
 
     Returns:
         tuple: (ret, success, conv_log) where ret is 0 on success,
             1 on failure
     """
     # Check for already applied commits before proceeding
-    _, applied = check_already_applied(commits)
-
-    # Build mapping of applied commits by hash
-    applied_map = {}
-    if applied:
-        for c in applied:
-            # Get the hash of the applied commit in target branch
-            escaped_subject = c.subject.replace('"', '\\"')
-            result = run_git(['log', '--oneline', 'ci/master',
-                             f'--grep={escaped_subject}', '-1'])
-            if result.strip():
-                applied_hash = result.split()[0]
-                applied_map[c.hash] = applied_hash
-        tout.info(f'Found {len(applied)} potentially already applied commit(s)')
+    applied_map = build_applied_map(commits)
 
     # Add all commits to database with 'pending' status (agent updates later)
     source_id = dbs.source_get_id(source)
@@ -1368,14 +1616,17 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     signal_status, signal_commit = agent.read_signal_file()
     if signal_status == agent.SIGNAL_APPLIED:
         ret = handle_already_applied(dbs, source, commits, branch_name,
-                                     conv_log, args, signal_commit)
+                                     conv_log, args, signal_commit,
+                                     advance_to)
         return ret, False, conv_log
 
     # Verify the branch actually exists - agent may have aborted and deleted it
     if success:
         try:
-            run_git(['rev-parse', '--verify', branch_name])
+            exists = run_git(['branch', '--list', branch_name]).strip()
         except Exception:  # pylint: disable=broad-except
+            exists = ''
+        if not exists:
             tout.warning(f'Branch {branch_name} does not exist - '
                          'agent may have aborted')
             success = False
@@ -1401,8 +1652,8 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
                       f"{commits[-1].chash}' to update the database")
 
     # Update database with the last processed commit if successful
-    if success:
-        dbs.source_set(source, commits[-1].hash)
+    if success and advance_to is not None:
+        dbs.source_set(source, advance_to)
         dbs.commit()
 
     return ret, success, conv_log
@@ -1428,7 +1679,8 @@ def do_apply(args, dbs):
     original_branch = info.original_branch
 
     ret, success, conv_log = execute_apply(dbs, source, commits,
-                                                   branch_name, args)
+                                           branch_name, args,
+                                           info.advance_to)
 
     # Write history file if successful
     if success:
@@ -1459,9 +1711,9 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
     commit_spec = args.commits
 
     # Get commits to cherry-pick
-    commits, error = get_commits_for_pick(commit_spec)
-    if error:
-        tout.error(error)
+    commits, err = get_commits_for_pick(commit_spec)
+    if err:
+        tout.error(err)
         return 1
 
     if not commits:
@@ -1477,12 +1729,9 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
         branch_name = f'pick-{commits[0].chash}'
 
     # Delete branch if it already exists
-    try:
-        run_git(['rev-parse', '--verify', branch_name])
+    if run_git(['branch', '--list', branch_name]).strip():
         tout.info(f'Deleting existing branch {branch_name}')
         run_git(['branch', '-D', branch_name])
-    except Exception:  # pylint: disable=broad-except
-        pass  # Branch doesn't exist, which is fine
 
     tout.info(f'Cherry-picking {len(commits)} commit(s):')
     tout.info(f'  Branch: {branch_name}')
@@ -1501,8 +1750,10 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
     # Verify the branch actually exists - agent may have aborted and deleted it
     if success:
         try:
-            run_git(['rev-parse', '--verify', branch_name])
+            exists = run_git(['branch', '--list', branch_name]).strip()
         except Exception:  # pylint: disable=broad-except
+            exists = ''
+        if not exists:
             tout.warning(f'Branch {branch_name} does not exist - '
                          'agent may have aborted')
             success = False
@@ -1581,6 +1832,154 @@ def do_commit_source(args, dbs):
     short_old = old_commit[:12]
     short_new = full_hash[:12]
     tout.info(f"Updated '{source}': {short_old} -> {short_new}")
+
+    return 0
+
+
+def do_rewind(args, dbs):
+    """Rewind the source position back by N merges
+
+    By default performs a dry run, showing what would happen. Use --force
+    to actually execute the rewind.
+
+    Walks back N merges on the first-parent chain from the current source
+    position, deletes the commits in that range from the database, and
+    resets the source to the earlier position.
+
+    Args:
+        args (Namespace): Parsed arguments with 'source', 'count', 'force'
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    source = args.source
+    count = args.count
+    force = args.force
+
+    current = dbs.source_get(source)
+    if not current:
+        tout.error(f"Source '{source}' not found in database")
+        return 1
+
+    # We need to find merges *before* current. Use ancestry instead.
+    try:
+        out = run_git([
+            'log', '--first-parent', '--merges', '--format=%H|%h|%s',
+            f'-{count + 1}', current
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not read merge history for {current[:12]}')
+        return 1
+
+    if not out:
+        tout.error('No merges found in history')
+        return 1
+
+    # Parse merges - first line is current (or nearest merge), last is target
+    merges = []
+    for line in out.strip().split('\n'):
+        if not line:
+            continue
+        parts = line.split('|', 2)
+        merges.append((parts[0], parts[1], parts[2] if len(parts) > 2 else ''))
+
+    if len(merges) < 2:
+        tout.error(f'Not enough merges to rewind by {count}')
+        return 1
+
+    # The target is count merges back from the first entry
+    target_idx = min(count, len(merges) - 1)
+    target_hash = merges[target_idx][0]
+    target_chash = merges[target_idx][1]
+    target_subject = merges[target_idx][2]
+
+    # Get all commits in the range target..current
+    try:
+        range_hashes = run_git([
+            'rev-list', f'{target_hash}..{current}'
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not list commits in range '
+                   f'{target_hash[:12]}..{current[:12]}')
+        return 1
+
+    # Count commits that exist in the database
+    db_commits = []
+    if range_hashes:
+        for chash in range_hashes.strip().split('\n'):
+            if chash and dbs.commit_get(chash):
+                db_commits.append(chash)
+
+    # Find cherry-pick branches that match commits in the range.
+    # List all ci/cherry-* remote branches, then check if the hash in
+    # the branch name matches any commit in the rewound range.
+    mr_branches = []
+    if range_hashes:
+        hash_set = set(range_hashes.strip().split('\n'))
+        try:
+            branch_out = run_git(
+                ['branch', '-r', '--list', f'{args.remote}/cherry-*'])
+        except Exception:  # pylint: disable=broad-except
+            branch_out = ''
+        remote_prefix = f'{args.remote}/'
+        for line in branch_out.strip().split('\n'):
+            branch = line.strip()
+            if not branch:
+                continue
+            # Branch is like 'ci/cherry-abc1234'; extract the hash part
+            short = branch.removeprefix(f'{remote_prefix}cherry-')
+            # Check if any commit in the range starts with this hash
+            for chash in hash_set:
+                if chash.startswith(short):
+                    mr_branches.append(
+                        branch.removeprefix(remote_prefix))
+                    break
+
+    # Look up MR details from GitLab for matching branches
+    matched_mrs = []
+    if mr_branches:
+        mrs = gitlab_api.get_open_pickman_mrs(args.remote)
+        if mrs:
+            branch_set = set(mr_branches)
+            for merge_req in mrs:
+                if merge_req.source_branch in branch_set:
+                    matched_mrs.append(merge_req)
+
+    # Show what would happen (or what is happening)
+    current_short = current[:12]
+    prefix = '' if force else '[dry run] '
+    tout.info(f"{prefix}Rewind '{source}': "
+              f'{current_short} -> {target_chash}')
+    tout.info(f'  Target: {target_chash} {target_subject}')
+    tout.info(f'  Merges being rewound:')
+    for i in range(target_idx):
+        tout.info(f'    {merges[i][1]} {merges[i][2]}')
+    tout.info(f'  Commits to delete from database: {len(db_commits)}')
+
+    if matched_mrs:
+        tout.info(f'  MRs to delete on GitLab:')
+        for merge_req in matched_mrs:
+            tout.info(f'    !{merge_req.iid}: {merge_req.title}')
+            tout.info(f'      {merge_req.web_url}')
+    elif mr_branches:
+        tout.info(f'  Branches to check for MRs:')
+        for branch in mr_branches:
+            tout.info(f'    {branch}')
+
+    if not force:
+        tout.info('Use --force to execute this rewind')
+        return 0
+
+    # Delete commits from database
+    for chash in db_commits:
+        dbs.commit_delete(chash)
+
+    # Update source position
+    dbs.source_set(source, target_hash)
+    dbs.commit()
+
+    tout.info(f'  Deleted {len(db_commits)} commit(s) from database')
 
     return 0
 
@@ -1855,6 +2254,10 @@ def process_merged_mrs(remote, source, dbs):
                          f"MR !{merge_req.iid}")
             continue
 
+        # Skip if already at this position
+        if full_hash == current:
+            continue
+
         # Check if this commit is newer than current (current is ancestor of it)
         try:
             # Is current an ancestor of last_hash? (meaning last_hash is newer)
@@ -2009,6 +2412,7 @@ COMMANDS = {
     'poll': do_poll,
     'push-branch': do_push_branch,
     'review': do_review,
+    'rewind': do_rewind,
     'step': do_step,
     'test': do_test,
 }
