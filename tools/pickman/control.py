@@ -91,8 +91,9 @@ AgentCommit = namedtuple('AgentCommit',
 #
 # commits: list of CommitInfo to cherry-pick
 # merge_found: True if these commits came from a merge on the source branch
+# advance_to: hash to advance the source position to, or None to stay put
 NextCommitsInfo = namedtuple('NextCommitsInfo',
-                             ['commits', 'merge_found'])
+                             ['commits', 'merge_found', 'advance_to'])
 
 # Named tuple for prepare_apply() result
 #
@@ -100,9 +101,10 @@ NextCommitsInfo = namedtuple('NextCommitsInfo',
 # branch_name: name of the branch to create for the MR
 # original_branch: branch name before any conflict suffix
 # merge_found: True if these commits came from a merge on the source branch
+# advance_to: hash to advance the source position to, or None to stay put
 ApplyInfo = namedtuple('ApplyInfo',
                        ['commits', 'branch_name', 'original_branch',
-                        'merge_found'])
+                        'merge_found', 'advance_to'])
 
 
 def parse_log_output(log_output, has_parents=False):
@@ -749,7 +751,8 @@ def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
     """Find the first merge with unprocessed commits
 
     Walks through the merge hashes in order, looking for one that has
-    commits not yet tracked in the database.
+    commits not yet tracked in the database. Decomposes mega-merges
+    (merges containing sub-merges) into individual batches.
 
     Args:
         dbs (Database): Database instance
@@ -761,7 +764,20 @@ def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
         NextCommitsInfo: Info about the next commits to process
     """
     prev_commit = last_commit
+    skipped_merges = False
     for merge_hash in merge_hashes:
+        # Check for mega-merge (contains sub-merges)
+        sub_merges = detect_sub_merges(merge_hash)
+        if sub_merges:
+            commits, advance_to = decompose_mega_merge(
+                dbs, prev_commit, merge_hash, sub_merges)
+            if commits:
+                return NextCommitsInfo(commits, True, advance_to)
+            # All sub-merges done, skip past this mega-merge
+            prev_commit = merge_hash
+            skipped_merges = True
+            continue
+
         # Get all commits from prev_commit to this merge
         log_output = run_git([
             'log', '--reverse', '--format=%H|%h|%an|%s|%P',
@@ -778,10 +794,11 @@ def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
                    if not dbs.commit_get(c.hash)]
 
         if commits:
-            return NextCommitsInfo(commits, True)
+            return NextCommitsInfo(commits, True, merge_hash)
 
         # All commits in this merge are processed, skip to next
         prev_commit = merge_hash
+        skipped_merges = True
 
     # No merges with unprocessed commits, check remaining commits
     log_output = run_git([
@@ -790,12 +807,14 @@ def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
     ])
 
     if not log_output:
-        return NextCommitsInfo([], False)
+        # If we skipped merges, advance past them
+        advance_to = prev_commit if skipped_merges else None
+        return NextCommitsInfo([], False, advance_to)
 
     all_commits = parse_log_output(log_output, has_parents=True)
     commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
-    return NextCommitsInfo(commits, False)
+    return NextCommitsInfo(commits, False, None)
 
 
 def get_next_commits(dbs, source):
@@ -804,7 +823,8 @@ def get_next_commits(dbs, source):
     Finds commits between the last cherry-picked commit and the next merge
     commit on the first-parent (mainline) chain of the source branch.
     Skips merges whose commits are already tracked in the database (from
-    pending MRs).
+    pending MRs). Decomposes mega-merges (merges containing sub-merges)
+    into individual sub-merge batches.
 
     Args:
         dbs (Database): Database instance
@@ -827,7 +847,7 @@ def get_next_commits(dbs, source):
     ])
 
     if not fp_output:
-        return NextCommitsInfo([], False), None
+        return NextCommitsInfo([], False, None), None
 
     # Build list of merge hashes on the first-parent chain
     merge_hashes = []
@@ -901,6 +921,130 @@ def get_commits_for_pick(commit_spec):
             err = f"Invalid commit: {commit_spec}"
 
     return commits, err
+
+
+def detect_sub_merges(merge_hash):
+    """Check if a merge commit contains sub-merges
+
+    Examines the second parent's first-parent chain to find merge commits
+    (sub-merges) within a larger merge.
+
+    Args:
+        merge_hash (str): Hash of the merge commit to check
+
+    Returns:
+        list: List of sub-merge hashes in chronological order, or empty
+            list if not a merge or has no sub-merges
+    """
+    # Get parents of the merge
+    try:
+        parents = run_git(['rev-parse', f'{merge_hash}^@'])
+    except command.CommandExc:
+        return []
+
+    parent_list = parents.strip().split('\n')
+    if len(parent_list) < 2:
+        return []
+
+    first_parent = parent_list[0]
+    second_parent = parent_list[1]
+
+    # Find merges on the second parent's first-parent chain
+    try:
+        out = run_git([
+            'log', '--reverse', '--first-parent', '--merges',
+            '--format=%H', f'^{first_parent}', second_parent
+        ])
+    except command.CommandExc:
+        return []
+
+    if not out:
+        return []
+
+    return [line for line in out.split('\n') if line]
+
+
+def decompose_mega_merge(dbs, prev_commit, merge_hash, sub_merges):
+    """Return the next unprocessed batch from a mega-merge
+
+    Handles three phases:
+    1. Mainline commits before the merge (prev_commit..merge^1)
+    2. Sub-merge batches (one at a time, skipping processed ones)
+    3. Remainder commits after the last sub-merge
+
+    Pre-adds the mega-merge commit itself to DB as 'skipped' so it does
+    not appear as an orphan commit.
+
+    Args:
+        dbs (Database): Database instance
+        prev_commit (str): Hash of the last processed commit
+        merge_hash (str): Hash of the mega-merge commit
+        sub_merges (list): List of sub-merge hashes in chronological order
+
+    Returns:
+        tuple: (commits, advance_to) where:
+            commits: list of CommitInfo tuples for the next batch
+            advance_to: hash to advance source to, or None to stay put
+    """
+    parents = run_git(['rev-parse', f'{merge_hash}^@']).strip().split('\n')
+    first_parent = parents[0]
+    second_parent = parents[1]
+
+    # Pre-add the mega-merge commit itself as skipped
+    if not dbs.commit_get(merge_hash):
+        source_id = None
+        sources = dbs.source_get_all()
+        if sources:
+            source_id = dbs.source_get_id(sources[0][0])
+        if source_id:
+            info = run_git(['log', '-1', '--format=%s|%an', merge_hash])
+            parts = info.split('|', 1)
+            subject = parts[0]
+            author = parts[1] if len(parts) > 1 else ''
+            dbs.commit_add(merge_hash, source_id, subject, author,
+                           status='skipped')
+            dbs.commit()
+
+    # Phase 1: mainline commits before the merge
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'{prev_commit}..{first_parent}'
+    ])
+    if log_output:
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+        if commits:
+            return commits, first_parent
+
+    # Phase 2: sub-merge batches
+    prev_sub = first_parent
+    for sub_hash in sub_merges:
+        # Get commits for this sub-merge
+        log_output = run_git([
+            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+            f'^{prev_sub}', sub_hash
+        ])
+        if log_output:
+            all_commits = parse_log_output(log_output, has_parents=True)
+            commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+            if commits:
+                return commits, None
+        prev_sub = sub_hash
+
+    # Phase 3: remainder after the last sub-merge
+    last_sub = sub_merges[-1] if sub_merges else first_parent
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'^{last_sub}', second_parent
+    ])
+    if log_output:
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+        if commits:
+            return commits, None
+
+    # All done
+    return [], None
 
 
 def do_next_set(args, dbs):
@@ -1279,6 +1423,14 @@ def prepare_apply(dbs, source, branch):
         return None, 1
 
     if not info.commits:
+        # If advance_to is set, advance source past fully-processed merges
+        if info.advance_to:
+            dbs.source_set(source, info.advance_to)
+            dbs.commit()
+            tout.info(f"Advanced source '{source}' to "
+                      f'{info.advance_to[:12]}')
+            # Retry with updated position
+            return prepare_apply(dbs, source, branch)
         tout.info('No new commits to cherry-pick')
         return None, 0
 
@@ -1313,12 +1465,12 @@ def prepare_apply(dbs, source, branch):
     tout.info('')
 
     return ApplyInfo(commits, branch_name, original_branch,
-                     info.merge_found), 0
+                     info.merge_found, info.advance_to), 0
 
 
 # pylint: disable=too-many-arguments
 def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
-                           signal_commit):
+                           signal_commit, advance_to=None):
     """Handle the case where commits are already applied to the target branch
 
     Creates an MR with [skip] prefix to record the attempt and updates the
@@ -1332,6 +1484,9 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
         conv_log (str): Conversation log from the agent
         args (Namespace): Parsed arguments with 'push', 'remote', 'target'
         signal_commit (str): Last commit hash from signal file
+        advance_to (str): Hash to advance source to, or None to use last
+            commit. If explicitly None (sub-merge batch), source is not
+            advanced.
 
     Returns:
         int: 0 on success, 1 on failure
@@ -1343,11 +1498,20 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
         dbs.commit_set_status(commit.hash, 'skipped')
     dbs.commit()
 
-    # Update source position to the last commit (or signal_commit if provided)
-    last_hash = signal_commit if signal_commit else commits[-1].hash
-    dbs.source_set(source, last_hash)
-    dbs.commit()
-    tout.info(f"Updated source '{source}' to {last_hash[:12]}")
+    # Update source position
+    if advance_to is not None:
+        dbs.source_set(source, advance_to)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {advance_to[:12]}")
+    elif signal_commit:
+        dbs.source_set(source, signal_commit)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {signal_commit[:12]}")
+    else:
+        last_hash = commits[-1].hash
+        dbs.source_set(source, last_hash)
+        dbs.commit()
+        tout.info(f"Updated source '{source}' to {last_hash[:12]}")
 
     # Push and create MR with [skip] prefix if requested
     if args.push:
@@ -1382,7 +1546,7 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
     return 0
 
 
-def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=too-many-locals
+def execute_apply(dbs, source, commits, branch_name, args, advance_to=None):  # pylint: disable=too-many-locals
     """Execute the apply operation: run agent, update database, push MR
 
     Args:
@@ -1391,6 +1555,8 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
         commits (list): List of CommitInfo namedtuples
         branch_name (str): Branch name for cherry-picks
         args (Namespace): Parsed arguments with 'push', 'remote', 'target'
+        advance_to (str): Hash to advance source to after success, or None
+            to skip source advancement (sub-merge batch)
 
     Returns:
         tuple: (ret, success, conv_log) where ret is 0 on success,
@@ -1416,7 +1582,8 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
     signal_status, signal_commit = agent.read_signal_file()
     if signal_status == agent.SIGNAL_APPLIED:
         ret = handle_already_applied(dbs, source, commits, branch_name,
-                                     conv_log, args, signal_commit)
+                                     conv_log, args, signal_commit,
+                                     advance_to)
         return ret, False, conv_log
 
     # Verify the branch actually exists - agent may have aborted and deleted it
@@ -1449,8 +1616,8 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
                       f"{commits[-1].chash}' to update the database")
 
     # Update database with the last processed commit if successful
-    if success:
-        dbs.source_set(source, commits[-1].hash)
+    if success and advance_to is not None:
+        dbs.source_set(source, advance_to)
         dbs.commit()
 
     return ret, success, conv_log
@@ -1476,7 +1643,8 @@ def do_apply(args, dbs):
     original_branch = info.original_branch
 
     ret, success, conv_log = execute_apply(dbs, source, commits,
-                                                   branch_name, args)
+                                           branch_name, args,
+                                           info.advance_to)
 
     # Write history file if successful
     if success:
