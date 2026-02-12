@@ -25,7 +25,8 @@ SIGNAL_APPLIED = 'already_applied'
 SIGNAL_CONFLICT = 'conflict'
 
 # Commits that need special handling (regenerate instead of cherry-pick)
-# These run savedefconfig on all boards and depend on target branch Kconfig state
+# These run savedefconfig on all boards and depend on target branch
+# Kconfig state
 QCONFIG_SUBJECTS = [
     'configs: Resync with savedefconfig',
 ]

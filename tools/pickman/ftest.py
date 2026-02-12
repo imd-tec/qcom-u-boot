@@ -3195,7 +3195,8 @@ class TestProcessMergedMrs(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            dbs.source_set('us/next', 'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
+            dbs.source_set('us/next',
+                              'bbb222bbb222bbb222bbb222bbb222bbb222bbb2')
             dbs.commit()
 
             merged_mrs = [gitlab.PickmanMr(
@@ -3282,7 +3283,8 @@ Date:   Mon Jan 15 10:30:00 2024 -0600
     def test_calc_ratio_different_files(self):
         """Test delta ratio calculation for different files."""
         orig_stats = control.GitStat(2, 15, 3, {'file1.c', 'file2.h'})
-        cherry_stats = control.GitStat(3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
+        cherry_stats = control.GitStat(
+            3, 15, 3, {'file1.c', 'file2.h', 'file3.c'})
 
         ratio = control.calc_ratio(orig_stats, cherry_stats)
         self.assertGreater(ratio, 0.0)
@@ -3862,8 +3864,9 @@ class TestDoPick(unittest.TestCase):
                                    return_value=(commits, None)):
                 with mock.patch.object(control, 'run_git',
                                        return_value='main'):
-                    with mock.patch.object(control.agent, 'cherry_pick_commits',
-                                           return_value=(True, 'log')) as mock_agent:
+                    with mock.patch.object(
+                            control.agent, 'cherry_pick_commits',
+                            return_value=(True, 'log')) as mock_agent:
                         ret = control.do_pick(args, dbs)
 
             # Verify agent was called with correct branch name
@@ -3931,7 +3934,7 @@ class TestDoPick(unittest.TestCase):
 
             def run_git_handler(args):
                 if '--verify' in args:
-                    raise Exception('branch not found')
+                    raise ValueError('branch not found')
                 return 'main'
 
             with mock.patch.object(control, 'get_commits_for_pick',
