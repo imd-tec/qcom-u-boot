@@ -23358,84 +23358,73 @@ The branch `cherry-a282950debc` is ready for pushing, based on `ci/master` with 
 
 ---
 
-
 ## 2026-02-12: us/next
 
-Branch: cherry-53f42c56436
+Branch: cherry-43fd4bcefd4
 
 Commits:
-- 53f42c56436 arm: dts: k3-am625-beagleplay-r5*: Remove clocks from main_timer0
-- 92f1347d7ca arm: dts: k3-am625-phycore-r5*: Remove clocks from main_timer0
-- 2696d3baea5 arm: dts: k3-am625-verdin-r5*: Remove clocks from main_timer0
-- 8668c6a3bd1 arm: dts: k3-am62a7-phycore-r5*: Remove clocks from main_timer0
-- 1481ae5d5aa Merge patch series "Remove clocks from R5 dtsi for missed boards."
+- 43fd4bcefd4 disk: part: implement generic function part_get_info_by_uuid()
+- 9a2010941f5 scsi: Implement get_blk() function
+- 8bf3e967f6a env: Add support for storing env variables in SCSI devices
+- 142aab7f3e0 configs: qcs9100: Enable env in SCSI
+- a619c441095 Merge patch series "Enable env in SCSI"
 
 ### Conversation log
-The repository has untracked files but no staged or modified changes, so we can proceed. Let me create and checkout the new branch based on ci/master:
+The repository has untracked files but is otherwise clean (no staged or modified files). The untracked `mr-report` file won't affect our cherry-pick operation. Let me proceed with creating the new branch based on ci/master.
 
-Let me check the available remotes and branches:
+Let me check for the correct remote name:
 
-Let me try with the full remote ref:
+I see there's both a local branch `ci/master` and a remote `remotes/ci/master`. Let me use the remote reference explicitly:
 
-Now let me start cherry-picking the first commit:
+Now let me cherry-pick the first commit:
 
-First commit successful. Let me check the delta and run the build:
+First commit cherry-picked successfully. Now let me verify the delta and run the build:
 
-Delta looks identical (2 files, 8+/8-). Let me run the build test:
+The deltas match (2 files, 59 insertions). Now let me run the build test:
 
-Build passed. Now let's cherry-pick the second commit:
+Build passed. Now let me proceed to the second commit:
 
-Delta looks identical (2 files, 8+/5-). Let me run the build test:
+Deltas match perfectly. Now build test:
 
-Build passed. Now let's cherry-pick the third commit:
+Build passed. Now the third commit:
 
-Delta looks identical (2 files, 8+/8-). Let me run the build test:
+Deltas match. Build test:
 
-Build passed. Now let's cherry-pick the fourth commit:
+Build passed. Fourth commit:
 
-Delta looks identical (2 files, 9+/5-). Let me run the build test:
+Deltas match. Build test:
 
-Build passed. Now let's cherry-pick the fifth (merge) commit:
+Build passed. Now the final commit - this is a merge commit so I need to use special flags:
 
-The merge commit is empty (expected since the individual commits were already applied). Let me commit it with --allow-empty:
+The merge commit is empty because we've already cherry-picked all the constituent commits. This is expected. Let me commit it with --allow-empty to preserve the merge commit message:
 
-The merge commit was successfully applied (empty since we already applied all the individual commits). Let me run the build test:
+The merge commit was cherry-picked as empty (expected since we already have the individual commits). The original shows the combined changes. Now let me run the build test:
 
-Build passed. Now let me verify all 5 commits are present:
+Build passed. Now let me verify all commits are present:
 
-All 5 commits are present. Let me run the final build:
+All 5 commits are present. Now let me run the final build:
 
-## Final Status
+## Summary: Cherry-pick Completed Successfully ✅
 
-**All cherry-picks completed successfully!**
+**Build Result:** OK - All builds passed without warnings or errors
 
-### Summary
+**Commits Cherry-picked:**
 
-| # | Original Hash | Subject | Status | Delta |
-|---|---------------|---------|--------|-------|
-| 1 | 53f42c56436 | arm: dts: k3-am625-beagleplay-r5*: Remove clocks from main_timer0 | ✅ OK | 2 files, 8+/8- (identical) |
-| 2 | 92f1347d7ca | arm: dts: k3-am625-phycore-r5*: Remove clocks from main_timer0 | ✅ OK | 2 files, 8+/5- (identical) |
-| 3 | 2696d3baea5 | arm: dts: k3-am625-verdin-r5*: Remove clocks from main_timer0 | ✅ OK | 2 files, 8+/8- (identical) |
-| 4 | 8668c6a3bd1 | arm: dts: k3-am62a7-phycore-r5*: Remove clocks from main_timer0 | ✅ OK | 2 files, 9+/5- (identical) |
-| 5 | 1481ae5d5aa | Merge patch series "Remove clocks from R5 dtsi..." | ✅ OK (empty) | N/A (merge commit) |
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | `43fd4bcefd4` | `c4064af7495` | disk: part: implement generic function part_get_info_by_uuid() | ✅ Clean |
+| 2 | `9a2010941f5` | `cd15dab3b3c` | scsi: Implement get_blk() function | ✅ Clean |
+| 3 | `8bf3e967f6a` | `56639e8c076` | env: Add support for storing env variables in SCSI devices | ✅ Clean |
+| 4 | `142aab7f3e0` | `755f83b9e29` | configs: qcs9100: Enable env in SCSI | ✅ Clean |
+| 5 | `a619c441095` | `615a58a6aae` | Merge patch series "Enable env in SCSI" | ✅ Empty (expected) |
 
-### Build Result
-- **Build: OK** - sandbox builds successfully with no warnings/errors
+**Fix-ups Made:** None - all commits applied cleanly
 
-### Fix-ups
-- None required - all commits applied cleanly
+**Delta Verification:** All 5 commits had matching deltas between original and cherry-picked versions. The merge commit is intentionally empty since the individual commits were already applied.
 
-### Commits with Concerning Deltas
-- None - all deltas matched the original commits exactly
+**Commits with Concerning Deltas:** None
 
-### Branch Status
-The branch `cherry-53f42c56436` is now ready for pushing with 5 commits ahead of `remotes/ci/master`:
-```
-890cd90d47d Merge patch series "Remove clocks from R5 dtsi for missed boards."
-f3dc57a48bd arm: dts: k3-am62a7-phycore-r5*: Remove clocks from main_timer0
-47158606b65 arm: dts: k3-am625-verdin-r5*: Remove clocks from main_timer0
-64a486bdbb8 arm: dts: k3-am625-phycore-r5*: Remove clocks from main_timer0
-ffc57737833 arm: dts: k3-am625-beagleplay-r5*: Remove clocks from main_timer0
-```
+**Branch Status:** `cherry-43fd4bcefd4` is ready for pushing, 5 commits ahead of `ci/master`.
 
 ---
+
