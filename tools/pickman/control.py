@@ -745,6 +745,59 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
+    """Find the first merge with unprocessed commits
+
+    Walks through the merge hashes in order, looking for one that has
+    commits not yet tracked in the database.
+
+    Args:
+        dbs (Database): Database instance
+        last_commit (str): Hash of the last cherry-picked commit
+        source (str): Source branch name
+        merge_hashes (list): List of merge commit hashes to check
+
+    Returns:
+        NextCommitsInfo: Info about the next commits to process
+    """
+    prev_commit = last_commit
+    for merge_hash in merge_hashes:
+        # Get all commits from prev_commit to this merge
+        log_output = run_git([
+            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+            f'{prev_commit}..{merge_hash}'
+        ])
+
+        if not log_output:
+            prev_commit = merge_hash
+            continue
+
+        # Parse commits, filtering out those already in database
+        all_commits = parse_log_output(log_output, has_parents=True)
+        commits = [c for c in all_commits
+                   if not dbs.commit_get(c.hash)]
+
+        if commits:
+            return NextCommitsInfo(commits, True)
+
+        # All commits in this merge are processed, skip to next
+        prev_commit = merge_hash
+
+    # No merges with unprocessed commits, check remaining commits
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'{prev_commit}..{source}'
+    ])
+
+    if not log_output:
+        return NextCommitsInfo([], False)
+
+    all_commits = parse_log_output(log_output, has_parents=True)
+    commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
+
+    return NextCommitsInfo(commits, False)
+
+
 def get_next_commits(dbs, source):
     """Get the next set of commits to cherry-pick from a source
 
@@ -786,42 +839,8 @@ def get_next_commits(dbs, source):
         if len(parents) > 1:
             merge_hashes.append(parts[0])
 
-    # Try each merge in order until we find one with unprocessed commits
-    prev_commit = last_commit
-    for merge_hash in merge_hashes:
-        # Get all commits from prev_commit to this merge
-        log_output = run_git([
-            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-            f'{prev_commit}..{merge_hash}'
-        ])
-
-        if not log_output:
-            prev_commit = merge_hash
-            continue
-
-        # Parse commits, filtering out those already in database
-        all_commits = parse_log_output(log_output, has_parents=True)
-        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
-
-        if commits:
-            return NextCommitsInfo(commits, True), None
-
-        # All commits in this merge are processed, skip to next
-        prev_commit = merge_hash
-
-    # No merges with unprocessed commits, check remaining commits
-    log_output = run_git([
-        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'{prev_commit}..{source}'
-    ])
-
-    if not log_output:
-        return NextCommitsInfo([], False), None
-
-    all_commits = parse_log_output(log_output, has_parents=True)
-    commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
-
-    return NextCommitsInfo(commits, False), None
+    return find_unprocessed_commits(
+        dbs, last_commit, source, merge_hashes), None
 
 
 def get_commits_for_pick(commit_spec):
