@@ -45,6 +45,8 @@ class Helper:
                 self.os_arch = 'arm64'
             else:
                 self.os_arch = 'arm'
+        elif self.args.arch == 'riscv':
+            self.os_arch = 'riscv64'
         else:  # x86
             if self.bitness == 64:
                 self.os_arch = 'amd64'
@@ -288,8 +290,9 @@ def add_common_args(parser):
     Args:
         parser (argparse.ArgumentParser): Parser to modify
     """
-    parser.add_argument('-a', '--arch', default='arm', choices=['arm', 'x86'],
-                        help='Select architecture (arm, x86) Default: arm')
+    parser.add_argument('-a', '--arch', default='arm',
+                        choices=['arm', 'riscv', 'x86'],
+                        help='Select architecture (arm, riscv, x86) Default: arm')
     parser.add_argument('-b', '--bootcmd', type=str,
                         help='U-Boot bootcmd to pass via fw_cfg')
     parser.add_argument('-B', '--no-build', action='store_true',

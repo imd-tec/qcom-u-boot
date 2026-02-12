@@ -101,6 +101,22 @@ class BuildEfi:
                 ]
             extra += ['-drive',
                       f'if=virtio,file={self.img},format=raw,id=hd0']
+        elif self.args.arch == 'riscv':
+            qemu_arch = 'riscv64'
+            extra += ['--machine', 'virt']
+            bios = os.path.join(efi_dir, 'RISCV_VIRT_CODE.fd')
+            if not os.path.exists(bios):
+                bios = '/usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd'
+            var_store = os.path.join(efi_dir, 'RISCV_VIRT_VARS.fd')
+            if not os.path.exists(var_store):
+                sys_var = '/usr/share/qemu-efi-riscv64/RISCV_VIRT_VARS.fd'
+                shutil.copy(sys_var, var_store)
+            extra += [
+                '-drive', f'if=pflash,format=raw,file={bios},readonly=on',
+                '-drive', f'if=pflash,format=raw,file={var_store}'
+                ]
+            extra += ['-drive',
+                      f'if=virtio,file={self.img},format=raw,id=hd0']
         else:  # x86
             if self.helper.bitness == 64:
                 qemu_arch = 'x86_64'
@@ -122,7 +138,7 @@ class BuildEfi:
             extra += ['-display', 'none', '-serial', 'mon:stdio']
             serial_msg = ' (Ctrl-a x to quit)'
         else:
-            if self.args.arch == 'arm':
+            if self.args.arch in ('arm', 'riscv'):
                 extra += ['-device', 'virtio-gpu-pci']
                 extra += ['-device', 'qemu-xhci', '-device', 'usb-kbd',
                           '-device', 'usb-tablet']
@@ -239,7 +255,12 @@ class BuildEfi:
     def start(self):
         """This does all the work"""
         args = self.args
-        arch = 'arm' if self.args.arch == 'arm' else 'x86'
+        if self.args.arch == 'arm':
+            arch = 'arm'
+        elif self.args.arch == 'riscv':
+            arch = 'riscv'
+        else:
+            arch = 'x86'
         build_type = 'payload' if args.payload else 'app'
         build = f'efi-{arch}_{build_type}{self.helper.bitness}'
 
