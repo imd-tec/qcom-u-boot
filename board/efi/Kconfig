@@ -5,14 +5,13 @@ config ARCH_EFI
 
 if ARCH_EFI
 
-if X86
-
 choice
 	prompt "Mainboard model"
 	optional
 
 config TARGET_EFI_X86_APP32
 	bool "32-bit efi application"
+	depends on X86
 	select EFI_APP
 	help
 	  This target is used for running U-Boot on top of EFI. In
@@ -22,6 +21,7 @@ config TARGET_EFI_X86_APP32
 
 config TARGET_EFI_X86_APP64
 	bool "64-bit efi application"
+	depends on X86
 	select EFI_APP
 	select X86_64 if X86
 	help
@@ -32,27 +32,16 @@ config TARGET_EFI_X86_APP64
 
 config TARGET_EFI_X86_PAYLOAD
 	bool "efi payload"
+	depends on X86
 	help
 	  This target is used for running U-Boot on top of EFI. In
 	  this case EFI does the early initialisation, and U-Boot
 	  takes over once the RAM, video and CPU are fully running.
 	  U-Boot is loaded as a payload from EFI.
 
-endchoice
-
-source "board/efi/efi-x86_app/Kconfig"
-source "board/efi/efi-x86_payload/Kconfig"
-
-endif  # X86
-
-if ARM
-
-choice
-	prompt "Mainboard model"
-	optional
-
 config TARGET_EFI_ARM_APP64
 	bool "64-bit efi application"
+	depends on ARM
 	select EFI_APP
 	select SYS_CUSTOM_LDSCRIPT
 	select ARM64
@@ -62,10 +51,31 @@ config TARGET_EFI_ARM_APP64
 	  starts once the RAM, video and CPU are fully running.
 	  U-Boot is loaded as an application from EFI.
 
+config TARGET_EFI_RISCV_APP64
+	bool "64-bit efi application"
+	depends on RISCV
+	select EFI_APP
+	select SYS_CUSTOM_LDSCRIPT
+	select ARCH_RV64I
+	help
+	  This target is used for running U-Boot on top of EFI in 64-bit mode.
+	  In this case EFI does the early initialisation, and U-Boot
+	  starts once the RAM, video and CPU are fully running.
+	  U-Boot is loaded as an application from EFI.
+
 endchoice
 
-source "board/efi/efi-arm_app/Kconfig"
+if X86
+source "board/efi/efi-x86_app/Kconfig"
+source "board/efi/efi-x86_payload/Kconfig"
+endif
 
-endif  # ARM
+if ARM
+source "board/efi/efi-arm_app/Kconfig"
+endif
+
+if RISCV
+source "board/efi/efi-riscv_app/Kconfig"
+endif
 
 endif  # ARCH_EFI

@@ -1,0 +1,7 @@
+EFI-RISCV_APP64 BOARD
+M:	Simon Glass <simon.glass@canonical.com>
+M:	Simon Glass <sjg@chromium.org>
+S:	Maintained
+F:	board/efi/Kconfig
+F:	board/efi/efi-riscv_app/
+F:	configs/efi-riscv_app64_defconfig

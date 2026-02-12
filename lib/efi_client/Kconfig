@@ -1,9 +1,9 @@
 menu "U-Boot as UEFI application"
-	depends on X86 || ARM
+	depends on X86 || ARM || RISCV
 
 config EFI_CLIENT
 	bool "Support running U-Boot from EFI"
-	depends on X86 || ARM
+	depends on X86 || ARM || RISCV
 	imply DISPLAY_BOARDINFO
 	imply X86_TSC_READ_BASE
 	select EFI
@@ -19,7 +19,7 @@ choice
 
 config EFI_APP
 	bool "Support running as an EFI application"
-	depends on X86 || ARM
+	depends on X86 || ARM || RISCV
 	select CHARSET
 	select EVENT
 	imply CONSOLE_MUX
