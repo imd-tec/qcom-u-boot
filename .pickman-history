@@ -23292,3 +23292,69 @@ Build: OK ✅
 
 ---
 
+## 2026-02-12: us/next
+
+Branch: cherry-a282950debc
+
+Commits:
+- a282950debc arm: mach-k3: Detect and print reset reason
+- be93c0892d0 arm: mach-k3: am62x: Implement get_reset_reason()
+- 4c0e1d8fad5 Merge patch series "Print Reset Reason for K3 based devices"
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-pick). Let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (a282950debc: arm: mach-k3: Detect and print reset reason):
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The delta matches exactly (2 files, 11 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (be93c0892d0: arm: mach-k3: am62x: Implement get_reset_reason()):
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+The delta matches exactly (2 files, 59 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (4c0e1d8fad5: Merge patch series "Print Reset Reason for K3 based devices"). This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (expected, since we already cherry-picked the constituent commits). Let me commit it with --allow-empty as instructed:
+
+The merge commit was committed. Let me verify the delta:
+
+The cherry-picked merge commit is empty (no changes shown) as expected, since we already cherry-picked the individual commits that make up the merge. The original merge shows the combined changes of all included commits. This is the expected behavior when cherry-picking a merge commit after its constituent commits.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all 3 commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Commits cherry-picked:
+| # | Original Hash | Cherry-picked Hash | Subject |
+|---|---------------|-------------------|---------|
+| 1 | a282950debc | 4942b3a1d34 | arm: mach-k3: Detect and print reset reason |
+| 2 | be93c0892d0 | 7095cebf869 | arm: mach-k3: am62x: Implement get_reset_reason() |
+| 3 | 4c0e1d8fad5 | 77834b6b157 | Merge patch series "Print Reset Reason for K3 based devices" |
+
+### Build result: **OK** ✓
+- All builds passed (sandbox board)
+- No warnings or errors
+
+### Fix-ups: **None required**
+- All commits applied cleanly without conflicts
+
+### Delta analysis:
+- Commit 1: Exact match (2 files, 11 insertions)
+- Commit 2: Exact match (2 files, 59 insertions)
+- Commit 3: Empty as expected (merge commit whose constituent commits were already applied)
+
+### Branch status:
+The branch `cherry-a282950debc` is ready for pushing, based on `ci/master` with 3 new commits.
+
+---
+
