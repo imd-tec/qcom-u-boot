@@ -793,7 +793,8 @@ void board_init_r(gd_t *new_gd, ulong dest_addr)
 		arch_setup_gd(new_gd);
 
 #if defined(CONFIG_RISCV)
-	set_gd(new_gd);
+	if (!IS_ENABLED(CONFIG_EFI_APP))
+		set_gd(new_gd);
 #elif !defined(CONFIG_X86) && !defined(CONFIG_ARM) && !defined(CONFIG_ARM64)
 	gd = new_gd;
 #endif
