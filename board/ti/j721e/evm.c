@@ -7,6 +7,7 @@
  *
  */
 
+#include <env.h>
 #include <efi_loader.h>
 #include <generic-phy.h>
 #include <image.h>

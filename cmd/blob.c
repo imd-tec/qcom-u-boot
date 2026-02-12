@@ -5,6 +5,7 @@
  */
 
 #include <command.h>
+#include <linux/string.h>
 #include <malloc.h>
 #include <vsprintf.h>
 #include <asm/byteorder.h>

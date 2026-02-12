@@ -16,6 +16,7 @@
 #include <efi.h>
 #include <efi_loader.h>
 #include <efi_log.h>
+#include <env.h>
 #include <expo.h>
 #include <mapmem.h>
 #ifdef CONFIG_SANDBOX

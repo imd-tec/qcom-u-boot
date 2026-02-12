@@ -12,6 +12,7 @@
 #include <bootflow.h>
 #include <bootmeth.h>
 #include <command.h>
+#include <env.h>
 #include <dm.h>
 #include <efi.h>
 #include <efi_loader.h>

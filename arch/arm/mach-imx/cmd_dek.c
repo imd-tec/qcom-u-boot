@@ -13,6 +13,7 @@
 #include <memalign.h>
 #include <asm/byteorder.h>
 #include <linux/compiler.h>
+#include <linux/string.h>
 #include <fsl_sec.h>
 #include <asm/arch/clock.h>
 #include <mapmem.h>

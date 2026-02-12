@@ -12,6 +12,7 @@
 #include <bootflow.h>
 #include <bootmeth.h>
 #include <command.h>
+#include <env.h>
 #include <dm.h>
 #include <extlinux.h>
 #include <fs_legacy.h>

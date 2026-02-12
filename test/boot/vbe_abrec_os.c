@@ -5,6 +5,7 @@
  * Copyright 2025 Simon Glass <simon.glass@canonical.com>
  */
 
+#include <env.h>
 #include <bootflow.h>
 #include <bootstd.h>
 #include <dm.h>

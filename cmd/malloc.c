@@ -7,6 +7,7 @@
  */
 
 #include <command.h>
+#include <linux/string.h>
 #include <display_options.h>
 #include <malloc.h>
 
