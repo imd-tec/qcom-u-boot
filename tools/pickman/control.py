@@ -835,7 +835,7 @@ def get_commits_for_pick(commit_spec):
             on success
     """
     commits = None
-    error = None
+    err = None
 
     if '..' in commit_spec:
         # Commit range format: hash1..hash2
@@ -847,9 +847,9 @@ def get_commits_for_pick(commit_spec):
             if log_output:
                 commits = parse_log_output(log_output)
             else:
-                commits, error = [], f"No commits found in range: {commit_spec}"
+                commits, err = [], f"No commits found in range: {commit_spec}"
         except Exception:  # pylint: disable=broad-except
-            error = f"Invalid commit range: {commit_spec}"
+            err = f"Invalid commit range: {commit_spec}"
     else:
         # Single commit - check if it's a merge
         try:
@@ -872,11 +872,11 @@ def get_commits_for_pick(commit_spec):
                     commits = parse_log_output(log_output)
                 else:
                     commits = []
-                    error = f"No commits found in merge: {commit_spec}"
+                    err = f"No commits found in merge: {commit_spec}"
         except Exception:  # pylint: disable=broad-except
-            error = f"Invalid commit: {commit_spec}"
+            err = f"Invalid commit: {commit_spec}"
 
-    return commits, error
+    return commits, err
 
 
 def do_next_set(args, dbs):
@@ -890,10 +890,10 @@ def do_next_set(args, dbs):
         int: 0 on success, 1 if source not found
     """
     source = args.source
-    commits, merge_found, error = get_next_commits(dbs, source)
+    commits, merge_found, err = get_next_commits(dbs, source)
 
-    if error:
-        tout.error(error)
+    if err:
+        tout.error(err)
         return 1
 
     if not commits:
@@ -1247,10 +1247,10 @@ def prepare_apply(dbs, source, branch):
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    commits, merge_found, error = get_next_commits(dbs, source)
+    commits, merge_found, err = get_next_commits(dbs, source)
 
-    if error:
-        tout.error(error)
+    if err:
+        tout.error(err)
         return None, 1
 
     if not commits:
@@ -1479,9 +1479,9 @@ def do_pick(args, dbs):  # pylint: disable=unused-argument,too-many-locals
     commit_spec = args.commits
 
     # Get commits to cherry-pick
-    commits, error = get_commits_for_pick(commit_spec)
-    if error:
-        tout.error(error)
+    commits, err = get_commits_for_pick(commit_spec)
+    if err:
+        tout.error(err)
         return 1
 
     if not commits:

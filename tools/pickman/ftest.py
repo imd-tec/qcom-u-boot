@@ -1208,11 +1208,11 @@ class TestGetNextCommits(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'unknown')
             self.assertIsNone(commits)
             self.assertFalse(merge_found)
-            self.assertIn('not found', error)
+            self.assertIn('not found', err)
             dbs.close()
 
     def test_get_next_commits_with_merge(self):
@@ -1243,9 +1243,9 @@ class TestGetNextCommits(unittest.TestCase):
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'us/next')
-            self.assertIsNone(error)
+            self.assertIsNone(err)
             self.assertTrue(merge_found)
             self.assertEqual(len(commits), 2)
             self.assertEqual(commits[0].chash, 'aaa111a')
@@ -2870,9 +2870,9 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'us/next')
-            self.assertIsNone(error)
+            self.assertIsNone(err)
             self.assertFalse(merge_found)
             self.assertEqual(len(commits), 2)
             dbs.close()
@@ -2897,9 +2897,9 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'us/next')
-            self.assertIsNone(error)
+            self.assertIsNone(err)
             self.assertFalse(merge_found)
             # Only second commit should be returned (first is in DB)
             self.assertEqual(len(commits), 1)
@@ -2928,9 +2928,9 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'us/next')
-            self.assertIsNone(error)
+            self.assertIsNone(err)
             self.assertFalse(merge_found)
             # No commits should be returned (all in DB)
             self.assertEqual(len(commits), 0)
@@ -2987,9 +2987,9 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, error = control.get_next_commits(dbs,
+            commits, merge_found, err = control.get_next_commits(dbs,
                                                                    'us/next')
-            self.assertIsNone(error)
+            self.assertIsNone(err)
             self.assertTrue(merge_found)
             # Should return commits from second merge (first was skipped)
             self.assertEqual(len(commits), 2)
@@ -3641,9 +3641,9 @@ class TestGetCommitsForPick(unittest.TestCase):
             'bbb222|bbb222b|Author2|Second commit'
         )
 
-        commits, error = control.get_commits_for_pick('abc123..def456')
+        commits, err = control.get_commits_for_pick('abc123..def456')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 2)
         self.assertEqual(commits[0].hash, 'aaa111')
         self.assertEqual(commits[0].chash, 'aaa111a')
@@ -3658,20 +3658,20 @@ class TestGetCommitsForPick(unittest.TestCase):
         """Test empty commit range returns error."""
         mock_run_git.return_value = ''
 
-        commits, error = control.get_commits_for_pick('abc123..abc123')
+        commits, err = control.get_commits_for_pick('abc123..abc123')
 
         self.assertEqual(commits, [])
-        self.assertIn('No commits found', error)
+        self.assertIn('No commits found', err)
 
     @mock.patch('pickman.control.run_git')
     def test_commit_range_invalid(self, mock_run_git):
         """Test invalid commit range returns error."""
         mock_run_git.side_effect = Exception('bad revision')
 
-        commits, error = control.get_commits_for_pick('invalid..range')
+        commits, err = control.get_commits_for_pick('invalid..range')
 
         self.assertIsNone(commits)
-        self.assertIn('Invalid commit range', error)
+        self.assertIn('Invalid commit range', err)
 
     @mock.patch('pickman.control.run_git')
     def test_single_commit_non_merge(self, mock_run_git):
@@ -3683,9 +3683,9 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('abc123')
+        commits, err = control.get_commits_for_pick('abc123')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 1)
         self.assertEqual(commits[0].hash, 'abc123full')
         self.assertEqual(commits[0].subject, 'Single commit')
@@ -3706,9 +3706,9 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('merge123')
+        commits, err = control.get_commits_for_pick('merge123')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(len(commits), 2)
         self.assertEqual(commits[0].hash, 'ccc333')
         self.assertEqual(commits[1].hash, 'ddd444')
@@ -3723,29 +3723,29 @@ class TestGetCommitsForPick(unittest.TestCase):
 
         mock_run_git.side_effect = git_handler
 
-        commits, error = control.get_commits_for_pick('merge123')
+        commits, err = control.get_commits_for_pick('merge123')
 
         self.assertEqual(commits, [])
-        self.assertIn('No commits found in merge', error)
+        self.assertIn('No commits found in merge', err)
 
     @mock.patch('pickman.control.run_git')
     def test_invalid_single_commit(self, mock_run_git):
         """Test invalid single commit returns error."""
         mock_run_git.side_effect = Exception('unknown revision')
 
-        commits, error = control.get_commits_for_pick('badcommit')
+        commits, err = control.get_commits_for_pick('badcommit')
 
         self.assertIsNone(commits)
-        self.assertIn('Invalid commit', error)
+        self.assertIn('Invalid commit', err)
 
     @mock.patch('pickman.control.run_git')
     def test_subject_with_separator(self, mock_run_git):
         """Test commit subject containing pipe character."""
         mock_run_git.return_value = 'aaa111|aaa111a|Author|Subject|with|pipes'
 
-        commits, error = control.get_commits_for_pick('abc..def')
+        commits, err = control.get_commits_for_pick('abc..def')
 
-        self.assertIsNone(error)
+        self.assertIsNone(err)
         self.assertEqual(commits[0].subject, 'Subject|with|pipes')
 
 
