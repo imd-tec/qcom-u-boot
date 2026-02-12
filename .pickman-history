@@ -23522,3 +23522,159 @@ All 10 commits are present. Now let me run the final build test:
 
 ---
 
+## 2026-02-12: us/next
+
+Branch: cherry-52caad0d14a
+
+Commits:
+- 52caad0d14a ARM: Align image end to 8 bytes to fit DT alignment
+- a510bc2c9a3 include/ahci.h: Audit include list
+- 6a891bb78cd include/arm_ffa.h: Audit include list
+- 377c75f8c55 include/bios_emul.h: Audit include list
+- 48703b2d6b7 include/bootflow.h: Audit include list
+- 5bbc8b5c551 include/bootstd.h: Audit include list
+- 5d14fca77af include/cadence-nand.h: Audit include list
+- ef560b42ec1 include/cbfs.h: Audit include list
+- cad8e203333 include/compiler.h: Audit include list
+- 1585d92a055 include/dfu.h: Audit include list
+- ddf050a5d6e include/dw_hdmi.h: Audit include list
+- 8f3c64a5353 include/dwmmc.h: Audit include list
+- 40d5f553316 include/efi_loader.h, include/efi_tcg2.h: Audit include list
+- 43d76dc7df6 include/fat.h: Audit include list
+- d81b57a3cc8 include/ide.h: Cleanup usage
+- 2cf46de9b6b include/mmc.h: Audit include list
+- 2266595bf89 include/mtd.h: Cleanup usage
+- 824f8f52a1e global: Cleanup usage of "ETH_ALEN"
+- d786c6b69f5 Merge patch series "Audit include list for include/[a-m]*.h"
+
+### Conversation log
+The repository state is clean (only untracked files which won't interfere). Now let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one at a time. Starting with the first commit:
+
+First commit successful. Let me verify the delta and run the build test:
+
+Delta matches perfectly. Now let me run the build test:
+
+Build passed. Continuing with the second commit:
+
+Delta matches. Build test:
+
+Build passed. Continuing with commit 3:
+
+Build passed. Continuing with commit 4:
+
+Build passed. Continuing with commit 5:
+
+There's a conflict. Let me check if this commit series might already be applied in ci/master with different hashes:
+
+Not found directly. Let me examine the conflict and see if we can resolve it:
+
+I can see the conflict. The HEAD has `linux/list.h` and `linux/build_bug.h`, while the commit wants to replace includes with `linux/types.h`. Let me check what the original commit does:
+
+I see. The original commit removes `linux/list.h` and adds `linux/types.h`. But ci/master has both `linux/list.h` and `linux/build_bug.h`. The intent is to replace `linux/list.h` with `linux/types.h`, while keeping `linux/build_bug.h`. Let me resolve this conflict:
+
+The conflict resolution should: keep `linux/build_bug.h` (from HEAD) and replace `linux/list.h` with `linux/types.h` (from the incoming commit). This properly applies the intent of the commit:
+
+Let me use sed via Bash to resolve the conflict:
+
+There's a duplicate `#include <linux/types.h>` and an extra blank line. Let me fix it:
+
+Still has duplicate. Let me use a more explicit approach:
+
+Now let me add the file and continue the cherry-pick with amended commit message:
+
+Now let me amend the commit message to note the fix-up:
+
+Build passed. Continuing with commit 6:
+
+Build passed. Continuing with commit 7:
+
+Build passed. Continuing with commit 8:
+
+Build passed. Continuing with commit 9:
+
+Build passed. Continuing with commit 10:
+
+Build passed. Continuing with commit 11:
+
+Build passed. Continuing with commit 12:
+
+Build passed. Continuing with commit 13:
+
+The delta is different - original shows 2 files changed but cherry-picked only shows 1. Let me check:
+
+The `include/efi_tcg2.h` file already has `#include <part_efi.h>` at line 20. This is why the cherry-pick only modified one file - the change to efi_tcg2.h was already applied. This is an acceptable difference. The critical change (removing includes from efi_loader.h) was applied. Let me proceed:
+
+Build passed. Continuing with commit 14:
+
+Build passed. Continuing with commit 15:
+
+Multiple conflicts. Let me check each one:
+
+I see - the original removes `#include <blk.h>` and HEAD has the new macro format. Let me keep HEAD's macro format and remove `#include <blk.h>`:
+
+Now let me check the part.h conflict:
+
+The original removes `#include <ide.h>`. HEAD has both `fs_common.h` and `ide.h`. I should remove `ide.h` but keep `fs_common.h`:
+
+Now let me check the efi_device_path.c conflict:
+
+I see - the original adds `#include <ide.h>`, but HEAD has `#include <efi_device_path.h>`. Let me check if the original commit shows why ide.h is needed here:
+
+Interesting. The original commit adds ide.h but neither IDE_BUS nor ide_set_reset is used in this file. This was probably due to a dependency chain that changed. Since the file doesn't use anything from ide.h, and HEAD has efi_device_path.h, I should keep efi_device_path.h and not add ide.h:
+
+Now let me add all files and continue the cherry-pick:
+
+The delta is slightly different - original has 12 files while we have 11 (since we kept efi_device_path.h instead of adding ide.h to efi_device_path.c). This is acceptable - the key changes are all applied. Let me build test:
+
+Build failed - lib/efi/device_path.c needs ide.h. Let me check and fix:
+
+This is lib/efi/device_path.c (different from lib/efi_loader/efi_device_path.c). This file uses IDE_BUS but doesn't include ide.h. Since the original commit was removing blk.h from ide.h (which was providing IDE_BUS indirectly), this file now needs ide.h directly. I need to add ide.h to this file:
+
+Build passed. Continuing with commit 16:
+
+Build passed. Continuing with commit 17:
+
+Build passed. Continuing with commit 18:
+
+Build passed. Now the last commit - which is a merge commit (identified by "Merge" in subject):
+
+Conflicts in the merge commit. Let me check each:
+
+This is a trivial conflict - we already have `linux/build_bug.h` which should be kept. The merge commit doesn't have it, but our previous cherry-pick kept it:
+
+Keep HEAD's improved macro:
+
+Keep fs_common.h from HEAD:
+
+Now add all files and continue:
+
+All 19 commits are present. Let me run the final build:
+
+All cherry-picks completed successfully. Here's the final status:
+
+## Summary
+
+**Build result:** ✅ OK
+
+**Commits cherry-picked:** 19/19 (all present)
+
+**Fix-ups made:**
+1. **48703b2d6b7** (include/bootflow.h: Audit include list) - Had conflict. Kept `linux/build_bug.h` that was added in ci/master while applying the intended change (replacing `linux/list.h` with `linux/types.h`).
+
+2. **d81b57a3cc8** (include/ide.h: Cleanup usage) - Had multiple conflicts:
+   - Kept improved IDE_BUS macro from ci/master (uses IF_ENABLED_INT)
+   - Kept `efi_device_path.h` and `fs_common.h` from ci/master
+   - Added `ide.h` to `lib/efi/device_path.c` which uses IDE_BUS (build fix)
+
+3. **d786c6b69f5** (Merge patch series) - Had conflicts with the same files as above, resolved consistently by keeping ci/master changes.
+
+**Commits with delta differences:**
+- **40d5f553316** (include/efi_loader.h, include/efi_tcg2.h): Original touched 2 files but cherry-pick only touched 1 - the `part_efi.h` include was already present in `efi_tcg2.h` in ci/master.
+- **d81b57a3cc8**: Original touched 12 files, cherry-pick touched 12 files but different modifications due to ci/master differences.
+
+The branch `cherry-52caad0d14a` is ready for pushing.
+
+---
+
