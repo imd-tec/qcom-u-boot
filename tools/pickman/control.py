@@ -79,6 +79,24 @@ CheckResult = namedtuple('CheckResult', [
 CommitInfo = namedtuple('CommitInfo',
                         ['hash', 'chash', 'subject', 'author'])
 
+# Named tuple for simplified commit data passed to agent
+# hash: Full SHA-1 commit hash (40 characters)
+# chash: Abbreviated commit hash (typically 7-8 characters)
+# subject: First line of commit message (commit subject)
+# applied_as: Short hash if potentially already applied, None otherwise
+AgentCommit = namedtuple('AgentCommit',
+                         ['hash', 'chash', 'subject', 'applied_as'])
+
+# Named tuple for prepare_apply() result
+#
+# commits: list of AgentCommit to cherry-pick
+# branch_name: name of the branch to create for the MR
+# original_branch: branch name before any conflict suffix
+# merge_found: True if these commits came from a merge on the source branch
+ApplyInfo = namedtuple('ApplyInfo',
+                       ['commits', 'branch_name', 'original_branch',
+                        'merge_found'])
+
 
 def parse_log_output(log_output, has_parents=False):
     """Parse git log output to extract CommitInfo tuples
@@ -106,19 +124,6 @@ def parse_log_output(log_output, has_parents=False):
             subject = '|'.join(parts[3:])
         commits.append(CommitInfo(commit_hash, chash, subject, author))
     return commits
-
-# Named tuple for simplified commit data passed to agent
-# hash: Full SHA-1 commit hash (40 characters)
-# chash: Abbreviated commit hash (typically 7-8 characters)
-# subject: First line of commit message (commit subject)
-# applied_as: Short hash if potentially already applied, None otherwise
-AgentCommit = namedtuple('AgentCommit',
-                         ['hash', 'chash', 'subject', 'applied_as'])
-
-# Named tuple for prepare_apply result
-ApplyInfo = namedtuple('ApplyInfo',
-                       ['commits', 'branch_name', 'original_branch',
-                        'merge_found'])
 
 
 def run_git(args):
