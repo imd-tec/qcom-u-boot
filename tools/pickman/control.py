@@ -87,6 +87,13 @@ CommitInfo = namedtuple('CommitInfo',
 AgentCommit = namedtuple('AgentCommit',
                          ['hash', 'chash', 'subject', 'applied_as'])
 
+# Named tuple for get_next_commits() result
+#
+# commits: list of CommitInfo to cherry-pick
+# merge_found: True if these commits came from a merge on the source branch
+NextCommitsInfo = namedtuple('NextCommitsInfo',
+                             ['commits', 'merge_found'])
+
 # Named tuple for prepare_apply() result
 #
 # commits: list of AgentCommit to cherry-pick
@@ -751,16 +758,14 @@ def get_next_commits(dbs, source):
         source (str): Source branch name
 
     Returns:
-        tuple: (commits, merge_found, error_msg) where:
-            commits: list of CommitInfo tuples
-            merge_found: bool, True if stopped at a merge commit
-            error_msg: str or None, error message if failed
+        tuple: (NextCommitsInfo, error_msg) where error_msg is None
+            on success
     """
     # Get the last cherry-picked commit from database
     last_commit = dbs.source_get(source)
 
     if not last_commit:
-        return None, False, f"Source '{source}' not found in database"
+        return None, f"Source '{source}' not found in database"
 
     # Get all first-parent commits to find merges
     fp_output = run_git([
@@ -769,7 +774,7 @@ def get_next_commits(dbs, source):
     ])
 
     if not fp_output:
-        return [], False, None
+        return NextCommitsInfo([], False), None
 
     # Build list of merge hashes on the first-parent chain
     merge_hashes = []
@@ -799,7 +804,7 @@ def get_next_commits(dbs, source):
         commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
         if commits:
-            return commits, True, None
+            return NextCommitsInfo(commits, True), None
 
         # All commits in this merge are processed, skip to next
         prev_commit = merge_hash
@@ -811,12 +816,12 @@ def get_next_commits(dbs, source):
     ])
 
     if not log_output:
-        return [], False, None
+        return NextCommitsInfo([], False), None
 
     all_commits = parse_log_output(log_output, has_parents=True)
     commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
 
-    return commits, False, None
+    return NextCommitsInfo(commits, False), None
 
 
 def get_commits_for_pick(commit_spec):
@@ -890,23 +895,24 @@ def do_next_set(args, dbs):
         int: 0 on success, 1 if source not found
     """
     source = args.source
-    commits, merge_found, err = get_next_commits(dbs, source)
+    info, err = get_next_commits(dbs, source)
 
     if err:
         tout.error(err)
         return 1
 
-    if not commits:
+    if not info.commits:
         tout.info('No new commits to cherry-pick')
         return 0
 
-    if merge_found:
-        tout.info(f'Next set from {source} ({len(commits)} commits):')
+    if info.merge_found:
+        tout.info(f'Next set from {source} '
+                  f'({len(info.commits)} commits):')
     else:
-        tout.info(f'Remaining commits from {source} ({len(commits)} commits, '
-                  'no merge found):')
+        tout.info(f'Remaining commits from {source} '
+                  f'({len(info.commits)} commits, no merge found):')
 
-    for commit in commits:
+    for commit in info.commits:
         tout.info(f'  {commit.chash} {commit.subject}')
 
     return 0
@@ -1247,15 +1253,17 @@ def prepare_apply(dbs, source, branch):
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    commits, merge_found, err = get_next_commits(dbs, source)
+    info, err = get_next_commits(dbs, source)
 
     if err:
         tout.error(err)
         return None, 1
 
-    if not commits:
+    if not info.commits:
         tout.info('No new commits to cherry-pick')
         return None, 0
+
+    commits = info.commits
 
     # Save current branch to return to later
     original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -1274,7 +1282,7 @@ def prepare_apply(dbs, source, branch):
     except Exception:  # pylint: disable=broad-except
         pass  # Branch doesn't exist, which is fine
 
-    if merge_found:
+    if info.merge_found:
         tout.info(f'Applying next set from {source} ({len(commits)} commits):')
     else:
         tout.info(f'Applying remaining commits from {source} '
@@ -1285,7 +1293,8 @@ def prepare_apply(dbs, source, branch):
         tout.info(f'  {commit.chash} {commit.subject}')
     tout.info('')
 
-    return ApplyInfo(commits, branch_name, original_branch, merge_found), 0
+    return ApplyInfo(commits, branch_name, original_branch,
+                     info.merge_found), 0
 
 
 # pylint: disable=too-many-arguments

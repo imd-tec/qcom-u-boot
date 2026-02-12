@@ -1208,10 +1208,8 @@ class TestGetNextCommits(unittest.TestCase):
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'unknown')
-            self.assertIsNone(commits)
-            self.assertFalse(merge_found)
+            info, err = control.get_next_commits(dbs, 'unknown')
+            self.assertIsNone(info)
             self.assertIn('not found', err)
             dbs.close()
 
@@ -1243,13 +1241,12 @@ class TestGetNextCommits(unittest.TestCase):
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'us/next')
+            info, err = control.get_next_commits(dbs, 'us/next')
             self.assertIsNone(err)
-            self.assertTrue(merge_found)
-            self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].chash, 'aaa111a')
-            self.assertEqual(commits[1].chash, 'bbb222b')
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 2)
+            self.assertEqual(info.commits[0].chash, 'aaa111a')
+            self.assertEqual(info.commits[1].chash, 'bbb222b')
             dbs.close()
 
 
@@ -2870,11 +2867,10 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'us/next')
+            info, err = control.get_next_commits(dbs, 'us/next')
             self.assertIsNone(err)
-            self.assertFalse(merge_found)
-            self.assertEqual(len(commits), 2)
+            self.assertFalse(info.merge_found)
+            self.assertEqual(len(info.commits), 2)
             dbs.close()
 
     def test_get_next_commits_skips_db_commits(self):
@@ -2897,13 +2893,12 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'us/next')
+            info, err = control.get_next_commits(dbs, 'us/next')
             self.assertIsNone(err)
-            self.assertFalse(merge_found)
+            self.assertFalse(info.merge_found)
             # Only second commit should be returned (first is in DB)
-            self.assertEqual(len(commits), 1)
-            self.assertEqual(commits[0].chash, 'bbb222b')
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.commits[0].chash, 'bbb222b')
             dbs.close()
 
     def test_get_next_commits_all_in_db(self):
@@ -2928,12 +2923,11 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
             )
             command.TEST_RESULT = command.CommandResult(stdout=log_output)
 
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'us/next')
+            info, err = control.get_next_commits(dbs, 'us/next')
             self.assertIsNone(err)
-            self.assertFalse(merge_found)
+            self.assertFalse(info.merge_found)
             # No commits should be returned (all in DB)
-            self.assertEqual(len(commits), 0)
+            self.assertEqual(len(info.commits), 0)
             dbs.close()
 
     def test_get_next_commits_skips_processed_merge(self):
@@ -2987,14 +2981,13 @@ class TestGetNextCommitsEmptyLine(unittest.TestCase):
 
             command.TEST_RESULT = mock_git
 
-            commits, merge_found, err = control.get_next_commits(dbs,
-                                                                   'us/next')
+            info, err = control.get_next_commits(dbs, 'us/next')
             self.assertIsNone(err)
-            self.assertTrue(merge_found)
+            self.assertTrue(info.merge_found)
             # Should return commits from second merge (first was skipped)
-            self.assertEqual(len(commits), 2)
-            self.assertEqual(commits[0].chash, 'ccc333c')
-            self.assertEqual(commits[1].chash, 'merge2m')
+            self.assertEqual(len(info.commits), 2)
+            self.assertEqual(info.commits[0].chash, 'ccc333c')
+            self.assertEqual(info.commits[1].chash, 'merge2m')
             dbs.close()
 
 
