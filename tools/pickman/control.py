@@ -542,6 +542,34 @@ def check_already_applied(commits, target_branch='ci/master'):
     return new_commits, applied
 
 
+def build_applied_map(commits):
+    """Build a mapping of commit hashes to their applied counterparts
+
+    Checks which commits have already been applied to the target branch
+    and returns a dict mapping original hashes to the applied hashes.
+
+    Args:
+        commits (list): List of CommitInfo tuples to check
+
+    Returns:
+        dict: Mapping of original commit hash to applied commit hash
+    """
+    _, applied = check_already_applied(commits)
+
+    applied_map = {}
+    if applied:
+        for c in applied:
+            escaped_subject = c.subject.replace('"', '\\"')
+            result = run_git(['log', '--oneline', 'ci/master',
+                             f'--grep={escaped_subject}', '-1'])
+            if result.strip():
+                applied_hash = result.split()[0]
+                applied_map[c.hash] = applied_hash
+        tout.info(f'Found {len(applied)} potentially already applied'
+                  ' commit(s)')
+    return applied_map
+
+
 def show_commit_diff(res, no_colour=False):
     """Show the difference between original and cherry-picked commit patches
 
@@ -1336,20 +1364,7 @@ def execute_apply(dbs, source, commits, branch_name, args):  # pylint: disable=t
             1 on failure
     """
     # Check for already applied commits before proceeding
-    _, applied = check_already_applied(commits)
-
-    # Build mapping of applied commits by hash
-    applied_map = {}
-    if applied:
-        for c in applied:
-            # Get the hash of the applied commit in target branch
-            escaped_subject = c.subject.replace('"', '\\"')
-            result = run_git(['log', '--oneline', 'ci/master',
-                             f'--grep={escaped_subject}', '-1'])
-            if result.strip():
-                applied_hash = result.split()[0]
-                applied_map[c.hash] = applied_hash
-        tout.info(f'Found {len(applied)} potentially already applied commit(s)')
+    applied_map = build_applied_map(commits)
 
     # Add all commits to database with 'pending' status (agent updates later)
     source_id = dbs.source_get_id(source)
