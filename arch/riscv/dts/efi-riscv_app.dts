@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2026 Canonical Ltd
+ * Written by Simon Glass <simon.glass@canonical.com>
+ */
+
+/dts-v1/;
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	model = "EFI RISC-V Application";
+	compatible = "efi,riscv-app";
+
+	chosen {
+		stdout-path = &serial;
+	};
+
+	serial: serial {
+		compatible = "efi,uart";
+	};
+
+	reset {
+		compatible = "efi,reset";
+		bootph-all;
+	};
+
+	efi-fb {
+		compatible = "efi-fb";
+		bootph-some-ram;
+	};
+
+	keyboard {
+		compatible = "efi-keyboard";
+	};
+
+	mouse {
+		compatible = "efi,mouse";
+	};
+
+	cpus {
+		timebase-frequency = <10000000>;
+	};
+
+	timer {
+		compatible = "riscv,timer";
+	};
+
+};

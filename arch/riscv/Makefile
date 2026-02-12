@@ -55,7 +55,9 @@ endif
 PLATFORM_CPPFLAGS	+= $(ARCH_FLAGS)
 CFLAGS_EFI		+= $(ARCH_FLAGS)
 
+ifndef CONFIG_EFI_APP
 head-y := arch/riscv/cpu/start.o
+endif
 
 libs-y += arch/riscv/cpu/
 libs-y += arch/riscv/cpu/$(CPU)/

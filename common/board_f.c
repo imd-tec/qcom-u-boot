@@ -665,7 +665,8 @@ static int init_post(void)
 static int reloc_and_fix_fdt(void)
 {
 	if (!IS_ENABLED(CONFIG_OF_EMBED)) {
-		if (gd->boardf->new_fdt) {
+		if (!(gd->flags & GD_FLG_SKIP_RELOC) &&
+		    gd->boardf->new_fdt) {
 			memcpy(gd->boardf->new_fdt, gd->fdt_blob,
 			       fdt_totalsize(gd->fdt_blob));
 			gd->fdt_blob = gd->boardf->new_fdt;

@@ -1,0 +1,26 @@
+# Copyright 2026 Canonical Ltd
+# Written by Simon Glass <simon.glass@canonical.com>
+
+if EFI_APP
+
+config SYS_BOARD
+	default "efi-riscv_app"
+
+config SYS_VENDOR
+	default "efi"
+
+config SYS_SOC
+	default "efi"
+
+config SYS_CPU
+	default "generic"
+
+config BOARD_SPECIFIC_OPTIONS # dummy
+	def_bool y
+	select GENERIC_RISCV
+	imply VIDEO_EFI
+
+config SYS_LDSCRIPT
+	default "arch/riscv/lib/elf_riscv64_efi_app.lds"
+
+endif

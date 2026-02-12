@@ -52,7 +52,7 @@
 
 efi_status_t EFIAPI _relocate(long ldbase, Elf_Dyn *dyn)
 {
-	long relsz = 0, relent = 0;
+	long relsz = 0, relent = 0, pltrelsz = 0;
 	Elf_Rela *rel = 0;
 	unsigned long *addr;
 	int i;
@@ -68,10 +68,20 @@ efi_status_t EFIAPI _relocate(long ldbase, Elf_Dyn *dyn)
 		case DT_RELAENT:
 			relent = dyn[i].d_un.d_val;
 			break;
+		case DT_PLTRELSZ:
+			pltrelsz = dyn[i].d_un.d_val;
+			break;
 		default:
 			break;
 		}
 	}
+
+	/*
+	 * GNU ld includes DT_PLTRELSZ in DT_RELASZ.  Subtract it so
+	 * we only process R_RISCV_RELATIVE entries from .rela.dyn and
+	 * do not run into R_RISCV_JUMP_SLOT entries from .rela.plt.
+	 */
+	relsz -= pltrelsz;
 
 	if (!rel && relent == 0)
 		return EFI_SUCCESS;

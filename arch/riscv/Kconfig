@@ -55,6 +55,14 @@ config TARGET_XILINX_MBV
 config TARGET_ASPEED_AST2700_IBEX
 	bool "Support Ibex RISC-V cores on Aspeed AST2700 SoC"
 
+config ARCH_EFI_RISCV
+	bool "efi"
+	select ARCH_EFI
+	help
+	  Indicates that this board uses EFI as its underlying base, i.e.
+	  that it does not have bare-metal code and can only run as an EFI
+	  application.
+
 endchoice
 
 config SYS_ICACHE_OFF
@@ -500,7 +508,7 @@ config STACK_SIZE_SHIFT
 	default 14
 
 config OF_BOARD_FIXUP
-	default y if OF_SEPARATE && RISCV_SMODE
+	default y if OF_SEPARATE && RISCV_SMODE && !EFI_APP
 
 menu "Use assembly optimized implementation of memory routines"
 

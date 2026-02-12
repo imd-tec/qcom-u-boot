@@ -172,6 +172,7 @@ static void scan_tables(struct efi_system_table *sys_table)
 	efi_guid_t acpi = EFI_ACPI_TABLE_GUID;
 	efi_guid_t smbios = SMBIOS_TABLE_GUID;
 	efi_guid_t smbios3 = SMBIOS3_TABLE_GUID;
+	efi_guid_t fdt = EFI_FDT_GUID;
 	uint i;
 
 	for (i = 0; i < sys_table->nr_tables; i++) {
@@ -182,6 +183,8 @@ static void scan_tables(struct efi_system_table *sys_table)
 		else if (!memcmp(&tab->guid, &smbios, sizeof(efi_guid_t)) ||
 			 !memcmp(&tab->guid, &smbios3, sizeof(efi_guid_t)))
 			gd_set_smbios_start(map_to_sysmem(tab->table));
+		else if (!memcmp(&tab->guid, &fdt, sizeof(efi_guid_t)))
+			gd_set_firmware_fdt_addr((ulong)tab->table);
 	}
 }
 

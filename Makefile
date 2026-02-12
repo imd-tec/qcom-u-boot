@@ -1864,7 +1864,9 @@ ifeq ($(CONFIG_KALLSYMS),y)
 endif
 	$(call cmd,llcheck,u-boot)
 ifeq ($(CONFIG_RISCV),y)
+ifneq ($(CONFIG_EFI_APP),y)
 	@tools/prelink-riscv $@
+endif
 endif
 
 # Common step: create archive and prepare modified object files
