@@ -4,6 +4,7 @@
 #define __NET_COMMON_H__
 
 #include <asm/cache.h>
+#include <command.h>
 #include <hexdump.h>
 #include <linux/if_ether.h>
 #include <linux/sizes.h>
@@ -455,16 +456,6 @@ void net_process_received_packet(uchar *in_packet, int len);
  * Return: - 0 on success, other value on failure
  */
 int update_tftp(ulong addr, char *interface, char *devstring);
-
-/**
- * env_get_ip() - Convert an environment value to an ip address
- *
- * @var: Environment variable to convert. The value of this variable must be
- *	in the format a.b.c.d, where each value is a decimal number from
- *	0 to 255
- * Return: IP address, or 0 if invalid
- */
-struct in_addr env_get_ip(char *var);
 
 int net_init(void);
 
