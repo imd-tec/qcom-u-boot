@@ -33,3 +33,20 @@ endif
 
 EFI_CRT0		:= crt0_riscv_efi.o
 EFI_RELOC		:= reloc_riscv_efi.o
+
+OBJCOPYFLAGS_EFI += -j .text -j .rodata -j .data -j .sdata -j .dynamic \
+	-j .dynsym -j .rela -j .reloc -j .got -j .got.plt \
+	-j __u_boot_list -j .embedded_dtb -O binary
+
+ifeq ($(CONFIG_EFI_APP),y)
+
+LDFLAGS_FINAL += -znocombreloc -shared -Bsymbolic --gc-sections
+LDSCRIPT := $(srctree)/arch/riscv/lib/elf_riscv64_efi_app.lds
+
+# The EFI app linker script places all data sections contiguously
+# between _data and _edata so the PE .data section covers them.
+OBJCOPYFLAGS_EFI := -j .text -j .rela.dyn \
+	-j .dynsym -j .dynstr -j .embedded_dtb -j .data \
+	-O binary
+
+endif
