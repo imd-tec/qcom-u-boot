@@ -666,6 +666,9 @@ UEFI variables. Booting according to these variables is possible via::
 
     bootefi bootmgr [fdt address]
 
+See :doc:`/develop/bootstd/efi_mgr` for how standard boot integrates the
+EFI boot manager.
+
 As of U-Boot v2020.10 UEFI variables cannot be set at runtime. The U-Boot
 command 'efidebug' can be used to set the variables.
 

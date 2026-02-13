@@ -441,7 +441,7 @@ Bootmeth drivers are provided for booting from various media:
    - :doc:`BLS <bls>` Boot Loader Specification Type #1 entries
    - :doc:`ChromiumOS <cros>` ChromiumOS boot from a disk
    - :doc:`EFI <efi>` boot using bootefi from disk or network
-   - EFI boot using boot manager
+   - :doc:`EFI boot manager <efi_mgr>` using UEFI BootOrder variables
    - :doc:`extlinux / syslinux <extlinux>` boot from a storage device
    - :doc:`extlinux / syslinux <extlinux>` boot from a network (PXE)
    - :doc:`sandbox <sandbox>` used only for testing

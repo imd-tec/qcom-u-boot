@@ -11,6 +11,7 @@ Standard Boot
    pxelinux
    bls
    efi
+   efi_mgr
    pxe_api
    qfw
    android
