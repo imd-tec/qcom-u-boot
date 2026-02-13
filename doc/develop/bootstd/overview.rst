@@ -442,6 +442,7 @@ Bootmeth drivers are provided for booting from various media:
    - :doc:`ChromiumOS <cros>` ChromiumOS boot from a disk
    - :doc:`EFI <efi>` boot using bootefi from disk or network
    - :doc:`EFI boot manager <efi_mgr>` using UEFI BootOrder variables
+   - :doc:`FEL <fel>` boot over USB on Allwinner (sunxi) boards
    - :doc:`extlinux / syslinux <extlinux>` boot from a storage device
    - :doc:`extlinux / syslinux <extlinux>` boot from a network (PXE)
    - :doc:`sandbox <sandbox>` used only for testing

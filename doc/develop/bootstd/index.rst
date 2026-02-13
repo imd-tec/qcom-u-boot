@@ -12,6 +12,7 @@ Standard Boot
    bls
    efi
    efi_mgr
+   fel
    pxe_api
    qfw
    android
