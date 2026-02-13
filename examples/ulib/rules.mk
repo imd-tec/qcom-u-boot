@@ -5,9 +5,12 @@
 # Copyright 2025 Canonical Ltd.
 # Written by Simon Glass <simon.glass@canonical.com>
 
-# Generate normal and statically linked binary names from progs variable
-all_bins := $(foreach prog,$(progs),$(OUTDIR)/$(prog) \
-	$(OUTDIR)/$(prog)_static)
+# Generate binary names from progs variable
+# Shared-linked versions are only built when libu-boot.so is available
+static_bins := $(foreach prog,$(progs),$(OUTDIR)/$(prog)_static)
+shared_bins := $(if $(wildcard $(UBOOT_BUILD)/libu-boot.so),\
+	$(foreach prog,$(progs),$(OUTDIR)/$(prog)))
+all_bins := $(shared_bins) $(static_bins)
 
 # Default target builds both programs
 all: $(all_bins)
