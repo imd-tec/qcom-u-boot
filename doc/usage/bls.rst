@@ -46,8 +46,9 @@ Supported Fields
 
 **Required (at least one):**
 
-* ``linux`` - Path to Linux kernel image (Type #1); supports FITs with
+* ``linux`` - Path to Linux kernel image; supports FITs with
   ``path#config`` syntax
+* ``fit`` - Path to FIT (U-Boot extension, not in the BLS spec)
 
 **Optional:**
 
@@ -55,30 +56,59 @@ Supported Fields
 * ``version`` - OS version identifier (parsed but not used for sorting)
 * ``options`` - Kernel command line parameters (may appear multiple times; all
   occurrences are concatenated)
-* ``initrd`` - Initial ramdisk path (may appear multiple times, but only first
-  is used due to PXE limitation)
+* ``initrd`` - Initial ramdisk path (may appear multiple times; all initrds
+  are loaded)
 * ``devicetree`` - Device tree blob path
 * ``devicetree-overlay`` - Device tree overlays (parsed but not yet supported)
 * ``architecture`` - Target architecture (parsed but not used for filtering)
 * ``machine-id`` - OS identifier (parsed but not used for filtering)
 * ``sort-key`` - Primary sorting key (parsed but not used for sorting)
 
-**Not supported (out of scope for Type #1):**
+**Not supported:**
 
-* ``efi`` - EFI program path (Type #2/UKI)
+These fields relate to `Unified Kernel Images`_ (UKIs), which combine a UEFI
+boot stub, kernel, initrd and other resources into a single UEFI PE file. They
+are not currently supported by U-Boot:
+
+* ``efi`` - EFI program path
 * ``uki`` - Unified Kernel Image path
 * ``uki-url`` - Remote UKI reference
 * ``profile`` - Multi-profile UKI selector
 
+.. _Unified Kernel Images: https://uapi-group.org/specifications/specs/unified_kernel_image/
+
+U-Boot Extensions
+-----------------
+
+The following fields are U-Boot extensions not defined in the BLS spec:
+
+* ``fit`` - Specifies a FIT path, as an alternative to ``linux``. When
+  ``fit`` is present it takes priority over ``linux``. This allows the entry to
+  explicitly indicate that the image is a FIT, rather than relying on the
+  ``path#config`` syntax in the ``linux`` field.
+
+Example::
+
+    title Ubuntu 24.04
+    version 6.8.0
+    fit /boot/ubuntu-6.8.0.fit
+    options root=/dev/sda3 ro quiet
+    initrd /boot/initrd-6.8.0.img
+
 FIT Support
 -----------
 
-U-Boot's BLS implementation works seamlessly with FITs using the standard
-``path#config`` syntax in the ``linux`` field::
+FITs can be specified in two ways:
+
+1. Using the ``linux`` field with ``path#config`` syntax::
 
     linux /boot/image.fit#config-1
 
-The PXE boot infrastructure handles FIT parsing automatically.
+2. Using the ``fit`` field (U-Boot extension)::
+
+    fit /boot/image.fit
+
+The PXE boot infrastructure handles FIT parsing automatically in both cases.
 
 Multiple Values
 ---------------
@@ -86,8 +116,7 @@ Multiple Values
 Fields that support multiple occurrences:
 
 * ``options`` - All values are concatenated with spaces
-* ``initrd`` - Multiple paths can be specified, but only the first is used
-  (limitation of PXE boot infrastructure)
+* ``initrd`` - All paths are loaded consecutively in memory
 
 Usage
 -----
@@ -115,11 +144,12 @@ Current Limitations
 -------------------
 
 * Only single entry file, not multiple entries directory scanning
-* Only first initrd used (PXE infrastructure limitation)
 * No devicetree-overlay support
 * No architecture/machine-id filtering
 * No version-based or sort-key sorting
-* No UKI/Type #2 support
+* No `Unified Kernel Image`_ (UKI) support
+
+.. _Unified Kernel Image: https://uapi-group.org/specifications/specs/unified_kernel_image/
 
 See Also
 --------
