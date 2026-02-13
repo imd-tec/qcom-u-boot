@@ -7,7 +7,6 @@
 #include <config.h>
 #include <event.h>
 #include <fdt_support.h>
-#include <ide.h>
 #include <init.h>
 #include <net.h>
 #include <netdev.h>

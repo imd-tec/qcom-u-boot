@@ -8,7 +8,6 @@
 
 #include <blk.h>
 #include <fs_common.h>
-#include <ide.h>
 #include <u-boot/uuid.h>
 #include <linker_lists.h>
 #include <linux/errno.h>

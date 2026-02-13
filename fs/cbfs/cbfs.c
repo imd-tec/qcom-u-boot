@@ -7,6 +7,7 @@
 #include <log.h>
 #include <malloc.h>
 #include <linux/errno.h>
+#include <linux/string.h>
 #include <asm/byteorder.h>
 
 /* Offset of master header from the start of a coreboot ROM */

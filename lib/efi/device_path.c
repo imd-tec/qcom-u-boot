@@ -11,6 +11,7 @@
 #include <bootflow.h>
 #include <dm.h>
 #include <dm/root.h>
+#include <ide.h>
 #include <efi_device_path.h>
 #include <log.h>
 #include <mapmem.h>

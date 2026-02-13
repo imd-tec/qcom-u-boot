@@ -7,8 +7,6 @@
 #ifndef	_IDE_H
 #define _IDE_H
 
-#include <blk.h>
-
 #define IDE_BUS(dev)	((dev) / \
 	(IF_ENABLED_INT(CONFIG_IDE, CONFIG_SYS_IDE_MAXDEVICE) / \
 	 IF_ENABLED_INT(CONFIG_IDE, CONFIG_SYS_IDE_MAXBUS)))
