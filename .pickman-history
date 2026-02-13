@@ -23737,112 +23737,184 @@ The branch has been successfully rebased and pushed. Let me provide a summary:
 
 ## 2026-02-13: us/next
 
-Branch: cherry-ae7e0330ce2
+Branch: cherry-b4b66e2f298
 
 Commits:
-- ae7e0330ce2 clk: scmi: add compatibility with clock protocol 2.0
-- fc6c5e703f6 clk: stm32mp25: Add clock driver support
-- 49bc67b3fa0 clk: stm32mp25: implement clock check security function
-- 0846bad0d08 clk: add CONFIG_CLK_AUTO_ID
-- 94e284a41d0 clk: sandbox: update driver for CONFIG_CLK_AUTO_ID support
-- 56789994c46 sandbox: test: update for CONFIG_CLK_AUTO_ID support
-- 64b07829f7c clk: fixed_rate: configure clock ID with CONFIG_CLK_AUTO_ID
-- aa7bdc1af50 clk: scmi: manage properly the clk identifier with CCF
-- 51954665a7d phy: stm32-usbphyc: manage properly the clk identifier with CCF
-- 901e0d95df3 clk: stm32: fix clock counter
-- 0994a627c27 reset: stm32mp25: add stm32mp25 reset driver
-- fddf9886d27 ARM: dts: stm32: switch from fixed to scmi clocks for stm32mp257f-ev1
-- 1cdb64ad3aa configs: stm32mp13: increase SYS_MALLOC_F_LEN to 0x210000
-- 38aa59bb36f configs: stm32mp25: increase SYS_MALLOC_F_LEN to 0x60000
-- 7df29a172a6 ARM: stm32: Drop unnecessary space
-- 380d6f8c195 ARM: stm32: Fix SYSRAM size on STM32MP13xx
-- d4972d5b59c ARM: stm32: Fix DBGMCU macro on STM32MP13xx
-- ecd6fd02e12 ARM: stm32: Auto-detect ROM API table on STM32MP15xx
-- b2c50bd30b7 clk: stm32mp13: Fix typo in STM32MP13 RCC driver
-- 0298696b1ef clk: stm32mp13: Add SPL support and clock tree init to STM32MP13 RCC driver
-- 447d1bd05ac ram: stm32mp1: Add STM32MP13xx support
-- 3f2eb09c223 tools: stm32image: Add support for STM32 Image V2.0
-- 6b9ecdfe9ac stm32mp: Add tamp_nvram driver
-- 5d15b430527 ARM: dts: stm32h7-pinctrl: add _a suffix to u[s]art_pins phandles
-- 484f098b2f7 dt-bindings: arm: stm32: add compatible for stm32h747i-disco board
-- e543e8b4094 dt-bindings: clock: stm32h7: rename USART{7,8}_CK to UART{7,8}_CK
-- d4fe7cd8ca0 ARM: dts: stm32: add uart8 node for stm32h743 MCU
-- 1addd0e4296 ARM: dts: stm32: add pin map for UART8 controller on stm32h743
-- 3a310f59c38 ARM: dts: stm32: add an extra pin map for USART1 on stm32h743
-- cb348ba58ff ARM: dts: stm32: support STM32h747i-disco board
-- 366f0bfe4f8 ARM: dts: stm32: add stm32h747i-disco-u-boot DTS file
-- 7ab0ee3a59c board: stm32: add stm32h747-discovery board support
-- 4b5cb576116 Merge tag 'u-boot-stm32-20250611' of https://source.denx.de/u-boot/custodians/u-boot-stm into next
+- b4b66e2f298 dm: core: use u32 instead of int for dev_read_u32_default
+- ad03050e26b dm: core: use s32 instead of int for dev_read_s32_default
+- ae297ca722f Merge patch series "dm: core: use {s,u}32 instead of int for dev_read_{s,u}32_default"
 
 ### Conversation log
-The repository is essentially clean (only an untracked file). Let me proceed with the cherry-pick process.
+The repository state is clean (untracked files don't affect cherry-picking). Let me create and checkout the new branch based on ci/master.
 
-Now let me cherry-pick the first commit:
+Now let me cherry-pick the first commit (regular commit):
 
-Build passed. Let me continue with the remaining commits. I'll proceed with commit 2:
+First cherry-pick succeeded. Let me verify the delta and run the build test:
 
-Let me check the conflict:
+The deltas match exactly: 2 files changed, 5 insertions, 5 deletions. Now let me run the build test:
 
-I can see the conflict - the code uses `struct imgtool *itl` (and `itl->addr`, `itl->ep`) in the HEAD version (ci/master), but the cherry-picked commit expects `struct image_tool_params *params`. This is an API change in the codebase. Let me view the original file to understand the expected state:
+Build passed. Now let me cherry-pick the second commit (also a regular commit):
 
-I can see the issue. The original commit uses `struct image_tool_params *params`, but the current ci/master uses `struct imgtool *itl` which is a different API. I need to adapt the cherry-picked commit to the new API. Let me check what `struct imgtool` looks like:
+Second cherry-pick succeeded. Let me verify the delta and run the build test:
 
-Good, I understand the API. The `struct imgtool *itl` has `itl->addr` and `itl->ep` which are equivalent to `params->addr` and `params->ep`. I need to resolve the conflict by adapting the code to use the new API. Let me create the resolved version:
+The deltas match exactly: 2 files changed, 6 insertions, 6 deletions. Now let me run the build test:
 
-Now I understand the conflicts. I need to:
-1. Keep the new `stm32image_check_image_types_v2` function
-2. Change `struct image_tool_params *params` to `struct imgtool *itl` in the verify and set functions
-3. Change `params->addr` to `itl->addr` and `params->ep` to `itl->ep`
+Build passed. Now let me cherry-pick the third commit - which is a merge commit, so I need to use `-m 1 --allow-empty`:
 
-Let me write the resolved file:
+The merge commit resulted in an empty commit (as expected since we already cherry-picked the individual commits). I need to commit it with `--allow-empty` to preserve the merge commit message:
 
-Now I need to amend the commit message to note the fix-ups. Let me check the delta first:
+The merge commit was created. Let me verify the deltas:
 
-Good, the delta is the same. Let me amend the commit to add a note about the fix-up:
+The original merge commit had file changes (because it was a real merge), but our cherry-picked version is empty (since the individual commits were already applied). This is expected behavior - the merge commit is preserved for its message and tracking purposes.
 
-Build passed. Let me continue with the remaining commits:
+Now let me run the build test:
 
-Now the final commit is a merge commit. Let me check:
+Build passed. Now let me verify all 3 commits are present:
 
-Yes, it's a merge commit. I need to use -m 1 --allow-empty:
+All 3 commits are present. Now let me run the final build test:
 
-The merge commit is trying to bring in the same changes we already cherry-picked. Since we have already resolved the API compatibility in the previous commit, I should just keep our HEAD version (which is the resolved version). The merge commit should ideally be empty since all the changes are already in.
+## Final Status
 
-As expected, the merge commit is now empty since all the changes are already applied. This is the correct behavior - I'll commit it as empty to preserve the merge commit history:
+**Build Result:** ✅ OK - All builds passed with no warnings or errors
 
-Now let me verify the complete commit history:
+**Cherry-pick Summary:**
+| Commit | Subject | Status |
+|--------|---------|--------|
+| b4b66e2f298 → 59bf7308d79 | dm: core: use u32 instead of int for dev_read_u32_default | ✅ Success |
+| ad03050e26b → 7533d549dfb | dm: core: use s32 instead of int for dev_read_s32_default | ✅ Success |
+| ae297ca722f → ac5551f2bc7 | Merge patch series "dm: core: use {s,u}32 instead of int for dev_read_{s,u}32_default" | ✅ Success (empty commit) |
 
-All 33 commits are present. Let me count to verify:
+**Fix-ups Made:** None
 
-All 33 commits are present. Now let me run the final build test:
+**Delta Analysis:**
+- Commit 1: Perfect match (2 files, +5/-5)
+- Commit 2: Perfect match (2 files, +6/-6)
+- Commit 3: Empty as expected (merge commit - individual changes already applied via commits 1 & 2)
 
-Build passed. Let me generate the final status report:
+**Branch Status:**
+The branch `cherry-b4b66e2f298` is ready for pushing with 3 commits ahead of `ci/master`.
 
-## Final Status Report
+---
 
-### Cherry-pick Summary
+### Review: 2026-02-13
 
-**Branch:** `cherry-ae7e0330ce2` (based on `ci/master`)
+Branch: cherry-b4b66e2f298
 
-**Total commits:** 33 (all successfully cherry-picked)
+Comments addressed:
 
-### Build Result
-✅ **OK** - sandbox build passes with no warnings or errors
 
-### Fix-ups Made
-1. **Commit `0d668aedfc1` (tools: stm32image: Add support for STM32 Image V2.0)**
-   - **Issue:** API incompatibility - the original commit used `struct image_tool_params *params` but ci/master uses `struct imgtool *itl` (new imagetool API refactoring)
-   - **Resolution:** Adapted function signatures from `struct image_tool_params *params` to `struct imgtool *itl` and changed `params->addr`/`params->ep` to `itl->addr`/`itl->ep`
-   - **Note added to commit message:** `[Fix-up: Adapt to new imgtool API (struct imgtool *itl instead of struct image_tool_params *params)]`
+### Conversation log
+Let me find the correct directory:
 
-### Merge Commit
-- **Commit `149ba7b82a0` (Merge tag 'u-boot-stm32-20250611')** - Created as empty commit using `--allow-empty` to preserve merge history. This is expected since all the changes from the merge were already applied via the individual cherry-picks.
+I'm in the u-boot directory. Let me proceed with the rebase:
 
-### Delta Comparison
-All commits had identical file/line count deltas between the original and cherry-picked versions, except for the merge commit which was empty as expected.
+Let me see the commits that need to be rebased and record their deltas before rebasing:
 
-### Branch Status
-The branch `cherry-ae7e0330ce2` is ready for pushing. It is 33 commits ahead of `ci/master`.
+Now let me perform the rebase:
+
+Rebase completed successfully. Now let me verify each commit's delta after rebase:
+
+All deltas match exactly:
+- Commit 1: 2 files, +5/-5 ✅
+- Commit 2: 2 files, +6/-6 ✅
+- Commit 3: Empty (merge commit) ✅
+- Pickman commit: 1 file, +61 ✅
+
+Now let me run the build test:
+
+Build passed. Now let me create the local branch with -v2 suffix and push:
+
+No existing version branches. Let me create -v2:
+
+The rebase was successful and the MR has been updated. Here's the summary:
+
+## Rebase Summary
+
+**Task:** Rebase MR !568 onto latest ci/master
+
+**Result:** ✅ Success
+
+**Rebase Details:**
+| Commit | Subject | Delta | Status |
+|--------|---------|-------|--------|
+| 59bf7308d79 → 9d488d57d98 | dm: core: use u32 instead of int for dev_read_u32_default | 2 files, +5/-5 | ✅ Match |
+| 7533d549dfb → d3b69977b76 | dm: core: use s32 instead of int for dev_read_s32_default | 2 files, +6/-6 | ✅ Match |
+| ac5551f2bc7 → 1faddbf6eb7 | Merge patch series "dm: core: use {s,u}32 instead of int..." | Empty | ✅ Match |
+| ad2f5abc8e1 → 41aa4834688 | pickman: Record cherry-pick of 3 commits | 1 file, +61 | ✅ Match |
+
+**Build:** ✅ Passed (sandbox board)
+
+**Branch Status:**
+- Local branch `cherry-b4b66e2f298-v2` created
+- Remote branch `cherry-b4b66e2f298` force-pushed to update MR !568
+
+---
+
+**Suggested reply for the MR:**
+
+> Rebased onto latest ci/master. Build verified OK.
+
+---
+
+### Review: 2026-02-13
+
+Branch: cherry-b4b66e2f298
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct directory:
+
+I'm in /home/sglass/dev/u-boot. Let me proceed with the rebase:
+
+The branch has more commits (including a review handling commit) than expected from the MR description. Let me record the deltas before rebasing:
+
+Now I have the deltas recorded. Let me perform the rebase:
+
+Rebase completed. Let me verify each commit's delta after rebase:
+
+All deltas match exactly:
+- Commit 1: 2 files, +5/-5 ✅
+- Commit 2: 2 files, +6/-6 ✅
+- Commit 3: Empty (merge commit) ✅
+- Pickman commit 1: 1 file, +61 ✅
+- Pickman commit 2: 1 file, +60 ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing version branches and create the next version:
+
+There's already a -v2 branch. Let me create -v3:
+
+The rebase was successful and the MR has been updated. Here's the summary:
+
+## Rebase Summary
+
+**Task:** Rebase MR !568 onto latest ci/master
+
+**Result:** ✅ Success
+
+**Rebase Details:**
+| Before | After | Subject | Delta | Status |
+|--------|-------|---------|-------|--------|
+| 9d488d57d98 | d4d8078ad03 | dm: core: use u32 instead of int for dev_read_u32_default | 2 files, +5/-5 | ✅ Match |
+| d3b69977b76 | 71d9285c700 | dm: core: use s32 instead of int for dev_read_s32_default | 2 files, +6/-6 | ✅ Match |
+| 1faddbf6eb7 | 495eb530e98 | Merge patch series "dm: core: use {s,u}32 instead of int..." | Empty | ✅ Match |
+| 41aa4834688 | 2a95720c266 | pickman: Record cherry-pick of 3 commits | 1 file, +61 | ✅ Match |
+| 5c90c216354 | a5ce4b1dd79 | pickman: Record review handling | 1 file, +60 | ✅ Match |
+
+**Build:** ✅ Passed (sandbox board)
+
+**Branch Status:**
+- Local branch `cherry-b4b66e2f298-v3` created
+- Remote branch `cherry-b4b66e2f298` force-pushed to update MR !568
+
+---
+
+**Suggested reply for the MR:**
+
+> Rebased onto latest ci/master. Build verified OK.
 
 ---
 
