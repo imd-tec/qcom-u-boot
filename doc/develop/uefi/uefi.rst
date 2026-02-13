@@ -64,6 +64,9 @@ Therefore the bootefi command uses the device path of the block device partition
 or the network adapter and the file name of the most recently loaded PE-COFF
 file when setting up the loaded image protocol.
 
+See :doc:`/develop/bootstd/efi` for how standard boot discovers and launches
+EFI binaries automatically.
+
 Launching a UEFI binary from a FIT image
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -662,6 +665,9 @@ The UEFI specification foresees to define boot entries and boot sequence via
 UEFI variables. Booting according to these variables is possible via::
 
     bootefi bootmgr [fdt address]
+
+See :doc:`/develop/bootstd/efi_mgr` for how standard boot integrates the
+EFI boot manager.
 
 As of U-Boot v2020.10 UEFI variables cannot be set at runtime. The U-Boot
 command 'efidebug' can be used to set the variables.

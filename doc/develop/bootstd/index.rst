@@ -9,6 +9,10 @@ Standard Boot
    overview
    extlinux
    pxelinux
+   bls
+   efi
+   efi_mgr
+   fel
    pxe_api
    qfw
    android

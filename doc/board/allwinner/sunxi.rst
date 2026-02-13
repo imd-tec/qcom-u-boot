@@ -306,6 +306,9 @@ bootstrap U-Boot by just providing our venerable u-boot-sunxi-with-spl.bin::
 Additional binaries like a kernel, an initial ramdisk or a boot script, can
 also be uploaded via FEL, check the Wiki's `FEL page`_ for more details.
 
+See :doc:`/develop/bootstd/fel` for details on how standard boot handles
+FEL-booted boards.
+
 .. _`Arm Trusted Firmware-A`:  https://www.trustedfirmware.org/projects/tf-a/
 .. _`docs/plat/allwinner.rst`: https://trustedfirmware-a.readthedocs.io/en/latest/plat/allwinner.html
 .. _`crust`: https://github.com/crust-firmware/crust

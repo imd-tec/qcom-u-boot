@@ -1,7 +1,7 @@
 .. SPDX-License-Identifier: GPL-2.0+
 
-Boot Loader Specification (BLS) Type #1 Support
-================================================
+Boot Loader Specification (BLS)
+===============================
 
 U-Boot supports Boot Loader Specification (BLS) Type #1 boot entries as defined
 in the `Boot Loader Specification`_.
@@ -26,7 +26,7 @@ Enable BLS support with::
 
     CONFIG_BOOTMETH_BLS=y
 
-This automatically selects ``CONFIG_PXE_UTILS`` for boot execution.
+This automatically selects ``CONFIG_PXE_UTILS`` for booting.
 
 BLS Entry Format
 ----------------
@@ -75,6 +75,11 @@ are not currently supported by U-Boot:
 * ``uki-url`` - Remote UKI reference
 * ``profile`` - Multi-profile UKI selector
 
+Fields that support multiple occurrences:
+
+* ``options`` - All values are concatenated with spaces
+* ``initrd`` - All paths are loaded consecutively in memory
+
 .. _Unified Kernel Images: https://uapi-group.org/specifications/specs/unified_kernel_image/
 
 U-Boot Extensions
@@ -109,26 +114,22 @@ FITs can be specified in two ways:
     fit /boot/image.fit
 
 The PXE boot infrastructure handles FIT parsing automatically in both cases.
-
-Multiple Values
----------------
-
-Fields that support multiple occurrences:
-
-* ``options`` - All values are concatenated with spaces
-* ``initrd`` - All paths are loaded consecutively in memory
+The second option is preferred since the standard 'best match' algorithm
+(enabled by ``CONFIG_FIT_BEST_MATCH=y``) should normally used to select the
+correct configuration.
 
 Usage
 -----
 
-BLS boot entries are discovered automatically during standard boot::
+BLS boot entries are discovered automatically by standard boot::
 
     => bootflow scan
     => bootflow list
     => bootflow select 0
     => bootflow boot
 
-The BLS entry at ``loader/entry.conf`` is discovered as a bootflow.
+The BLS entry at ``loader/entry.conf`` on any available media is recognised as
+a bootflow.
 
 Implementation Notes
 --------------------
@@ -154,5 +155,7 @@ Current Limitations
 See Also
 --------
 
-* doc/develop/bootstd.rst - Standard boot framework
-* doc/usage/cmd/bootflow.rst - Bootflow command reference
+* :doc:`/develop/bootstd/index`
+* :doc:`/usage/cmd/bootflow`
+* `Boot Loader Specification <https://uapi-group.org/specifications/specs/boot_loader_specification/>`_
+* `Unified Kernel Image <https://uapi-group.org/specifications/specs/unified_kernel_image/>`_
