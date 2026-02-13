@@ -23,6 +23,7 @@ from img.common import mkdir_cond, copy_partition, setup_extlinux_image
 from img.fedora import setup_fedora_image
 from img.ubuntu import setup_ubuntu_image
 from img.armbian import setup_bootmenu_image
+from img.bls import setup_bls_image
 from img.chromeos import setup_cros_image
 from img.android import setup_android_image
 from img.efi import setup_efi_image
@@ -79,6 +80,7 @@ def test_ut_dm_init_bootstd(u_boot_config, u_boot_log):
         u_boot_log (multiplexed_log.Logfile): Log to write to
     """
     setup_fedora_image(u_boot_config, u_boot_log, 1, 'mmc')
+    setup_bls_image(u_boot_config, u_boot_log, 15, 'mmc')
     setup_bootmenu_image(u_boot_config, u_boot_log)
     setup_cedit_file(u_boot_config, u_boot_log)
     setup_cros_image(u_boot_config, u_boot_log)

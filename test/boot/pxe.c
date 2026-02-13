@@ -203,7 +203,9 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/vmlinuz", label->kernel);
 	ut_assertnull(label->config);
 	ut_asserteq_str("root=/dev/sda1 quiet", label->append);
-	ut_asserteq_str("/initrd.img", label->initrd);
+	ut_asserteq(1, label->initrds.count);
+	ut_asserteq_str("/initrd.img",
+			*alist_get(&label->initrds, 0, char *));
 	ut_asserteq_str("/dtb/board.dtb", label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(5, label->files.count);
@@ -233,7 +235,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/vmlinuz-rescue", label->kernel);
 	ut_assertnull(label->config);
 	ut_asserteq_str("single", label->append);
-	ut_assertnull(label->initrd);
+	ut_asserteq(0, label->initrds.count);
 	ut_assertnull(label->fdt);
 	ut_asserteq_str("/dtb/", label->fdtdir);
 	ut_asserteq(1, label->files.count);
@@ -255,7 +257,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_assertnull(label->kernel);
 	ut_assertnull(label->config);
 	ut_assertnull(label->append);
-	ut_assertnull(label->initrd);
+	ut_asserteq(0, label->initrds.count);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(0, label->files.count);
@@ -275,7 +277,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/boot/image.fit", label->kernel);
 	ut_asserteq_str("#config-1", label->config);
 	ut_asserteq_str("console=ttyS0", label->append);
-	ut_assertnull(label->initrd);
+	ut_asserteq(0, label->initrds.count);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(1, label->files.count);
@@ -297,7 +299,7 @@ static int pxe_test_parse_norun(struct unit_test_state *uts)
 	ut_asserteq_str("/boot/included-kernel", label->kernel);
 	ut_assertnull(label->config);
 	ut_asserteq_str("root=/dev/sdb1", label->append);
-	ut_assertnull(label->initrd);
+	ut_asserteq(0, label->initrds.count);
 	ut_assertnull(label->fdt);
 	ut_assertnull(label->fdtdir);
 	ut_asserteq(1, label->files.count);

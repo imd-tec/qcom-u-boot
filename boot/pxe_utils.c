@@ -622,11 +622,71 @@ static int label_run_boot(struct pxe_context *ctx, struct pxe_label *label,
  */
 static int generate_localboot(struct pxe_label *label)
 {
+	char *initrd_path;
+
 	label->kernel = strdup("/vmlinuz");
 	label->kernel_label = strdup(label->kernel);
-	label->initrd = strdup("/initrd.img");
-	if (!label->kernel || !label->kernel_label || !label->initrd)
+	initrd_path = strdup("/initrd.img");
+	if (!label->kernel || !label->kernel_label || !initrd_path)
 		return -ENOMEM;
+	if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+		if (!alist_add(&label->initrds, initrd_path)) {
+			free(initrd_path);
+			return -ENOMEM;
+		}
+	} else {
+		label->initrd = initrd_path;
+	}
+
+	return 0;
+}
+
+/**
+ * pxe_load_initrds() - Load all initrd files consecutively
+ *
+ * @ctx: PXE context
+ * @label: Label containing initrd file paths
+ * @initrd_addr: Starting address for first initrd
+ * @total_sizep: Returns total size of all initrds
+ * Return: 0 on success, -EIO on error
+ */
+static int pxe_load_initrds(struct pxe_context *ctx, struct pxe_label *label,
+			    ulong initrd_addr, ulong *total_sizep)
+{
+	const char **initrd_path;
+	ulong total_size = 0;
+	int ret;
+	int i;
+
+	/* Load each initrd consecutively */
+	for (i = 0; i < label->initrds.count; i++) {
+		ulong size;
+
+		initrd_path = alist_get(&label->initrds, i, char *);
+		/* Use ramdisk_addr_r for first, then append */
+		if (i == 0) {
+			ret = get_relfile_envaddr(ctx, *initrd_path,
+						  "ramdisk_addr_r", SZ_2M,
+						  (enum bootflow_img_t)IH_TYPE_RAMDISK,
+						  &initrd_addr, &size);
+			ctx->initrd_addr = initrd_addr;
+		} else {
+			/* Load subsequent initrds after the previous one */
+			ulong addr = initrd_addr + total_size;
+
+			ret = get_relfile_envaddr(ctx, *initrd_path,
+						  NULL, SZ_2M,
+						  (enum bootflow_img_t)IH_TYPE_RAMDISK,
+						  &addr, &size);
+		}
+		if (ret < 0) {
+			printf("Skipping %s for failure retrieving initrd %s\n",
+			       label->name, *initrd_path);
+			return -EIO;
+		}
+		total_size += size;
+	}
+	*total_sizep = total_size;
 
 	return 0;
 }
@@ -634,6 +694,9 @@ static int generate_localboot(struct pxe_label *label)
 int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 		   char *fdtfile)
 {
+	const char **initrd_path;
+	ulong initrd_addr = 0;
+	ulong total_size = 0;
 	int ret;
 
 	if (!label->kernel) {
@@ -649,18 +712,38 @@ int pxe_load_files(struct pxe_context *ctx, struct pxe_label *label,
 		return -EIO;
 	}
 
-	/* For FIT, the label can be identical to kernel one */
-	if (label->initrd && !strcmp(label->kernel_label, label->initrd)) {
-		ctx->initrd_addr = ctx->kern_addr;
-	} else if (label->initrd) {
-		ret = get_relfile_envaddr(ctx, label->initrd, "ramdisk_addr_r",
-					  SZ_2M,
-					  (enum bootflow_img_t)IH_TYPE_RAMDISK,
-					  &ctx->initrd_addr, &ctx->initrd_size);
-		if (ret < 0) {
-			printf("Skipping %s for failure retrieving initrd\n",
-			       label->name);
-			return -EIO;
+	/* Load initrds if present */
+	if (IS_ENABLED(CONFIG_PXE_INITRD_LIST)) {
+		if (label->initrds.count) {
+			/* For FIT, check if first initrd is identical to kernel */
+			initrd_path = alist_get(&label->initrds, 0, char *);
+			if (!strcmp(label->kernel_label, *initrd_path)) {
+				ctx->initrd_addr = ctx->kern_addr;
+				ctx->initrd_size = ctx->kern_size;
+			} else {
+				ret = pxe_load_initrds(ctx, label, initrd_addr,
+						       &total_size);
+				if (ret)
+					return ret;
+				ctx->initrd_size = total_size;
+			}
+		}
+	} else {
+		if (label->initrd) {
+			if (!strcmp(label->kernel_label, label->initrd)) {
+				ctx->initrd_addr = ctx->kern_addr;
+				ctx->initrd_size = ctx->kern_size;
+			} else {
+				if (get_relfile_envaddr(ctx, label->initrd,
+							"ramdisk_addr_r", SZ_2M,
+							(enum bootflow_img_t)IH_TYPE_RAMDISK,
+							&ctx->initrd_addr,
+							&ctx->initrd_size) < 0) {
+					printf("Skipping %s for failure retrieving initrd\n",
+					       label->name);
+					return -EIO;
+				}
+			}
 		}
 	}
 
@@ -697,7 +780,8 @@ int pxe_load_label(struct pxe_context *ctx, struct pxe_label *label)
 
 	if (label->localboot) {
 		if (label->localboot_val >= 0) {
-			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT)) {
+			if (IS_ENABLED(CONFIG_BOOTMETH_EXTLINUX_LOCALBOOT) &&
+			    !label->kernel) {
 				ret = generate_localboot(label);
 				if (ret)
 					return ret;

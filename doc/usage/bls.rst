@@ -1,0 +1,158 @@
+.. SPDX-License-Identifier: GPL-2.0+
+
+Boot Loader Specification (BLS) Type #1 Support
+================================================
+
+U-Boot supports Boot Loader Specification (BLS) Type #1 boot entries as defined
+in the `Boot Loader Specification`_.
+
+.. _Boot Loader Specification: https://uapi-group.org/specifications/specs/boot_loader_specification/
+
+Overview
+--------
+
+BLS provides a standardised way to describe boot entries. U-Boot's BLS support
+allows it to boot operating systems configured with BLS entries, which is used
+by Fedora, RHEL, and other distributions.
+
+The current implementation supports a single BLS entry file at
+``loader/entry.conf``. Future versions may support multiple entries in
+``loader/entries/``.
+
+Configuration
+-------------
+
+Enable BLS support with::
+
+    CONFIG_BOOTMETH_BLS=y
+
+This automatically selects ``CONFIG_PXE_UTILS`` for boot execution.
+
+BLS Entry Format
+----------------
+
+BLS entries use a simple key-value format, one field per line. Lines starting
+with ``#`` are comments. Example::
+
+    title Fedora Linux 39
+    version 6.7.0-1.fc39.x86_64
+    options root=/dev/sda3 ro quiet
+    linux /vmlinuz-6.7.0-1.fc39.x86_64
+    initrd /initramfs-6.7.0-1.fc39.x86_64.img
+    devicetree /dtbs/6.7.0-1.fc39.x86_64/board.dtb
+
+Supported Fields
+----------------
+
+**Required (at least one):**
+
+* ``linux`` - Path to Linux kernel image; supports FITs with
+  ``path#config`` syntax
+* ``fit`` - Path to FIT (U-Boot extension, not in the BLS spec)
+
+**Optional:**
+
+* ``title`` - Human-readable menu display name
+* ``version`` - OS version identifier (parsed but not used for sorting)
+* ``options`` - Kernel command line parameters (may appear multiple times; all
+  occurrences are concatenated)
+* ``initrd`` - Initial ramdisk path (may appear multiple times; all initrds
+  are loaded)
+* ``devicetree`` - Device tree blob path
+* ``devicetree-overlay`` - Device tree overlays (parsed but not yet supported)
+* ``architecture`` - Target architecture (parsed but not used for filtering)
+* ``machine-id`` - OS identifier (parsed but not used for filtering)
+* ``sort-key`` - Primary sorting key (parsed but not used for sorting)
+
+**Not supported:**
+
+These fields relate to `Unified Kernel Images`_ (UKIs), which combine a UEFI
+boot stub, kernel, initrd and other resources into a single UEFI PE file. They
+are not currently supported by U-Boot:
+
+* ``efi`` - EFI program path
+* ``uki`` - Unified Kernel Image path
+* ``uki-url`` - Remote UKI reference
+* ``profile`` - Multi-profile UKI selector
+
+.. _Unified Kernel Images: https://uapi-group.org/specifications/specs/unified_kernel_image/
+
+U-Boot Extensions
+-----------------
+
+The following fields are U-Boot extensions not defined in the BLS spec:
+
+* ``fit`` - Specifies a FIT path, as an alternative to ``linux``. When
+  ``fit`` is present it takes priority over ``linux``. This allows the entry to
+  explicitly indicate that the image is a FIT, rather than relying on the
+  ``path#config`` syntax in the ``linux`` field.
+
+Example::
+
+    title Ubuntu 24.04
+    version 6.8.0
+    fit /boot/ubuntu-6.8.0.fit
+    options root=/dev/sda3 ro quiet
+    initrd /boot/initrd-6.8.0.img
+
+FIT Support
+-----------
+
+FITs can be specified in two ways:
+
+1. Using the ``linux`` field with ``path#config`` syntax::
+
+    linux /boot/image.fit#config-1
+
+2. Using the ``fit`` field (U-Boot extension)::
+
+    fit /boot/image.fit
+
+The PXE boot infrastructure handles FIT parsing automatically in both cases.
+
+Multiple Values
+---------------
+
+Fields that support multiple occurrences:
+
+* ``options`` - All values are concatenated with spaces
+* ``initrd`` - All paths are loaded consecutively in memory
+
+Usage
+-----
+
+BLS boot entries are discovered automatically during standard boot::
+
+    => bootflow scan
+    => bootflow list
+    => bootflow select 0
+    => bootflow boot
+
+The BLS entry at ``loader/entry.conf`` is discovered as a bootflow.
+
+Implementation Notes
+--------------------
+
+* Single BLS entry file support (``loader/entry.conf``)
+* Boot execution reuses U-Boot's PXE infrastructure for kernel loading
+* Unknown fields are ignored for forward compatibility
+* The bootmethod is ordered as ``bootmeth_2bls`` (after extlinux)
+* Zero-copy parsing: most fields point into bootflow buffer (except ``options``
+  which is allocated for concatenation)
+
+Current Limitations
+-------------------
+
+* Only single entry file, not multiple entries directory scanning
+* No devicetree-overlay support
+* No architecture/machine-id filtering
+* No version-based or sort-key sorting
+* No `Unified Kernel Image`_ (UKI) support
+
+.. _Unified Kernel Image: https://uapi-group.org/specifications/specs/unified_kernel_image/
+
+See Also
+--------
+
+* doc/develop/bootstd.rst - Standard boot framework
+* doc/usage/cmd/bootflow.rst - Bootflow command reference

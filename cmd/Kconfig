@@ -1637,7 +1637,7 @@ config CMD_PART
 
 config CMD_PART_FIND
 	bool "part_find"
-	depends on PARTITIONS
+	depends on EFI_PARTITION
 	default y if SANDBOX || EFI_APP
 	select HAVE_BLOCK_DEVICE
 	select PARTITION_UUIDS

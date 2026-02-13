@@ -469,6 +469,22 @@ config PXE_UTILS
 	help
 	  Utilities for parsing PXE file formats.
 
+config PXE_INITRD_LIST
+	bool "Support multiple initrd files in PXE/extlinux"
+	depends on PXE_UTILS
+	help
+	  Enable support for multiple initrd files in PXE/extlinux
+	  configurations. This allows loading multiple initrd images
+	  consecutively in memory, as required by Boot Loader Specification
+	  (BLS) Type #1 entries.
+
+	  When enabled, the PXE parser can handle multiple 'initrd' lines
+	  and load all specified initrd files. When disabled, only a single
+	  initrd is supported, reducing code size.
+
+	  Say Y if you need BLS support or multiple initrds. Say N to save
+	  code space if you only use single initrd configurations.
+
 config BOOT_DEFAULTS_FEATURES
 	bool
 	select SUPPORT_RAW_INITRD
@@ -689,6 +705,28 @@ config BOOTMETH_EXTLINUX_LOCALBOOT
 	  Enables standard boot support for the extlinux 'localboot' feature.
 	  This attempts to find a kernel and initrd on the disk and boot it,
 	  in the case where there is no "localcmd" in the environment.
+
+config BOOTMETH_BLS
+	bool "Bootdev support for Boot Loader Specification (BLS) Type #1"
+	select PXE_UTILS
+	select PXE_INITRD_LIST
+	default y if SANDBOX
+	help
+	  Enables support for Boot Loader Specification (BLS) Type #1 entries.
+	  This makes bootdevs look for '*.conf' files in 'loader/entries/'
+	  directories on each filesystem they scan.
+
+	  BLS is a standard for boot entry configuration used by Fedora, RHEL,
+	  and other distributions. Each .conf file describes a single boot
+	  entry with fields like kernel path, initrd, and boot options.
+
+	  The specification is here:
+
+	    https://uapi-group.org/specifications/specs/boot_loader_specification/
+
+	  This supports standard BLS fields (title, linux, initrd, options,
+	  devicetree) and works with U-Boot FIT images using the path#config
+	  syntax.
 
 config BOOTMETH_EFI
 	bool "Bootdev support for EFI boot"
