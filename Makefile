@@ -1891,6 +1891,7 @@ quiet_cmd_ulib-objs = OBJS    $@
 	$(PYTHON3) $(srctree)/scripts/build_api.py \
 		$(srctree)/lib/ulib/rename.syms \
 		--redefine $$(cat $@.objlist) --output-dir $@.objdir \
+		--objcopy $(OBJCOPY) \
 		$(if $(filter -j%,$(MAKEFLAGS)),--jobs $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))) \
 		> $@; \
 	rm -f $@.tmp $@.objlist
