@@ -718,10 +718,6 @@ static __efi_runtime void efi_relocate_runtime_table(ulong offset)
 /* Relocate EFI runtime to uboot_reloc_base = offset */
 void efi_runtime_relocate(ulong offset, struct efi_mem_desc *map)
 {
-	/* Skip EFI runtime relocation when running as a library */
-	if (gd_ulib())
-		return;
-
 	/*
 	 * Cache gd->relocaddr for use by the EFI runtime services after
 	 * the OS has taken over. On architectures where 'gd' is accessed
