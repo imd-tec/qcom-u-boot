@@ -23430,186 +23430,95 @@ All 5 commits are present. Now let me run the final build:
 
 ## 2026-02-12: us/next
 
-Branch: cherry-ea26f2ac4c4
+Branch: cherry-14f90413096
 
 Commits:
-- ea26f2ac4c4 configs: imx8m*_venice: enable several commands useful for scripting
-- 2f1c3e1f9ef configs: imx8m*_venice: enable GPT support
-- 66e8b17eeef board: venice: move soc-specific dram config into soc-specific files
-- 1bf9f1e5501 board: venice: fix dram bus config for GW7902/GW7903/GW7904
-- c83ab826408 board: venice: fix dram size for GW7901-SP486
-- ea04f7261ef board: venice: use baseboard model for family
-- b1ead5a2240 board: venice: use SOM model for PMIC adjustment on SOM
-- 5e726768905 board: venice: flip logic for GSC supervisor enable
-- 9eebca10250 board: venice: add imx8mp-gw82xx support
-- da9e2218afc board: venice: add FSA support
-- 41bc2d5334f board: venice: update model representation for venice-flex
-- 314469b6bad board: venice: append configuration string to model
-- 37195f84133 imx8mp-venice-gw74xx: add w_disable2 gpio configuration
-- 0f53197c3d6 clk: imx: add i.MX6UL clk driver
-- 1c513b9edf6 mtd: mxs_nand_dt: Move from clk_get/clk_enable to clk_bulk api
-- 404a4c84d88 mtd: nand: Add support for EDO mode 1-5 to IMX6ULL platform
-- 8642939ee04 configs/imx6ulz_smm_m2_defconfig: Enable clock framework
-- c7b82b4aabc bsh: imx6ulz_smm_m2: Add imx6ulz BSH SMM M2B board
-- 3d9f63519db Merge tag 'u-boot-imx-next-20250601' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+- 14f90413096 usb: dwc2: Extract register definitions to common header file
+- 94a1f8fe47e usb: dwc2: Fix incorrect ULPI_UTMI_SEL bit setting
+- bd6ef5097dd usb: dwc2: Fix HBstLen setting for external DMA mode
+- a5699130f4a usb: dwc2: Clean up with bitfield macros
+- 6def014bba5 usb: dwc2: Align macros with Linux kernel definitions
+- 24b0e2604e2 usb: dwc2: Extract macro definitions to common header
+- c5d685b8993 usb: dwc2: Unify flush and reset logic with v4.20a support
+- bd88148a1bf usb: dwc2: Replace uint<x>_t types with u<x>
+- 42911f61b77 usb: dwc2: Refactor register operations with clrsetbits macros
+- d45b1d4ac94 Merge tag 'u-boot-dfu-next-20250602' of https://source.denx.de/u-boot/custodians/u-boot-dfu into next
 
 ### Conversation log
-The repository is clean (only untracked files). Let me create and checkout a new branch based on ci/master.
+The repository is clean enough (only untracked files). Let me create and checkout the new branch.
 
-Good, branch created. Now let me start cherry-picking the commits one at a time. Let me start with the first commit:
+Now let me start cherry-picking the commits one by one. Starting with the first commit:
 
-First commit successful. Let me verify the delta and run the build test:
+First commit succeeded. Let me verify the delta and run the build test:
 
-Commit delta looks identical. Let me run the build test:
+The delta matches exactly. Now let me run the build test:
 
-Build passed. Now let me continue with the second commit:
-
-Delta matches. Let me run the build test:
-
-Build passed. Continuing with commit 3:
+Build passed. Now let me cherry-pick the second commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 4:
+Build passed. Third commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 5:
+Build passed. Fourth commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 6:
+Build passed. Fifth commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 7:
+Build passed. Sixth commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 8:
+Build passed. Seventh commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 9:
-
-There's a conflict. Let me check what the conflict looks like:
-
-I can see the conflict. The base has gw71xx, gw72xx, gw73xx, gw74xx, gw7905. The incoming commit adds gw71xx, gw72xx, gw73xx, gw74xx, gw75xx, gw82xx. I need to merge both - keeping gw7905 from the base and adding the new ones from the incoming. Let me resolve this:
-
-I see the conflict. The resolution should combine both lists, keeping gw7905 from HEAD and adding gw75xx and gw82xx from the incoming commit. Let me resolve this:
-
-Let me try using sed via bash to resolve this conflict:
-
-Good, now let me continue the cherry-pick and amend with a note about the fix-up:
-
-Now let me amend the commit message to note the fix-up:
-
-Now let me check the delta and run build test:
+Build passed. Eighth commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 10:
-
-Two conflicts. Let me check them:
-
-I see. Both need CONFIG_OF_LIVE=y added, and the OF_LIST needs to combine entries. Let me resolve both:
-
-For imx8mm:
-- HEAD: gw71xx, gw72xx, gw73xx, gw7901, gw7902, gw7903, gw7904, gw7905-0x
-- Incoming: gw71xx, gw72xx, gw73xx, gw7901, gw7902, gw7903, gw7904, gw75xx-0x
-- Resolution: Keep gw7905-0x from HEAD, add gw75xx-0x from incoming, add CONFIG_OF_LIVE=y
-
-For imx8mp:
-- HEAD: gw71xx, gw72xx, gw73xx, gw74xx, gw75xx, gw7905-2x, gw82xx
-- Incoming: gw71xx, gw72xx, gw73xx, gw74xx, gw75xx, gw82xx
-- Resolution: Keep gw7905-2x from HEAD (already have it), add CONFIG_OF_LIVE=y
-
-Delta is very close (814 vs 813 due to merge conflict resolution). Build test:
-
-Build passed. Continuing with commit 11:
+Build passed. Ninth commit:
 
 Delta matches. Build test:
 
-Build passed. Continuing with commit 12:
+Build passed. Now the tenth and final commit - this is a merge commit, so I need to use special flags:
 
-Delta matches. Build test:
+The merge commit is empty (which is expected since all changes were already cherry-picked). Let me commit it as empty to preserve the history:
 
-Build passed. Continuing with commit 13:
+Now let me verify all commits are present:
 
-Delta matches. Build test:
+All 10 commits are present. Now let me run the final build test:
 
-Build passed. Continuing with commit 14:
+## Summary
 
-Delta matches. Build test:
+**Cherry-pick completed successfully!**
 
-Build passed. Continuing with commit 15:
+### Final Status:
 
-Delta matches. Build test:
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 14f90413096 → 6cf642dc9c3 | usb: dwc2: Extract register definitions to common header file | ✓ |
+| 2 | 94a1f8fe47e → 0938c12f08e | usb: dwc2: Fix incorrect ULPI_UTMI_SEL bit setting | ✓ |
+| 3 | bd6ef5097dd → e0914a3f164 | usb: dwc2: Fix HBstLen setting for external DMA mode | ✓ |
+| 4 | a5699130f4a → cab8d7a5a39 | usb: dwc2: Clean up with bitfield macros | ✓ |
+| 5 | 6def014bba5 → 4b78a5feaa7 | usb: dwc2: Align macros with Linux kernel definitions | ✓ |
+| 6 | 24b0e2604e2 → 764aebc847b | usb: dwc2: Extract macro definitions to common header | ✓ |
+| 7 | c5d685b8993 → 9b8e640173a | usb: dwc2: Unify flush and reset logic with v4.20a support | ✓ |
+| 8 | bd88148a1bf → 563a0694883 | usb: dwc2: Replace uint<x>_t types with u<x> | ✓ |
+| 9 | 42911f61b77 → 60c884f083f | usb: dwc2: Refactor register operations with clrsetbits macros | ✓ |
+| 10 | d45b1d4ac94 → 357750229d2 | Merge tag 'u-boot-dfu-next-20250602'... | ✓ (empty) |
 
-Build passed. Continuing with commit 16:
+**Build result:** OK (no warnings or errors)
 
-Delta matches. Build test:
+**Fix-ups made:** None required
 
-Build passed. Continuing with commit 17:
+**Commits with concerning deltas:** None - all deltas matched exactly
 
-Delta matches. Build test:
-
-Build passed. Continuing with commit 18:
-
-Delta matches. Build test:
-
-Build passed. Now the last commit is a merge commit. Let me cherry-pick it with -m 1 --allow-empty:
-
-There are conflicts. Let me check what they are:
-
-I see - these are the same conflicts we saw before. The merge commit from us/next doesn't have gw7905, but our resolution from before does. I should keep our resolution (which has gw7905). Let me resolve these:
-
-The merge commit is now empty. As instructed, I should commit it with --allow-empty to preserve the merge commit message:
-
-Now let me verify all 19 commits:
-
-All 19 commits are present. Now let me run the final build test:
-
-All done. Let me provide the final summary:
-
-## Final Status Report
-
-**Branch:** `cherry-ea26f2ac4c4` (based on `ci/master`)
-
-**Build Result:** ✅ OK - sandbox build passed
-
-**Commits Cherry-picked:** 19/19
-
-| # | Hash (orig) | Subject | Status |
-|---|------------|---------|--------|
-| 1 | ea26f2ac4c4 | configs: imx8m*_venice: enable several commands useful for scripting | ✅ |
-| 2 | 2f1c3e1f9ef | configs: imx8m*_venice: enable GPT support | ✅ |
-| 3 | 66e8b17eeef | board: venice: move soc-specific dram config into soc-specific files | ✅ |
-| 4 | 1bf9f1e5501 | board: venice: fix dram bus config for GW7902/GW7903/GW7904 | ✅ |
-| 5 | c83ab826408 | board: venice: fix dram size for GW7901-SP486 | ✅ |
-| 6 | ea04f7261ef | board: venice: use baseboard model for family | ✅ |
-| 7 | b1ead5a2240 | board: venice: use SOM model for PMIC adjustment on SOM | ✅ |
-| 8 | 5e726768905 | board: venice: flip logic for GSC supervisor enable | ✅ |
-| 9 | 9eebca10250 | board: venice: add imx8mp-gw82xx support | ✅ (fix-up) |
-| 10 | da9e2218afc | board: venice: add FSA support | ✅ (fix-up) |
-| 11 | 41bc2d5334f | board: venice: update model representation for venice-flex | ✅ |
-| 12 | 314469b6bad | board: venice: append configuration string to model | ✅ |
-| 13 | 37195f84133 | imx8mp-venice-gw74xx: add w_disable2 gpio configuration | ✅ |
-| 14 | 0f53197c3d6 | clk: imx: add i.MX6UL clk driver | ✅ |
-| 15 | 1c513b9edf6 | mtd: mxs_nand_dt: Move from clk_get/clk_enable to clk_bulk api | ✅ |
-| 16 | 404a4c84d88 | mtd: nand: Add support for EDO mode 1-5 to IMX6ULL platform | ✅ |
-| 17 | 8642939ee04 | configs/imx6ulz_smm_m2_defconfig: Enable clock framework | ✅ |
-| 18 | c7b82b4aabc | bsh: imx6ulz_smm_m2: Add imx6ulz BSH SMM M2B board | ✅ |
-| 19 | 3d9f63519db | Merge tag 'u-boot-imx-next-20250601' (merge commit) | ✅ (empty) |
-
-**Fix-ups Made:**
-1. **Commit 9 (9eebca10250):** Merged CONFIG_OF_LIST in `configs/imx8mp_venice_defconfig` to include gw7905-2x from ci/master along with gw75xx-2x and gw82xx-2x from the incoming commit.
-2. **Commit 10 (da9e2218afc):** Merged CONFIG_OF_LIST in both `configs/imx8mm_venice_defconfig` and `configs/imx8mp_venice_defconfig` to include gw7905-0x/gw7905-2x from ci/master.
-3. **Commit 19 (3d9f63519db):** Merge commit resulted in an empty commit after resolution (all changes already applied), preserved with --allow-empty.
-
-**Deltas:** All deltas matched or were within expected range (minor differences due to merge conflict resolutions).
-
-**Branch is ready for pushing.**
+**Branch `cherry-14f90413096`** is ready for pushing with 10 commits ahead of `ci/master`.
 
 ---
 
