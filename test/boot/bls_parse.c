@@ -137,6 +137,30 @@ static int bls_test_parse_unknown_field(struct unit_test_state *uts)
 }
 UNIT_TEST(bls_test_parse_unknown_field, 0, bootstd);
 
+/* Test FIT-only entry (no linux field) */
+static int bls_test_parse_fit(struct unit_test_state *uts)
+{
+	struct bls_entry entry;
+	char buf[] =
+		"title FIT Test\n"
+		"version 1.0\n"
+		"fit /boot/image.fit\n"
+		"options root=/dev/sda\n"
+		"initrd /initrd.img\n";
+
+	ut_assertok(bls_parse_entry(buf, sizeof(buf) - 1, &entry));
+	ut_asserteq_str("FIT Test", entry.title);
+	ut_assertnull(entry.kernel);
+	ut_asserteq_str("/boot/image.fit", entry.fit);
+	ut_asserteq_str("root=/dev/sda", entry.options);
+	ut_asserteq(1, entry.initrds.count);
+
+	bls_entry_uninit(&entry);
+
+	return 0;
+}
+UNIT_TEST(bls_test_parse_fit, 0, bootstd);
+
 /* Test all supported fields */
 static int bls_test_parse_all_fields(struct unit_test_state *uts)
 {

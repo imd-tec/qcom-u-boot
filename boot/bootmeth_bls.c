@@ -202,7 +202,12 @@ static int bls_entry_init(struct bls_entry *entry, struct bootflow *bflow,
 	}
 
 	/* Register discovered images (not yet loaded, addr=0) */
-	if (entry->kernel) {
+	if (entry->fit) {
+		if (!bootflow_img_add(bflow, entry->fit,
+				      (enum bootflow_img_t)IH_TYPE_KERNEL,
+				      0, 0))
+			return log_msg_ret("imf", -ENOMEM);
+	} else if (entry->kernel) {
 		if (!bootflow_img_add(bflow, entry->kernel,
 				      (enum bootflow_img_t)IH_TYPE_KERNEL,
 				      0, 0))

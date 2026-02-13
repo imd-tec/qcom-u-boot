@@ -24,8 +24,9 @@
  *
  * @title: Human-readable name (points into buffer)
  * @version: OS version string (points into buffer)
- * @kernel: Kernel path or FIT image - required (points into buffer)
+ * @kernel: Kernel path - required unless @fit is set (points into buffer)
  *          Can include FIT config syntax: path#config
+ * @fit: FIT image path - required unless @kernel is set (points into buffer)
  * @options: Kernel command line - ALLOCATED, must be freed
  *           Multiple options lines are concatenated with spaces
  * @initrds: List of initrd paths (alist of char * pointing into buffer)
@@ -41,6 +42,7 @@ struct bls_entry {
 	char *title;
 	char *version;
 	char *kernel;
+	char *fit;
 	char *options;		/* Allocated */
 	struct alist initrds;	/* list of char * into buffer */
 	char *devicetree;
@@ -70,7 +72,8 @@ struct bls_entry {
  * Supported fields:
  *   title       - Human-readable name
  *   version     - OS version string
- *   linux       - Kernel path (required)
+ *   linux       - Kernel path (required unless 'fit' is present)
+ *   fit         - FIT image path (required unless 'linux' is present)
  *   options     - Kernel command line (allocated, can appear multiple times)
  *   initrd      - Initramfs path (can appear multiple times)
  *   devicetree  - Device tree blob path

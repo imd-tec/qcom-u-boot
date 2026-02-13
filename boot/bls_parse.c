@@ -26,6 +26,7 @@ enum bls_token_t {
 	TOK_TITLE = 0,
 	TOK_VERSION,
 	TOK_LINUX,
+	TOK_FIT,
 	TOK_OPTIONS,
 	TOK_INITRD,
 	TOK_DEVICETREE,
@@ -42,6 +43,7 @@ static const char *const bls_token_names[] = {
 	[TOK_TITLE]		= "title",
 	[TOK_VERSION]		= "version",
 	[TOK_LINUX]		= "linux",
+	[TOK_FIT]		= "fit",
 	[TOK_OPTIONS]		= "options",
 	[TOK_INITRD]		= "initrd",
 	[TOK_DEVICETREE]	= "devicetree",
@@ -224,6 +226,10 @@ int bls_parse_entry(const char *buf, size_t size, struct bls_entry *entry)
 			/* Point into buffer */
 			entry->kernel = value;
 			break;
+		case TOK_FIT:
+			/* Point into buffer */
+			entry->fit = value;
+			break;
 		case TOK_OPTIONS:
 			/* Multiple times - allocate and concatenate */
 			if (bls_append_str(&entry->options, value))
@@ -267,10 +273,10 @@ int bls_parse_entry(const char *buf, size_t size, struct bls_entry *entry)
 
 	/*
 	 * Validate required fields: BLS spec requires at least one of
-	 * 'linux' or 'efi'. We only support 'linux' for Type #1 entries.
+	 * 'linux' or 'efi'. We also accept 'fit' for FIT images.
 	 */
-	if (!entry->kernel) {
-		log_err("BLS entry missing required 'linux' field\n");
+	if (!entry->kernel && !entry->fit) {
+		log_err("BLS entry missing required 'linux' or 'fit' field\n");
 		return -EINVAL;
 	}
 
