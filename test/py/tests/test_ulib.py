@@ -4,6 +4,7 @@
 """Test U-Boot library functionality"""
 
 import os
+import shutil
 import subprocess
 import pytest
 import utils
@@ -208,3 +209,32 @@ def test_ulib_api_header(ubman):
     assert 'ub_printf(const char *fmt, ...)' in out
     assert 'ub_snprintf(char *buf, size_t size, const char *fmt, ...)' in out
     assert 'ub_vprintf(const char *fmt, va_list args)' in out
+
+@pytest.mark.boardspec('qemu-x86')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_rom(ubman):
+    """Test the ulib demo ROM image under QEMU x86."""
+    build = ubman.config.build_dir
+    demo_rom = os.path.join(build, 'demo.rom')
+
+    assert os.path.exists(demo_rom), 'demo.rom not found in build directory'
+    assert shutil.which('qemu-system-i386'), 'qemu-system-i386 not found'
+
+    cmd = ['qemu-system-i386', '-bios', demo_rom, '-nographic',
+           '-no-reboot']
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as proc:
+        try:
+            stdout, _ = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+
+    out = stdout.decode('utf-8', errors='replace')
+
+    assert 'U-Boot Library Demo Helper' in out
+    assert '==========================' in out
+    assert 'U-Boot version:' in out
+    assert 'helper: Adding 42 + 13 = 55' in out
+    assert '=================================' in out
+    assert 'Demo complete' in out
