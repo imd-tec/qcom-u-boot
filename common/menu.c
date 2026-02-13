@@ -9,6 +9,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <errno.h>
+#include <linux/ctype.h>
 #include <linux/delay.h>
 #include <linux/list.h>
 #include <watchdog.h>
@@ -437,6 +438,29 @@ int menu_destroy(struct menu *m)
 	return 1;
 }
 
+static int bootmenu_conv_shortcut_key(struct bootmenu_data *menu, int ichar)
+{
+	int shortcut_key;
+
+	ichar = tolower(ichar);
+	switch (ichar) {
+	/* a-z for bootmenu entry > 9 */
+	case 'a' ... 'z':
+		shortcut_key = ichar - 'a' + 9;
+		break;
+	/* 1-9 for bootmenu entry <= 9 */
+	case '1' ... '9':
+		shortcut_key = ichar - '1';
+		break;
+	/* Reserve 0 for last option (aka Exit) */
+	case '0':
+	default:
+		return -1;
+	}
+
+	return shortcut_key;
+}
+
 enum bootmenu_key bootmenu_autoboot_loop(struct bootmenu_data *menu,
 					 struct cli_ch_state *cch)
 {
@@ -444,12 +468,12 @@ enum bootmenu_key bootmenu_autoboot_loop(struct bootmenu_data *menu,
 	int i, c;
 
 	while (menu->delay > 0) {
+		int ichar;
+
 		if (ansi)
 			printf(ANSI_CURSOR_POSITION, menu->count + 5, 3);
 		printf("Hit any key to stop autoboot: %d ", menu->delay);
 		for (i = 0; i < 100; ++i) {
-			int ichar;
-
 			if (!tstc()) {
 				schedule();
 				mdelay(10);
@@ -471,12 +495,20 @@ enum bootmenu_key bootmenu_autoboot_loop(struct bootmenu_data *menu,
 			case 0x3: /* ^C */
 				key = BKEY_QUIT;
 				break;
+			case 'A' ... 'Z':
+			case 'a' ... 'z':
+			case '0' ... '9':
+				key = BKEY_SHORTCUT;
+				break;
 			default:
 				key = BKEY_NONE;
 				break;
 			}
 			break;
 		}
+
+		if (key == BKEY_SHORTCUT)
+			cch->shortcut_key = bootmenu_conv_shortcut_key(menu, ichar);
 
 		if (menu->delay < 0)
 			break;
@@ -554,6 +586,11 @@ enum bootmenu_key bootmenu_loop(struct bootmenu_data *menu,
 	}
 
 	key = bootmenu_conv_key(c);
+
+	if (key == BKEY_NONE && isalnum(c)) {
+		key = BKEY_SHORTCUT;
+		cch->shortcut_key = bootmenu_conv_shortcut_key(menu, c);
+	}
 
 	return key;
 }
