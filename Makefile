@@ -1831,33 +1831,40 @@ endif
 
 # Rule to link u-boot
 # May be overridden by arch/$(ARCH)/config.mk
+#
+# u-boot-link is a parameterised helper shared with arch/x86 example builds:
+#   $(1) - extra objects to link alongside $(u-boot-init) (empty for u-boot)
+#   $(2) - map-file path
 ifeq ($(LTO_ENABLE),y)
 quiet_cmd_u-boot__ ?= LTO     $@
-      cmd_u-boot__ ?=								\
+define u-boot-link
 		touch $(u-boot-main) ;						\
 		$(CC) -nostdlib -nostartfiles					\
 		$(LTO_FINAL_LDFLAGS) $(c_flags)					\
 		$(KBUILD_LDFLAGS:%=-Wl,%) $(LDFLAGS_u-boot:%=-Wl,%) -o $@	\
-		-T u-boot.lds $(u-boot-init)					\
+		-T u-boot.lds $(u-boot-init) $(1)				\
 		-Wl,--whole-archive						\
 			$(u-boot-main)						\
 			$(u-boot-keep-syms-lto)					\
 			$(PLATFORM_LIBS)					\
 		-Wl,--no-whole-archive						\
-		-Wl,-Map,u-boot.map;						\
+		-Wl,-Map,$(2);							\
 		$(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
+endef
 else
 quiet_cmd_u-boot__ ?= LD      $@
-      cmd_u-boot__ ?=								\
+define u-boot-link
 		touch $(u-boot-main) ;						\
-		$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_u-boot) -o $@			\
-		-T u-boot.lds $(u-boot-init)					\
+		$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_u-boot) -o $@		\
+		-T u-boot.lds $(u-boot-init) $(1)				\
 		--whole-archive							\
 			$(u-boot-main)						\
 		--no-whole-archive						\
-		$(PLATFORM_LIBS) -Map u-boot.map;				\
+		$(PLATFORM_LIBS) -Map $(2);					\
 		$(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
+endef
 endif
+      cmd_u-boot__ ?= $(call u-boot-link,,u-boot.map)
 
 quiet_cmd_smap = GEN     common/system_map.o
 cmd_smap = \
