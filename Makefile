@@ -1961,7 +1961,7 @@ test/ulib/ulib_test_static: test/ulib/ulib_test.o libu-boot.a \
 
 # abspath is used since many paths are relative
 PHONY += examples_ulib
-examples_ulib: libu-boot.a libu-boot.so FORCE
+examples_ulib: libu-boot.a $(if $(CONFIG_ULIB_SHARED_LIB),libu-boot.so) FORCE
 	$(Q)$(MAKE) -C $(srctree)/examples/ulib \
 		UBOOT_BUILD=$(abspath $(obj)) \
 		EXAMPLE_DIR=. \
@@ -1973,7 +1973,7 @@ examples_ulib: libu-boot.a libu-boot.so FORCE
 		LIB_STATIC_LDS="$(abspath $(LIB_STATIC_LDS))"
 
 PHONY += examples_rust
-examples_rust: libu-boot.a libu-boot.so FORCE
+examples_rust: libu-boot.a $(if $(CONFIG_ULIB_SHARED_LIB),libu-boot.so) FORCE
 	@if command -v cargo >/dev/null 2>&1; then \
 		$(MAKE) -C $(srctree)/examples/rust \
 			UBOOT_BUILD=$(abspath $(obj)) \
