@@ -1875,6 +1875,17 @@ M:	Neha Malcom Francis <n-francis@ti.com>
 S:	Maintained
 F:	drivers/ufs/
 
+ULIB
+M:	Simon Glass <sjg@chromium.org>
+S:	Maintained
+T:	git https://source.denx.de/u-boot/custodians/u-boot-dm.git
+F:	doc/develop/ulib.rst
+F:	examples/ulib/
+F:	include/u-boot-lib.h
+F:	lib/ulib/
+F:	test/py/tests/test_ulib.py
+F:	test/ulib/
+
 UPL
 M:	Simon Glass <sjg@chromium.org>
 S:	Maintained
