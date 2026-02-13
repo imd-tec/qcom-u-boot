@@ -393,6 +393,17 @@ int do_bdinfo(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]);
 int ulib_init_with_data(char *progname, struct global_data *data);
 
 /**
+ * ulib_has_main() - check whether an example main() is linked
+ *
+ * This weak function returns false by default.  Example programs override it
+ * to return true so that U-Boot can set GD_FLG_ULIB and jump to main() after
+ * initialisation.
+ *
+ * Return: true if an example main() is present, false otherwise
+ */
+bool ulib_has_main(void);
+
+/**
  * main() - main program called from ulib
  *
  * When ulib has to start up the machine, it calls main() when it is finished.

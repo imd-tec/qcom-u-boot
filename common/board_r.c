@@ -771,6 +771,22 @@ static void initcall_run_r(void)
 	INITCALL(run_main_loop);
 }
 
+__weak bool ulib_has_main(void)
+{
+	return false;
+}
+
+#ifdef CONFIG_ULIB
+__weak int main(void)
+{
+	/* No example linked -- fall through to normal command loop */
+	for (;;)
+		main_loop();
+
+	return 0;
+}
+#endif
+
 void board_init_r(gd_t *new_gd, ulong dest_addr)
 {
 	/*
@@ -803,7 +819,7 @@ void board_init_r(gd_t *new_gd, ulong dest_addr)
 
 	if (gd_ulib()) {
 #ifdef CONFIG_ULIB	/* handle __noreturn attribute */
-		if (!IS_ENABLED(CONFIG_ULIB_JUMP_TO_MAIN))
+		if (!ulib_has_main())
 			return;
 #endif
 		main();
