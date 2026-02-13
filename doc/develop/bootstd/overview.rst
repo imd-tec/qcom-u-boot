@@ -440,7 +440,7 @@ Bootmeth drivers are provided for booting from various media:
    - :doc:`Android <android>` bootflow (boot image v4)
    - :doc:`BLS <bls>` Boot Loader Specification Type #1 entries
    - :doc:`ChromiumOS <cros>` ChromiumOS boot from a disk
-   - EFI boot using bootefi from disk
+   - :doc:`EFI <efi>` boot using bootefi from disk or network
    - EFI boot using boot manager
    - :doc:`extlinux / syslinux <extlinux>` boot from a storage device
    - :doc:`extlinux / syslinux <extlinux>` boot from a network (PXE)

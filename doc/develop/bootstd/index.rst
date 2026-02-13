@@ -10,6 +10,7 @@ Standard Boot
    extlinux
    pxelinux
    bls
+   efi
    pxe_api
    qfw
    android

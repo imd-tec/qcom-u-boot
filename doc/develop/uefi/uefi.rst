@@ -64,6 +64,9 @@ Therefore the bootefi command uses the device path of the block device partition
 or the network adapter and the file name of the most recently loaded PE-COFF
 file when setting up the loaded image protocol.
 
+See :doc:`/develop/bootstd/efi` for how standard boot discovers and launches
+EFI binaries automatically.
+
 Launching a UEFI binary from a FIT image
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
