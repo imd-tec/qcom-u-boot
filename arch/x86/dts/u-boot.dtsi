@@ -7,7 +7,7 @@
 #include <config.h>
 
 / {
-	binman {
+	binman: binman {
 		multiple-images;
 		rom: rom {
 		};
@@ -15,12 +15,43 @@
 };
 
 #ifdef CONFIG_ROM_SIZE
+&binman {
+	rom_common: template {
+		end-at-4gb;
+		sort-by-offset;
+		pad-byte = <0xff>;
+		size = <CONFIG_ROM_SIZE>;
+#ifdef CONFIG_TPL
+		x86-start16-tpl {
+			offset = <CONFIG_SYS_X86_START16>;
+		};
+		x86-reset16-tpl {
+			offset = <CONFIG_RESET_VEC_LOC>;
+		};
+#elif defined(CONFIG_SPL)
+		x86-start16-spl {
+			offset = <CONFIG_SYS_X86_START16>;
+		};
+		x86-reset16-spl {
+			offset = <CONFIG_RESET_VEC_LOC>;
+		};
+#else
+		x86-start16 {
+			offset = <CONFIG_SYS_X86_START16>;
+		};
+		x86-reset16 {
+			offset = <CONFIG_RESET_VEC_LOC>;
+		};
+#endif
+		image-header {
+			location = "end";
+		};
+	};
+};
+
 &rom {
 	filename = "u-boot.rom";
-	end-at-4gb;
-	sort-by-offset;
-	pad-byte = <0xff>;
-	size = <CONFIG_ROM_SIZE>;
+	insert-template = <&rom_common>;
 #ifdef CONFIG_HAVE_INTEL_ME
 	intel-descriptor {
 		filename = CONFIG_FLASH_DESCRIPTOR_FILE;
@@ -163,30 +194,5 @@
 		offset = <CFG_X86_REFCODE_ADDR>;
 	};
 #endif
-#ifdef CONFIG_TPL
-	x86-start16-tpl {
-		offset = <CONFIG_SYS_X86_START16>;
-	};
-	x86-reset16-tpl {
-		offset = <CONFIG_RESET_VEC_LOC>;
-	};
-#elif defined(CONFIG_SPL)
-	x86-start16-spl {
-		offset = <CONFIG_SYS_X86_START16>;
-	};
-	x86-reset16-spl {
-		offset = <CONFIG_RESET_VEC_LOC>;
-	};
-#else
-	x86-start16 {
-		offset = <CONFIG_SYS_X86_START16>;
-	};
-	x86-reset16 {
-		offset = <CONFIG_RESET_VEC_LOC>;
-	};
-#endif
-	image-header {
-		location = "end";
-	};
 };
 #endif
