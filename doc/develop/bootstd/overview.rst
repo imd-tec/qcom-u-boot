@@ -438,6 +438,7 @@ Available bootmeth drivers
 Bootmeth drivers are provided for booting from various media:
 
    - :doc:`Android <android>` bootflow (boot image v4)
+   - :doc:`BLS <bls>` Boot Loader Specification Type #1 entries
    - :doc:`ChromiumOS <cros>` ChromiumOS boot from a disk
    - EFI boot using bootefi from disk
    - EFI boot using boot manager
