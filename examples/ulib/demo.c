@@ -2,66 +2,79 @@
 /*
  * Demo program showing U-Boot library functionality
  *
- * This demonstrates using U-Boot library functions in sandbox like os_*
- * from external programs.
+ * This demonstrates using U-Boot library functions from external programs
+ * (sandbox) or as a standalone example linked into U-Boot.
  *
  * Copyright 2025 Canonical Ltd.
  * Written by Simon Glass <simon.glass@canonical.com>
  */
 
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <os.h>
+#include <stdio.h>
 #include <u-boot-lib.h>
 #include <version_string.h>
 #include "demo_helper.h"
 
+#ifndef CONFIG_SANDBOX
+bool ulib_has_main(void)
+{
+	return true;
+}
+#endif
+
+static const char *get_version(void)
+{
+	if (IS_ENABLED(CONFIG_SANDBOX))
+		return ulib_get_version();
+	return version_string;
+}
+
+static int demo_run(void)
+{
+	demo_show_banner();
+	printf("U-Boot version: %s\n", get_version());
+	printf("\n");
+
+	demo_add_numbers(42, 13);
+	demo_show_footer();
+
+	return 0;
+}
+
+#ifdef CONFIG_SANDBOX
 int main(int argc, char *argv[])
 {
-	int fd, result, lines = 0;
+	int fd, lines = 0;
 	char line[256];
+	int ret;
 
-	/* Init U-Boot library */
 	if (ulib_init(argv[0]) < 0) {
 		fprintf(stderr, "Failed to initialize U-Boot library\n");
 		return 1;
 	}
 
-	demo_show_banner();
-	printf("U-Boot version: %s\n", ulib_get_version());
-	printf("\n");
+	ret = demo_run();
 
-	/* Use U-Boot's os_open to open a file */
+	/* Also demonstrate using U-Boot's os_* functions to read a file */
 	fd = os_open("/proc/version", 0);
-	if (fd < 0) {
-		fprintf(stderr, "Failed to open /proc/version\n");
-		ulib_uninit();
-		return 1;
+	if (fd >= 0) {
+		printf("\nSystem version:\n");
+		while (os_fgets(line, sizeof(line), fd)) {
+			printf("  %s", line);
+			lines++;
+		}
+		os_close(fd);
+		printf("\nRead %d line(s) using U-Boot library functions.\n",
+		       lines);
 	}
 
-	printf("System version:\n");
-
-	/* Use U-Boot's os_fgets to read lines */
-	while (os_fgets(line, sizeof(line), fd)) {
-		printf("  %s", line);
-		lines++;
-	}
-
-	os_close(fd);
-
-	printf("\nRead %d line(s) using U-Boot library functions.\n", lines);
-
-	/* Test the helper function */
-	result = demo_add_numbers(42, 13);
-	printf("Helper function result: %d\n", result);
-
-	demo_show_footer();
-
-	/* Clean up */
 	ulib_uninit();
 
-	return 0;
+	return ret;
 }
+#else
+int main(void)
+{
+	return demo_run();
+}
+#endif

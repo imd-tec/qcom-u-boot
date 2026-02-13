@@ -53,18 +53,22 @@ def check_demo_output(ubman, out):
     with open('/proc/version', 'r', encoding='utf-8') as f:
         proc_version = f.read().strip()
 
+    # demo.c uses U-Boot's printf (compiled with U-Boot headers) while
+    # demo_helper.c uses glibc's printf, so their output streams are
+    # buffered separately.  The helper output appears first, then the
+    # U-Boot printf output is flushed at exit.
     expected = [
         'U-Boot Library Demo Helper\r',
         '==========================\r',
-        'System version:helper: Adding 42 + 13 = 55\r',
+        'helper: Adding 42 + 13 = 55\r',
         '=================================\r',
         'Demo complete\r',
-        f'U-Boot version: {ubman.u_boot_version_string}',
+        '\r',
+        f'System version:U-Boot version: {ubman.u_boot_version_string}',
         '',
         f'  {proc_version}',
         '',
         'Read 1 line(s) using U-Boot library functions.',
-        'Helper function result: 55',
         ''
     ]
 
