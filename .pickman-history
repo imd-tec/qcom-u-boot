@@ -23918,3 +23918,160 @@ The rebase was successful and the MR has been updated. Here's the summary:
 
 ---
 
+## 2026-02-13: us/next
+
+Branch: cherry-7e81e690d72
+
+Commits:
+- 7e81e690d72 kbuild: add -fno-PIE flag unconditionally
+- 0ebda5f1f0c kbuild: add -Werror=implicit-int flag unconditionally
+- a76fb6981fb kbuild: use assignment instead of define ... endef for filechk_* rules
+- 3991f85e4cd kbuild: clang: choose GCC_TOOLCHAIN_DIR not on LD
+- c4a52fbb674 kbuild: use -Werror=implicit-... instead of -Werror-implicit-...
+- 156fdc57f7a kbuild: gitignore output directory
+- 931f04a85ad kbuild: remove meaningless prepare2 target
+- 057a53b570a gcc-9: silence 'address-of-packed-member' warning
+- d1b6489ef11 kbuild: do not overwrite .gitignore in output directory
+- 27529f1cb02 kbuild: skip parsing pre sub-make code for recursion
+- 4a247d13763 kbuild: mark prepare0 as PHONY to fix external module build
+- 45acf56e59a kbuild: make 'archprepare' depend on 'scripts'
+- 070b81458ae kbuild: fix single target build for external module
+- d142036b4cf Merge patch series "Update the kbuild system to 5.1"
+
+### Conversation log
+Now let me start cherry-picking the commits one by one. First commit:
+
+The first cherry-pick failed with conflicts. Let me check if this commit is already present in ci/master with a different hash:
+
+Let me search more broadly and also check multiple commits:
+
+I see there's "Merge patch series 'Update kbuild'" - let me check if it contains these commits:
+
+Let me check the "Merge patch series 'Update kbuild'" commit more closely:
+
+Let me check the "Update kbuild" merge more closely:
+
+This looks like a merge commit containing kbuild updates. Let me check the parent commits to see what was merged:
+
+Interesting - this is a different "Update kbuild" series. Let me now search for each of the specific commits I need to cherry-pick:
+
+None of them were found. Let me verify more thoroughly by searching for the subjects:
+
+The commits don't seem to be applied yet. Let me check if they're in the us/next branch:
+
+Good. The commit exists in us/next. The conflict is not because it's already applied, but because ci/master has diverged. Let me look at the conflict and try to resolve it:
+
+I see - the conflict shows that HEAD already has the -fno-PIE content (with EFI_APP conditional), while the commit from us/next has an empty section (meaning it was removing something). Let me look at what the original commit 7e81e690d72 actually did:
+
+Let me check what ci/master has at those lines currently:
+
+So ci/master already has the -fno-PIE flags but in a different form with CONFIG_EFI_APP conditional. The original commit from us/next is trying to move -fno-PIE to be unconditionally added at the initial KBUILD_CFLAGS definition.
+
+This is actually a structural conflict - ci/master has evolved differently than the original branch. Let me understand the current state better:
+
+I need to apply this commit's intent: add -fno-PIE unconditionally to the initial KBUILD_CFLAGS and KBUILD_AFLAGS definitions, and remove the conditional block. Let me resolve the conflict:
+
+Now I understand the situation. The commit's intent is:
+1. Add -fno-PIE to KBUILD_CFLAGS and KBUILD_AFLAGS at the initial definition 
+2. Remove the conditional block at the end
+
+But ci/master has the CONFIG_EFI_APP conditional which keeps `-shared` for EFI apps. This is a more evolved version - it adds -fno-PIE conditionally (not for EFI_APP). 
+
+Let me apply the change manually that achieves the same effect as the original commit while preserving the EFI_APP logic:
+
+Good - git has auto-merged the first part (adding -fno-PIE to KBUILD_CFLAGS and KBUILD_AFLAGS at lines 438-441). The conflict is in the second part where:
+- HEAD wants to keep CONFIG_EFI_APP block
+- The commit wants to remove -fno-PIE from here since it's now unconditionally added earlier
+
+Since we've already added -fno-PIE unconditionally, we should remove the redundant lines but keep the CONFIG_EFI_APP `-shared` part. Let me resolve:
+
+Now I need to add the CONFIG_EFI_APP block back (just keeping the -shared part):
+
+Good - the changes look correct. Now let me stage and continue:
+
+First commit done. Let me verify delta and run build:
+
+Close enough (8 vs 9 lines changed - minimal difference). Let me run build test:
+
+Build succeeded. Now cherry-pick the second commit:
+
+Third commit:
+
+Fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit - this one might be already applied, so I need to verify:
+
+These are different commits - they're making different changes. The original commit (057a53b570a) is a kbuild change that silences the warning, while the found commit (3586cb82277) reverts some sunxi-specific code. They're not the same. Let me proceed with cherry-pick:
+
+Ninth commit:
+
+Tenth commit:
+
+Eleventh commit:
+
+Twelfth commit:
+
+Thirteenth commit:
+
+Fourteenth commit - the merge commit:
+
+Same type of conflict - the merge commit also expects to remove the -fno-PIE conditional block which we want to keep in a different form. Since this is a merge commit, it should represent the combined state of all the previous commits. Let me keep the CONFIG_EFI_APP block:
+
+I removed the markers but I also lost the CONFIG_EFI_APP block. Let me add it back:
+
+The merge commit is empty now because we already applied all the individual commits. This is expected - let me commit it with --allow-empty to preserve the merge message:
+
+Now let me verify the log and run final build:
+
+All 14 commits are present. Now let me run the final build test:
+
+Excellent! Build passed. Let me provide a summary:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-7e81e690d72` (based on `ci/master`)
+
+**Status:** ✅ Successfully completed
+
+### Commits cherry-picked (14 total):
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | d02c54a4368 | kbuild: add -fno-PIE flag unconditionally | ✅ Conflict resolved |
+| 2 | 63912c73baa | kbuild: add -Werror=implicit-int flag unconditionally | ✅ Clean |
+| 3 | c77ce3a7658 | kbuild: use assignment instead of define ... endef for filechk_* rules | ✅ Clean |
+| 4 | 149c11d7a76 | kbuild: clang: choose GCC_TOOLCHAIN_DIR not on LD | ✅ Clean |
+| 5 | b28a07c20bc | kbuild: use -Werror=implicit-... instead of -Werror-implicit-... | ✅ Clean |
+| 6 | b84d8215085 | kbuild: gitignore output directory | ✅ Clean |
+| 7 | 98afb7b05e6 | kbuild: remove meaningless prepare2 target | ✅ Clean |
+| 8 | 3167c18dbea | gcc-9: silence 'address-of-packed-member' warning | ✅ Clean (verified NOT same as 3586cb82277) |
+| 9 | 3ee0f4ed7e2 | kbuild: do not overwrite .gitignore in output directory | ✅ Clean |
+| 10 | 259029485b4 | kbuild: skip parsing pre sub-make code for recursion | ✅ Clean |
+| 11 | 15b754decbf | kbuild: mark prepare0 as PHONY to fix external module build | ✅ Clean |
+| 12 | f7b7c2feb05 | kbuild: make 'archprepare' depend on 'scripts' | ✅ Clean |
+| 13 | c09a95331d6 | kbuild: fix single target build for external module | ✅ Clean |
+| 14 | 1689f12d7eb | Merge patch series "Update the kbuild system to 5.1" | ✅ Empty merge (expected) |
+
+### Fix-ups made:
+1. **Commit 1 (7e81e690d72)**: Resolved conflict to keep `CONFIG_EFI_APP` block with `-shared` flag while adding `-fno-PIE` unconditionally to initial KBUILD_CFLAGS/KBUILD_AFLAGS definitions. The original commit was designed for a codebase without the EFI_APP conditional.
+2. **Commit 14 (d142036b4cf)**: Same conflict resolution as commit 1 - kept `CONFIG_EFI_APP` block.
+
+### Verification for "maybe already applied" commit:
+- **057a53b570a vs 3586cb82277**: Verified these are **different commits** - the original is a kbuild change to silence warning globally, while the found commit reverts sunxi-specific code. Proceeded with cherry-pick.
+
+### Build result: ✅ OK
+- All sandbox builds passed after each commit and final build
+
+### Delta concerns: None
+- All commits had matching or near-matching line changes between original and cherry-picked versions
+
+The branch `cherry-7e81e690d72` is ready for pushing.
+
+---
+
