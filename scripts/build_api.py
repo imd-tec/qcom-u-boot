@@ -356,6 +356,12 @@ class SymbolRedefiner:
         Returns:
             bool: True if file was modified, False otherwise
         """
+        # Skip empty archives (objcopy cannot process them)
+        if os.path.getsize(path) == 0:
+            with open(outfile, 'wb'):
+                pass
+            return False
+
         # Always run objcopy to apply redefinitions
         self.redefine_file(path, outfile)
 
