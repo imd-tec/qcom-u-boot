@@ -92,8 +92,9 @@ def check_patch_parse_one_message(message):
     file_match = RE_FILE.search(message)
     # some messages have no file, catch those here
     no_file_match = any(s in message for s in [
-        '\nSubject:', 'Missing Signed-off-by: line(s)',
-        'does MAINTAINERS need updating'
+        '\nSubject:', 'Missing Signed-off-by:',
+        'does MAINTAINERS need updating',
+        'should have a',
     ])
 
     if file_match:
