@@ -772,7 +772,8 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
     def test_series_list_archived(self):
         """Archive a series and test listing it"""
         self.setup_second()
-        self.cser.archive('first')
+        with terminal.capture():
+            self.cser.archive('first')
         with terminal.capture() as (out, _):
             self.run_args('series', 'ls', pwork=True)
         lines = out.getvalue().splitlines()
@@ -877,7 +878,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
                          f'- add v2: {HASH_RE} as {HASH_RE} spi: SPI fixes')
         self.assertRegex(
             next(itr), f'Updating branch first2 from {HASH_RE} to {HASH_RE}')
-        self.assertEqual('Added new branch first2', next(itr))
+        self.assertEqual("Incremented series 'first' to v2", next(itr))
         return itr
 
     def test_series_link(self):
@@ -1532,9 +1533,11 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         cser = next(cor)
 
         # Archive it and make sure it is invisible
-        cser.archive('first')
+        with terminal.capture():
+            cser.archive('first')
         cser = next(cor)
-        cser.unarchive('first')
+        with terminal.capture():
+            cser.unarchive('first')
         self.assertFalse(next(cor))
         cor.close()
 
@@ -1544,11 +1547,13 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         cser = next(cor)
 
         # Archive it and make sure it is invisible
-        self.run_args('series', '-s', 'first', 'archive', pwork=True,
-                      cser=cser)
+        with terminal.capture():
+            self.run_args('series', '-s', 'first', 'archive', pwork=True,
+                          cser=cser)
         next(cor)
-        self.run_args('series', '-s', 'first', 'unarchive', pwork=True,
-                      cser=cser)
+        with terminal.capture():
+            self.run_args('series', '-s', 'first', 'unarchive', pwork=True,
+                          cser=cser)
         self.assertFalse(next(cor))
         cor.close()
 
@@ -1696,10 +1701,11 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.decrement('first')
         lines = out.getvalue().splitlines()
-        self.assertEqual(2, len(lines))
+        self.assertEqual(3, len(lines))
         self.assertEqual("Removing series 'first' v2", lines[0])
         self.assertEqual(
             f"Deleted branch 'first2' {str(branch_oid)[:10]}", lines[1])
+        self.assertEqual("Decremented series 'first' to v1", lines[2])
 
         svdict = cser.get_ser_ver_dict()
         self.assertEqual(1, len(svdict))
@@ -1720,12 +1726,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         """Test adding an upsream"""
         cser = self.get_cser()
 
-        cser.upstream_add('us', 'https://one')
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one')
         ulist = cser.get_upstream_dict()
         self.assertEqual(1, len(ulist))
         self.assertEqual(('https://one', None), ulist['us'])
 
-        cser.upstream_add('ci', 'git@two')
+        with terminal.capture():
+            cser.upstream_add('ci', 'git@two')
         ulist = cser.get_upstream_dict()
         self.assertEqual(2, len(ulist))
         self.assertEqual(('https://one', None), ulist['us'])
@@ -1762,17 +1770,21 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_set_default('us')
         self.assertEqual("No such upstream 'us'", str(exc.exception))
 
-        cser.upstream_add('us', 'https://one')
-        cser.upstream_add('ci', 'git@two')
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one')
+            cser.upstream_add('ci', 'git@two')
 
         self.assertIsNone(cser.upstream_get_default())
 
-        cser.upstream_set_default('us')
+        with terminal.capture():
+            cser.upstream_set_default('us')
         self.assertEqual('us', cser.upstream_get_default())
 
-        cser.upstream_set_default('us')
+        with terminal.capture():
+            cser.upstream_set_default('us')
 
-        cser.upstream_set_default('ci')
+        with terminal.capture():
+            cser.upstream_set_default('ci')
         self.assertEqual('ci', cser.upstream_get_default())
 
         with terminal.capture() as (out, _):
@@ -1792,19 +1804,22 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual("patman: ValueError: No such upstream 'us'",
                          out.getvalue().strip().splitlines()[-1])
 
-        self.run_args('upstream', 'add', 'us', 'https://one')
-        self.run_args('upstream', 'add', 'ci', 'git@two')
+        with terminal.capture():
+            self.run_args('upstream', 'add', 'us', 'https://one')
+            self.run_args('upstream', 'add', 'ci', 'git@two')
 
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'default')
         self.assertEqual('unset', out.getvalue().strip())
 
-        self.run_args('upstream', 'default', 'us')
+        with terminal.capture():
+            self.run_args('upstream', 'default', 'us')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'default')
         self.assertEqual('us', out.getvalue().strip())
 
-        self.run_args('upstream', 'default', 'ci')
+        with terminal.capture():
+            self.run_args('upstream', 'default', 'ci')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'default')
         self.assertEqual('ci', out.getvalue().strip())
@@ -1825,14 +1840,17 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_delete('us')
         self.assertEqual("No such upstream 'us'", str(exc.exception))
 
-        cser.upstream_add('us', 'https://one')
-        cser.upstream_add('ci', 'git@two')
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one')
+            cser.upstream_add('ci', 'git@two')
 
-        cser.upstream_set_default('us')
-        cser.upstream_delete('us')
+        with terminal.capture():
+            cser.upstream_set_default('us')
+            cser.upstream_delete('us')
         self.assertIsNone(cser.upstream_get_default())
 
-        cser.upstream_delete('ci')
+        with terminal.capture():
+            cser.upstream_delete('ci')
         ulist = cser.get_upstream_dict()
         self.assertFalse(ulist)
 
@@ -1843,17 +1861,20 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual("patman: ValueError: No such upstream 'us'",
                          out.getvalue().strip().splitlines()[-1])
 
-        self.run_args('us', 'add', 'us', 'https://one')
-        self.run_args('us', 'add', 'ci', 'git@two')
+        with terminal.capture():
+            self.run_args('us', 'add', 'us', 'https://one')
+            self.run_args('us', 'add', 'ci', 'git@two')
 
-        self.run_args('upstream', 'default', 'us')
-        self.run_args('upstream', 'delete', 'us')
+        with terminal.capture():
+            self.run_args('upstream', 'default', 'us')
+            self.run_args('upstream', 'delete', 'us')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'default', 'us', expect_ret=1)
         self.assertEqual("patman: ValueError: No such upstream 'us'",
                          out.getvalue().strip())
 
-        self.run_args('upstream', 'delete', 'ci')
+        with terminal.capture():
+            self.run_args('upstream', 'delete', 'ci')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'list')
         self.assertFalse(out.getvalue().strip())
@@ -2003,6 +2024,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             f'- unmarked: {HASH_RE} as {HASH_RE} spi: SPI fixes')
         self.assertRegex(
             next(itr), f'Updating branch first from {HASH_RE} to {HASH_RE}')
+        self.assertEqual("Unmarked 2 commits in series 'first'", next(itr))
         self.assertEqual('Dry run completed', next(itr))
 
         with self.stage('unmark'):
@@ -2389,7 +2411,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.project_set(pwork, 'U-Boot')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
     def test_patchwork_project_get(self):
@@ -2400,7 +2422,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.project_set(pwork, 'U-Boot')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
         name, pwid, link_name = cser.project_get()
@@ -2419,7 +2441,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('-P', 'https://url', 'patchwork', 'set-project',
                           'U-Boot', pwork=pwork)
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
         name, pwid, link_name = cser.project_get()
@@ -2430,7 +2452,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             self.run_args('-P', 'https://url', 'patchwork', 'get-project')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
     def check_series_list_patches(self):
@@ -3086,7 +3108,8 @@ Date:   .*
     def test_series_progress_all_archived(self):
         """Test showing progress for all cseries including archived ones"""
         self.setup_second()
-        self.cser.archive('first')
+        with terminal.capture():
+            self.cser.archive('first')
 
         with self.stage('progress without archived'):
             with terminal.capture() as (out, _):
@@ -3335,7 +3358,9 @@ Date:   .*
 
         with terminal.capture() as (out, _):
             self.run_args('series', 'scan', '-M', pwork=True)
-        self.assertEqual(expect, out.getvalue())
+        self.assertEqual(
+            expect + 'Scanned 3 commits (1 added, 1 removed)\n',
+            out.getvalue())
 
         new_pcdict = cser.get_pcommit_dict(svid).values()
         self.assertEqual(len(old_pcdict), len(new_pcdict))

@@ -304,6 +304,13 @@ class CseriesHelper:
         series.idnum = in_series.idnum
         series.name = in_series.name
 
+    def plural(self, val):
+        """Returns a string to make something plural
+
+        So far this is very simple and just returns an 's' when needed
+        """
+        return '' if val == 1 else 's'
+
     def _handle_mark(self, branch_name, in_series, version, mark,
                      allow_unmarked, force_version, dry_run):
         """Handle marking a series, checking for unmarked commits, etc.
