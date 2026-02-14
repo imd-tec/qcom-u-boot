@@ -95,7 +95,7 @@ def patchwork_status(branch, count, start, end, dest_branch, force,
     _, version = patchstream.split_name_version(branch)
     link = series.get_link_for_version(version, links)
     if not link:
-        raise ValueError('Series-links has no link for v{version}')
+        raise ValueError(f'Series-links has no link for v{version}')
     tout.debug(f"Link '{link}")
 
     # Allow the series to override the URL
