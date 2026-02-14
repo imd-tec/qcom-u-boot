@@ -94,7 +94,7 @@ class Cseries(cser_helper.CseriesHelper):
             count = len(ser.commits)
             msg += f" ({count} commit{'s' if count > 1 else ''})"
         if not added:
-            tout.info(f"Series '{ser.name}' v{version} already exists")
+            tout.notice(f"Series '{ser.name}' v{version} already exists")
             msg = None
         elif not dry_run:
             self.commit()
@@ -105,7 +105,7 @@ class Cseries(cser_helper.CseriesHelper):
         ser.idnum = series_id
 
         if msg:
-            tout.info(msg)
+            tout.notice(msg)
         if dry_run:
             tout.info('Dry run completed')
 
@@ -211,7 +211,8 @@ class Cseries(cser_helper.CseriesHelper):
 
         self._set_link(ser.idnum, ser.name, version, link, update_commit)
         self.commit()
-        tout.info(f"Setting link for series '{ser.name}' v{version} to {link}")
+        tout.notice(
+            f"Setting link for series '{ser.name}' v{version} to {link}")
 
     def link_get(self, series, version):
         """Get the patchwork link for a version of a series
@@ -280,8 +281,8 @@ class Cseries(cser_helper.CseriesHelper):
                 pwork, series, version)
             if pws:
                 if wait_s:
-                    tout.info('Link completed after '
-                              f'{self.get_time() - start} seconds')
+                    tout.notice('Link completed after '
+                                f'{self.get_time() - start} seconds')
                 break
 
             print(f"Possible matches for '{name}' v{version} desc '{desc}':")
@@ -684,7 +685,7 @@ class Cseries(cser_helper.CseriesHelper):
             self.rollback()
 
         self.commit()
-        tout.info(f"Removed series '{name}'")
+        tout.notice(f"Removed series '{name}'")
         if dry_run:
             tout.info('Dry run completed')
 
@@ -867,7 +868,7 @@ class Cseries(cser_helper.CseriesHelper):
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
 
         if likely_sent and autolink:
-            print(f'Autolinking with Patchwork ({autolink_wait} seconds)')
+            tout.notice(f'Autolinking with Patchwork ({autolink_wait} seconds)')
             self.link_auto(pwork, name, version, True, wait_s=autolink_wait)
 
     def archive(self, series):

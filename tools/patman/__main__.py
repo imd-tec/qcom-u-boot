@@ -32,7 +32,7 @@ def run_patman():
     if not args.debug:
         sys.tracebacklimit = 0
 
-    tout.init(tout.INFO if args.verbose else tout.WARNING)
+    tout.init(tout.INFO if args.verbose else tout.NOTICE)
 
     # Run our reasonably good tests
     if args.cmd == 'test':
