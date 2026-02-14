@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0+
+#
+# Example objects for x86 platforms (compiled via kbuild, not linked into
+# u-boot).  The standalone Makefile is used for sandbox builds instead.
+
+extra-y += demo.o demo_helper.o

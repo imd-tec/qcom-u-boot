@@ -310,7 +310,7 @@ class SymbolRedefiner:
     """
 
     def __init__(self, syms: List[Symbol], outdir: str, max_workers,
-                 verbose=False):
+                 verbose=False, objcopy='objcopy'):
         """Initialize with symbols and output settings
 
         Args:
@@ -318,11 +318,13 @@ class SymbolRedefiner:
             outdir (str): Directory to write modified object files
             max_workers (int): Number of parallel workers
             verbose (bool): Whether to show verbose output
+            objcopy (str): Path to objcopy binary
         """
         self.syms = syms
         self.outdir = outdir
         self.verbose = verbose
         self.max_workers = max_workers
+        self.objcopy = objcopy
         self.redefine_args = []
         self.symbol_names = set()
 
@@ -339,7 +341,7 @@ class SymbolRedefiner:
             infile (str): Input object file path
             outfile (str): Output object file path
         """
-        cmd = ['objcopy'] + self.redefine_args + [infile, outfile]
+        cmd = [self.objcopy] + self.redefine_args + [infile, outfile]
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         if self.verbose:
             print(f'Copied and modified {infile} -> {outfile}')
@@ -397,7 +399,8 @@ class SymbolRedefiner:
         return outfiles, modified
 
     @staticmethod
-    def apply_renames(obj_files, syms, outdir: str, max_workers, verbose=False):
+    def apply_renames(obj_files, syms, outdir: str, max_workers,
+                      verbose=False, objcopy='objcopy'):
         """Apply symbol redefinitions to object files using objcopy
 
         Args:
@@ -406,6 +409,7 @@ class SymbolRedefiner:
             outdir (str): Directory to write modified object files
             max_workers (int): Number of parallel workers
             verbose (bool): Whether to show verbose output
+            objcopy (str): Path to objcopy binary
 
         Returns:
             tuple[List[str], int]: List of output object file paths and
@@ -414,7 +418,8 @@ class SymbolRedefiner:
         if not syms:
             return obj_files, 0
 
-        redefiner = SymbolRedefiner(syms, outdir, max_workers, verbose)
+        redefiner = SymbolRedefiner(syms, outdir, max_workers, verbose,
+                                    objcopy)
 
         # Setup: create output directory and prepare work items
         os.makedirs(outdir, exist_ok=True)
@@ -618,6 +623,8 @@ def parse_args(argv):
                         help='Show verbose output')
     parser.add_argument('-j', '--jobs', type=int, metavar='N',
                         help='Number of parallel jobs for symbol processing')
+    parser.add_argument('--objcopy', default='objcopy',
+                        help='Path to objcopy binary (default: objcopy)')
     parser.add_argument('-P', '--processes', type=int,
                         help='set number of processes to use for running tests')
     parser.add_argument('-t', '--test', action='store_true', dest='test',
@@ -692,7 +699,8 @@ def main(argv=None):
         jobs = args.jobs if args.jobs else min(os.cpu_count() or 4, 8)
         start_time = time.time()
         outfiles, modified = SymbolRedefiner.apply_renames(
-            args.redefine, syms, args.output_dir, jobs, args.verbose)
+            args.redefine, syms, args.output_dir, jobs, args.verbose,
+            args.objcopy)
         # Print the list of output files for the build system to use
         if args.output_dir:
             print('\n'.join(outfiles))

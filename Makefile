@@ -1061,7 +1061,9 @@ ifeq ($(NO_LIBS),)
 INPUTS-$(CONFIG_ULIB_SHARED_LIB) += libu-boot.so test/ulib/ulib_test
 INPUTS-$(CONFIG_ULIB) += libu-boot.a
 ifdef CONFIG_EXAMPLES
+ifdef CONFIG_SANDBOX
 INPUTS-$(CONFIG_ULIB) += examples_ulib examples_rust
+endif
 endif
 endif
 endif
@@ -1831,33 +1833,40 @@ endif
 
 # Rule to link u-boot
 # May be overridden by arch/$(ARCH)/config.mk
+#
+# u-boot-link is a parameterised helper shared with arch/x86 example builds:
+#   $(1) - extra objects to link alongside $(u-boot-init) (empty for u-boot)
+#   $(2) - map-file path
 ifeq ($(LTO_ENABLE),y)
 quiet_cmd_u-boot__ ?= LTO     $@
-      cmd_u-boot__ ?=								\
+define u-boot-link
 		touch $(u-boot-main) ;						\
 		$(CC) -nostdlib -nostartfiles					\
 		$(LTO_FINAL_LDFLAGS) $(c_flags)					\
 		$(KBUILD_LDFLAGS:%=-Wl,%) $(LDFLAGS_u-boot:%=-Wl,%) -o $@	\
-		-T u-boot.lds $(u-boot-init)					\
+		-T u-boot.lds $(u-boot-init) $(1)				\
 		-Wl,--whole-archive						\
 			$(u-boot-main)						\
 			$(u-boot-keep-syms-lto)					\
 			$(PLATFORM_LIBS)					\
 		-Wl,--no-whole-archive						\
-		-Wl,-Map,u-boot.map;						\
+		-Wl,-Map,$(2);							\
 		$(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
+endef
 else
 quiet_cmd_u-boot__ ?= LD      $@
-      cmd_u-boot__ ?=								\
+define u-boot-link
 		touch $(u-boot-main) ;						\
-		$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_u-boot) -o $@			\
-		-T u-boot.lds $(u-boot-init)					\
+		$(LD) $(KBUILD_LDFLAGS) $(LDFLAGS_u-boot) -o $@		\
+		-T u-boot.lds $(u-boot-init) $(1)				\
 		--whole-archive							\
 			$(u-boot-main)						\
 		--no-whole-archive						\
-		$(PLATFORM_LIBS) -Map u-boot.map;				\
+		$(PLATFORM_LIBS) -Map $(2);					\
 		$(if $(ARCH_POSTLINK), $(MAKE) -f $(ARCH_POSTLINK) $@, true)
+endef
 endif
+      cmd_u-boot__ ?= $(call u-boot-link,,u-boot.map)
 
 quiet_cmd_smap = GEN     common/system_map.o
 cmd_smap = \
@@ -1891,6 +1900,7 @@ quiet_cmd_ulib-objs = OBJS    $@
 	$(PYTHON3) $(srctree)/scripts/build_api.py \
 		$(srctree)/lib/ulib/rename.syms \
 		--redefine $$(cat $@.objlist) --output-dir $@.objdir \
+		--objcopy $(OBJCOPY) \
 		$(if $(filter -j%,$(MAKEFLAGS)),--jobs $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))) \
 		> $@; \
 	rm -f $@.tmp $@.objlist
@@ -1960,7 +1970,7 @@ test/ulib/ulib_test_static: test/ulib/ulib_test.o libu-boot.a \
 
 # abspath is used since many paths are relative
 PHONY += examples_ulib
-examples_ulib: libu-boot.a libu-boot.so FORCE
+examples_ulib: libu-boot.a $(if $(CONFIG_ULIB_SHARED_LIB),libu-boot.so) FORCE
 	$(Q)$(MAKE) -C $(srctree)/examples/ulib \
 		UBOOT_BUILD=$(abspath $(obj)) \
 		EXAMPLE_DIR=. \
@@ -1972,7 +1982,7 @@ examples_ulib: libu-boot.a libu-boot.so FORCE
 		LIB_STATIC_LDS="$(abspath $(LIB_STATIC_LDS))"
 
 PHONY += examples_rust
-examples_rust: libu-boot.a libu-boot.so FORCE
+examples_rust: libu-boot.a $(if $(CONFIG_ULIB_SHARED_LIB),libu-boot.so) FORCE
 	@if command -v cargo >/dev/null 2>&1; then \
 		$(MAKE) -C $(srctree)/examples/rust \
 			UBOOT_BUILD=$(abspath $(obj)) \

@@ -6,7 +6,12 @@
  * Written by Simon Glass <simon.glass@canonical.com>
  */
 
+#ifndef CONFIG_ULIB
 #include <u-boot-api.h>
+#else
+#include <stdio.h>
+#define ub_printf printf
+#endif
 
 void demo_show_banner(void)
 {
