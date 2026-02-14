@@ -803,13 +803,17 @@ class Cseries(cser_helper.CseriesHelper):
             if i is not None:
                 del to_remove[i]
 
+        removed = 0
+        added = 0
         for seq, cmt in enumerate(ser.commits):
             if seq in to_remove:
                 _show_item('-', seq, to_remove[seq].subject)
                 del to_remove[seq]
+                removed += 1
             if seq in to_add:
                 _show_item('+', seq, to_add[seq].subject)
                 del to_add[seq]
+                added += 1
             else:
                 _show_item(' ', seq, cmt.subject)
         seq = len(ser.commits)
@@ -823,6 +827,17 @@ class Cseries(cser_helper.CseriesHelper):
         self._add_series_commits(ser, svid)
         if not dry_run:
             self.commit()
+            seq = len(ser.commits)
+            msg = ''
+            if added:
+                msg += f'{added} added'
+            if removed:
+                if msg:
+                    msg += ', '
+                msg += f'{removed} removed'
+            if msg:
+                msg = f' ({msg})'
+            tout.notice(f'Scanned {seq} commit{self.plural(seq)}{msg}')
         else:
             self.rollback()
             tout.info('Dry run completed')

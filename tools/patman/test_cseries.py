@@ -3335,7 +3335,9 @@ Date:   .*
 
         with terminal.capture() as (out, _):
             self.run_args('series', 'scan', '-M', pwork=True)
-        self.assertEqual(expect, out.getvalue())
+        self.assertEqual(
+            expect + 'Scanned 3 commits (1 added, 1 removed)\n',
+            out.getvalue())
 
         new_pcdict = cser.get_pcommit_dict(svid).values()
         self.assertEqual(len(old_pcdict), len(new_pcdict))
