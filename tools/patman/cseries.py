@@ -142,13 +142,15 @@ class Cseries(cser_helper.CseriesHelper):
             del_branch = repo.lookup_branch(del_name)
             branch_oid = del_branch.peel(pygit2.enums.ObjectType.COMMIT).oid
             del_branch.delete()
-            print(f"Deleted branch '{del_name}' {oid(branch_oid)}")
+            tout.info(f"Deleted branch '{del_name}' {oid(branch_oid)}")
 
         self.db.ser_ver_remove(ser.idnum, max_vers)
         if not dry_run:
             self.commit()
         else:
             self.rollback()
+
+        tout.notice(f"Decremented series '{ser.name}' to v{new_max}")
 
     def increment(self, series_name, dry_run=False):
         """Increment a series to the next version and create a new branch
@@ -191,7 +193,7 @@ class Cseries(cser_helper.CseriesHelper):
             self.rollback()
 
         # repo.head.set_target(amended)
-        tout.info(f'Added new branch {new_name}')
+        tout.notice(f"Incremented series '{ser.name}' to v{vers}")
         if dry_run:
             tout.info('Dry run completed')
 
@@ -372,7 +374,7 @@ class Cseries(cser_helper.CseriesHelper):
                 msg += f', {no_desc} missing description'
             if failed:
                 msg += f', {failed} updated failed'
-            tout.info(msg + f' ({requests} requests)')
+            tout.notice(msg + f' ({requests} requests)')
 
             tout.info('')
             tout.info(f"{'Name':15}  Version  {'Description':40}  Result")
@@ -466,6 +468,9 @@ class Cseries(cser_helper.CseriesHelper):
                     f'Marked commits {len(bad)}/{len(ser.commits)}')
         new_oid = self._mark_series(in_name, ser, dry_run=dry_run)
 
+        count = len(ser.commits)
+        tout.notice(f"Marked {count} commit{self.plural(count)}"
+                    f" in series '{name}'")
         if dry_run:
             tout.info('Dry run completed')
         return new_oid
@@ -510,6 +515,9 @@ class Cseries(cser_helper.CseriesHelper):
             else:
                 vals.info = 'no mark'
 
+        count = len(ser.commits)
+        tout.notice(f"Unmarked {count} commit{self.plural(count)}"
+                    f" in series '{name}'")
         if dry_run:
             tout.info('Dry run completed')
         return vals.oid
@@ -756,7 +764,7 @@ class Cseries(cser_helper.CseriesHelper):
         else:
             self.rollback()
 
-        tout.info(f"Renamed series '{series}' to '{name}'")
+        tout.notice(f"Renamed series '{series}' to '{name}'")
         if dry_run:
             tout.info('Dry run completed')
 
@@ -916,6 +924,9 @@ class Cseries(cser_helper.CseriesHelper):
 
         self.db.series_set_archived(ser.idnum, True)
         self.commit()
+        count = len(tag_info)
+        tout.notice(f"Archived series '{ser.name}'"
+                    f" ({count} version{self.plural(count)})")
 
     def unarchive(self, series):
         """Unarchive a series
@@ -958,6 +969,9 @@ class Cseries(cser_helper.CseriesHelper):
             self.db.ser_ver_set_archive_tag(idnum, None)
 
         self.commit()
+        count = len(tag_info)
+        tout.notice(f"Unarchived series '{ser.name}'"
+                    f" ({count} version{self.plural(count)})")
 
     def status(self, pwork, series, version, show_comments,
                show_cover_comments=False):
@@ -1029,9 +1043,9 @@ class Cseries(cser_helper.CseriesHelper):
             updated, updated_cover = self._sync_one(
                 svid, ser.name, version, show_comments, show_cover_comments,
                 gather_tags, cover, patches, dry_run)
-            tout.info(f"{updated} patch{'es' if updated != 1 else ''}"
-                      f"{' and cover letter' if updated_cover else ''} "
-                      f'updated ({stats.request_count} requests)')
+            tout.notice(f"{updated} patch{'es' if updated != 1 else ''}"
+                        f"{' and cover letter' if updated_cover else ''} "
+                        f'updated ({stats.request_count} requests)')
 
             if not dry_run:
                 self.commit()
@@ -1064,7 +1078,7 @@ class Cseries(cser_helper.CseriesHelper):
                 add_newline = gather_tags
 
             tout.info('')
-            tout.info(
+            tout.notice(
                 f"{tot_updated} patch{'es' if tot_updated != 1 else ''} and "
                 f"{tot_cover} cover letter{'s' if tot_cover != 1 else ''} "
                 f'updated, {missing} missing '
@@ -1084,6 +1098,7 @@ class Cseries(cser_helper.CseriesHelper):
         """
         self.db.upstream_add(name, url)
         self.commit()
+        tout.notice(f"Added upstream '{name}' ({url})")
 
     def upstream_list(self):
         """List the upstream repos
@@ -1106,6 +1121,8 @@ class Cseries(cser_helper.CseriesHelper):
         """
         self.db.upstream_set_default(name)
         self.commit()
+        if name:
+            tout.notice(f"Set default upstream to '{name}'")
 
     def upstream_get_default(self):
         """Get the default upstream target
@@ -1123,6 +1140,7 @@ class Cseries(cser_helper.CseriesHelper):
         """
         self.db.upstream_delete(name)
         self.commit()
+        tout.notice(f"Deleted upstream '{name}'")
 
     def version_remove(self, name, version, dry_run=False):
         """Remove a version of a series from the database
@@ -1147,7 +1165,7 @@ class Cseries(cser_helper.CseriesHelper):
         else:
             self.rollback()
 
-        tout.info(f"Removed version {version} from series '{name}'")
+        tout.notice(f"Removed version {version} from series '{name}'")
         if dry_run:
             tout.info('Dry run completed')
 
@@ -1194,7 +1212,7 @@ class Cseries(cser_helper.CseriesHelper):
         else:
             self.rollback()
 
-        tout.info(f"Changed version {version} in series '{ser.name}' "
-                  f"to {new_version} named '{new_name}'")
+        tout.notice(f"Changed version {version} in series '{ser.name}' "
+                    f"to {new_version} named '{new_name}'")
         if dry_run:
             tout.info('Dry run completed')
