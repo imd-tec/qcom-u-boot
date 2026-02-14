@@ -24491,6 +24491,56 @@ For commit 3 (009d7722ffd → fbd362e9727):
 
 **Branch status:**
 The branch `cherry-7e5c2c782fb` is ready for pushing, sitting 3 commits ahead of `ci/master`.
+Branch: cherry-9d7f90782d0
+
+Commits:
+- 9d7f90782d0 ARM: imx: mxs: Add support for imx287 based BTT devices
+- 5d7e003248a Merge tag 'u-boot-imx-next-20250617' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+
+### Conversation log
+The repository state is clean (untracked files don't affect cherry-picking). Let me create the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (9d7f90782d0 - ARM: imx: mxs: Add support for imx287 based BTT devices):
+
+First cherry-pick succeeded. Now let me check the delta between the cherry-picked commit and the original:
+
+The delta is identical - 17 files changed with 1322 insertions. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (5d7e003248a - a merge commit):
+
+The merge commit is empty (which is expected since the content was already applied in the previous commit). Since we're instructed to NEVER skip merge commits and use --allow-empty, let me commit it:
+
+Good. Now let me check the delta for the merge commit:
+
+The cherry-picked merge commit is empty (which is expected - the changes were already applied in the first commit). The original merge commit shows the 17 files changed because it's showing the diff introduced by the merge. This is expected behavior when cherry-picking a merge commit when its content was already applied.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 2 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**✅ Cherry-pick completed successfully**
+
+### Commits Cherry-picked:
+1. `0a2afd4f2a7` - ARM: imx: mxs: Add support for imx287 based BTT devices (from `9d7f90782d0`)
+2. `92bc1f20aa6` - Merge tag 'u-boot-imx-next-20250617' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next (from `5d7e003248a`)
+
+### Build Result: **OK**
+- sandbox board builds successfully with no errors or warnings
+
+### Fix-ups Made: **None**
+- Both cherry-picks applied cleanly
+
+### Commit Deltas:
+1. **9d7f90782d0**: ✅ Identical delta - 17 files changed, 1322 insertions
+2. **5d7e003248a**: ✅ Expected empty commit - the merge commit's content was already in the first commit
+
+### Branch Status:
+- Branch `cherry-9d7f90782d0` is ready for pushing
+- It is 2 commits ahead of `ci/master`
 
 ---
 
