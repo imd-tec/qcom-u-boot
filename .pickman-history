@@ -24289,3 +24289,74 @@ The branch `cherry-9f208a3e709` is ready for pushing, containing 8 commits ahead
 
 ---
 
+## 2026-02-14: us/next
+
+Branch: cherry-7d0f2733797
+
+Commits:
+- 7d0f2733797 clk: imx: add missing linux/bug.h header for WARN
+- 1f1aafe0b52 iommu: qcom-smmu: add missing linux/bug.h header for WARN_ON
+- 5c734237ac5 arm: apple: rtkit: add missing header linux/bug.h and linux/bitops.h
+- 01cc7046ad2 linux/bitfield.h: sync <linux/bitfield.h> from Linux 6.15
+- fe37fb8214e mtd: spinand: winbond: add Winbond W25N04KV flash support
+- 9de873b4c30 Merge patch series "linux/bitfield.h: sync <linux/bitfield.h> from Linux 6.15 + winbond"
+
+### Conversation log
+The repository state is clean (untracked files don't affect cherry-picking). Let me create the new branch and start the cherry-pick process.
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build:
+
+Delta looks identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Delta looks identical. Running build test:
+
+Build passed. Now the third commit:
+
+Delta looks identical. Running build test:
+
+Build passed. Now the fourth commit:
+
+Delta looks identical. Running build test:
+
+Build passed. Now the fifth commit:
+
+Delta looks identical. Running build test:
+
+Build passed. Now the sixth and final commit (this is a merge commit, so I'll use `-m 1 --allow-empty`):
+
+The merge commit is empty as expected (since we've already cherry-picked all the individual commits). Let me commit it with `--allow-empty`:
+
+The merge commit is empty in our cherry-picked version (since we applied each commit individually), but it preserves the commit message. This is expected behavior. Now let me run the build test:
+
+Build passed. Now let me verify all 6 commits are present:
+
+All 6 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+- **Branch created:** `cherry-7d0f2733797` (based on `ci/master`)
+- **Build result:** ✅ OK (no warnings or errors)
+- **Fix-ups made:** None needed
+- **Concerning deltas:** None - all commits applied cleanly with identical deltas
+
+### Commits cherry-picked (6 total):
+| # | Hash (cherry-picked) | Hash (original) | Subject |
+|---|---------------------|-----------------|---------|
+| 1 | 600238a204a | 7d0f2733797 | clk: imx: add missing linux/bug.h header for WARN |
+| 2 | 22f826ec8d4 | 1f1aafe0b52 | iommu: qcom-smmu: add missing linux/bug.h header for WARN_ON |
+| 3 | ae2a83ef316 | 5c734237ac5 | arm: apple: rtkit: add missing header linux/bug.h and linux/bitops.h |
+| 4 | 06a0c159dfa | 01cc7046ad2 | linux/bitfield.h: sync <linux/bitfield.h> from Linux 6.15 |
+| 5 | 320c8ceee56 | fe37fb8214e | mtd: spinand: winbond: add Winbond W25N04KV flash support |
+| 6 | 688994146c4 | 9de873b4c30 | Merge patch series "linux/bitfield.h: sync..." (empty, preserved for history) |
+
+The branch is ready for pushing. The merge commit (commit 6) is empty because we cherry-picked each individual commit separately, but the commit message is preserved for tracking history as requested.
+
+---
+
