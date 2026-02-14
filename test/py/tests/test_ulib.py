@@ -290,18 +290,44 @@ def test_ulib_demo_rom_64(ubman):
     """Test the ulib demo ROM image under QEMU x86_64."""
     run_x86_rom_demo(ubman, 'qemu-system-x86_64')
 
+def run_bios_demo(ubman, qemu_binary, extra_qemu_args=None):
+    """Boot the demo.bin binary under QEMU and check for expected output.
+
+    Locates demo.bin in the build directory, launches the given QEMU
+    binary with it as -bios, and asserts that the expected demo output
+    is present.
+
+    Args:
+        ubman (ConsoleBase): Test fixture providing build directory
+            etc.
+        qemu_binary (str): QEMU system binary
+            (e.g. 'qemu-system-aarch64')
+        extra_qemu_args (list): Additional QEMU arguments
+            (e.g. ['-cpu', 'cortex-a57'])
+    """
+    build = ubman.config.build_dir
+    demo_bin = os.path.join(build, 'examples', 'ulib', 'demo.bin')
+
+    assert os.path.exists(demo_bin), 'demo.bin not found in build directory'
+    assert shutil.which(qemu_binary), f'{qemu_binary} not found'
+
+    cmd = [qemu_binary, '-machine', 'virt', '-nographic', '-no-reboot',
+           '-bios', demo_bin]
+    if extra_qemu_args:
+        cmd += extra_qemu_args
+    out = run_qemu_demo(cmd)
+    assert_demo_output(out)
+
 @pytest.mark.localqemu
 @pytest.mark.boardspec('qemu_arm64')
 @pytest.mark.buildconfigspec("examples")
 def test_ulib_demo_arm64(ubman):
     """Test the ulib demo binary under QEMU ARM64."""
-    build = ubman.config.build_dir
-    demo_bin = os.path.join(build, 'examples', 'ulib', 'demo.bin')
+    run_bios_demo(ubman, 'qemu-system-aarch64', ['-cpu', 'cortex-a57'])
 
-    assert os.path.exists(demo_bin), 'demo.bin not found in build directory'
-    assert shutil.which('qemu-system-aarch64'), 'qemu-system-aarch64 not found'
-
-    cmd = ['qemu-system-aarch64', '-machine', 'virt', '-cpu', 'cortex-a57',
-           '-nographic', '-no-reboot', '-bios', demo_bin]
-    out = run_qemu_demo(cmd)
-    assert_demo_output(out)
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-riscv64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_riscv64(ubman):
+    """Test the ulib demo binary under QEMU RISC-V 64."""
+    run_bios_demo(ubman, 'qemu-system-riscv64')
