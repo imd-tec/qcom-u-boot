@@ -234,12 +234,13 @@ def assert_demo_output(out):
     assert '=================================' in out
     assert 'Demo complete' in out
 
-def run_qemu_demo(qemu_cmd):
+def run_qemu_demo(qemu_cmd, timeout=5):
     """Run a ulib demo under QEMU and return output.
 
     Args:
         qemu_cmd (list): QEMU command and arguments (e.g.
                   ['qemu-system-i386', '-bios', 'demo.rom', ...])
+        timeout (int): Seconds to wait before killing QEMU (default 5)
 
     Returns:
         str: Decoded stdout from QEMU
@@ -247,7 +248,7 @@ def run_qemu_demo(qemu_cmd):
     with subprocess.Popen(qemu_cmd, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE) as proc:
         try:
-            stdout, _ = proc.communicate(timeout=5)
+            stdout, _ = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
             stdout, _ = proc.communicate()
@@ -331,3 +332,35 @@ def test_ulib_demo_arm64(ubman):
 def test_ulib_demo_riscv64(ubman):
     """Test the ulib demo binary under QEMU RISC-V 64."""
     run_bios_demo(ubman, 'qemu-system-riscv64')
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('efi-x86_app64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_efi_x86(ubman):
+    """Test the ulib demo EFI application under QEMU x86_64 with OVMF."""
+    build = ubman.config.build_dir
+    efi_dir = os.path.join(build, 'examples', 'ulib')
+    demo_efi = os.path.join(efi_dir, 'demo-app.efi')
+
+    assert os.path.exists(demo_efi), 'demo-app.efi not found in build directory'
+    assert shutil.which('qemu-system-x86_64'), 'qemu-system-x86_64 not found'
+
+    ovmf_code = '/usr/share/OVMF/OVMF_CODE_4M.fd'
+    ovmf_vars = '/usr/share/OVMF/OVMF_VARS_4M.fd'
+    assert os.path.exists(ovmf_code), 'OVMF firmware not found'
+
+    with open(os.path.join(efi_dir, 'startup.nsh'), 'w',
+              encoding='utf-8') as nsh:
+        nsh.write('fs0:demo-app.efi\n')
+
+    # OVMF needs a writable copy of the vars file
+    vars_copy = os.path.join(efi_dir, 'OVMF_VARS_4M.fd')
+    shutil.copy(ovmf_vars, vars_copy)
+
+    cmd = ['qemu-system-x86_64',
+           '-drive', f'if=pflash,format=raw,file={ovmf_code},readonly=on',
+           '-drive', f'if=pflash,format=raw,file={vars_copy}',
+           '-drive', f'file=fat:rw:{efi_dir},format=raw',
+           '-nographic', '-no-reboot', '-nic', 'none']
+    out = run_qemu_demo(cmd, timeout=15)
+    assert_demo_output(out)
