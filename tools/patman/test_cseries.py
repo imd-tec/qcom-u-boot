@@ -2389,7 +2389,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.project_set(pwork, 'U-Boot')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
     def test_patchwork_project_get(self):
@@ -2400,7 +2400,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.project_set(pwork, 'U-Boot')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
         name, pwid, link_name = cser.project_get()
@@ -2419,7 +2419,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('-P', 'https://url', 'patchwork', 'set-project',
                           'U-Boot', pwork=pwork)
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
         name, pwid, link_name = cser.project_get()
@@ -2430,7 +2430,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             self.run_args('-P', 'https://url', 'patchwork', 'get-project')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name uboot",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
     def check_series_list_patches(self):

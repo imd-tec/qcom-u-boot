@@ -634,20 +634,25 @@ class Cseries(cser_helper.CseriesHelper):
             name (str): Name of the project to use in patchwork
             quiet (bool): True to skip writing the message
         """
+        tout.detail(f"Patchwork URL '{pwork.url}': finding name '{name}'")
         res = self.loop.run_until_complete(pwork.get_projects())
         proj_id = None
         link_name = None
         for proj in res:
-            if proj['name'] == name:
-                proj_id = proj['id']
+            pid, pname = proj['id'], proj['name']
+            ok = pname.strip() == name
+            tout.detail(f"{pid:3} '{pname}'")
+            if ok:
+                proj_id = pid
                 link_name = proj['link_name']
+                tout.detail(f'Name match: ID {proj_id}')
         if not proj_id:
             raise ValueError(f"Unknown project name '{name}'")
         self.db.settings_update(name, proj_id, link_name)
         self.commit()
         if not quiet:
-            tout.info(f"Project '{name}' patchwork-ID {proj_id} "
-                      f'link-name {link_name}')
+            tout.notice(f"Project '{name}' patchwork-ID {proj_id} "
+                        f"link-name '{link_name}'")
 
     def project_get(self):
         """Get the details of the project

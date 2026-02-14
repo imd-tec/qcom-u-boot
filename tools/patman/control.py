@@ -273,7 +273,7 @@ def patchwork(args, test_db=None, pwork=None):
             if not info:
                 raise ValueError("Project has not been set; use 'patman patchwork set-project'")
             name, pwid, link_name = info
-            print(f"Project '{name}' patchwork-ID {pwid} link-name {link_name}")
+            print(f"Project '{name}' patchwork-ID {pwid} link-name '{link_name}'")
         else:
             raise ValueError(f"Unknown patchwork subcommand '{args.subcmd}'")
     finally:
