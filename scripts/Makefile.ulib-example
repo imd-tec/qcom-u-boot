@@ -31,6 +31,17 @@ examples/ulib/demo: $(example-demo-objs) u-boot FORCE
 	$(call if_changed,u-boot-example)
 	$(EXAMPLE_POST_LINK)
 
+ifeq ($(CONFIG_EFI_APP),y)
+# EFI: embed DTB and convert to PE binary
+OBJCOPYFLAGS_demo-app.efi := $(OBJCOPYFLAGS_EFI)
+examples/ulib/demo-app.efi: examples/ulib/demo dts/dt.dtb FORCE
+	$(if $(CONFIG_OF_SEPARATE),$(call if_changed,embeddtb))
+	$(call if_changed,zobjcopy)
+
+examples_$(EXAMPLE_ARCH): \
+		$(foreach e,$(ULIB_EXAMPLES),examples/ulib/$(e)-app.efi) FORCE
+	@:
+else
 # Binary target (without DTB)
 OBJCOPYFLAGS_demo-nodtb.bin = $(OBJCOPYFLAGS_u-boot-nodtb.bin)
 examples/ulib/demo-nodtb.bin: examples/ulib/demo FORCE
@@ -49,3 +60,4 @@ examples_$(EXAMPLE_ARCH): \
 		$(foreach e,$(ULIB_EXAMPLES),examples/ulib/$(e)-nodtb.bin) FORCE
 	@:
 endif
+endif # CONFIG_EFI_APP
