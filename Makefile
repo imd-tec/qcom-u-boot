@@ -1061,7 +1061,9 @@ ifeq ($(NO_LIBS),)
 INPUTS-$(CONFIG_ULIB_SHARED_LIB) += libu-boot.so test/ulib/ulib_test
 INPUTS-$(CONFIG_ULIB) += libu-boot.a
 ifdef CONFIG_EXAMPLES
+ifdef CONFIG_SANDBOX
 INPUTS-$(CONFIG_ULIB) += examples_ulib examples_rust
+endif
 endif
 endif
 endif
