@@ -66,6 +66,6 @@ libs-y += arch/riscv/lib/
 ifdef CONFIG_EXAMPLES
 EXAMPLE_ARCH := riscv
 EXAMPLE_APPEND_DTB := y
-EXAMPLE_POST_LINK = @tools/prelink-riscv $@
+EXAMPLE_POST_LINK = $(if $(CONFIG_EFI_APP),,@tools/prelink-riscv $@)
 include scripts/Makefile.ulib-example
 endif
