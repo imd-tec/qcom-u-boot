@@ -16,6 +16,7 @@ def check_output(out):
     assert 'Uses libc printf before ulib_init' in out
     assert 'another printf()' in out
 
+@pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec("ulib")
 def test_ulib_shared(ubman):
     """Test the ulib shared library test program"""
@@ -23,9 +24,11 @@ def test_ulib_shared(ubman):
     build = ubman.config.build_dir
     prog = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(prog):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(prog), 'ulib_test not found in build dir'
 
     out = utils.run_and_log(ubman, [prog], cwd=build)
     check_output(out)
@@ -38,9 +41,11 @@ def test_ulib_static(ubman):
     build = ubman.config.build_dir
     prog = os.path.join(build, 'test', 'ulib', 'ulib_test_static')
 
-    # Skip test if ulib_test_static doesn't exist (clang)
-    if not os.path.exists(prog):
-        pytest.skip('ulib_test_static not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(prog), 'ulib_test_static not found in build directory'
 
     out = utils.run_and_log(ubman, [prog])
     check_output(out)
@@ -115,9 +120,11 @@ def test_ulib_demos(ubman):
     examples = os.path.join(src, 'examples', 'ulib')
     test_program = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(test_program):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(test_program), 'ulib_test not found in build dir'
 
     # Build the demo programs - clean first to ensure fresh build, since this
     # test is run in the source directory
@@ -148,9 +155,11 @@ def test_ulib_rust_demos(ubman):
     examples = os.path.join(src, 'examples', 'rust')
     test_program = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(test_program):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(test_program), 'ulib_test not found in build dir'
 
     # Check if cargo is available
     try:
@@ -183,9 +192,11 @@ def test_ulib_api_header(ubman):
 
     hdr = os.path.join(ubman.config.build_dir, 'include', 'u-boot-api.h')
 
-    # Skip if header doesn't exist (clang)
-    if not os.path.exists(hdr):
-        pytest.skip('u-boot-api.h not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(hdr), 'u-boot-api.h not found in build directory'
 
     # Read and verify header content
     with open(hdr, 'r', encoding='utf-8') as inf:
