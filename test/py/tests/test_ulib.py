@@ -397,3 +397,13 @@ def test_ulib_demo_efi_arm64(ubman):
     run_efi_demo(ubman, 'qemu-system-aarch64',
                  '/usr/share/qemu-efi-aarch64/QEMU_EFI.fd', None,
                  ['--machine', 'virt', '-cpu', 'max'])
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('efi-riscv_app64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_efi_riscv64(ubman):
+    """Test the ulib demo EFI application under QEMU RISC-V 64 with UEFI."""
+    run_efi_demo(ubman, 'qemu-system-riscv64',
+                 '/usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd',
+                 '/usr/share/qemu-efi-riscv64/RISCV_VIRT_VARS.fd',
+                 ['--machine', 'virt'])
