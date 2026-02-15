@@ -221,19 +221,26 @@ def test_ulib_api_header(ubman):
     assert 'ub_snprintf(char *buf, size_t size, const char *fmt, ...)' in out
     assert 'ub_vprintf(const char *fmt, va_list args)' in out
 
-@pytest.mark.localqemu
-@pytest.mark.boardspec('qemu-x86')
-@pytest.mark.buildconfigspec("examples")
-def test_ulib_demo_rom(ubman):
-    """Test the ulib demo ROM image under QEMU x86."""
+def run_x86_rom_demo(ubman, qemu_binary):
+    """Boot the demo ROM image under QEMU and check for expected output.
+
+    Locates demo.rom in the build directory, launches the given QEMU
+    binary with it, and asserts that the expected demo output is present.
+
+    Args:
+        ubman (ConsoleBase): Test fixture providing build directory
+            etc.
+        qemu_binary (str): QEMU system binary
+            (e.g. 'qemu-system-i386')
+    """
     build = ubman.config.build_dir
     demo_rom = os.path.join(build, 'demo.rom')
 
     assert os.path.exists(demo_rom), 'demo.rom not found in build directory'
-    assert shutil.which('qemu-system-i386'), 'qemu-system-i386 not found'
+    assert shutil.which(qemu_binary), f'{qemu_binary} not found'
 
-    cmd = ['qemu-system-i386', '-bios', demo_rom, '-nographic',
-           '-no-reboot']
+    cmd = [qemu_binary, '-bios', demo_rom, '-nographic', '-no-reboot']
+
     with subprocess.Popen(cmd, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE) as proc:
         try:
@@ -250,3 +257,17 @@ def test_ulib_demo_rom(ubman):
     assert 'helper: Adding 42 + 13 = 55' in out
     assert '=================================' in out
     assert 'Demo complete' in out
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-x86')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_rom(ubman):
+    """Test the ulib demo ROM image under QEMU x86."""
+    run_x86_rom_demo(ubman, 'qemu-system-i386')
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-x86_64_nospl')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_rom_64(ubman):
+    """Test the ulib demo ROM image under QEMU x86_64."""
+    run_x86_rom_demo(ubman, 'qemu-system-x86_64')
