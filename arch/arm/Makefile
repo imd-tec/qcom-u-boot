@@ -124,5 +124,11 @@ ifneq (,$(filter $(SOC), kirkwood))
 libs-y += arch/arm/mach-mvebu/
 endif
 
+ifdef CONFIG_EXAMPLES
+EXAMPLE_ARCH := arm
+EXAMPLE_APPEND_DTB := y
+include scripts/Makefile.ulib-example
+endif
+
 # deprecated
 -include $(machdirs)/config.mk

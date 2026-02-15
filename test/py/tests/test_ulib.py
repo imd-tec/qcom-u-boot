@@ -221,6 +221,39 @@ def test_ulib_api_header(ubman):
     assert 'ub_snprintf(char *buf, size_t size, const char *fmt, ...)' in out
     assert 'ub_vprintf(const char *fmt, va_list args)' in out
 
+def assert_demo_output(out):
+    """Assert that demo output contains expected strings.
+
+    Args:
+        out (str): Decoded output string from QEMU
+    """
+    assert 'U-Boot Library Demo Helper' in out
+    assert '==========================' in out
+    assert 'U-Boot version:' in out
+    assert 'helper: Adding 42 + 13 = 55' in out
+    assert '=================================' in out
+    assert 'Demo complete' in out
+
+def run_qemu_demo(qemu_cmd):
+    """Run a ulib demo under QEMU and return output.
+
+    Args:
+        qemu_cmd (list): QEMU command and arguments (e.g.
+                  ['qemu-system-i386', '-bios', 'demo.rom', ...])
+
+    Returns:
+        str: Decoded stdout from QEMU
+    """
+    with subprocess.Popen(qemu_cmd, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as proc:
+        try:
+            stdout, _ = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+
+    return stdout.decode('utf-8', errors='replace')
+
 def run_x86_rom_demo(ubman, qemu_binary):
     """Boot the demo ROM image under QEMU and check for expected output.
 
@@ -240,23 +273,8 @@ def run_x86_rom_demo(ubman, qemu_binary):
     assert shutil.which(qemu_binary), f'{qemu_binary} not found'
 
     cmd = [qemu_binary, '-bios', demo_rom, '-nographic', '-no-reboot']
-
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE) as proc:
-        try:
-            stdout, _ = proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, _ = proc.communicate()
-
-    out = stdout.decode('utf-8', errors='replace')
-
-    assert 'U-Boot Library Demo Helper' in out
-    assert '==========================' in out
-    assert 'U-Boot version:' in out
-    assert 'helper: Adding 42 + 13 = 55' in out
-    assert '=================================' in out
-    assert 'Demo complete' in out
+    out = run_qemu_demo(cmd)
+    assert_demo_output(out)
 
 @pytest.mark.localqemu
 @pytest.mark.boardspec('qemu-x86')
@@ -271,3 +289,19 @@ def test_ulib_demo_rom(ubman):
 def test_ulib_demo_rom_64(ubman):
     """Test the ulib demo ROM image under QEMU x86_64."""
     run_x86_rom_demo(ubman, 'qemu-system-x86_64')
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu_arm64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_arm64(ubman):
+    """Test the ulib demo binary under QEMU ARM64."""
+    build = ubman.config.build_dir
+    demo_bin = os.path.join(build, 'examples', 'ulib', 'demo.bin')
+
+    assert os.path.exists(demo_bin), 'demo.bin not found in build directory'
+    assert shutil.which('qemu-system-aarch64'), 'qemu-system-aarch64 not found'
+
+    cmd = ['qemu-system-aarch64', '-machine', 'virt', '-cpu', 'cortex-a57',
+           '-nographic', '-no-reboot', '-bios', demo_bin]
+    out = run_qemu_demo(cmd)
+    assert_demo_output(out)
