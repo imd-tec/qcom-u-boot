@@ -210,6 +210,7 @@ def test_ulib_api_header(ubman):
     assert 'ub_snprintf(char *buf, size_t size, const char *fmt, ...)' in out
     assert 'ub_vprintf(const char *fmt, va_list args)' in out
 
+@pytest.mark.localqemu
 @pytest.mark.boardspec('qemu-x86')
 @pytest.mark.buildconfigspec("examples")
 def test_ulib_demo_rom(ubman):

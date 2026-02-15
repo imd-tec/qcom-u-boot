@@ -596,3 +596,12 @@ option not to be set. The following annotation requires CONFIG_RISCV=n:
 .. code-block:: python
 
     @pytest.mark.notbuildconfigspec('riscv')
+
+The localqemu marker indicates that a test launches its own QEMU process
+rather than using the lab's managed U-Boot instance. Tests with this marker
+are automatically skipped when running in lab mode (i.e. when ``--role`` is
+set), since the locally launched QEMU is not available in that environment:
+
+.. code-block:: python
+
+    @pytest.mark.localqemu
