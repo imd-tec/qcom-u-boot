@@ -25012,3 +25012,98 @@ Rebased onto latest master. Build verified.
 
 ---
 
+## 2026-02-15: us/next
+
+Branch: cherry-3bc174031d3
+
+Commits:
+- 3bc174031d3 ti_sci_*: Add utility to access tisci firmware and SOC capability
+- 33fc7751b9a ti_sci_* : Add capability to access DM firmware's metadata
+- e1252194b62 firmware: ti_sci.c: Add a function to query DM firmware's capability
+- 60ee9458556 firmware: ti_sci.c: Add a function to request DM metadata using ti_sci* calls
+- 7bdbda262c1 arm: mach-k3: Add a function for printing DM version
+- 003e7d70cd5 arm: mach-k3: Print version of DM firmware during boot process
+- ff43c2272a7 Merge patch series "Print version of the DM firmware"
+
+### Conversation log
+The repository state is clean (only untracked files). Now let me create and checkout a new branch based on ci/master:
+
+Branch created successfully. Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The delta is identical (2 files, 26 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify delta and run build:
+
+Delta matches (2 files, 55 insertions). Running build:
+
+Build passed. Now cherry-pick the third commit:
+
+Third commit cherry-picked. Let me verify delta and run build:
+
+Delta matches (1 file, 45 insertions). Running build:
+
+Build passed. Cherry-pick the fourth commit:
+
+Fourth commit cherry-picked. Let me verify delta and run build:
+
+Delta matches (1 file, 54 insertions). Running build:
+
+Build passed. Cherry-pick the fifth commit:
+
+Fifth commit cherry-picked. Let me verify delta and run build:
+
+Delta matches (2 files, 30 insertions). Running build:
+
+Build passed. Cherry-pick the sixth commit:
+
+Sixth commit cherry-picked. Let me verify delta and run build:
+
+Delta matches (6 files, 24 insertions). Running build:
+
+Build passed. Now cherry-pick the seventh commit (merge commit - requires -m 1 --allow-empty):
+
+The merge commit is empty (expected since all the changes were already cherry-picked in the previous commits). I need to commit it with --allow-empty to preserve the history:
+
+Merge commit preserved. Let me verify the delta and run build:
+
+The cherry-picked merge commit is empty (no file changes) since all changes were already applied by the individual commits - this is expected and correct. Running build:
+
+Build passed. Now let me verify all 7 commits are present:
+
+All 7 commits are present. Let me run the final build:
+
+## Final Status Report
+
+**All 7 commits cherry-picked successfully!**
+
+### Build Result: ✅ OK
+- No warnings or errors
+
+### Cherry-Picked Commits (in order):
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 3bc174031d3 | 07db2a5b1ca | ti_sci_*: Add utility to access tisci firmware and SOC capability |
+| 2 | 33fc7751b9a | efd086d4959 | ti_sci_* : Add capability to access DM firmware's metadata |
+| 3 | e1252194b62 | 6f44998fe33 | firmware: ti_sci.c: Add a function to query DM firmware's capability |
+| 4 | 60ee9458556 | 0e8ed3a9631 | firmware: ti_sci.c: Add a function to request DM metadata using ti_sci* calls |
+| 5 | 7bdbda262c1 | a47523db4b1 | arm: mach-k3: Add a function for printing DM version |
+| 6 | 003e7d70cd5 | 4fcaa2ceaaa | arm: mach-k3: Print version of DM firmware during boot process |
+| 7 | ff43c2272a7 | 9b6cf7fd80a | Merge patch series "Print version of the DM firmware" (empty merge) |
+
+### Fix-ups Made: None
+- All commits applied cleanly with auto-merge
+
+### Deltas: All OK
+- All commits had identical file counts and line changes compared to originals
+- Merge commit (7) is empty as expected since changes were cherry-picked individually
+
+### Branch Status:
+- Branch `cherry-3bc174031d3` is ready for pushing
+- 7 commits ahead of `ci/master`
+
+---
+
