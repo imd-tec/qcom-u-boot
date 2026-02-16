@@ -65,34 +65,7 @@ u-boot-x86-reset16.bin: u-boot-x86-16bit.elf FORCE
 	$(call if_changed,objcopy)
 endif
 
-# x86 example targets: re-link U-Boot with example objects providing main()
-#
-# The example .o files are compiled via kbuild (examples/ulib/Kbuild).
-# This re-links u-boot with those objects so the example's strong main()
-# overrides the weak one in board_r.c, using the shared u-boot-link helper.
 ifdef CONFIG_EXAMPLES
-INPUTS-$(CONFIG_ULIB) += examples_x86
-
-PHONY += examples_x86
-
-X86_EXAMPLES := demo
-
-quiet_cmd_u-boot-example = LD      $@
-      cmd_u-boot-example = $(call u-boot-link,$(example-objs),$@.map)
-
-# Per-example object lists (matches examples/ulib/Makefile:demo_objs)
-example-demo-objs := examples/ulib/demo.o examples/ulib/demo_helper.o
-
-# Link each example ELF (depends on u-boot to ensure archives exist)
-examples/ulib/demo: $(example-demo-objs) u-boot FORCE
-	$(eval example-objs := $(example-demo-objs))
-	$(call if_changed,u-boot-example)
-
-# Binary targets (same objcopy flags as u-boot-nodtb.bin)
-OBJCOPYFLAGS_demo-nodtb.bin = $(OBJCOPYFLAGS_u-boot-nodtb.bin)
-examples/ulib/demo-nodtb.bin: examples/ulib/demo FORCE
-	$(call if_changed,objcopy)
-
-examples_x86: $(foreach e,$(X86_EXAMPLES),examples/ulib/$(e)-nodtb.bin) FORCE
-	@:
+EXAMPLE_ARCH := x86
+include scripts/Makefile.ulib-example
 endif

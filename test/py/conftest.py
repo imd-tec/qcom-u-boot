@@ -818,6 +818,20 @@ def setup_role(item):
     if required_roles and ubconfig.role not in required_roles:
         pytest.skip(f'board "{ubconfig.role}" not supported')
 
+def setup_localqemu(item):
+    """Process any 'localqemu' marker for a test.
+
+    Skip this test if running in lab mode (i.e. role is set), since the
+    test launches its own QEMU rather than using the lab's U-Boot.
+
+    Args:
+        item (pytest.Item): The pytest test item
+    """
+    for _ in item.iter_markers('localqemu'):
+        if ubconfig.role:
+            pytest.skip('test requires local QEMU (not supported in lab)')
+        return
+
 def start_test_section(item):
     anchors[item.name] = log.start_section(item.name)
 
@@ -840,6 +854,7 @@ def pytest_runtest_setup(item):
     setup_requiredtool(item)
     setup_singlethread(item)
     setup_role(item)
+    setup_localqemu(item)
 
 def pytest_runtest_protocol(item, nextitem):
     """pytest hook: Called to execute a test.

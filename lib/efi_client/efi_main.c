@@ -8,13 +8,14 @@
 
 #include <efi.h>
 #include <efi_api.h>
+#include <init.h>
 
 efi_status_t EFIAPI efi_main(efi_handle_t image,
 			     struct efi_system_table *sys_table)
 {
 	efi_status_t ret;
 
-	ret = efi_startup(image, sys_table, false);
+	ret = efi_startup(image, sys_table, ulib_has_main());
 	if (ret)
 		return ret;
 

@@ -6,6 +6,7 @@
 import os
 import shutil
 import subprocess
+import tempfile
 import pytest
 import utils
 
@@ -16,6 +17,7 @@ def check_output(out):
     assert 'Uses libc printf before ulib_init' in out
     assert 'another printf()' in out
 
+@pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec("ulib")
 def test_ulib_shared(ubman):
     """Test the ulib shared library test program"""
@@ -23,9 +25,11 @@ def test_ulib_shared(ubman):
     build = ubman.config.build_dir
     prog = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(prog):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(prog), 'ulib_test not found in build dir'
 
     out = utils.run_and_log(ubman, [prog], cwd=build)
     check_output(out)
@@ -38,9 +42,11 @@ def test_ulib_static(ubman):
     build = ubman.config.build_dir
     prog = os.path.join(build, 'test', 'ulib', 'ulib_test_static')
 
-    # Skip test if ulib_test_static doesn't exist (clang)
-    if not os.path.exists(prog):
-        pytest.skip('ulib_test_static not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(prog), 'ulib_test_static not found in build directory'
 
     out = utils.run_and_log(ubman, [prog])
     check_output(out)
@@ -115,9 +121,11 @@ def test_ulib_demos(ubman):
     examples = os.path.join(src, 'examples', 'ulib')
     test_program = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(test_program):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(test_program), 'ulib_test not found in build dir'
 
     # Build the demo programs - clean first to ensure fresh build, since this
     # test is run in the source directory
@@ -148,9 +156,11 @@ def test_ulib_rust_demos(ubman):
     examples = os.path.join(src, 'examples', 'rust')
     test_program = os.path.join(build, 'test', 'ulib', 'ulib_test')
 
-    # Skip test if ulib_test doesn't exist (clang)
-    if not os.path.exists(test_program):
-        pytest.skip('ulib_test not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(test_program), 'ulib_test not found in build dir'
 
     # Check if cargo is available
     try:
@@ -183,9 +193,11 @@ def test_ulib_api_header(ubman):
 
     hdr = os.path.join(ubman.config.build_dir, 'include', 'u-boot-api.h')
 
-    # Skip if header doesn't exist (clang)
-    if not os.path.exists(hdr):
-        pytest.skip('u-boot-api.h not found - library build may be disabled')
+    # ulib is not yet supported with clang
+    if ubman.config.buildconfig.get('config_cc_is_clang'):
+        pytest.skip('ulib not supported with clang')
+
+    assert os.path.exists(hdr), 'u-boot-api.h not found in build directory'
 
     # Read and verify header content
     with open(hdr, 'r', encoding='utf-8') as inf:
@@ -210,31 +222,188 @@ def test_ulib_api_header(ubman):
     assert 'ub_snprintf(char *buf, size_t size, const char *fmt, ...)' in out
     assert 'ub_vprintf(const char *fmt, va_list args)' in out
 
-@pytest.mark.boardspec('qemu-x86')
-@pytest.mark.buildconfigspec("examples")
-def test_ulib_demo_rom(ubman):
-    """Test the ulib demo ROM image under QEMU x86."""
-    build = ubman.config.build_dir
-    demo_rom = os.path.join(build, 'demo.rom')
+def assert_demo_output(out):
+    """Assert that demo output contains expected strings.
 
-    assert os.path.exists(demo_rom), 'demo.rom not found in build directory'
-    assert shutil.which('qemu-system-i386'), 'qemu-system-i386 not found'
-
-    cmd = ['qemu-system-i386', '-bios', demo_rom, '-nographic',
-           '-no-reboot']
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE) as proc:
-        try:
-            stdout, _ = proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, _ = proc.communicate()
-
-    out = stdout.decode('utf-8', errors='replace')
-
+    Args:
+        out (str): Decoded output string from QEMU
+    """
     assert 'U-Boot Library Demo Helper' in out
     assert '==========================' in out
     assert 'U-Boot version:' in out
     assert 'helper: Adding 42 + 13 = 55' in out
     assert '=================================' in out
     assert 'Demo complete' in out
+
+def run_qemu_demo(qemu_cmd, timeout=5):
+    """Run a ulib demo under QEMU and return output.
+
+    Args:
+        qemu_cmd (list): QEMU command and arguments (e.g.
+                  ['qemu-system-i386', '-bios', 'demo.rom', ...])
+        timeout (int): Seconds to wait before killing QEMU (default 5)
+
+    Returns:
+        str: Decoded stdout from QEMU
+    """
+    with subprocess.Popen(qemu_cmd, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as proc:
+        try:
+            stdout, _ = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+
+    return stdout.decode('utf-8', errors='replace')
+
+def run_x86_rom_demo(ubman, qemu_binary):
+    """Boot the demo ROM image under QEMU and check for expected output.
+
+    Locates demo.rom in the build directory, launches the given QEMU
+    binary with it, and asserts that the expected demo output is present.
+
+    Args:
+        ubman (ConsoleBase): Test fixture providing build directory
+            etc.
+        qemu_binary (str): QEMU system binary
+            (e.g. 'qemu-system-i386')
+    """
+    build = ubman.config.build_dir
+    demo_rom = os.path.join(build, 'demo.rom')
+
+    assert os.path.exists(demo_rom), 'demo.rom not found in build directory'
+    assert shutil.which(qemu_binary), f'{qemu_binary} not found'
+
+    cmd = [qemu_binary, '-bios', demo_rom, '-nographic', '-no-reboot']
+    out = run_qemu_demo(cmd)
+    assert_demo_output(out)
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-x86')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_rom(ubman):
+    """Test the ulib demo ROM image under QEMU x86."""
+    run_x86_rom_demo(ubman, 'qemu-system-i386')
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-x86_64_nospl')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_rom_64(ubman):
+    """Test the ulib demo ROM image under QEMU x86_64."""
+    run_x86_rom_demo(ubman, 'qemu-system-x86_64')
+
+def run_bios_demo(ubman, qemu_binary, extra_qemu_args=None):
+    """Boot the demo.bin binary under QEMU and check for expected output.
+
+    Locates demo.bin in the build directory, launches the given QEMU
+    binary with it as -bios, and asserts that the expected demo output
+    is present.
+
+    Args:
+        ubman (ConsoleBase): Test fixture providing build directory
+            etc.
+        qemu_binary (str): QEMU system binary
+            (e.g. 'qemu-system-aarch64')
+        extra_qemu_args (list): Additional QEMU arguments
+            (e.g. ['-cpu', 'cortex-a57'])
+    """
+    build = ubman.config.build_dir
+    demo_bin = os.path.join(build, 'examples', 'ulib', 'demo.bin')
+
+    assert os.path.exists(demo_bin), 'demo.bin not found in build directory'
+    assert shutil.which(qemu_binary), f'{qemu_binary} not found'
+
+    cmd = [qemu_binary, '-machine', 'virt', '-nographic', '-no-reboot',
+           '-bios', demo_bin]
+    if extra_qemu_args:
+        cmd += extra_qemu_args
+    out = run_qemu_demo(cmd)
+    assert_demo_output(out)
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu_arm64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_arm64(ubman):
+    """Test the ulib demo binary under QEMU ARM64."""
+    run_bios_demo(ubman, 'qemu-system-aarch64', ['-cpu', 'cortex-a57'])
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('qemu-riscv64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_riscv64(ubman):
+    """Test the ulib demo binary under QEMU RISC-V 64."""
+    run_bios_demo(ubman, 'qemu-system-riscv64')
+
+def run_efi_demo(ubman, qemu_binary, fw_code, fw_vars, extra_qemu_args=None):
+    """Run a ulib demo EFI application under QEMU with UEFI firmware.
+
+    Writes a startup.nsh script next to demo-app.efi in the build
+    directory, boots QEMU with the given firmware, and checks for
+    expected output.
+
+    Args:
+        ubman (ConsoleBase): Test fixture providing build directory
+            etc.
+        qemu_binary (str): QEMU system binary name
+            (e.g. 'qemu-system-x86_64')
+        fw_code (str): Path to UEFI firmware code file
+        fw_vars (str): Path to UEFI firmware variables file (or None)
+        extra_qemu_args (list): Additional QEMU arguments
+    """
+    build = ubman.config.build_dir
+    efi_dir = os.path.join(build, 'examples', 'ulib')
+    demo_efi = os.path.join(efi_dir, 'demo-app.efi')
+
+    assert os.path.exists(demo_efi), 'demo-app.efi not found in build directory'
+    assert shutil.which(qemu_binary), f'{qemu_binary} not found'
+    assert os.path.exists(fw_code), f'UEFI firmware not found: {fw_code}'
+
+    with open(os.path.join(efi_dir, 'startup.nsh'), 'w',
+              encoding='utf-8') as nsh:
+        nsh.write('fs0:demo-app.efi\n')
+
+    cmd = [qemu_binary]
+
+    # Set up firmware pflash drives
+    cmd += ['-drive', f'if=pflash,format=raw,file={fw_code},readonly=on']
+    if fw_vars:
+        vars_copy = os.path.join(efi_dir, 'vars.fd')
+        shutil.copy(fw_vars, vars_copy)
+        cmd += ['-drive', f'if=pflash,format=raw,file={vars_copy}']
+
+    if extra_qemu_args:
+        cmd += extra_qemu_args
+
+    # FAT drive with EFI binary and startup script
+    cmd += ['-drive', f'file=fat:rw:{efi_dir},format=raw',
+            '-nographic', '-no-reboot', '-nic', 'none']
+    out = run_qemu_demo(cmd, timeout=15)
+    assert_demo_output(out)
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('efi-x86_app64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_efi_x86(ubman):
+    """Test the ulib demo EFI application under QEMU x86_64 with OVMF."""
+    run_efi_demo(ubman, 'qemu-system-x86_64',
+                 '/usr/share/OVMF/OVMF_CODE_4M.fd',
+                 '/usr/share/OVMF/OVMF_VARS_4M.fd')
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('efi-arm_app64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_efi_arm64(ubman):
+    """Test the ulib demo EFI application under QEMU aarch64 with UEFI."""
+    run_efi_demo(ubman, 'qemu-system-aarch64',
+                 '/usr/share/qemu-efi-aarch64/QEMU_EFI.fd', None,
+                 ['--machine', 'virt', '-cpu', 'max'])
+
+@pytest.mark.localqemu
+@pytest.mark.boardspec('efi-riscv_app64')
+@pytest.mark.buildconfigspec("examples")
+def test_ulib_demo_efi_riscv64(ubman):
+    """Test the ulib demo EFI application under QEMU RISC-V 64 with UEFI."""
+    run_efi_demo(ubman, 'qemu-system-riscv64',
+                 '/usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd',
+                 '/usr/share/qemu-efi-riscv64/RISCV_VIRT_VARS.fd',
+                 ['--machine', 'virt'])

@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: GPL-2.0+
+#
+# Common build rules for ulib example programs.
+#
+# Re-links U-Boot with example objects providing main(). The example .o
+# files are compiled via kbuild (examples/ulib/Kbuild). This re-links
+# u-boot with those objects so the example's strong main() overrides the
+# weak one in board_r.c, using the shared u-boot-link helper.
+#
+# Required variables (set by arch Makefile before including):
+#   EXAMPLE_ARCH        - architecture name (x86, arm, riscv, ...)
+#
+# Optional variables:
+#   EXAMPLE_APPEND_DTB  - set to y to append DTB to the binary
+#   EXAMPLE_POST_LINK   - extra recipe line run after linking the ELF
+
+INPUTS-$(CONFIG_ULIB) += examples_$(EXAMPLE_ARCH)
+PHONY += examples_$(EXAMPLE_ARCH)
+
+ULIB_EXAMPLES := demo
+
+quiet_cmd_u-boot-example = LD      $@
+      cmd_u-boot-example = $(call u-boot-link,$(example-objs),$@.map)
+
+# Per-example object lists (matches examples/ulib/Kbuild)
+example-demo-objs := examples/ulib/demo.o examples/ulib/demo_helper.o
+
+# Link each example ELF (depends on u-boot to ensure archives exist)
+examples/ulib/demo: $(example-demo-objs) u-boot FORCE
+	$(eval example-objs := $(example-demo-objs))
+	$(call if_changed,u-boot-example)
+	$(EXAMPLE_POST_LINK)
+
+ifeq ($(CONFIG_EFI_APP),y)
+# EFI: embed DTB and convert to PE binary
+OBJCOPYFLAGS_demo-app.efi := $(OBJCOPYFLAGS_EFI)
+examples/ulib/demo-app.efi: examples/ulib/demo dts/dt.dtb FORCE
+	$(if $(CONFIG_OF_SEPARATE),$(call if_changed,embeddtb))
+	$(call if_changed,zobjcopy)
+
+examples_$(EXAMPLE_ARCH): \
+		$(foreach e,$(ULIB_EXAMPLES),examples/ulib/$(e)-app.efi) FORCE
+	@:
+else
+# Binary target (without DTB)
+OBJCOPYFLAGS_demo-nodtb.bin = $(OBJCOPYFLAGS_u-boot-nodtb.bin)
+examples/ulib/demo-nodtb.bin: examples/ulib/demo FORCE
+	$(call if_changed,objcopy)
+
+ifeq ($(EXAMPLE_APPEND_DTB),y)
+# Binary with DTB appended
+examples/ulib/demo.bin: examples/ulib/demo-nodtb.bin dts/dt.dtb FORCE
+	$(call if_changed,cat)
+
+examples_$(EXAMPLE_ARCH): \
+		$(foreach e,$(ULIB_EXAMPLES),examples/ulib/$(e).bin) FORCE
+	@:
+else
+examples_$(EXAMPLE_ARCH): \
+		$(foreach e,$(ULIB_EXAMPLES),examples/ulib/$(e)-nodtb.bin) FORCE
+	@:
+endif
+endif # CONFIG_EFI_APP

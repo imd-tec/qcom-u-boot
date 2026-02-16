@@ -62,3 +62,10 @@ endif
 libs-y += arch/riscv/cpu/
 libs-y += arch/riscv/cpu/$(CPU)/
 libs-y += arch/riscv/lib/
+
+ifdef CONFIG_EXAMPLES
+EXAMPLE_ARCH := riscv
+EXAMPLE_APPEND_DTB := y
+EXAMPLE_POST_LINK = $(if $(CONFIG_EFI_APP),,@tools/prelink-riscv $@)
+include scripts/Makefile.ulib-example
+endif
