@@ -393,6 +393,13 @@ def test_ulib_demo_arm64(ubman):
     run_bios_demo(ubman, 'qemu-system-aarch64', ['-cpu', 'cortex-a57'])
 
 @pytest.mark.localqemu
+@pytest.mark.boardspec('qemu_arm64')
+@pytest.mark.buildconfigspec("rust_examples")
+def test_ulib_rust_demo_arm64(ubman):
+    """Test the Rust ulib demo binary under QEMU ARM64."""
+    run_bios_rust_demo(ubman, 'qemu-system-aarch64', ['-cpu', 'cortex-a57'])
+
+@pytest.mark.localqemu
 @pytest.mark.boardspec('qemu-riscv64')
 @pytest.mark.buildconfigspec("examples")
 def test_ulib_demo_riscv64(ubman):
