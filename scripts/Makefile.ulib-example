@@ -19,11 +19,28 @@ PHONY += examples_$(EXAMPLE_ARCH)
 
 ULIB_EXAMPLES := demo
 
+# --- Rust examples ---
+RUSTC := rustc
+RUST_TARGET := $(RUST_TARGET_$(EXAMPLE_ARCH))
+
+ifeq ($(CONFIG_RUST_EXAMPLES),y)
+ULIB_EXAMPLES += rust-demo
+endif
+
 quiet_cmd_u-boot-example = LD      $@
       cmd_u-boot-example = $(call u-boot-link,$(example-objs),$@.map)
 
+quiet_cmd_rustc_obj = RUSTC   $@
+      cmd_rustc_obj = \
+	mkdir -p $(dir $@) && \
+	MAKEFLAGS= $(RUSTC) --edition 2021 --emit=obj -o $@ --target=$(RUST_TARGET) $<
+
+examples/ulib/rust_demo.o: examples/ulib/rust_demo.rs FORCE
+	$(call if_changed,rustc_obj)
+
 # Per-example object lists (matches examples/ulib/Kbuild)
 example-demo-objs := examples/ulib/demo.o examples/ulib/demo_helper.o
+example-rust-demo-objs := examples/ulib/rust_demo.o examples/ulib/demo_helper.o
 
 # Generate link rule for each example
 define example_link_rule
