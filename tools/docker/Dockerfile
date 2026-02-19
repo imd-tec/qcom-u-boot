@@ -64,6 +64,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	binutils-dev \
 	bison \
 	build-essential \
+	byacc \
 	cgpt \
 	clang-18 \
 	coreutils \
@@ -74,8 +75,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	e2fsprogs \
 	efitools \
 	erofs-utils \
+	exfatprogs \
 	expect \
 	fakeroot \
+	fdisk \
 	flex \
 	gawk \
 	gdisk \
@@ -87,6 +90,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	help2man \
 	iasl \
 	imagemagick \
+	inetutils-telnet \
 	iputils-ping \
 	libconfuse-dev \
 	libgit2-dev \
@@ -234,12 +238,23 @@ RUN git clone https://gitlab.com/qemu-project/qemu.git /tmp/qemu && \
 # Build fiptool
 RUN git clone https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git /tmp/tf-a && \
 	cd /tmp/tf-a/ && \
-	git checkout v2.10.0 && \
-	cd tools/fiptool && \
-	make -j$(nproc) && \
-	mkdir -p /usr/local/bin && \
-	cp fiptool /usr/local/bin && \
+	git checkout v2.12.0 && \
+	make CROSS_COMPILE=/opt/gcc-${TCVER}-nolibc/aarch64-linux/bin/aarch64-linux- \
+		PLAT=fvp BL33=/dev/null -j$(nproc) all fip && \
+	mkdir -p /usr/local/bin /opt/tf-a/vexpress_fvp && \
+	cp tools/fiptool/fiptool /usr/local/bin && \
+	cp build/fvp/release/fip.bin build/fvp/release/bl1.bin \
+		/opt/tf-a/vexpress_fvp/ && \
+	rm -rf build/fvp && \
+	make CROSS_COMPILE=/opt/gcc-${TCVER}-nolibc/aarch64-linux/bin/aarch64-linux- \
+		PLAT=fvp BL33=/dev/null TRANSFER_LIST=1 -j$(nproc) all fip && \
+	mkdir -p /opt/tf-a/vexpress_fvp_bloblist && \
+	cp build/fvp/release/fip.bin build/fvp/release/bl1.bin \
+		/opt/tf-a/vexpress_fvp_bloblist/ && \
 	rm -rf /tmp/tf-a
+
+# Download the Arm Architecture FVP platform. This file is double compressed.
+RUN wget -O - https://developer.arm.com/-/cdn-downloads/permalink/FVPs-Architecture/FM-11.28/FVP_Base_RevC-2xAEMvA_11.28_23_Linux64.tgz | gunzip -dc | tar -C /opt -x
 
 # Build genimage (required by some targets to generate disk images)
 RUN wget -O - https://github.com/pengutronix/genimage/releases/download/v14/genimage-14.tar.xz | tar -C /tmp -xJ && \
@@ -269,24 +284,30 @@ RUN git clone https://github.com/stefanberger/swtpm /tmp/swtpm && \
 	rm -rf /tmp/swtpm
 
 # Build trace-cmd
+# Pin to commits from Oct 2025 to avoid libtraceevent 1.9+ BTF dependency
+# which requires kernel headers newer than Jammy's 5.15
 RUN mkdir /tmp/trace && \
     git clone https://git.kernel.org/pub/scm/libs/libtrace/libtraceevent.git /tmp/trace/libtraceevent && \
     cd /tmp/trace/libtraceevent && \
+    git checkout b3f5849 && \
     make -j$(nproc) && \
-    sudo make install && \
-    git clone https://git.kernel.org/pub/scm/libs/libtrace/libtracefs.git /tmp/trace/libtracefs && \
+    sudo make install prefix=/usr && \
+    sudo ldconfig && \
+    git clone --branch libtracefs-1.8.1 --depth 1 https://git.kernel.org/pub/scm/libs/libtrace/libtracefs.git /tmp/trace/libtracefs && \
     cd /tmp/trace/libtracefs && \
     make -j$(nproc) && \
-    sudo make install && \
+    sudo make install prefix=/usr && \
+    sudo ldconfig && \
     git clone https://github.com/rostedt/trace-cmd.git /tmp/trace/trace-cmd && \
     cd /tmp/trace/trace-cmd && \
+    git checkout 364faec && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf /tmp/trace
 
 # Build coreboot
-RUN wget -O - https://coreboot.org/releases/coreboot-24.08.tar.xz | tar -C /tmp -xJ && \
-    cd /tmp/coreboot-24.08 && \
+RUN wget -O - https://coreboot.org/releases/coreboot-24.12.tar.xz | tar -C /tmp -xJ && \
+    cd /tmp/coreboot-24.12 && \
     make crossgcc-i386 CPUS=$(nproc) && \
     make -C payloads/coreinfo olddefconfig && \
     make -C payloads/coreinfo && \
@@ -296,18 +317,30 @@ RUN wget -O - https://coreboot.org/releases/coreboot-24.08.tar.xz | tar -C /tmp 
     make olddefconfig && \
     make -j $(nproc) && \
     sudo mkdir /opt/coreboot && \
-    sudo cp build/coreboot.rom build/cbfstool /opt/coreboot/
+    sudo cp build/coreboot.rom build/cbfstool /opt/coreboot/ && \
+    rm -rf /tmp/coreboot-24.08
 
 # Create our user/group
 RUN echo uboot ALL=NOPASSWD: ALL > /etc/sudoers.d/uboot
 RUN useradd -m -U uboot
 USER uboot:uboot
 
+# Install Rust toolchain with cross-compilation targets for ulib examples
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+	sh -s -- -y --default-toolchain stable --profile minimal && \
+	. $HOME/.cargo/env && \
+	rustup target add \
+		aarch64-unknown-none \
+		i686-unknown-linux-gnu \
+		riscv64gc-unknown-none-elf \
+		x86_64-unknown-none
+ENV PATH="/home/uboot/.cargo/bin:${PATH}"
 
 # Populate the cache for pip to use. Get these via wget as the
 # COPY / ADD directives don't work as we need them to.
 RUN wget -O /tmp/pytest-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/test/py/requirements.txt
 RUN wget -O /tmp/sphinx-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/doc/sphinx/requirements.txt
+RUN wget -O /tmp/binman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/binman/requirements.txt
 RUN wget -O /tmp/buildman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/buildman/requirements.txt
 RUN wget -O /tmp/patman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/patman/requirements.txt
 RUN wget -O /tmp/u_boot_pylib-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/u_boot_pylib/requirements.txt
@@ -315,6 +348,7 @@ RUN python3 -m venv /tmp/venv && \
 	. /tmp/venv/bin/activate && \
 	pip install -r /tmp/pytest-requirements.txt \
 		-r /tmp/sphinx-requirements.txt \
+		-r /tmp/binman-requirements.txt \
 		-r /tmp/buildman-requirements.txt \
 		-r /tmp/patman-requirements.txt \
 		-r /tmp/u_boot_pylib-requirements.txt && \
