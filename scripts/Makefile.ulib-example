@@ -21,6 +21,7 @@ ULIB_EXAMPLES := demo
 
 # --- Rust examples ---
 RUSTC := rustc
+RUST_TARGET_x86 := x86_64-unknown-none
 RUST_TARGET := $(RUST_TARGET_$(EXAMPLE_ARCH))
 
 ifeq ($(CONFIG_RUST_EXAMPLES),y)
