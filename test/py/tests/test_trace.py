@@ -144,14 +144,13 @@ def check_function(ubman, fname, proftool, map_fname, trace_dat):
     cmd = f"trace-cmd report -l {trace_dat} |grep -E '(initf_|initr_)'"
     out = utils.run_and_log(ubman, ['sh', '-c', cmd])
 
-    # Format:
+    # Format (older trace-cmd):
     #      u-boot-1     0.....    60.805596: function:             initf_malloc
-    #      u-boot-1     0.....    60.805597: function:             initf_malloc
-    #      u-boot-1     0.....    60.805601: function:             initf_bootstage
-    #      u-boot-1     0.....    60.805607: function:             initf_bootstage
+    # Format (newer trace-cmd, includes caller):
+    #      u-boot-1     0.....    60.805596: function:             initf_malloc <-- initcall_run_f
 
     lines = [line.replace(':', '').split() for line in out.splitlines()]
-    vals = {items[4]: float(items[2]) for items in lines if len(items) == 5}
+    vals = {items[4]: float(items[2]) for items in lines if len(items) >= 5}
     base = None
     max_delta = 0
     for timestamp in vals.values():
