@@ -314,8 +314,17 @@ static int __maybe_unused part_get_info_efi(struct blk_desc *desc, int part,
 
 static int part_test_efi(struct blk_desc *desc)
 {
-	ALLOC_CACHE_ALIGN_BUFFER_PAD(legacy_mbr, legacymbr, 1, desc->blksz);
 	long ret;
+
+	/*
+	 * An ATAPI device (e.g. CD-ROM) may have blksz == 0 if the
+	 * capacity query failed or no media is present.  The buffer
+	 * macro below divides by blksz, so bail out early.
+	 */
+	if (!desc->blksz)
+		return -ENOENT;
+
+	ALLOC_CACHE_ALIGN_BUFFER_PAD(legacy_mbr, legacymbr, 1, desc->blksz);
 
 	/* Read legacy MBR from block 0 and validate it */
 	ret = blk_dread(desc, 0, 1, (ulong *)legacymbr);
