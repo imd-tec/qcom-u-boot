@@ -1024,8 +1024,7 @@
 		};
 
 		keyboard: keyboard@10010000 {
-			compatible = "mediatek,mt8183-keypad",
-				     "mediatek,mt6779-keypad";
+			compatible = "mediatek,mt6779-keypad";
 			reg = <0 0x10010000 0 0x1000>;
 			interrupts = <GIC_SPI 186 IRQ_TYPE_EDGE_FALLING>;
 			clocks = <&clk26m>;
@@ -1835,7 +1834,6 @@
 			resets = <&mmsys MT8183_MMSYS_SW0_RST_B_DISP_DSI0>;
 			phys = <&mipi_tx0>;
 			phy-names = "dphy";
-			status = "disabled";
 		};
 
 		dpi0: dpi@14015000 {
@@ -1847,7 +1845,6 @@
 				 <&mmsys CLK_MM_DPI_MM>,
 				 <&apmixedsys CLK_APMIXED_TVDPLL>;
 			clock-names = "pixel", "engine", "pll";
-			status = "disabled";
 
 			port {
 				dpi_out: endpoint { };

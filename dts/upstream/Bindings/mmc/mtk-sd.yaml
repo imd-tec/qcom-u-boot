@@ -235,19 +235,11 @@ allOf:
       properties:
         compatible:
           contains:
-            enum:
-              - mediatek,mt7986-mmc
-              - mediatek,mt7988-mmc
-              - mediatek,mt8183-mmc
-              - mediatek,mt8196-mmc
+            const: mediatek,mt8183-mmc
     then:
       properties:
         reg:
           minItems: 2
-    else:
-      properties:
-        reg:
-          maxItems: 1
 
   - if:
       properties:

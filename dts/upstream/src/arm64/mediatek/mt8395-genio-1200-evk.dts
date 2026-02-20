@@ -835,6 +835,7 @@
 
 		regulators {
 			mt6315_6_vbuck1: vbuck1 {
+				regulator-compatible = "vbuck1";
 				regulator-name = "Vbcpu";
 				regulator-min-microvolt = <300000>;
 				regulator-max-microvolt = <1193750>;
@@ -851,6 +852,7 @@
 
 		regulators {
 			mt6315_7_vbuck1: vbuck1 {
+				regulator-compatible = "vbuck1";
 				regulator-name = "Vgpu";
 				regulator-min-microvolt = <546000>;
 				regulator-max-microvolt = <787000>;

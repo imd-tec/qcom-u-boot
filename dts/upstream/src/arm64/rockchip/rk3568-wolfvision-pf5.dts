@@ -53,7 +53,7 @@
 
 	pdm_codec: pdm-codec {
 		compatible = "dmic-codec";
-		num-channels = <2>;
+		num-channels = <1>;
 		#sound-dai-cells = <0>;
 	};
 
@@ -165,10 +165,6 @@
 	hdmi_tx_out: endpoint {
 		remote-endpoint = <&hdmi_tx_in>;
 	};
-};
-
-&hdmi_sound {
-	status = "okay";
 };
 
 &i2c0 {
@@ -416,10 +412,6 @@
 &i2c4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4m1_xfer>;
-};
-
-&i2s0_8ch {
-	status = "okay";
 };
 
 &pdm {

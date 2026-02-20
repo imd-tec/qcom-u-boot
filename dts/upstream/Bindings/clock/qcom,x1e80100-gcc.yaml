@@ -17,11 +17,7 @@ description: |
 
 properties:
   compatible:
-    oneOf:
-      - items:
-          - const: qcom,x1p42100-gcc
-          - const: qcom,x1e80100-gcc
-      - const: qcom,x1e80100-gcc
+    const: qcom,x1e80100-gcc
 
   clocks:
     items:

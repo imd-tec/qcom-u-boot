@@ -50,8 +50,6 @@ properties:
     items:
       pattern: '^fic[0-3]$'
 
-  dma-coherent: true
-
   ranges:
     minItems: 1
     maxItems: 3

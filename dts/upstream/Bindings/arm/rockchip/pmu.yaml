@@ -53,17 +53,11 @@ properties:
   reg:
     maxItems: 1
 
-  power-controller:
-    type: object
-
-  reboot-mode:
-    type: object
-
 required:
   - compatible
   - reg
 
-additionalProperties: false
+additionalProperties: true
 
 examples:
   - |

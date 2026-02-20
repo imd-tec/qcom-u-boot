@@ -44,10 +44,6 @@ properties:
           - const: st,stm32h743
       - items:
           - enum:
-              - st,stm32h747i-disco
-          - const: st,stm32h747
-      - items:
-          - enum:
               - st,stm32h750i-art-pi
           - const: st,stm32h750
       - items:
@@ -93,13 +89,6 @@ properties:
         items:
           - const: dh,stm32mp153c-dhcor-drc-compact
           - const: dh,stm32mp153c-dhcor-som
-          - const: st,stm32mp153
-
-      - description: Octavo OSD32MP153 System-in-Package based boards
-        items:
-          - enum:
-              - lxa,stm32mp153c-tac-gen3 # Linux Automation TAC (Generation 3)
-          - const: oct,stm32mp153x-osd32
           - const: st,stm32mp153
 
       - items:

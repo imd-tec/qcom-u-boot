@@ -651,7 +651,6 @@
 			interrupt-names = "host", "peripheral";
 			maximum-speed = "high-speed";
 			dr_mode = "otg";
-			bootph-all;
 			snps,usb2-gadget-lpm-disable;
 			snps,usb2-lpm-disable;
 		};
@@ -769,7 +768,6 @@
 		#mbox-cells = <1>;
 		ti,mbox-num-users = <4>;
 		ti,mbox-num-fifos = <16>;
-		status = "disabled";
 	};
 
 	mailbox0_cluster1: mailbox@29010000 {
@@ -779,7 +777,6 @@
 		#mbox-cells = <1>;
 		ti,mbox-num-users = <4>;
 		ti,mbox-num-fifos = <16>;
-		status = "disabled";
 	};
 
 	mailbox0_cluster2: mailbox@29020000 {
@@ -789,7 +786,6 @@
 		#mbox-cells = <1>;
 		ti,mbox-num-users = <4>;
 		ti,mbox-num-fifos = <16>;
-		status = "disabled";
 	};
 
 	mailbox0_cluster3: mailbox@29030000 {
@@ -799,7 +795,6 @@
 		#mbox-cells = <1>;
 		ti,mbox-num-users = <4>;
 		ti,mbox-num-fifos = <16>;
-		status = "disabled";
 	};
 
 	ecap0: pwm@23100000 {

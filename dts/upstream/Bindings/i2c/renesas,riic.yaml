@@ -26,9 +26,7 @@ properties:
           - const: renesas,riic-rz      # RZ/A or RZ/G2L
 
       - items:
-          - enum:
-              - renesas,riic-r9a08g045   # RZ/G3S
-              - renesas,riic-r9a09g047   # RZ/G3E
+          - const: renesas,riic-r9a08g045   # RZ/G3S
           - const: renesas,riic-r9a09g057   # RZ/V2H(P)
 
       - const: renesas,riic-r9a09g057   # RZ/V2H(P)
@@ -91,7 +89,6 @@ if:
           - renesas,riic-r9a07g043
           - renesas,riic-r9a07g044
           - renesas,riic-r9a07g054
-          - renesas,riic-r9a09g057
 then:
   required:
     - resets

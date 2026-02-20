@@ -134,8 +134,9 @@
 	vmmc-supply = <&vddao_3v3>;
 	vqmmc-supply = <&vddio_boot>;
 
-	sdio: wifi@1 {
+	brcmf: wifi@1 {
 		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
 	};
 };
 

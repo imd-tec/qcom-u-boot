@@ -7,8 +7,7 @@ $schema: http://devicetree.org/meta-schemas/core.yaml#
 title: Qualcomm SM6115 Peripheral Authentication Service
 
 maintainers:
-  - Bjorn Andersson <andersson@kernel.org>
-  - Konrad Dybcio <konradybcio@kernel.org>
+  - Bhupesh Sharma <bhupesh.sharma@linaro.org>
 
 description:
   Qualcomm SM6115 SoC Peripheral Authentication Service loads and boots

@@ -115,7 +115,7 @@
 };
 
 &u2phy1_host {
-	phy-supply = <&vdd_5v>;
+	status = "disabled";
 };
 
 &uart0 {

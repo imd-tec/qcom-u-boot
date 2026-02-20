@@ -68,7 +68,6 @@ properties:
       - items:
           - enum:
               - amd,pensando-elba-qspi
-              - amd,versal2-ospi
               - intel,lgm-qspi
               - intel,socfpga-qspi
               - mobileye,eyeq5-ospi

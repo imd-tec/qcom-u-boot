@@ -218,8 +218,6 @@ patternProperties:
     description: Shenzhen BigTree Tech Co., LTD
   "^bitmain,.*":
     description: Bitmain Technologies
-  "^blaize,.*":
-    description: Blaize, Inc.
   "^blutek,.*":
     description: BluTek Power
   "^boe,.*":
@@ -577,8 +575,6 @@ patternProperties:
     description: Gemtek Technology Co., Ltd.
   "^genesys,.*":
     description: Genesys Logic, Inc.
-  "^genexis,.*":
-    description: Genexis BV/AB
   "^geniatech,.*":
     description: Geniatech, Inc.
   "^giantec,.*":
@@ -1208,8 +1204,6 @@ patternProperties:
     description: PulsedLight, Inc
   "^purism,.*":
     description: Purism, SPC
-  "^puya,.*":
-    description: Puya Semiconductor (Shanghai) Co., Ltd.
   "^qca,.*":
     description: Qualcomm Atheros, Inc.
   "^qcom,.*":
@@ -1342,8 +1336,6 @@ patternProperties:
     description: Siemens AG
   "^sifive,.*":
     description: SiFive, Inc.
-  "^siflower,.*":
-    description: Shanghai Siflower Communication Co.
   "^sigma,.*":
     description: Sigma Designs, Inc.
   "^sii,.*":
@@ -1532,8 +1524,6 @@ patternProperties:
     description: Topeet
   "^topic,.*":
     description: Topic Embedded Systems
-  "^topland,.*":
-    description: Topland Electronics (H.K) Co., Ltd.
   "^toppoly,.*":
     description: TPO (deprecated, use tpo)
     deprecated: true

@@ -16,7 +16,6 @@ description:
 properties:
   compatible:
     enum:
-      - qcom,ipq5424-qmp-usb3-phy
       - qcom,ipq6018-qmp-usb3-phy
       - qcom,ipq8074-qmp-usb3-phy
       - qcom,ipq9574-qmp-usb3-phy
@@ -90,7 +89,6 @@ allOf:
         compatible:
           contains:
             enum:
-              - qcom,ipq5424-qmp-usb3-phy
               - qcom,ipq6018-qmp-usb3-phy
               - qcom,ipq8074-qmp-usb3-phy
               - qcom,ipq9574-qmp-usb3-phy

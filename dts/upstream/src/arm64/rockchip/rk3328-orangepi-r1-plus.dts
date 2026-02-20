@@ -15,7 +15,6 @@
 
 &gmac2io {
 	phy-handle = <&rtl8211e>;
-	phy-mode = "rgmii";
 	tx_delay = <0x24>;
 	rx_delay = <0x18>;
 	status = "okay";

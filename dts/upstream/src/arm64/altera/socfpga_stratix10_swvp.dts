@@ -63,6 +63,7 @@
 	status = "okay";
 	phy-mode = "rgmii";
 	phy-addr = <0xffffffff>;
+	snps,max-mtu = <0x0>;
 };
 
 &gmac1 {

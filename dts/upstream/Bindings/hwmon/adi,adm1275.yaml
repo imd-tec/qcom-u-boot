@@ -24,7 +24,6 @@ properties:
     enum:
       - adi,adm1075
       - adi,adm1272
-      - adi,adm1273
       - adi,adm1275
       - adi,adm1276
       - adi,adm1278
@@ -80,7 +79,6 @@ allOf:
           contains:
             enum:
               - adi,adm1272
-              - adi,adm1273
     then:
       properties:
         adi,volt-curr-sample-average:
