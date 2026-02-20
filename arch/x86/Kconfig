@@ -755,16 +755,15 @@ config X86_HARDFP
 config X86_NO_REGPARM
 	bool "Disable register parameters (regparm=3)"
 	depends on !X86_64
+	default y if RUST_EXAMPLES
 	help
 	  By default, U-Boot on 32-bit x86 uses -mregparm=3 to pass the first
 	  three function arguments in registers (EAX, EDX, ECX) rather than on
-	  the stack. This is more efficient but can cause issues with debugging
-	  tools or when interfacing with code that expects the standard calling
-	  convention.
+	  the stack. This is more efficient but is incompatible with Rust's
+	  extern "C" ABI which uses the standard cdecl convention.
 
-	  Select this option to disable regparm and use the standard i386
-	  calling convention where all arguments are passed on the stack. This
-	  may be useful for debugging or for running in certain emulators.
+	  This is automatically enabled when RUST_EXAMPLES is set. It may
+	  also be useful for debugging or for running in certain emulators.
 
 config HAVE_ITSS
 	bool "Enable ITSS"

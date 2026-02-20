@@ -5,7 +5,9 @@
  * From Linux arch/um/sys-i386/setjmp.S
  */
 
+#ifndef CONFIG_X86_NO_REGPARM
 #define _REGPARM
+#endif
 
 /*
  * The jmp_buf is assumed to contain the following, in order:
