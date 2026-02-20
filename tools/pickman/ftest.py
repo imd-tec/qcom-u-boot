@@ -2061,16 +2061,21 @@ class TestStep(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
-                    args = argparse.Namespace(cmd='step', source='us/next',
-                                              remote='ci', target='master',
-                                              max_mrs=1, fix_retries=3)
-                    with terminal.capture():
-                        ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        args = argparse.Namespace(
+                            cmd='step', source='us/next', remote='ci',
+                            target='master', max_mrs=1, fix_retries=3)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -2109,18 +2114,23 @@ class TestStep(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
-                    with mock.patch.object(control, 'do_apply',
-                                           return_value=0) as mock_apply:
-                        args = argparse.Namespace(cmd='step', source='us/next',
-                                                  remote='ci', target='master',
-                                                  max_mrs=5, fix_retries=3)
-                        with terminal.capture():
-                            ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(control, 'do_apply',
+                                               return_value=0) as mock_apply:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next', remote='ci',
+                                target='master', max_mrs=5, fix_retries=3)
+                            with terminal.capture():
+                                ret = control.do_step(args, None)
 
         # With 1 open MR and max_mrs=5, it should try to create a new one
         self.assertEqual(ret, 0)
@@ -2138,17 +2148,23 @@ class TestStep(unittest.TestCase):
             )
             for i in range(3)
         ]
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=mock_mrs):
-                    with mock.patch.object(control, 'do_apply') as mock_apply:
-                        args = argparse.Namespace(cmd='step', source='us/next',
-                                                  remote='ci', target='master',
-                                                  max_mrs=3, fix_retries=3)
-                        with terminal.capture():
-                            ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(control, 'do_apply') \
+                                as mock_apply:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next', remote='ci',
+                                target='master', max_mrs=3, fix_retries=3)
+                            with terminal.capture():
+                                ret = control.do_step(args, None)
 
         # With 3 open MRs and max_mrs=3, should not create new MR
         self.assertEqual(ret, 0)
@@ -6120,19 +6136,25 @@ class TestProcessPipelineFailures(unittest.TestCase):
             pipeline_status='failed',
             pipeline_id=100,
         )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
                     with mock.patch.object(
-                            control, 'process_pipeline_failures') as mock_ppf:
-                        args = argparse.Namespace(
-                            cmd='step', source='us/next',
-                            remote='ci', target='master',
-                            max_mrs=1, fix_retries=0)
-                        with terminal.capture():
-                            control.do_step(args, None)
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(
+                                control,
+                                'process_pipeline_failures') as mock_ppf:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next',
+                                remote='ci', target='master',
+                                max_mrs=1, fix_retries=0)
+                            with terminal.capture():
+                                control.do_step(args, None)
 
         mock_ppf.assert_not_called()
 

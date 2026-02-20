@@ -1663,7 +1663,7 @@ def _prepare_get_commits(dbs, source, args):
         return info, None
 
 
-def prepare_apply(dbs, source, branch, args=None):
+def prepare_apply(dbs, source, branch, args=None, info=None):
     """Prepare for applying commits from a source branch
 
     Get the next commits, set up the branch name and prints info about
@@ -1676,15 +1676,18 @@ def prepare_apply(dbs, source, branch, args=None):
         branch (str): Branch name to use, or None to auto-generate
         args (Namespace): Parsed arguments with 'push', 'remote', 'target'
             (needed for subtree updates)
+        info (NextCommitsInfo): Pre-fetched commit info from
+            _prepare_get_commits(), or None to fetch it here
 
     Returns:
         tuple: (ApplyInfo, return_code) where ApplyInfo is set if there are
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    info, ret = _prepare_get_commits(dbs, source, args)
-    if ret is not None:
-        return None, ret
+    if info is None:
+        info, ret = _prepare_get_commits(dbs, source, args)
+        if ret is not None:
+            return None, ret
 
     commits = info.commits
 
@@ -1889,18 +1892,20 @@ def execute_apply(dbs, source, commits, branch_name, args, advance_to=None):  # 
     return ret, success, conv_log
 
 
-def do_apply(args, dbs):
+def do_apply(args, dbs, info=None):
     """Apply the next set of commits using Claude agent
 
     Args:
         args (Namespace): Parsed arguments with 'source' and 'branch' attributes
         dbs (Database): Database instance
+        info (NextCommitsInfo): Pre-fetched commit info from
+            _prepare_get_commits(), or None to fetch during prepare
 
     Returns:
         int: 0 on success, 1 on failure
     """
     source = args.source
-    info, ret = prepare_apply(dbs, source, args.branch, args)
+    info, ret = prepare_apply(dbs, source, args.branch, args, info=info)
     if not info:
         return ret
 
@@ -2851,6 +2856,14 @@ def do_step(args, dbs):
             process_pipeline_failures(remote, active_mrs, dbs,
                                       args.target, args.fix_retries)
 
+    # Process subtree updates and advance past fully-processed merges
+    # regardless of MR count, since these don't create MRs
+    info, ret = _prepare_get_commits(dbs, source, args)
+    if ret is not None:
+        if ret:
+            return ret
+        return 0
+
     # Only block new MR creation if we've reached the max allowed open MRs
     max_mrs = args.max_mrs
     if len(active_mrs) >= max_mrs:
@@ -2869,7 +2882,7 @@ def do_step(args, dbs):
         tout.info('No pending pickman MRs, creating new one...')
     args.push = True
     args.branch = None  # Let do_apply generate branch name
-    return do_apply(args, dbs)
+    return do_apply(args, dbs, info=info)
 
 
 def do_poll(args, dbs):
