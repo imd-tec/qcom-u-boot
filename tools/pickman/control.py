@@ -1539,6 +1539,60 @@ def prepare_apply(dbs, source, branch):
 
 
 # pylint: disable=too-many-arguments
+def _applied_advance_source(dbs, source, commits, advance_to,
+                            signal_commit):
+    """Advance the source position after skipping already-applied commits.
+
+    Chooses the new position from advance_to, signal_commit, or the
+    last commit hash, in that priority order.
+    """
+    if advance_to is not None:
+        new_hash = advance_to
+    elif signal_commit:
+        new_hash = signal_commit
+    else:
+        new_hash = commits[-1].hash
+
+    dbs.source_set(source, new_hash)
+    dbs.commit()
+    tout.info(f"Updated source '{source}' to {new_hash[:12]}")
+
+
+def _applied_create_skip_mr(args, source, commits, branch_name, conv_log):
+    """Push a skip branch and create an MR recording the skip.
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    remote = args.remote
+    target = args.target
+
+    try:
+        run_git(['checkout', '-b', branch_name, f'{remote}/{target}'])
+    except Exception:  # pylint: disable=broad-except
+        # Branch may already exist from failed attempt
+        try:
+            run_git(['checkout', branch_name])
+        except Exception:  # pylint: disable=broad-except
+            tout.error(f'Could not create/checkout branch {branch_name}')
+            return 1
+
+    title = f'{SKIPPED_TAG} [pickman] {commits[-1].subject}'
+    summary = format_history(source, commits, branch_name)
+    description = (f'{summary}\n\n'
+                   f'**Status:** Commits already applied to {target} '
+                   f'with different hashes.\n\n'
+                   f'### Conversation log\n{conv_log}')
+
+    mr_url = gitlab_api.push_and_create_mr(
+        remote, branch_name, target, title, description
+    )
+    if not mr_url:
+        return 1
+
+    return 0
+
+
 def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
                            signal_commit, advance_to=None):
     """Handle the case where commits are already applied to the target branch
@@ -1563,55 +1617,16 @@ def handle_already_applied(dbs, source, commits, branch_name, conv_log, args,
     """
     tout.info('Commits already applied to target branch - creating skip MR')
 
-    # Mark commits as 'skipped' in database
     for commit in commits:
         dbs.commit_set_status(commit.hash, 'skipped')
     dbs.commit()
 
-    # Update source position
-    if advance_to is not None:
-        dbs.source_set(source, advance_to)
-        dbs.commit()
-        tout.info(f"Updated source '{source}' to {advance_to[:12]}")
-    elif signal_commit:
-        dbs.source_set(source, signal_commit)
-        dbs.commit()
-        tout.info(f"Updated source '{source}' to {signal_commit[:12]}")
-    else:
-        last_hash = commits[-1].hash
-        dbs.source_set(source, last_hash)
-        dbs.commit()
-        tout.info(f"Updated source '{source}' to {last_hash[:12]}")
+    _applied_advance_source(dbs, source, commits, advance_to,
+                            signal_commit)
 
-    # Push and create MR with [skip] prefix if requested
     if args.push:
-        remote = args.remote
-        target = args.target
-
-        # Create a skip branch from ci/master (no changes)
-        try:
-            run_git(['checkout', '-b', branch_name, f'{remote}/{target}'])
-        except Exception:  # pylint: disable=broad-except
-            # Branch may already exist from failed attempt
-            try:
-                run_git(['checkout', branch_name])
-            except Exception:  # pylint: disable=broad-except
-                tout.error(f'Could not create/checkout branch {branch_name}')
-                return 1
-
-        # Use merge commit subject as title with [skip] prefix
-        title = f'{SKIPPED_TAG} [pickman] {commits[-1].subject}'
-        summary = format_history(source, commits, branch_name)
-        description = (f'{summary}\n\n'
-                       f'**Status:** Commits already applied to {target} '
-                       f'with different hashes.\n\n'
-                       f'### Conversation log\n{conv_log}')
-
-        mr_url = gitlab_api.push_and_create_mr(
-            remote, branch_name, target, title, description
-        )
-        if not mr_url:
-            return 1
+        return _applied_create_skip_mr(args, source, commits,
+                                       branch_name, conv_log)
 
     return 0
 
