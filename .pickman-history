@@ -24954,3 +24954,61 @@ Rebased onto latest master. Build verified.
 
 ---
 
+### Review: 2026-02-20
+
+Branch: cherry-9d7f90782d0
+
+Comments addressed:
+
+
+### Conversation log
+The branch is behind ci/master (merge-base 1b21a0b6308 vs ci/master f345e4b0ec5). Let me save the original commit stats before rebasing:
+
+Good. First commit has 17 files, 1322 insertions. Second commit is empty (merge commit). Now let me perform the rebase:
+
+Rebase completed successfully. Let me verify the commits and check deltas:
+
+Good, the rebase is based on f345e4b0ec5 (latest ci/master). Now let me verify the commit deltas:
+
+Deltas are identical (17 files, 1322 insertions for first commit; empty for second). Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the new one:
+
+v7 exists, so I need to create v8:
+
+Now let me force push to update the MR:
+
+## Rebase Completed Successfully ✅
+
+### Summary
+
+**Branch:** `cherry-9d7f90782d0` rebased onto latest `ci/master`
+
+### Commits After Rebase:
+1. `85dcbcb65c1` - ARM: imx: mxs: Add support for imx287 based BTT devices
+   - Delta: ✅ Identical (17 files changed, 1322 insertions)
+   
+2. `6a3d0f8749f` - Merge tag 'u-boot-imx-next-20250617' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+   - Delta: ✅ Empty commit (as expected)
+
+3. `fc8d3676836` - pickman: Record cherry-pick of 2 commits from us/next
+
+4. Plus 6 pickman review handling commits
+
+### Build Result: **OK**
+- sandbox board builds successfully
+
+### Actions Taken:
+- Rebased `cherry-9d7f90782d0` onto latest `ci/master` (f345e4b0ec5) with `--keep-empty`
+- Verified all commit deltas match original
+- Verified build passes
+- Created local branch `cherry-9d7f90782d0-v8`
+- Force pushed to `cherry-9d7f90782d0` to update MR
+
+### Suggested Reply for MR:
+```
+Rebased onto latest master. Build verified.
+```
+
+---
+
