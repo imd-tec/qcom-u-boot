@@ -530,6 +530,10 @@ def ubman(request):
     Returns:
         The fixture value.
     """
+    # Tests marked @pytest.mark.localqemu run QEMU locally, so they
+    # don't need a target-board connection; return the fixture directly.
+    if request.node.get_closest_marker('localqemu'):
+        return ubman_fix
     if not ubconfig.connection_ok:
         pytest.skip('Cannot get target connection')
         return None
