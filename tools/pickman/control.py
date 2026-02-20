@@ -1836,6 +1836,148 @@ def do_commit_source(args, dbs):
     return 0
 
 
+def _rewind_fetch_merges(current, count):
+    """Fetch first-parent merges and find target index.
+
+    Returns:
+        tuple: (merges, target_idx) where merges is a list of
+            (hash, short_hash, subject) tuples, or None on error
+    """
+    try:
+        out = run_git([
+            'log', '--first-parent', '--merges', '--format=%H|%h|%s',
+            f'-{count + 1}', current
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not read merge history for {current[:12]}')
+        return None
+
+    if not out:
+        tout.error('No merges found in history')
+        return None
+
+    merges = []
+    for line in out.strip().split('\n'):
+        if not line:
+            continue
+        parts = line.split('|', 2)
+        merges.append((parts[0], parts[1],
+                        parts[2] if len(parts) > 2 else ''))
+
+    if len(merges) < 2:
+        tout.error(f'Not enough merges to rewind by {count}')
+        return None
+
+    target_idx = min(count, len(merges) - 1)
+    return merges, target_idx
+
+
+def _rewind_get_range_commits(dbs, target_hash, current):
+    """Get commits in range and filter to those in database.
+
+    Returns:
+        tuple: (range_hashes_str, db_commits_list) or None on error
+    """
+    try:
+        range_hashes = run_git([
+            'rev-list', f'{target_hash}..{current}'
+        ])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not list commits in range '
+                   f'{target_hash[:12]}..{current[:12]}')
+        return None
+
+    db_commits = []
+    if range_hashes:
+        for chash in range_hashes.strip().split('\n'):
+            if chash and dbs.commit_get(chash):
+                db_commits.append(chash)
+
+    return range_hashes, db_commits
+
+
+def _rewind_find_branches(range_hashes, remote):
+    """Find cherry-pick branches matching commits in the range.
+
+    Returns:
+        list: Branch names (without remote prefix) that match
+    """
+    if not range_hashes:
+        return []
+
+    hash_set = set(range_hashes.strip().split('\n'))
+    try:
+        branch_out = run_git(
+            ['branch', '-r', '--list', f'{remote}/cherry-*'])
+    except Exception:  # pylint: disable=broad-except
+        branch_out = ''
+
+    mr_branches = []
+    remote_prefix = f'{remote}/'
+    for line in branch_out.strip().split('\n'):
+        branch = line.strip()
+        if not branch:
+            continue
+        # Branch is like 'ci/cherry-abc1234'; extract the hash part
+        short = branch.removeprefix(f'{remote_prefix}cherry-')
+        # Check if any commit in the range starts with this hash
+        for chash in hash_set:
+            if chash.startswith(short):
+                mr_branches.append(
+                    branch.removeprefix(remote_prefix))
+                break
+
+    return mr_branches
+
+
+def _rewind_find_mrs(mr_branches, remote):
+    """Look up MR details for matching branches.
+
+    Returns:
+        list: PickmanMr objects whose source_branch matches
+    """
+    if not mr_branches:
+        return []
+
+    matched_mrs = []
+    mrs = gitlab_api.get_open_pickman_mrs(remote)
+    if mrs:
+        branch_set = set(mr_branches)
+        for merge_req in mrs:
+            if merge_req.source_branch in branch_set:
+                matched_mrs.append(merge_req)
+
+    return matched_mrs
+
+
+def _rewind_show_summary(source, current, merges, target_idx,
+                         db_commits, matched_mrs, mr_branches,
+                         force):
+    """Display rewind summary."""
+    current_short = current[:12]
+    target_chash = merges[target_idx][1]
+    target_subject = merges[target_idx][2]
+
+    prefix = '' if force else '[dry run] '
+    tout.info(f"{prefix}Rewind '{source}': "
+              f'{current_short} -> {target_chash}')
+    tout.info(f'  Target: {target_chash} {target_subject}')
+    tout.info('  Merges being rewound:')
+    for i in range(target_idx):
+        tout.info(f'    {merges[i][1]} {merges[i][2]}')
+    tout.info(f'  Commits to delete from database: {len(db_commits)}')
+
+    if matched_mrs:
+        tout.info('  MRs to delete on GitLab:')
+        for merge_req in matched_mrs:
+            tout.info(f'    !{merge_req.iid}: {merge_req.title}')
+            tout.info(f'      {merge_req.web_url}')
+    elif mr_branches:
+        tout.info('  Branches to check for MRs:')
+        for branch in mr_branches:
+            tout.info(f'    {branch}')
+
+
 def do_rewind(args, dbs):
     """Rewind the source position back by N merges
 
@@ -1862,120 +2004,30 @@ def do_rewind(args, dbs):
         tout.error(f"Source '{source}' not found in database")
         return 1
 
-    # We need to find merges *before* current. Use ancestry instead.
-    try:
-        out = run_git([
-            'log', '--first-parent', '--merges', '--format=%H|%h|%s',
-            f'-{count + 1}', current
-        ])
-    except Exception:  # pylint: disable=broad-except
-        tout.error(f'Could not read merge history for {current[:12]}')
+    result = _rewind_fetch_merges(current, count)
+    if not result:
         return 1
-
-    if not out:
-        tout.error('No merges found in history')
-        return 1
-
-    # Parse merges - first line is current (or nearest merge), last is target
-    merges = []
-    for line in out.strip().split('\n'):
-        if not line:
-            continue
-        parts = line.split('|', 2)
-        merges.append((parts[0], parts[1], parts[2] if len(parts) > 2 else ''))
-
-    if len(merges) < 2:
-        tout.error(f'Not enough merges to rewind by {count}')
-        return 1
-
-    # The target is count merges back from the first entry
-    target_idx = min(count, len(merges) - 1)
+    merges, target_idx = result
     target_hash = merges[target_idx][0]
-    target_chash = merges[target_idx][1]
-    target_subject = merges[target_idx][2]
 
-    # Get all commits in the range target..current
-    try:
-        range_hashes = run_git([
-            'rev-list', f'{target_hash}..{current}'
-        ])
-    except Exception:  # pylint: disable=broad-except
-        tout.error(f'Could not list commits in range '
-                   f'{target_hash[:12]}..{current[:12]}')
+    result = _rewind_get_range_commits(dbs, target_hash, current)
+    if not result:
         return 1
+    range_hashes, db_commits = result
 
-    # Count commits that exist in the database
-    db_commits = []
-    if range_hashes:
-        for chash in range_hashes.strip().split('\n'):
-            if chash and dbs.commit_get(chash):
-                db_commits.append(chash)
+    mr_branches = _rewind_find_branches(range_hashes, args.remote)
+    matched_mrs = _rewind_find_mrs(mr_branches, args.remote)
 
-    # Find cherry-pick branches that match commits in the range.
-    # List all ci/cherry-* remote branches, then check if the hash in
-    # the branch name matches any commit in the rewound range.
-    mr_branches = []
-    if range_hashes:
-        hash_set = set(range_hashes.strip().split('\n'))
-        try:
-            branch_out = run_git(
-                ['branch', '-r', '--list', f'{args.remote}/cherry-*'])
-        except Exception:  # pylint: disable=broad-except
-            branch_out = ''
-        remote_prefix = f'{args.remote}/'
-        for line in branch_out.strip().split('\n'):
-            branch = line.strip()
-            if not branch:
-                continue
-            # Branch is like 'ci/cherry-abc1234'; extract the hash part
-            short = branch.removeprefix(f'{remote_prefix}cherry-')
-            # Check if any commit in the range starts with this hash
-            for chash in hash_set:
-                if chash.startswith(short):
-                    mr_branches.append(
-                        branch.removeprefix(remote_prefix))
-                    break
-
-    # Look up MR details from GitLab for matching branches
-    matched_mrs = []
-    if mr_branches:
-        mrs = gitlab_api.get_open_pickman_mrs(args.remote)
-        if mrs:
-            branch_set = set(mr_branches)
-            for merge_req in mrs:
-                if merge_req.source_branch in branch_set:
-                    matched_mrs.append(merge_req)
-
-    # Show what would happen (or what is happening)
-    current_short = current[:12]
-    prefix = '' if force else '[dry run] '
-    tout.info(f"{prefix}Rewind '{source}': "
-              f'{current_short} -> {target_chash}')
-    tout.info(f'  Target: {target_chash} {target_subject}')
-    tout.info('  Merges being rewound:')
-    for i in range(target_idx):
-        tout.info(f'    {merges[i][1]} {merges[i][2]}')
-    tout.info(f'  Commits to delete from database: {len(db_commits)}')
-
-    if matched_mrs:
-        tout.info('  MRs to delete on GitLab:')
-        for merge_req in matched_mrs:
-            tout.info(f'    !{merge_req.iid}: {merge_req.title}')
-            tout.info(f'      {merge_req.web_url}')
-    elif mr_branches:
-        tout.info('  Branches to check for MRs:')
-        for branch in mr_branches:
-            tout.info(f'    {branch}')
+    _rewind_show_summary(source, current, merges, target_idx,
+                         db_commits, matched_mrs, mr_branches, force)
 
     if not force:
         tout.info('Use --force to execute this rewind')
         return 0
 
-    # Delete commits from database
     for chash in db_commits:
         dbs.commit_delete(chash)
 
-    # Update source position
     dbs.source_set(source, target_hash)
     dbs.commit()
 
