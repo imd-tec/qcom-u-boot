@@ -111,6 +111,39 @@ If there are no merge commits between the last processed commit and the branch
 tip, pickman includes all remaining commits in a single set. This is noted in
 the output as "no merge found".
 
+Subtree Merge Handling
+----------------------
+
+The source branch may contain subtree merges that update vendored trees such as
+``dts/upstream``, ``lib/mbedtls/external/mbedtls`` or ``lib/lwip/lwip``. These
+appear as a pair of commits on the first-parent chain:
+
+1. ``Squashed 'dts/upstream/' changes from <old>..<new>`` (the actual file
+   changes)
+2. ``Subtree merge tag '<tag>' of <repo> into dts/upstream`` (the merge commit
+   joining histories)
+
+These commits cannot be cherry-picked. Pickman detects them automatically by
+matching the merge subject against the pattern
+``Subtree merge tag '<tag>' of ... into <path>``. When a subtree merge is found,
+pickman:
+
+1. Checks out the target branch (e.g. ``ci/master``)
+2. Runs ``./tools/update-subtree.sh pull <name> <tag>`` to apply the update
+3. Pushes the target branch (if ``--push`` is active)
+4. Records both the squash and merge commits as 'applied' in the database
+5. Advances the source position past the merge and continues with the next batch
+
+This is works without manual intervention. The currently supported subtrees are:
+
+=================================  ===========
+Path                               Name
+=================================  ===========
+``dts/upstream``                   ``dts``
+``lib/mbedtls/external/mbedtls``   ``mbedtls``
+``lib/lwip/lwip``                  ``lwip``
+=================================  ===========
+
 Skipping MRs
 ------------
 

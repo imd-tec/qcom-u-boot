@@ -2706,6 +2706,7 @@ class TestPrepareApply(unittest.TestCase):
 
             self.assertIsNotNone(info)
             self.assertEqual(ret, 0)
+            # Check that branch -D was called
             self.assertTrue(
                 any('branch' in c and '-D' in c for c in git_cmds))
             dbs.close()
@@ -3463,24 +3464,28 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='mega|mega1|A|Merge branch next|'
                                'base second_parent\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch next')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges (found sub-merges)
                     return command.CommandResult(stdout='sub1\n')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # decompose: rev-parse ^@ for mega-merge
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 5:
+                if call_count[0] == 6:
                     # decompose: log -1 for mega-merge info
                     return command.CommandResult(
                         stdout='Mega merge|Author\n')
-                if call_count[0] == 6:
+                if call_count[0] == 7:
                     # decompose: mainline commits (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 7:
+                if call_count[0] == 8:
                     # decompose: sub-merge 1 commits
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Sub commit|base\n')
@@ -3522,31 +3527,35 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='mega|mega1|A|Merge branch next|'
                                'base second_parent\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch next')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges
                     return command.CommandResult(stdout='sub1\n')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # decompose: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 5:
+                if call_count[0] == 6:
                     # decompose: log -1 for mega-merge info
                     return command.CommandResult(
                         stdout='Mega merge|Author\n')
-                if call_count[0] == 6:
+                if call_count[0] == 7:
                     # decompose: mainline (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 7:
+                if call_count[0] == 8:
                     # decompose: sub-merge 1 (in DB)
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Sub commit|base\n')
-                if call_count[0] == 8:
+                if call_count[0] == 9:
                     # decompose: remainder (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 9:
+                if call_count[0] == 10:
                     # Remaining commits after mega-merge (empty)
                     return command.CommandResult(stdout='')
                 return command.CommandResult(stdout='')
@@ -3580,13 +3589,17 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='merge1|m1|A|Merge branch feat|'
                                'base side1\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch feat')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nside1\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges (no sub-merges)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # Commits for this merge
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Commit 1|base\n'
@@ -3604,6 +3617,605 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
             # Normal merge: advance_to is the merge hash
             self.assertEqual(info.advance_to, 'merge1')
             dbs.close()
+
+
+class TestSubtreeMergeDetection(unittest.TestCase):
+    """Tests for subtree merge detection in find_unprocessed_commits."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_detects_dts_subtree_merge(self):
+        """Test find_unprocessed_commits detects dts/upstream subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'v6.15-dts' of "
+                       "https://example.com/dts.git into dts/upstream")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertTrue(info.merge_found)
+            self.assertEqual(info.commits, [])
+            self.assertEqual(info.advance_to, 'merge1')
+            self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+            dbs.close()
+
+    def test_detects_mbedtls_subtree_merge(self):
+        """Test find_unprocessed_commits detects mbedtls subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'v3.6.2' of "
+                       "https://example.com/mbedtls.git into "
+                       "lib/mbedtls/external/mbedtls")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertEqual(info.subtree_update,
+                             ('mbedtls', 'v3.6.2'))
+            dbs.close()
+
+    def test_detects_lwip_subtree_merge(self):
+        """Test find_unprocessed_commits detects lwip subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'STABLE-2_2_0' of "
+                       "https://example.com/lwip.git into lib/lwip/lwip")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertEqual(info.subtree_update,
+                             ('lwip', 'STABLE-2_2_0'))
+            dbs.close()
+
+    def test_skips_unknown_subtree_path(self):
+        """Test find_unprocessed_commits skips unknown subtree paths."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # Subject for merge1: unknown subtree
+                    return command.CommandResult(
+                        stdout="Subtree merge tag 'v1.0' of "
+                               "https://x.com/x.git into lib/unknown")
+                if call_count[0] == 2:
+                    # Subject for merge2: not a subtree merge
+                    return command.CommandResult(
+                        stdout='Normal merge commit')
+                if call_count[0] == 3:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='merge1\nside1\n')
+                if call_count[0] == 4:
+                    # detect_sub_merges: log --merges (no sub-merges)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 5:
+                    # Commits for merge2
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Commit 1|merge1\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1', 'merge2'])
+
+            # Should have skipped merge1 and found commits in merge2
+            self.assertIsNone(info.subtree_update)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.commits[0].chash, 'aaa1')
+            dbs.close()
+
+    def test_subtree_merge_via_get_next_commits(self):
+        """Test get_next_commits returns subtree_update for subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # First-parent log shows one merge
+                    return command.CommandResult(
+                        stdout='merge1|m1|A|Subtree merge tag '
+                               "'v6.15-dts' of https://x.com/dts.git"
+                               ' into dts/upstream|base second\n')
+                if call_count[0] == 2:
+                    # find_unprocessed: log -1 --format=%s for merge1
+                    return command.CommandResult(
+                        stdout="Subtree merge tag 'v6.15-dts' of "
+                               "https://x.com/dts.git into "
+                               "dts/upstream")
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, err = control.get_next_commits(dbs, 'us/next')
+
+            self.assertIsNone(err)
+            self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+            self.assertEqual(info.advance_to, 'merge1')
+            self.assertEqual(info.commits, [])
+            dbs.close()
+
+    def test_non_subtree_merge_has_no_subtree_update(self):
+        """Test normal merges have subtree_update=None."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # Subject: not a subtree merge
+                    return command.CommandResult(
+                        stdout='Merge branch some-feature')
+                if call_count[0] == 2:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nside1\n')
+                if call_count[0] == 3:
+                    # detect_sub_merges: log --merges (no sub-merges)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Commits in merge
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Commit 1|base\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertIsNone(info.subtree_update)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 1)
+            dbs.close()
+
+
+class TestApplySubtreeUpdate(unittest.TestCase):
+    """Tests for apply_subtree_update function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_apply_success(self):
+        """Test apply_subtree_update succeeds and updates database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    # Parents of merge: first_parent squash_hash
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    if 'squash_hash' in git_args:
+                        return "Squashed 'dts/upstream/' changes|Author"
+                    return "Subtree merge tag 'v6.15-dts'|Author"
+                return ''
+
+            mock_result = command.CommandResult(
+                'Subtree updated', '', '', 0)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 0)
+
+            # Source should be advanced past the merge
+            self.assertEqual(dbs.source_get('us/next'), 'merge_hash')
+
+            # Both commits should be in the database
+            squash = dbs.commit_get('squash_hash')
+            self.assertIsNotNone(squash)
+            merge = dbs.commit_get('merge_hash')
+            self.assertIsNotNone(merge)
+            dbs.close()
+
+    def test_apply_with_push(self):
+        """Test apply_subtree_update pushes when args.push is True."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=True, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    return 'Commit subject|Author'
+                return ''
+
+            pushed = [False]
+
+            def mock_push(remote, branch, skip_ci=False):
+                pushed[0] = True
+                return True
+
+            mock_result = command.CommandResult('ok', '', '', 0)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    with mock.patch.object(
+                            control.gitlab_api, 'push_branch',
+                            side_effect=mock_push):
+                        ret = control.apply_subtree_update(
+                            dbs, 'us/next', 'dts', 'v6.15-dts',
+                            'merge_hash', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(pushed[0])
+            dbs.close()
+
+    def test_apply_checkout_failure(self):
+        """Test apply_subtree_update returns 1 on checkout failure."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    raise Exception('checkout failed')
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                ret = control.apply_subtree_update(
+                    dbs, 'us/next', 'dts', 'v6.15-dts',
+                    'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_no_second_parent(self):
+        """Test apply_subtree_update returns 1 when merge has no 2nd parent."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            # Only one parent
+            with mock.patch.object(control, 'run_git',
+                                   return_value='single_parent'):
+                ret = control.apply_subtree_update(
+                    dbs, 'us/next', 'dts', 'v6.15-dts',
+                    'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_apply_script_exception(self):
+        """Test apply_subtree_update returns 1 on script exception."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        side_effect=Exception('script failed')):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_merge_conflict(self):
+        """Test apply_subtree_update aborts merge on non-zero exit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            merge_aborted = [False]
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if 'merge' in git_args and '--abort' in git_args:
+                    merge_aborted[0] = True
+                    return ''
+                return ''
+
+            mock_result = command.CommandResult(
+                '', 'CONFLICT (content): Merge conflict', '', 1)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            self.assertTrue(merge_aborted[0])
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+
+class TestPrepareApplySubtreeUpdate(unittest.TestCase):
+    """Tests for prepare_apply handling of subtree updates."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_prepare_apply_calls_subtree_update(self):
+        """Test prepare_apply applies subtree update and retries."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+            normal_info = control.NextCommitsInfo([], False, None)
+
+            call_count = [0]
+
+            def mock_get_next(dbs_arg, source):
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return subtree_info, None
+                return normal_info, None
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   side_effect=mock_get_next):
+                with mock.patch.object(
+                        control, 'apply_subtree_update',
+                        return_value=0) as mock_apply:
+                    info, ret = control.prepare_apply(
+                        dbs, 'us/next', None, args)
+
+            # Should have called apply_subtree_update
+            mock_apply.assert_called_once_with(
+                dbs, 'us/next', 'dts', 'v6.15-dts', 'merge1', args)
+            # No commits after retry, so returns None/0
+            self.assertIsNone(info)
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_prepare_apply_subtree_update_failure(self):
+        """Test prepare_apply returns error when subtree update fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(subtree_info, None)):
+                with mock.patch.object(
+                        control, 'apply_subtree_update',
+                        return_value=1):
+                    info, ret = control.prepare_apply(
+                        dbs, 'us/next', None, args)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_prepare_apply_subtree_without_args(self):
+        """Test prepare_apply returns error when subtree needs args=None."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(subtree_info, None)):
+                info, ret = control.prepare_apply(
+                    dbs, 'us/next', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+
+class TestNextCommitsInfoDefault(unittest.TestCase):
+    """Tests for NextCommitsInfo subtree_update default value."""
+
+    def test_default_subtree_update_is_none(self):
+        """Test NextCommitsInfo defaults subtree_update to None."""
+        info = control.NextCommitsInfo([], False, None)
+        self.assertIsNone(info.subtree_update)
+
+    def test_explicit_subtree_update(self):
+        """Test NextCommitsInfo accepts explicit subtree_update."""
+        info = control.NextCommitsInfo([], True, 'hash1',
+                                       ('dts', 'v6.15-dts'))
+        self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+
+    def test_explicit_none_subtree_update(self):
+        """Test NextCommitsInfo accepts explicit None subtree_update."""
+        info = control.NextCommitsInfo([], False, None, None)
+        self.assertIsNone(info.subtree_update)
+
+
+class TestSubtreeMergeRegex(unittest.TestCase):
+    """Tests for RE_SUBTREE_MERGE regex pattern."""
+
+    def test_matches_dts_merge(self):
+        """Test regex matches dts subtree merge subject."""
+        subject = ("Subtree merge tag 'v6.15-dts' of "
+                   "https://git.kernel.org/pub/scm/linux/kernel/git/"
+                   "devicetree/devicetree-rebasing.git into dts/upstream")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'v6.15-dts')
+        self.assertEqual(match.group(2), 'dts/upstream')
+
+    def test_matches_mbedtls_merge(self):
+        """Test regex matches mbedtls subtree merge subject."""
+        subject = ("Subtree merge tag 'v3.6.2' of "
+                   "https://github.com/Mbed-TLS/mbedtls.git into "
+                   "lib/mbedtls/external/mbedtls")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'v3.6.2')
+        self.assertEqual(match.group(2), 'lib/mbedtls/external/mbedtls')
+
+    def test_matches_lwip_merge(self):
+        """Test regex matches lwip subtree merge subject."""
+        subject = ("Subtree merge tag 'STABLE-2_2_0' of "
+                   "https://git.savannah.gnu.org/git/lwip.git into "
+                   "lib/lwip/lwip")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'STABLE-2_2_0')
+        self.assertEqual(match.group(2), 'lib/lwip/lwip')
+
+    def test_no_match_normal_merge(self):
+        """Test regex does not match normal merge subjects."""
+        subject = "Merge branch 'feature-xyz' into main"
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNone(match)
+
+    def test_no_match_squash_commit(self):
+        """Test regex does not match subtree squash commits."""
+        subject = ("Squashed 'dts/upstream/' changes from "
+                   "v6.14-dts..v6.15-dts")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNone(match)
 
 
 class TestDoCommitSourceResolveError(unittest.TestCase):

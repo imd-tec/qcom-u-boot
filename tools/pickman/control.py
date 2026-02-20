@@ -46,6 +46,17 @@ RE_GIT_STAT_FILE = re.compile(r'^([^|]+)\s*\|')
 # Extract hash from line like "(cherry picked from commit abc123def)"
 RE_CHERRY_PICK = re.compile(r'cherry picked from commit ([a-f0-9]+)')
 
+# Detect subtree merge commits on the first-parent chain
+RE_SUBTREE_MERGE = re.compile(
+    r"Subtree merge tag '([^']+)' of .* into (.*)")
+
+# Map from subtree path to update-subtree.sh name
+SUBTREE_NAMES = {
+    'dts/upstream': 'dts',
+    'lib/mbedtls/external/mbedtls': 'mbedtls',
+    'lib/lwip/lwip': 'lwip',
+}
+
 # Named tuple for commit info
 Commit = namedtuple('Commit', ['hash', 'chash', 'subject', 'date'])
 
@@ -92,8 +103,11 @@ AgentCommit = namedtuple('AgentCommit',
 # commits: list of CommitInfo to cherry-pick
 # merge_found: True if these commits came from a merge on the source branch
 # advance_to: hash to advance the source position to, or None to stay put
+# subtree_update: (name, tag) tuple if a subtree update is needed, else None
 NextCommitsInfo = namedtuple('NextCommitsInfo',
-                             ['commits', 'merge_found', 'advance_to'])
+                             ['commits', 'merge_found', 'advance_to',
+                              'subtree_update'],
+                             defaults=[None])
 
 # Named tuple for prepare_apply() result
 #
@@ -747,6 +761,22 @@ def do_check_gitlab(args, dbs):  # pylint: disable=unused-argument
     return 0
 
 
+def _check_subtree_merge(merge_hash):
+    """Check if a merge commit is a subtree merge.
+
+    Returns:
+        tuple: (name, tag) where name is the subtree name (or None for
+            unknown paths), or None if not a subtree merge
+    """
+    subject = run_git(['log', '-1', '--format=%s', merge_hash])
+    match = RE_SUBTREE_MERGE.match(subject)
+    if not match:
+        return None
+    tag = match.group(1)
+    path = match.group(2)
+    return SUBTREE_NAMES.get(path), tag
+
+
 def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
     """Find the first merge with unprocessed commits
 
@@ -766,6 +796,18 @@ def find_unprocessed_commits(dbs, last_commit, source, merge_hashes):
     prev_commit = last_commit
     skipped_merges = False
     for merge_hash in merge_hashes:
+        # Check for subtree merge (e.g. dts/upstream update)
+        result = _check_subtree_merge(merge_hash)
+        if result is not None:
+            name, tag = result
+            if name:
+                return NextCommitsInfo([], True, merge_hash,
+                                       (name, tag))
+            # Unknown subtree path - skip past it
+            prev_commit = merge_hash
+            skipped_merges = True
+            continue
+
         # Check for mega-merge (contains sub-merges)
         sub_merges = detect_sub_merges(merge_hash)
         if sub_merges:
@@ -1473,54 +1515,175 @@ def push_mr(args, branch_name, title, description):
     return bool(mr_url)
 
 
-def _prepare_get_commits(dbs, source):
-    """Get the next commits to apply, handling skips.
+def _subtree_run_update(name, tag):
+    """Run update-subtree.sh to pull a subtree update.
 
-    Fetches the next batch of commits from the source.
+    On failure, aborts any in-progress merge to clean up the working
+    tree.
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    try:
+        result = command.run(
+            './tools/update-subtree.sh', 'pull', name, tag,
+            capture=True, raise_on_error=False)
+        if result.stdout:
+            tout.info(result.stdout)
+        if result.return_code:
+            tout.error(f'Subtree update failed (exit code '
+                        f'{result.return_code})')
+            if result.stderr:
+                tout.error(result.stderr)
+            try:
+                run_git(['merge', '--abort'])
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return 1
+    except Exception as exc:  # pylint: disable=broad-except
+        tout.error(f'Subtree update failed: {exc}')
+        return 1
+
+    return 0
+
+
+def _subtree_record(dbs, source, squash_hash, merge_hash):
+    """Mark subtree commits as applied and advance the source position."""
+    source_id = dbs.source_get_id(source)
+    for commit_hash in [squash_hash, merge_hash]:
+        if not dbs.commit_get(commit_hash):
+            info = run_git(['log', '-1', '--format=%s|%an', commit_hash])
+            parts = info.split('|', 1)
+            subj = parts[0]
+            auth = parts[1] if len(parts) > 1 else ''
+            dbs.commit_add(commit_hash, source_id, subj, auth,
+                           status='applied')
+    dbs.commit()
+
+    dbs.source_set(source, merge_hash)
+    dbs.commit()
+    tout.info(f"Advanced source '{source}' past subtree merge "
+              f'{merge_hash[:12]}')
+
+
+def apply_subtree_update(dbs, source, name, tag, merge_hash, args):  # pylint: disable=too-many-arguments
+    """Apply a subtree update on the target branch
+
+    Runs tools/update-subtree.sh to pull the subtree update, then
+    optionally pushes the result to the remote target branch.
 
     Args:
         dbs (Database): Database instance
         source (str): Source branch name
+        name (str): Subtree name ('dts', 'mbedtls', 'lwip')
+        tag (str): Tag to pull (e.g. 'v6.15-dts')
+        merge_hash (str): Hash of the subtree merge commit to advance past
+        args (Namespace): Parsed arguments with 'push', 'remote', 'target'
+
+    Returns:
+        int: 0 on success, 1 on failure
+    """
+    target = args.target
+
+    tout.info(f'Applying subtree update: {name} -> {tag}')
+
+    # Get the squash commit (second parent of the merge)
+    parents = run_git(['rev-parse', f'{merge_hash}^@']).split()
+    if len(parents) < 2:
+        tout.error(f'Subtree merge {merge_hash[:12]} has no second parent')
+        return 1
+    squash_hash = parents[1]
+
+    try:
+        run_git(['checkout', target])
+    except Exception:  # pylint: disable=broad-except
+        tout.error(f'Could not checkout {target}')
+        return 1
+
+    ret = _subtree_run_update(name, tag)
+    if ret:
+        return ret
+
+    if args.push:
+        try:
+            gitlab_api.push_branch(args.remote, target, skip_ci=True)
+            tout.info(f'Pushed {target} to {args.remote}')
+        except Exception as exc:  # pylint: disable=broad-except
+            tout.error(f'Failed to push {target}: {exc}')
+            return 1
+
+    _subtree_record(dbs, source, squash_hash, merge_hash)
+
+    return 0
+
+
+def _prepare_get_commits(dbs, source, args):
+    """Get the next commits to apply, handling subtrees and skips.
+
+    Fetch the next batch of commits from the source. If a subtree
+    update is encountered, apply it and retry. If all commits in a
+    merge are already processed, advance the source and retry.
+
+    Args:
+        dbs (Database): Database instance
+        source (str): Source branch name
+        args (Namespace): Parsed arguments (needed for subtree updates)
 
     Returns:
         tuple: (NextCommitsInfo, return_code) where return_code is None
             on success, or an int (0 or 1) if there is nothing to do
     """
-    info, err = get_next_commits(dbs, source)
-    if err:
-        tout.error(err)
-        return None, 1
+    while True:
+        info, err = get_next_commits(dbs, source)
+        if err:
+            tout.error(err)
+            return None, 1
 
-    if not info.commits:
-        if info.advance_to:
-            dbs.source_set(source, info.advance_to)
-            dbs.commit()
-            tout.info(f"Advanced source '{source}' to "
-                      f'{info.advance_to[:12]}')
-        else:
+        if info.subtree_update:
+            name, tag = info.subtree_update
+            tout.info(f'Subtree update needed: {name} -> {tag}')
+            if not args:
+                tout.error('Cannot apply subtree update without args')
+                return None, 1
+            ret = apply_subtree_update(dbs, source, name, tag,
+                                       info.advance_to, args)
+            if ret:
+                return None, ret
+            continue
+
+        if not info.commits:
+            if info.advance_to:
+                dbs.source_set(source, info.advance_to)
+                dbs.commit()
+                tout.info(f"Advanced source '{source}' to "
+                          f'{info.advance_to[:12]}')
+                continue
             tout.info('No new commits to cherry-pick')
-        return None, 0
+            return None, 0
 
-    return info, None
+        return info, None
 
 
-def prepare_apply(dbs, source, branch):
+def prepare_apply(dbs, source, branch, args=None):
     """Prepare for applying commits from a source branch
 
-    Gets the next commits, sets up the branch name, and prints info about
-    what will be applied.
+    Get the next commits, set up the branch name and prints info about
+    what will be applied. When a subtree update is encountered, apply it
+    automatically and retry.
 
     Args:
         dbs (Database): Database instance
         source (str): Source branch name
         branch (str): Branch name to use, or None to auto-generate
+        args (Namespace): Parsed arguments with 'push', 'remote', 'target'
+            (needed for subtree updates)
 
     Returns:
         tuple: (ApplyInfo, return_code) where ApplyInfo is set if there are
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    info, ret = _prepare_get_commits(dbs, source)
+    info, ret = _prepare_get_commits(dbs, source, args)
     if ret is not None:
         return None, ret
 
@@ -1738,7 +1901,7 @@ def do_apply(args, dbs):
         int: 0 on success, 1 on failure
     """
     source = args.source
-    info, ret = prepare_apply(dbs, source, args.branch)
+    info, ret = prepare_apply(dbs, source, args.branch, args)
     if not info:
         return ret
 
