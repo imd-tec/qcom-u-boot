@@ -964,6 +964,49 @@ def detect_sub_merges(merge_hash):
     return [line for line in out.split('\n') if line]
 
 
+def _mega_preadd(dbs, merge_hash):
+    """Pre-add a mega-merge commit to the database as 'skipped'.
+
+    This prevents the mega-merge from appearing as an orphan commit.
+    Does nothing if the commit already exists in the database.
+    """
+    if dbs.commit_get(merge_hash):
+        return
+
+    source_id = None
+    sources = dbs.source_get_all()
+    if sources:
+        source_id = dbs.source_get_id(sources[0][0])
+    if source_id:
+        info = run_git(['log', '-1', '--format=%s|%an', merge_hash])
+        parts = info.split('|', 1)
+        subject = parts[0]
+        author = parts[1] if len(parts) > 1 else ''
+        dbs.commit_add(merge_hash, source_id, subject, author,
+                       status='skipped')
+        dbs.commit()
+
+
+def _mega_get_batch(dbs, exclude_ref, include_ref):
+    """Fetch a batch of unprocessed commits between two refs.
+
+    Runs git log for the range ^exclude_ref include_ref, parses the
+    output and filters out commits already in the database.
+
+    Returns:
+        list: CommitInfo tuples for unprocessed commits, may be empty
+    """
+    log_output = run_git([
+        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
+        f'^{exclude_ref}', include_ref
+    ])
+    if not log_output:
+        return []
+
+    all_commits = parse_log_output(log_output, has_parents=True)
+    return [c for c in all_commits if not dbs.commit_get(c.hash)]
+
+
 def decompose_mega_merge(dbs, prev_commit, merge_hash, sub_merges):
     """Return the next unprocessed batch from a mega-merge
 
@@ -990,60 +1033,27 @@ def decompose_mega_merge(dbs, prev_commit, merge_hash, sub_merges):
     first_parent = parents[0]
     second_parent = parents[1]
 
-    # Pre-add the mega-merge commit itself as skipped
-    if not dbs.commit_get(merge_hash):
-        source_id = None
-        sources = dbs.source_get_all()
-        if sources:
-            source_id = dbs.source_get_id(sources[0][0])
-        if source_id:
-            info = run_git(['log', '-1', '--format=%s|%an', merge_hash])
-            parts = info.split('|', 1)
-            subject = parts[0]
-            author = parts[1] if len(parts) > 1 else ''
-            dbs.commit_add(merge_hash, source_id, subject, author,
-                           status='skipped')
-            dbs.commit()
+    _mega_preadd(dbs, merge_hash)
 
     # Phase 1: mainline commits before the merge
-    log_output = run_git([
-        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'{prev_commit}..{first_parent}'
-    ])
-    if log_output:
-        all_commits = parse_log_output(log_output, has_parents=True)
-        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
-        if commits:
-            return commits, first_parent
+    commits = _mega_get_batch(dbs, prev_commit, first_parent)
+    if commits:
+        return commits, first_parent
 
     # Phase 2: sub-merge batches
     prev_sub = first_parent
     for sub_hash in sub_merges:
-        # Get commits for this sub-merge
-        log_output = run_git([
-            'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-            f'^{prev_sub}', sub_hash
-        ])
-        if log_output:
-            all_commits = parse_log_output(log_output, has_parents=True)
-            commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
-            if commits:
-                return commits, None
+        commits = _mega_get_batch(dbs, prev_sub, sub_hash)
+        if commits:
+            return commits, None
         prev_sub = sub_hash
 
     # Phase 3: remainder after the last sub-merge
     last_sub = sub_merges[-1] if sub_merges else first_parent
-    log_output = run_git([
-        'log', '--reverse', '--format=%H|%h|%an|%s|%P',
-        f'^{last_sub}', second_parent
-    ])
-    if log_output:
-        all_commits = parse_log_output(log_output, has_parents=True)
-        commits = [c for c in all_commits if not dbs.commit_get(c.hash)]
-        if commits:
-            return commits, None
+    commits = _mega_get_batch(dbs, last_sub, second_parent)
+    if commits:
+        return commits, None
 
-    # All done
     return [], None
 
 
