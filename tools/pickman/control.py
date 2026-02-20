@@ -1952,18 +1952,18 @@ def do_rewind(args, dbs):
     tout.info(f"{prefix}Rewind '{source}': "
               f'{current_short} -> {target_chash}')
     tout.info(f'  Target: {target_chash} {target_subject}')
-    tout.info(f'  Merges being rewound:')
+    tout.info('  Merges being rewound:')
     for i in range(target_idx):
         tout.info(f'    {merges[i][1]} {merges[i][2]}')
     tout.info(f'  Commits to delete from database: {len(db_commits)}')
 
     if matched_mrs:
-        tout.info(f'  MRs to delete on GitLab:')
+        tout.info('  MRs to delete on GitLab:')
         for merge_req in matched_mrs:
             tout.info(f'    !{merge_req.iid}: {merge_req.title}')
             tout.info(f'      {merge_req.web_url}')
     elif mr_branches:
-        tout.info(f'  Branches to check for MRs:')
+        tout.info('  Branches to check for MRs:')
         for branch in mr_branches:
             tout.info(f'    {branch}')
 
