@@ -25107,3 +25107,64 @@ All 7 commits are present. Let me run the final build:
 
 ---
 
+### Review: 2026-02-20
+
+Branch: cherry-3bc174031d3
+
+Comments addressed:
+
+
+### Conversation log
+The branch is only 4 commits behind now. Let me record the current deltas before rebasing:
+
+Good, I have the deltas recorded. Now let me perform the rebase:
+
+Rebase completed successfully. Now let me verify the deltas after rebase:
+
+All deltas are identical:
+- Commit 1: 2 files, 26 insertions ✅
+- Commit 2: 2 files, 55 insertions ✅
+- Commit 3: 1 file, 45 insertions ✅
+- Commit 4: 1 file, 54 insertions ✅
+- Commit 5: 2 files, 30 insertions ✅
+- Commit 6: 6 files, 24 insertions ✅
+- Commit 7 (merge): empty as expected ✅
+- Commit 8 (pickman): 1 file, 95 insertions ✅
+
+Now let me run the build:
+
+Build passed. Now let me check for existing versioned branches and create a new one:
+
+There's already a v2, so I'll create v3:
+
+Push succeeded. Let me verify the final state:
+
+## Rebase Complete
+
+**Summary:**
+- Successfully rebased branch `cherry-3bc174031d3` onto latest `ci/master`
+- The branch was 4 commits behind before rebase
+- All 8 commits (7 cherry-picked + 1 pickman record) rebased cleanly with no conflicts
+- All deltas verified identical before/after rebase
+- Build passed ✅
+- Force-pushed to remote branch to update MR !584
+- Created local versioned branch `cherry-3bc174031d3-v3`
+
+**Commits after rebase:**
+| # | New Hash | Subject |
+|---|----------|---------|
+| 1 | 984d19d8fb0 | ti_sci_*: Add utility to access tisci firmware and SOC capability |
+| 2 | 1ee53e93fc7 | ti_sci_* : Add capability to access DM firmware's metadata |
+| 3 | fc3524524c6 | firmware: ti_sci.c: Add a function to query DM firmware's capability |
+| 4 | 008cfb83c7f | firmware: ti_sci.c: Add a function to request DM metadata using ti_sci* calls |
+| 5 | fc946084566 | arm: mach-k3: Add a function for printing DM version |
+| 6 | 40d66885f7e | arm: mach-k3: Print version of DM firmware during boot process |
+| 7 | f2f11e53ef9 | Merge patch series "Print version of the DM firmware" (empty merge) |
+| 8 | fd787bd8d22 | pickman: Record cherry-pick of 7 commits from us/next |
+
+**Suggested MR reply:**
+
+> Rebased onto latest ci/master.
+
+---
+
