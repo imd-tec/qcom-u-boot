@@ -1081,27 +1081,12 @@ def do_next_set(args, dbs):
     return 0
 
 
-def do_next_merges(args, dbs):
-    """Show the next N merges to be applied from a source
-
-    Args:
-        args (Namespace): Parsed arguments with 'source' and 'count' attributes
-        dbs (Database): Database instance
+def _next_fetch_merges(last_commit, source, count):
+    """Fetch the next merge commits from a source.
 
     Returns:
-        int: 0 on success, 1 if source not found
+        list: (hash, short_hash, subject) tuples, up to count entries
     """
-    source = args.source
-    count = args.count
-
-    # Get the last cherry-picked commit from database
-    last_commit = dbs.source_get(source)
-
-    if not last_commit:
-        tout.error(f"Source '{source}' not found in database")
-        return 1
-
-    # Find merge commits on the first-parent chain
     out = run_git([
         'log', '--reverse', '--first-parent', '--merges',
         '--format=%H|%h|%s',
@@ -1109,8 +1094,7 @@ def do_next_merges(args, dbs):
     ])
 
     if not out:
-        tout.info('No merges remaining')
-        return 0
+        return []
 
     merges = []
     for line in out.split('\n'):
@@ -1124,9 +1108,18 @@ def do_next_merges(args, dbs):
         if len(merges) >= count:
             break
 
-    # Build display list, expanding mega-merges into sub-merges
-    # Each entry is (chash, subject, is_mega, sub_list) where sub_list
-    # is a list of (chash, subject) for mega-merge sub-merges
+    return merges
+
+
+def _next_build_display(merges):
+    """Build display list, expanding mega-merges into sub-merges.
+
+    Each entry is (chash, subject, is_mega, sub_list) where sub_list
+    is a list of (chash, subject) for mega-merge sub-merges.
+
+    Returns:
+        tuple: (display_list, total_sub_count)
+    """
     display = []
     total_sub = 0
     for commit_hash, chash, subject in merges:
@@ -1149,6 +1142,11 @@ def do_next_merges(args, dbs):
         else:
             display.append((chash, subject, False, None))
 
+    return display, total_sub
+
+
+def _next_show_merges(source, merges, display, total_sub):
+    """Display the next-merges listing."""
     n_items = total_sub + len(merges) - len(
         [d for d in display if d[2]])
     tout.info(f'Next merges from {source} '
@@ -1164,6 +1162,34 @@ def do_next_merges(args, dbs):
         else:
             tout.info(f'  {idx}. {chash} {subject}')
             idx += 1
+
+
+def do_next_merges(args, dbs):
+    """Show the next N merges to be applied from a source
+
+    Args:
+        args (Namespace): Parsed arguments with 'source' and 'count' attributes
+        dbs (Database): Database instance
+
+    Returns:
+        int: 0 on success, 1 if source not found
+    """
+    source = args.source
+    count = args.count
+
+    last_commit = dbs.source_get(source)
+    if not last_commit:
+        tout.error(f"Source '{source}' not found in database")
+        return 1
+
+    merges = _next_fetch_merges(last_commit, source, count)
+    if not merges:
+        tout.info('No merges remaining')
+        return 0
+
+    display, total_sub = _next_build_display(merges)
+
+    _next_show_merges(source, merges, display, total_sub)
 
     return 0
 
