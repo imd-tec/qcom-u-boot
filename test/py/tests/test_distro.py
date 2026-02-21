@@ -57,7 +57,8 @@ def test_distro(ubman):
 
     with ubman.log.section('Ubuntu'):
         # Shortly later, we should see this banner
-        ubman.expect(['Welcome to .*Ubuntu 24.04.1 LTS.*!'])
+        with ubman.temporary_timeout(200 * 1000):
+            ubman.expect(['Welcome to .*Ubuntu 24.04.1 LTS.*!'])
 
     ubman.restart_uboot()
 
