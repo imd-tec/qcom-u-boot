@@ -27236,3 +27236,73 @@ All 7 commits are present. Let me provide a final summary:
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-615620479e3
+
+Commits:
+- 615620479e3 test: disable TCG test on sandbox
+- d7aee0c5ce1 sandbox: enable CONFIG_CMD_BOOTEFI_SELFTEST by default
+- f2220962f9c Merge patch series "sandbox: enable CONFIG_CMD_BOOTEFI_SELFTEST by default"
+
+### Conversation log
+Let me find the repository location first:
+
+Good, the repository is clean (just an untracked file which is fine). Now let me create the branch based on ci/master:
+
+Now let me start cherry-picking the first commit (not a merge commit):
+
+First cherry-pick succeeded. Now let me verify the commit delta and run the build test:
+
+The delta matches exactly (1 file changed, 1 insertion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify the delta and run the build:
+
+Delta matches (1 file changed, 1 insertion). Now run the build test:
+
+Build passed. Now let me cherry-pick the third commit (this is a merge commit, so I need to use -m 1 --allow-empty):
+
+The merge commit is empty as expected (since the individual commits were already cherry-picked). Let me commit it as an empty commit:
+
+Now let me verify the commit delta for the merge commit and run the build:
+
+The merge commit is empty as expected - the original shows 2 files changed, but since we already cherry-picked those changes individually, the merge commit is empty. This is correct behavior. Now let me run the final build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 3 commits are present. Let me provide a final summary:
+
+---
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-615620479e3` (based on `ci/master`)
+
+### Commits Cherry-Picked:
+
+| # | Original Hash | New Hash | Status |
+|---|---------------|----------|--------|
+| 1 | `615620479e3` | `a3431e2faa6` | ✅ OK |
+| 2 | `d7aee0c5ce1` | `b6bfffba820` | ✅ OK |
+| 3 | `f2220962f9c` | `f89c86ba768` | ✅ OK (empty merge) |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed for all commits
+
+### Fix-ups Made:
+- None required
+
+### Delta Analysis:
+- **Commit 1:** Identical delta (1 file, +1 line)
+- **Commit 2:** Identical delta (1 file, +1 line)  
+- **Commit 3:** Empty commit (expected - this is a merge commit and the actual changes were already applied by commits 1 and 2)
+
+### Commits with Concerning Deltas:
+- None
+
+The branch `cherry-615620479e3` is ready for pushing with all 3 commits successfully cherry-picked.
+
+---
+
