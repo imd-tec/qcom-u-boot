@@ -26096,127 +26096,385 @@ All 4 commits are present. Let me run the final build test:
 
 ## 2026-02-20: us/next
 
-Branch: cherry-0fd9a3480a0
+Branch: cherry-9997cc261a3
 
 Commits:
-- 0fd9a3480a0 env: Rename OVERWRITE_ETHADDR_ONCE to ENV_OVERWRITE_ETHADDR_ONCE
-- 5fb88fa725d env: Rename SYS_REDUNDAND_ENVIRONMENT to ENV_REDUNDANT
-- 123682c7651 env: Rename SYS_RELOC_GD_ENV_ADDR to ENV_RELOC_GD_ENV_ADDR
-- 0f44d5549ed env: Rename SYS_MMC_ENV_DEV to ENV_MMC_DEVICE_INDEX
-- 31617b880ab env: Rename SYS_MMC_ENV_PART to ENV_MMC_EMMC_HW_PARTITION
-- ffc4914703a env: Rename ENV_MMC_PARTITION to ENV_MMC_SW_PARTITION
-- fb5235239aa env: Rename DEFAULT_ENV_FILE to ENV_DEFAULT_ENV_TEXT_FILE
-- 224224c9fa2 env: Drop DELAY_ENVIRONMENT
-- dbf7fd557a7 Merge patch series "Consistent Kconfig environment options CONFIG_ENV_ prefix"
+- 9997cc261a3 dts: ipq5424-rdp466-u-boot: add override dtsi
+- c1363633c6e doc: board/qualcomm: Update RDP signing instructions
+- d7fb15c17d3 clk/qcom: add initial clock driver for ipq5424
+- c4aa86c04f5 pinctrl: qcom: Add ipq5424 pinctrl driver
+- cb99e1257ba configs: add qcom_ipq5424_mmc_defconfig
+- 530764de9fc watchdog: qcom: introduce qcom-wdt driver
+- 35811a7b0d6 drivers: watchdog: qcom: Add timeout configuration support in watchdog
+- ddc527ac433 gpio: msm_gpio: return correct value for gpio read
+- 787ef522884 mach-snapdragon: of_fixup: Drop USB dr_mode override for RB1/2
+- e71cfbbae60 doc: board: qualcomm: document Dragonwing board building/flashing
+- 8e29f5adccf dts: qcs8300-ride-u-boot.dtsi: Add memory entry to bootup
+- 57f232607bd clk/qcom: qcs8300: Add GCC clock driver for QCS8300
+- b661d7c96b5 phy: qcom: Enable QMP UFS PHY driver for QCS8300
+- 1c6f9b45589 qcom_defconfig: Enable QCS8300 clock driver
+- 5afb01b2ab1 configs: add qcom_qcs8300_defconfig
+- abe2faf4269 dts: qcs615-ride-u-boot.dtsi: Add memory entry to bootup
+- d9dd486c5b4 phy: qcom: Enable QMP UFS PHY driver for QCS615
+- 4add840e7e7 clk/qcom: qcs615: Add GCC clock driver for QCS615
+- ddb3c757740 qcom_defconfig: Enable QCS615 clock driver
+- caac92ad287 configs: add qcom_qcs615_defconfig
+- 482fc6a82a5 board: qualcomm: add a MAINTAINERS file
+- e122850933c boot/image-android: Workaround kernel/ramdisk invalid addr
+- ca2a0383467 mach-snapdragon: Enable workaround of ignoring androidboot addr
+- a43ba5497fc mach-snapdragon: Enhance android image handling memory footprint
+- 32f0291900a board: qualcomm: Add MAINTAINERS entries for Dragonwing platforms
+- 35cdb4676e9 mach-snapdragon: track boot source
+- fe80a5f8009 mach-snapdragon: CapsuleUpdate: support all boot methods
+- b946a9ff1b2 dfu: scsi: don't call scsi_scan()
+- 5df87251c29 qcom_defconfig: enable capsule update support
+- 6746e81ba62 doc: board/qualcomm: Fix commands for compilation missing CROSS_COMPILE
+- 13043a2339a doc: board/qualcomm: Replace buildman build instructions
+- 41e2de28c01 doc: board/qualcomm: Add example for boot image version 2
+- 8c6481b7385 clk/qcom: sc7280: Fix variable name of msm_clk_data
+- 35a03711cec clk/qcom: sm8250: Fix variable name of msm_clk_data
+- 7f4af4c5509 doc: board/qualcomm: remove signing references from dragonwing.rst
+- 59e6462d7c0 Merge tag 'qcom-next-23Jun-1' of https://source.denx.de/u-boot/custodians/u-boot-snapdragon into next
 
 ### Conversation log
-The repository is clean (only untracked files present). Let me create the new branch and start the cherry-pick process.
+The repository is clean (only untracked files). Let me create the new branch and start cherry-picking.
 
-Now let me cherry-pick the first commit:
+Now let me start cherry-picking the commits one by one. First commit:
 
-First commit cherry-picked successfully. Let me check the delta and run a build test:
+Delta looks good. Now run build test:
 
-Deltas match (6 files, 6+/6-). Now let me run the build test:
+Build passed. Continue with commit 2:
 
-Build passed. Now let me cherry-pick the second commit:
+Commit 3:
 
-There's a conflict. The file `configs/imx8qxp_capricorn.config` was deleted in the base but modified in the commit being cherry-picked. This is a modify/delete conflict. Since the file was deleted in ci/master, I should remove it and continue:
+Commit 4:
 
-I need to amend the commit to add a note about the fix-up:
+Commit 5:
 
-Now let me check the delta:
+Commit 6:
 
-The delta is close: 164 files vs 165 files (1 file difference due to the deleted capricorn config). This is expected. Now build test:
+Commit 7:
 
-Build passed. Now cherry-pick commit 3:
+Commit 8:
 
-There's a conflict in `configs/efi-x86_app64_defconfig`. Let me check the conflict:
+Commit 9:
 
-I see the conflict. The HEAD version has additional lines for FAT environment that need to be kept, and the rename should be applied. Let me fix this:
+Commit 10:
 
-I need to amend the commit to note the fix-up:
+Commit 11:
 
-Now let me check the delta and run build test:
+Commit 12:
 
-Deltas match (868 files, 870+/870-). Now build test:
+Commit 13:
 
-Build passed. Now cherry-pick commit 4:
+Commit 14:
 
-Good, commit 4 cherry-picked successfully. Let me check the delta:
+Commit 15:
 
-Deltas match. Now build test:
+Commit 16:
 
-Build passed. Now cherry-pick commit 5:
+Commit 17:
 
-Same conflict with `configs/imx8qxp_capricorn.config` (deleted in ci/master). Let me resolve it:
+Commit 18:
 
-Let me amend to note the fix-up:
+Commit 19:
 
-Now check delta:
+Commit 20:
 
-Delta is close (91 vs 92 files - 1 file difference due to deleted capricorn config). Build test:
+Commit 21:
 
-Build passed. Now cherry-pick commit 6:
+Commit 22:
 
-Good, commit 6 cherry-picked successfully. Let me check the delta:
+Commit 23:
 
-Deltas match. Build test:
+Commit 24:
 
-Build passed. Now cherry-pick commit 7:
+Commit 25:
 
-Good, commit 7 cherry-picked successfully. Check delta:
+Commit 26:
 
-Deltas match. Build test:
+We have a conflict. Let me examine it:
 
-Build passed. Now cherry-pick commit 8:
+The conflict is straightforward - we need both the `#include <stdbool.h>` from HEAD and the enum definition from the commit. Let me resolve it:
 
-Good, commit 8 cherry-picked successfully. Check delta:
+Let me amend the commit to note the conflict resolution:
 
-Deltas match. Build test:
+Commit 27:
 
-Build passed. Now cherry-pick the final commit (merge commit - commit 9):
+Commit 28:
 
-There's a conflict with the merge commit. Let me check what files are conflicting:
+Commit 29 (needs verification because it's marked as "maybe already applied"):
 
-Let me resolve these conflicts. The efi-x86_app64_defconfig had a conflict resolution earlier, and imx8qxp_capricorn.config was deleted:
+These are different commits! The original 5df87251c29 removes capsule update configs from qcom_qcs6490_defconfig and adds them to qcom_defconfig, while e88089e4f13 adds them to qcom_qcs6490_defconfig. They're actually opposite/different changes. Let me cherry-pick the original:
 
-The HEAD version has the FAT env config that needs to be kept. Let me resolve this:
+Commit 30:
 
-Let me amend the commit to add a fix-up note:
+Commit 31:
 
-Now let me verify the log and run the final build test:
+Commit 32:
 
-All 9 commits are present. Now let me run the final build test:
+Commit 33:
 
-**Final Status Report:**
+Commit 34:
 
-All 9 commits were successfully cherry-picked from `us/next` to the new branch `cherry-0fd9a3480a0` (based on `ci/master`).
+Commit 35:
+
+Commit 36 (merge commit - use -m 1 --allow-empty):
+
+Let me check the conflict:
+
+Simple conflict - we want to keep the `#include <stdbool.h>`:
+
+The merge commit is now empty because all its content has already been applied via the individual cherry-picks. This is expected - commit it anyway:
+
+Now let me verify all commits are present:
+
+All 36 commits are present. Let me run a final build test:
+
+Let me also count the commits to be sure:
+
+All 36 commits have been successfully cherry-picked.
+
+## Final Status Report
+
+**Branch**: `cherry-9997cc261a3` (based on `ci/master`)
+
+**Build Result**: ✅ OK - sandbox build passes with no errors or warnings
+
+**Commits Applied**: 36 of 36
+
+**Fix-ups Made**:
+1. **Commit 26 (35cdb4676e9)** - `mach-snapdragon: track boot source`: Conflict in `arch/arm/mach-snapdragon/qcom-priv.h` - kept `#include <stdbool.h>` from ci/master alongside the new enum definition. Commit message amended to note the fix.
+
+2. **Commit 36 (59e6462d7c0)** - `Merge tag 'qcom-next-23Jun-1'`: This merge commit resulted in an empty commit after conflict resolution (because all its content was already applied via the individual cherry-picks). Created with `--allow-empty` to preserve the merge commit message in history.
+
+**Commit 29 (5df87251c29)** - `qcom_defconfig: enable capsule update support`: Verified this is NOT the same as e88089e4f13 (they actually make opposite changes), so it was correctly cherry-picked.
+
+**Deltas**: All commit deltas matched the originals (same files changed with same line counts).
+
+**Summary of cherry-picked commits**:
+1. dts: ipq5424-rdp466-u-boot: add override dtsi
+2. doc: board/qualcomm: Update RDP signing instructions
+3. clk/qcom: add initial clock driver for ipq5424
+4. pinctrl: qcom: Add ipq5424 pinctrl driver
+5. configs: add qcom_ipq5424_mmc_defconfig
+6. watchdog: qcom: introduce qcom-wdt driver
+7. drivers: watchdog: qcom: Add timeout configuration support
+8. gpio: msm_gpio: return correct value for gpio read
+9. mach-snapdragon: of_fixup: Drop USB dr_mode override for RB1/2
+10. doc: board: qualcomm: document Dragonwing board building/flashing
+11. dts: qcs8300-ride-u-boot.dtsi: Add memory entry to bootup
+12. clk/qcom: qcs8300: Add GCC clock driver for QCS8300
+13. phy: qcom: Enable QMP UFS PHY driver for QCS8300
+14. qcom_defconfig: Enable QCS8300 clock driver
+15. configs: add qcom_qcs8300_defconfig
+16. dts: qcs615-ride-u-boot.dtsi: Add memory entry to bootup
+17. phy: qcom: Enable QMP UFS PHY driver for QCS615
+18. clk/qcom: qcs615: Add GCC clock driver for QCS615
+19. qcom_defconfig: Enable QCS615 clock driver
+20. configs: add qcom_qcs615_defconfig
+21. board: qualcomm: add a MAINTAINERS file
+22. boot/image-android: Workaround kernel/ramdisk invalid addr
+23. mach-snapdragon: Enable workaround of ignoring androidboot addr
+24. mach-snapdragon: Enhance android image handling memory footprint
+25. board: qualcomm: Add MAINTAINERS entries for Dragonwing platforms
+26. mach-snapdragon: track boot source [CONFLICT RESOLVED]
+27. mach-snapdragon: CapsuleUpdate: support all boot methods
+28. dfu: scsi: don't call scsi_scan()
+29. qcom_defconfig: enable capsule update support
+30. doc: board/qualcomm: Fix commands for compilation missing CROSS_COMPILE
+31. doc: board/qualcomm: Replace buildman build instructions
+32. doc: board/qualcomm: Add example for boot image version 2
+33. clk/qcom: sc7280: Fix variable name of msm_clk_data
+34. clk/qcom: sm8250: Fix variable name of msm_clk_data
+35. doc: board/qualcomm: remove signing references from dragonwing.rst
+36. Merge tag 'qcom-next-23Jun-1' [EMPTY MERGE - content already applied]
+
+---
+
+### Pipeline fix: 2026-02-20 (attempt 1)
+
+Branch: cherry-9997cc261a3
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failure. Looking at the log, the failures are in `test_distro.py`:
+- `test_distro_arm_app_extlinux` - Timeout waiting for "Welcome to Ubuntu 25.04!"
+- `test_distro_arm_app_efi` - Timeout waiting for "Ubuntu 25.04 qarm ttyAMA0"
+
+These are distro boot tests for ARM EFI that timed out. Let me examine the test file and check recent changes to understand the root cause:
+
+The test is looking for `Welcome to Ubuntu 25.04!` and `Ubuntu 25.04 qarm ttyAMA0`. These are ARM EFI distro boot tests. Let me look at what Android-related changes might have affected this:
+
+This commit adds a new Kconfig option but seems unrelated to the EFI boot tests. Let me look at the test again more carefully and check the mach-snapdragon changes:
+
+This is interesting - the `select ANDROID_BOOT_IMAGE_IGNORE_BLOB_ADDR` is added to ARCH_SNAPDRAGON. Let me check if this is somehow affecting the EFI ARM app tests:
+
+This is `ARCH_EFI_ARM`, not `ARCH_SNAPDRAGON`, so the previous change shouldn't affect it directly. Let me look at the actual failure more closely. The failure is a timeout in test_distro tests. Let me check if there were any recent changes that could have affected the boot process:
+
+Let me look at the actual test log more closely. The test ran and output is showing tests running, but the timeout occurs. Let me see if I can find other information about the failure:
+
+The test file wasn't modified. Looking at the error log again:
+- `test_distro_arm_app_extlinux` timed out waiting for `Welcome to Ubuntu 25.04!`
+- `test_distro_arm_app_efi` timed out waiting for `Ubuntu 25.04 qarm ttyAMA0`
+
+These are timeouts during Linux boot. Let me see what the job config looks like:
+
+Let me check the ci/master branch test status to see if this is something new or a known flaky test:
+
+Let me look at the actual failure logs more closely. The error shows the test is timing out after Linux boots and the initrd starts. Looking at the log output pattern, this seems like a flaky test related to infrastructure (timing issue with test expectation).
+
+Let me check if this is a known flaky test:
+
+Looking at the job log output more carefully:
+- The test ran 2 failed, 33 passed, 635 skipped in about 5 minutes
+- The timeouts are in the `test_distro.py` tests specifically
+- The log shows a lot of SMBios output (`test_smbios.py`) and then moves through other tests before reaching `test_distro.py`
+
+The key issue here is that this is an **infrastructure/test timing issue**, not a code bug introduced by the cherry-picked commits. The tests are timing out waiting for Linux to boot in QEMU. This can happen due to:
+1. Slow CI runner performance
+2. Network issues fetching test images
+3. QEMU virtualization overhead
+
+Let me verify the tests actually passed before this commit series was applied:
+
+Let me check if any of these commits touch files that would affect the EFI ARM app build:
+
+This is a Rust target issue locally. Let me use buildman instead:
+
+This Rust compilation error is a local toolchain issue, not related to the cherry-picked commits. Let me disable Rust and build:
+
+The build succeeds. The issue here is not a build failure but a **test timeout**. Let me examine the nature of this failure more carefully.
+
+Looking at the test log output:
+```
+test/py/tests/test_distro.py::test_distro_arm_app_extlinux - console_base.Timeout
+test/py/tests/test_distro.py::test_distro_arm_app_efi - console_base.Timeout
+```
+
+The tests are waiting for Linux to boot in QEMU and then expecting specific strings from the Ubuntu userspace. This is timing out, which is typically an infrastructure/test flakiness issue.
+
+Let me check if there are any Kconfig changes that could have affected the boot process:
+
+The Kconfig changes add `ANDROID_BOOT_IMAGE_IGNORE_BLOB_ADDR` and select it for `ARCH_SNAPDRAGON`. This shouldn't affect `ARCH_EFI_ARM`.
+
+Let me check the config for efi-arm_app64 to verify it's not pulling in any of these changes:
+
+None of the Android options are enabled for efi-arm_app64. This confirms the failure is **not caused by the cherry-picked commits**.
+
+Let me verify by checking if this test passes on ci/master:
+
+Looking at the job log one more time, I see:
+1. The tests ran correctly (33 passed, 635 skipped)
+2. Only 2 tests failed with `console_base.Timeout`
+3. The failing tests are booting Linux in QEMU and waiting for Ubuntu userspace strings
+4. This is a typical **infrastructure flakiness** - the VM boot didn't complete in time
+
+The key evidence that this is infrastructure/transient:
+1. No code changes affect `ARCH_EFI_ARM` or the `efi-arm_app64` configuration
+2. The Android-related changes are only selected for `ARCH_SNAPDRAGON`
+3. The build succeeds
+4. The test is timing out waiting for Linux userspace, not U-Boot itself
+
+This is an **infrastructure/transient issue** - the QEMU-based tests timed out waiting for Linux to boot and reach userspace. This is a common occurrence in CI environments where VM performance can vary.
+
+## Conclusion
+
+**This is an infrastructure/transient failure, not a code issue introduced by the cherry-picked commits.**
+
+The failing tests (`test_distro_arm_app_extlinux` and `test_distro_arm_app_efi`) are QEMU-based distro boot tests that boot into Ubuntu 25.04. They timed out waiting for Linux userspace strings (`Welcome to Ubuntu 25.04!` and `Ubuntu 25.04 qarm ttyAMA0`).
+
+**Evidence:**
+1. The cherry-picked commits primarily affect Qualcomm/Snapdragon platforms and Android boot image handling
+2. The `efi-arm_app64_defconfig` has no Android or Snapdragon options enabled
+3. No code changes affect the EFI ARM app build path
+4. The build completes successfully
+5. The timeout happens during Linux userspace boot (after U-Boot has handed off), not in U-Boot code
+
+**Recommendation:** Re-run the pipeline. If the issue persists consistently, it may indicate a deeper test infrastructure problem or slow CI runners, but it is not caused by the code changes in this MR.
+
+---
+
+### Review: 2026-02-20
+
+Branch: cherry-9997cc261a3
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64.
+
+Now let me analyze the job failure. Look...
+
+### Conversation log
+Now let me understand the review comment. It says "fixed failed job(s) efi-aarch64" - but looking at the context, the analysis concluded that this was an **infrastructure/transient failure**, not a code issue. The tests timed out waiting for Linux userspace in QEMU, which is unrelated to the cherry-picked commits.
+
+Let me verify the current state of the branch and check if there's anything that can be done:
+
+The branch has 36 cherry-picked commits plus 2 pickman record commits. Let me re-read the review comment more carefully:
+
+The review comment says: "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64."
+
+But looking at the context, the previous analysis concluded this was an **infrastructure/transient failure** - the tests timed out waiting for Linux to boot in QEMU, not a code issue. The conclusion was to **re-run the pipeline**.
+
+Since the comment says "fixed failed job(s) efi-aarch64", this seems to be a request to address the pipeline failure. However, since the analysis determined this is a transient/infrastructure issue:
+
+1. There are no code changes needed
+2. The recommendation was to re-run the pipeline
+
+Let me verify the build still passes locally:
+
+Good, the build passes. Now let me understand what the review comment is asking for:
+
+The review comment "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64" appears to be a **status update** from a bot, not a request for changes. Looking at the format, this seems to be an automated comment tracking that an attempt was made to fix the pipeline failure.
+
+Looking back at the context:
+1. The efi-aarch64 job failed with test timeouts in `test_distro.py`
+2. The analysis concluded this was an infrastructure/transient failure
+3. The recommendation was to re-run the pipeline
+
+Since this is a transient failure and no code changes are needed, the appropriate action is to:
+1. Re-trigger the pipeline (by force-pushing the branch)
+2. Report that no code changes were needed
+
+Let me check if there are existing -v2 branches:
+
+Let me check if maybe the review comment is asking something else. Let me re-read it:
+
+The comment says: "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64."
+
+This looks like an automated bot comment tracking pipeline fix attempts. The previous conversation log shows the analysis concluded this was a transient failure.
+
+However, the task says "address 1 review comment(s)" - so I need to do something to address this.
+
+Looking at the situation:
+1. The pipeline failed due to test timeouts (transient/infrastructure issue)
+2. No code changes are needed
+3. Re-running the pipeline should resolve the issue
+
+The appropriate action is to force-push the branch to trigger a new pipeline run. Since the code hasn't changed, I can just push as-is:
+
+The branch has been pushed. This will trigger a new pipeline run. Since this was identified as a transient/infrastructure failure (QEMU test timeouts), re-running the pipeline should resolve the issue.
 
 ## Summary
 
-| # | Commit | Subject | Status | Notes |
-|---|--------|---------|--------|-------|
-| 1 | 0fd9a3480a0 | env: Rename OVERWRITE_ETHADDR_ONCE to ENV_OVERWRITE_ETHADDR_ONCE | ✅ OK | Clean cherry-pick |
-| 2 | 5fb88fa725d | env: Rename SYS_REDUNDAND_ENVIRONMENT to ENV_REDUNDANT | ✅ OK | Fix-up: configs/imx8qxp_capricorn.config was deleted in ci/master |
-| 3 | 123682c7651 | env: Rename SYS_RELOC_GD_ENV_ADDR to ENV_RELOC_GD_ENV_ADDR | ✅ OK | Fix-up: configs/efi-x86_app64_defconfig conflict resolved, kept FAT env config |
-| 4 | 0f44d5549ed | env: Rename SYS_MMC_ENV_DEV to ENV_MMC_DEVICE_INDEX | ✅ OK | Clean cherry-pick |
-| 5 | 31617b880ab | env: Rename SYS_MMC_ENV_PART to ENV_MMC_EMMC_HW_PARTITION | ✅ OK | Fix-up: configs/imx8qxp_capricorn.config was deleted in ci/master |
-| 6 | ffc4914703a | env: Rename ENV_MMC_PARTITION to ENV_MMC_SW_PARTITION | ✅ OK | Clean cherry-pick |
-| 7 | fb5235239aa | env: Rename DEFAULT_ENV_FILE to ENV_DEFAULT_ENV_TEXT_FILE | ✅ OK | Clean cherry-pick |
-| 8 | 224224c9fa2 | env: Drop DELAY_ENVIRONMENT | ✅ OK | Clean cherry-pick |
-| 9 | dbf7fd557a7 | Merge patch series "Consistent Kconfig environment options CONFIG_ENV_ prefix" | ✅ OK | Fix-up: resolved conflicts in efi-x86_app64_defconfig and removed deleted capricorn.config |
+**What was done:**
+1. Checked out branch `cherry-9997cc261a3`
+2. Verified the sandbox build still passes
+3. Analyzed the review comment - it's a bot comment tracking a pipeline fix attempt for the `efi-aarch64` job which failed with test timeouts
+4. Confirmed the analysis from the previous attempt: the failure was a **transient/infrastructure issue** (QEMU-based tests timing out waiting for Linux userspace), not a code problem
+5. Force-pushed the branch to trigger a new pipeline run
 
-## Build Result
-**✅ OK** - Final build passed with no errors or warnings
+**Reply to post on the MR:**
 
-## Fix-ups Made
-1. **configs/imx8qxp_capricorn.config**: Removed - file was deleted in ci/master (affected commits 2, 5, 9)
-2. **configs/efi-x86_app64_defconfig**: Resolved conflict by keeping the FAT environment configuration (`CONFIG_ENV_IS_IN_FAT`, `CONFIG_ENV_FAT_INTERFACE`, `CONFIG_ENV_FAT_DEVICE_AND_PART`) that was added in ci/master (affected commits 3, 9)
-
-## Deltas
-All commit deltas matched or had minor expected differences (1 file difference) due to the deleted capricorn.config file that existed in us/next but not in ci/master.
-
-The branch `cherry-0fd9a3480a0` is ready for pushing.
+> The `efi-aarch64` job failure was analyzed and determined to be a transient/infrastructure issue - the `test_distro_arm_app_extlinux` and `test_distro_arm_app_efi` tests timed out waiting for Linux to boot in QEMU. This is unrelated to the cherry-picked commits:
+> 
+> - The failing tests are for `ARCH_EFI_ARM`, not `ARCH_SNAPDRAGON`
+> - No Android or Snapdragon options are enabled in `efi-arm_app64_defconfig`
+> - The build completes successfully
+> - The timeout occurs during Linux userspace boot (after U-Boot hands off)
+> 
+> Re-triggered the pipeline. If the issue persists consistently, it may indicate a CI runner performance issue.
 
 ---
 
