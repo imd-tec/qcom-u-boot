@@ -26023,6 +26023,74 @@ The comment `[project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (att
 > - The test failures were timeouts during QEMU-based boot tests, indicating infrastructure timing issues
 >
 > **Recommendation:** Retry the pipeline. If failures persist, consider adding `[skip-sjg]` to skip the lab-based tests.
+Branch: cherry-11319e0e2bb
+
+Commits:
+- 11319e0e2bb bootstd: Fix memleak on errors in bootmeth_setup_iter_order()
+- 8da358c0a15 bootstd: Probe bootmeth devices for bootmeths env var
+- 8c61fc082e9 bootstd: Fix incorrect struct name in bootmeth_setup_iter_order()
+- 73fd2456231 Merge patch series "bootstd: Fix efi_mgr usage in bootmeths env var"
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick successful. Let me check the commit delta and run the build test:
+
+The deltas match perfectly (1 file, 12 insertions, 4 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick successful. Let me check the delta and build:
+
+Deltas match (1 file, 7 insertions). Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third cherry-pick successful. Let me check the delta and build:
+
+Deltas match (1 file, 1 insertion, 1 deletion). Build test:
+
+Build passed. Now cherry-pick the fourth commit (merge commit):
+
+The merge commit is empty since all changes were already applied via the individual commits. As per instructions, I need to preserve the merge commit even if empty. Let me commit it:
+
+Let me verify the delta for this merge commit:
+
+The cherry-picked merge commit is empty (as expected - the changes were already applied via the individual commits), while the original merge commit shows the combined changes. This is normal behavior since we cherry-picked all individual commits first.
+
+Now run the build test:
+
+Build passed. Now let me verify all 4 commits are present:
+
+All 4 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Build Result: ✅ OK
+- All 4 builds passed (after each commit and final build)
+- No warnings or errors
+
+### Commits Applied:
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 11319e0e2bb | 44c77cafd19 | bootstd: Fix memleak on errors in bootmeth_setup_iter_order() |
+| 2 | 8da358c0a15 | 2bf619bc510 | bootstd: Probe bootmeth devices for bootmeths env var |
+| 3 | 8c61fc082e9 | fc8b26ff236 | bootstd: Fix incorrect struct name in bootmeth_setup_iter_order() |
+| 4 | 73fd2456231 | 6b2668f1d01 | Merge patch series "bootstd: Fix efi_mgr usage in bootmeths env var" |
+
+### Fix-ups Made:
+- None required - all cherry-picks applied cleanly
+
+### Commits with Concerning Deltas:
+- Commit 4 (merge commit): Cherry-picked as empty since all changes were already applied via commits 1-3. This is expected behavior - the merge commit is preserved for history tracking.
+
+### Branch Status:
+- Branch `cherry-11319e0e2bb` is ready for pushing
+- 4 commits ahead of `ci/master`
 
 ---
 
