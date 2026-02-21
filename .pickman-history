@@ -27144,3 +27144,95 @@ The branch `cherry-14480c84dcd` is ready for pushing with 3 commits on top of ci
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-a657d87f087
+
+Commits:
+- a657d87f087 binman: drop "faked" return value from check_fake_fname
+- 3ae668b9d21 binman: mark optional missing blobs as absent
+- 21bc3433a43 binman: rework dropping absent entries from packaged image
+- f5817e05efd binman: add faked optional entry case in CheckForProblems
+- e749d64b462 binman: ftest: pass allow_fake_blob to _DoReadFileDtb
+- 0dbb0a8d1f2 binman: test: assert optional blobs don't cause non-functionality
+- d4f61eae2ab Merge patch series "Fix handling of optional blobs in binman"
+
+### Conversation log
+The repository is clean (only an untracked file `mr-report`). Now let me create and checkout the new branch based on ci/master:
+
+Good. Now let me cherry-pick each commit in order. Starting with the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The delta matches exactly (same files, same line counts). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded (with auto-merge). Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Fourth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fifth commit:
+
+Fifth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the sixth commit:
+
+Sixth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the seventh commit (this is a merge commit, so I need to use `-m 1 --allow-empty`):
+
+The merge commit is empty (as expected since all the constituent commits were already cherry-picked), but I need to commit it anyway to preserve the history. Let me commit the empty merge:
+
+Good, the merge commit has been created. Now let me verify the delta for the merge commit:
+
+The cherry-picked merge commit is empty (which is expected since all the individual commits were already cherry-picked separately), while the original merge shows all the combined changes. This is expected behavior for cherry-picking a merge commit after its constituent commits. The commit message is preserved properly.
+
+Let me run the final build test:
+
+Build passed. Now let me verify all 7 commits are present:
+
+All 7 commits are present. Let me provide a final summary:
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-a657d87f087` (based on `ci/master`)
+
+**All 7 commits successfully cherry-picked:**
+
+| # | Hash (new) | Original Hash | Subject |
+|---|------------|---------------|---------|
+| 1 | 8ba44bfe29c | a657d87f087 | binman: drop "faked" return value from check_fake_fname |
+| 2 | a22320ae280 | 3ae668b9d21 | binman: mark optional missing blobs as absent |
+| 3 | 96bfbd3388e | 21bc3433a43 | binman: rework dropping absent entries from packaged image |
+| 4 | faa3e986270 | f5817e05efd | binman: add faked optional entry case in CheckForProblems |
+| 5 | 96f55b557ff | e749d64b462 | binman: ftest: pass allow_fake_blob to _DoReadFileDtb |
+| 6 | 4ca0c76ef1f | 0dbb0a8d1f2 | binman: test: assert optional blobs don't cause non-functionality |
+| 7 | 854c4992d5b | d4f61eae2ab | Merge patch series "Fix handling of optional blobs in binman" |
+
+**Build result:** ✅ OK (all builds passed)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None - all regular commits had matching deltas. The merge commit (7) is empty as expected since all constituent commits were cherry-picked individually.
+
+**Status:** The branch `cherry-a657d87f087` is ready for pushing.
+
+---
+
