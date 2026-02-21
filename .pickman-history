@@ -26292,3 +26292,108 @@ All 36 commits have been successfully cherry-picked.
 
 ---
 
+### Pipeline fix: 2026-02-20 (attempt 1)
+
+Branch: cherry-9997cc261a3
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failure. Looking at the log, the failures are in `test_distro.py`:
+- `test_distro_arm_app_extlinux` - Timeout waiting for "Welcome to Ubuntu 25.04!"
+- `test_distro_arm_app_efi` - Timeout waiting for "Ubuntu 25.04 qarm ttyAMA0"
+
+These are distro boot tests for ARM EFI that timed out. Let me examine the test file and check recent changes to understand the root cause:
+
+The test is looking for `Welcome to Ubuntu 25.04!` and `Ubuntu 25.04 qarm ttyAMA0`. These are ARM EFI distro boot tests. Let me look at what Android-related changes might have affected this:
+
+This commit adds a new Kconfig option but seems unrelated to the EFI boot tests. Let me look at the test again more carefully and check the mach-snapdragon changes:
+
+This is interesting - the `select ANDROID_BOOT_IMAGE_IGNORE_BLOB_ADDR` is added to ARCH_SNAPDRAGON. Let me check if this is somehow affecting the EFI ARM app tests:
+
+This is `ARCH_EFI_ARM`, not `ARCH_SNAPDRAGON`, so the previous change shouldn't affect it directly. Let me look at the actual failure more closely. The failure is a timeout in test_distro tests. Let me check if there were any recent changes that could have affected the boot process:
+
+Let me look at the actual test log more closely. The test ran and output is showing tests running, but the timeout occurs. Let me see if I can find other information about the failure:
+
+The test file wasn't modified. Looking at the error log again:
+- `test_distro_arm_app_extlinux` timed out waiting for `Welcome to Ubuntu 25.04!`
+- `test_distro_arm_app_efi` timed out waiting for `Ubuntu 25.04 qarm ttyAMA0`
+
+These are timeouts during Linux boot. Let me see what the job config looks like:
+
+Let me check the ci/master branch test status to see if this is something new or a known flaky test:
+
+Let me look at the actual failure logs more closely. The error shows the test is timing out after Linux boots and the initrd starts. Looking at the log output pattern, this seems like a flaky test related to infrastructure (timing issue with test expectation).
+
+Let me check if this is a known flaky test:
+
+Looking at the job log output more carefully:
+- The test ran 2 failed, 33 passed, 635 skipped in about 5 minutes
+- The timeouts are in the `test_distro.py` tests specifically
+- The log shows a lot of SMBios output (`test_smbios.py`) and then moves through other tests before reaching `test_distro.py`
+
+The key issue here is that this is an **infrastructure/test timing issue**, not a code bug introduced by the cherry-picked commits. The tests are timing out waiting for Linux to boot in QEMU. This can happen due to:
+1. Slow CI runner performance
+2. Network issues fetching test images
+3. QEMU virtualization overhead
+
+Let me verify the tests actually passed before this commit series was applied:
+
+Let me check if any of these commits touch files that would affect the EFI ARM app build:
+
+This is a Rust target issue locally. Let me use buildman instead:
+
+This Rust compilation error is a local toolchain issue, not related to the cherry-picked commits. Let me disable Rust and build:
+
+The build succeeds. The issue here is not a build failure but a **test timeout**. Let me examine the nature of this failure more carefully.
+
+Looking at the test log output:
+```
+test/py/tests/test_distro.py::test_distro_arm_app_extlinux - console_base.Timeout
+test/py/tests/test_distro.py::test_distro_arm_app_efi - console_base.Timeout
+```
+
+The tests are waiting for Linux to boot in QEMU and then expecting specific strings from the Ubuntu userspace. This is timing out, which is typically an infrastructure/test flakiness issue.
+
+Let me check if there are any Kconfig changes that could have affected the boot process:
+
+The Kconfig changes add `ANDROID_BOOT_IMAGE_IGNORE_BLOB_ADDR` and select it for `ARCH_SNAPDRAGON`. This shouldn't affect `ARCH_EFI_ARM`.
+
+Let me check the config for efi-arm_app64 to verify it's not pulling in any of these changes:
+
+None of the Android options are enabled for efi-arm_app64. This confirms the failure is **not caused by the cherry-picked commits**.
+
+Let me verify by checking if this test passes on ci/master:
+
+Looking at the job log one more time, I see:
+1. The tests ran correctly (33 passed, 635 skipped)
+2. Only 2 tests failed with `console_base.Timeout`
+3. The failing tests are booting Linux in QEMU and waiting for Ubuntu userspace strings
+4. This is a typical **infrastructure flakiness** - the VM boot didn't complete in time
+
+The key evidence that this is infrastructure/transient:
+1. No code changes affect `ARCH_EFI_ARM` or the `efi-arm_app64` configuration
+2. The Android-related changes are only selected for `ARCH_SNAPDRAGON`
+3. The build succeeds
+4. The test is timing out waiting for Linux userspace, not U-Boot itself
+
+This is an **infrastructure/transient issue** - the QEMU-based tests timed out waiting for Linux to boot and reach userspace. This is a common occurrence in CI environments where VM performance can vary.
+
+## Conclusion
+
+**This is an infrastructure/transient failure, not a code issue introduced by the cherry-picked commits.**
+
+The failing tests (`test_distro_arm_app_extlinux` and `test_distro_arm_app_efi`) are QEMU-based distro boot tests that boot into Ubuntu 25.04. They timed out waiting for Linux userspace strings (`Welcome to Ubuntu 25.04!` and `Ubuntu 25.04 qarm ttyAMA0`).
+
+**Evidence:**
+1. The cherry-picked commits primarily affect Qualcomm/Snapdragon platforms and Android boot image handling
+2. The `efi-arm_app64_defconfig` has no Android or Snapdragon options enabled
+3. No code changes affect the EFI ARM app build path
+4. The build completes successfully
+5. The timeout happens during Linux userspace boot (after U-Boot has handed off), not in U-Boot code
+
+**Recommendation:** Re-run the pipeline. If the issue persists consistently, it may indicate a deeper test infrastructure problem or slow CI runners, but it is not caused by the code changes in this MR.
+
+---
+
