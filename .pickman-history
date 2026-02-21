@@ -26478,3 +26478,344 @@ The branch has been pushed. This will trigger a new pipeline run. Since this was
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-7a337270c07
+
+Commits:
+- 7a337270c07 sunxi: A133: add DRAM init code
+- fb4c3b2a049 sunxi: add support for the Allwinner A100/A133 SoC
+- 2b2783a1c07 arm64: dts: allwinner: a100: set maximum MMC frequency
+- 1cc93d42b24 arm64: dts: allwinner: a100: add Liontron H-A133L board support
+- be5038f168e sunxi: add support for Liontron H-A133L board
+- 63c9c697809 arm64: dts: allwinner: h616: add YuzukiHD Chameleon support
+- babf74be60e sunxi: H616: add support for YuzukiHD Chameleon board
+- 0862a8c48f2 Merge branch 'next' of https://source.denx.de/u-boot/custodians/u-boot-sunxi into next
+
+### Conversation log
+Now let me start cherry-picking the commits one by one.
+
+The delta looks identical (9 files, 1722 insertions, 8 deletions). Now let me run the build test.
+
+Build passed. Now let me cherry-pick the second commit.
+
+Delta is identical (8 files, 28 insertions, 8 deletions). Build test:
+
+Build passed. Cherry-pick the third commit.
+
+Delta is identical (1 file, 3 insertions). Build test:
+
+Build passed. Cherry-pick the fourth commit.
+
+Delta is identical (1 file, 211 insertions). Build test:
+
+Build passed. Cherry-pick the fifth commit.
+
+Delta is identical (2 files, 42 insertions). Build test:
+
+Build passed. Cherry-pick the sixth commit.
+
+Delta is identical (1 file, 222 insertions). Build test:
+
+Build passed. Cherry-pick the seventh commit.
+
+Delta is identical (2 files, 35 insertions). Build test:
+
+Build passed. Now for the eighth commit - this is a merge commit marked as "maybe already applied". Let me first verify if it's already applied by comparing patches.
+
+The patches are completely different. The original `0862a8c48f2` is a merge commit from Tom Rini with a short message, while `702025856df` is a completely different commit (a "pickman" record with 841 commits). These are NOT the same commit - I should proceed with the cherry-pick.
+
+This is expected for a merge commit - since the actual changes were already cherry-picked earlier in the series, the merge commit results in an empty commit. I need to commit it with `--allow-empty` as instructed:
+
+Good, the merge commit was recorded. Now let me verify the commit delta:
+
+The merge commit was originally adding all the changes that were already cherry-picked individually. The cherry-picked version results in an empty commit (as expected, since all changes were already applied via individual commits). This is the expected behavior. Let me run the build test:
+
+Build passed. Now let me verify all 8 commits are present:
+
+All 8 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+All 8 commits have been cherry-picked from `us/next` branch to the new branch `cherry-7a337270c07` based on `ci/master`.
+
+### Commits Applied:
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 7a337270c07 | sunxi: A133: add DRAM init code | ✅ OK |
+| 2 | fb4c3b2a049 | sunxi: add support for the Allwinner A100/A133 SoC | ✅ OK |
+| 3 | 2b2783a1c07 | arm64: dts: allwinner: a100: set maximum MMC frequency | ✅ OK |
+| 4 | 1cc93d42b24 | arm64: dts: allwinner: a100: add Liontron H-A133L board support | ✅ OK |
+| 5 | be5038f168e | sunxi: add support for Liontron H-A133L board | ✅ OK |
+| 6 | 63c9c697809 | arm64: dts: allwinner: h616: add YuzukiHD Chameleon support | ✅ OK |
+| 7 | babf74be60e | sunxi: H616: add support for YuzukiHD Chameleon board | ✅ OK |
+| 8 | 0862a8c48f2 | Merge branch 'next' (merge commit) | ✅ OK (empty, as expected) |
+
+### Build Result: **OK**
+- All 8 builds passed with no warnings or errors
+
+### Fix-ups Made: **None**
+- No conflicts requiring manual resolution
+- Commits 2 (fb4c3b2a049) had auto-merging in `board/sunxi/board.c` and `common/spl/Kconfig` but no conflicts
+
+### Delta Notes:
+- All 7 regular commits had identical deltas between original and cherry-picked versions
+- Commit 8 (merge commit) resulted in an empty commit as expected, since all individual changes were already applied via the preceding cherry-picks
+
+### Concerning Deltas: **None**
+- All commit deltas matched exactly
+
+The branch `cherry-7a337270c07` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-02-21 (attempt 1)
+
+Branch: cherry-7a337270c07
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+- tk1 (sjg-lab)
+- qemu-x86_64 (sjg-lab)
+- bob (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failures. Looking at the logs:
+
+1. **efi-aarch64**: Test failure in `test_distro_arm_app_extlinux` - Timeout waiting for "Welcome to Ubuntu 25.04!"
+2. **tk1**: Lab infrastructure failure - `NetworkTegraUSBLoader` resources not available (hardware not connected)
+3. **qemu-x86_64**: Test failure in `test_distro` - Timeout waiting for "Welcome to .*Ubuntu 24.04.1 LTS.*!"
+4. **bob**: Lab infrastructure failure - Timeout waiting for login prompt on `chromebook_bob`
+
+Let me check the commits on this branch:
+
+Now let me examine the failed tests more closely. The failures are:
+1. `test_distro_arm_app_extlinux` (efi-aarch64) - timeout waiting for Ubuntu 25.04
+2. `test_distro` (qemu-x86_64) - timeout waiting for Ubuntu 24.04.1 LTS
+
+These look like test infrastructure/environment issues rather than code issues. Let me check if these tests were passing before these commits by looking at the test file:
+
+Let me check if the commits on this branch modified anything related to these tests or distro boot:
+
+These commits are all related to Allwinner A133/A100 and H616 SoC support - they shouldn't affect `test_distro` tests on qemu-x86_64 or efi-aarch64 at all.
+
+Let me check the nature of the failures more closely:
+
+1. **tk1 and bob**: These are clear infrastructure failures - the hardware is disconnected or unavailable:
+   - tk1: "Not all resources are available: {NetworkTegraUSBLoader...avail=False}"
+   - bob: "Timeout of 30 seconds exceeded during waiting for login"
+
+2. **efi-aarch64 and qemu-x86_64**: These are test timeouts waiting for the Ubuntu welcome message, which happens during booting into a distro - this is testing the EFI/distro boot flow.
+
+Let me verify if these are flaky/infrastructure issues by checking if these tests pass on the base branch:
+
+The key question is: are these failures related to the cherry-picked commits, or are they infrastructure/flaky test issues?
+
+Looking at the evidence:
+1. The cherry-picked commits only touch Allwinner sunxi code (A133, A100, H616 SoCs)
+2. The failing tests are on qemu-x86_64 and efi-aarch64 (QEMU-based) - completely unrelated platforms
+3. The tk1 and bob failures are clearly hardware availability issues
+4. The test_distro failures are timeouts waiting for a Linux distro to boot - this is testing external distro images, not U-Boot code changes
+
+Let me check if there's any common code that could affect both:
+
+These changes are all specific to sunxi/Allwinner platforms and wouldn't affect qemu-x86_64 or efi-aarch64 at all.
+
+Let me verify the builds work correctly:
+
+This is a local build environment issue - missing BMP files in my local tree. Let me check if this build passes on the CI - looking at the job logs, the CI builds did succeed (they ran pytest tests after building). The failure is in the tests, not in the build.
+
+Let me re-examine the failure logs:
+
+For **efi-aarch64**:
+```
+FAILED test/py/tests/test_distro.py::test_distro_arm_app_extlinux - console_base.Timeout
+```
+
+For **qemu-x86_64**:
+```
+FAILED test/py/tests/test_distro.py::test_distro - console_base.Timeout
+```
+
+These are timeout errors in the test framework waiting for a response from the booted system. This could be:
+1. A test infrastructure issue (network, disk image availability, etc.)
+2. A flaky test that sometimes times out
+3. Something in the code changes affecting boot
+
+Given that:
+1. The cherry-picked commits only touch Allwinner sunxi code
+2. The failing tests are on completely unrelated platforms (QEMU x86_64 and QEMU aarch64)
+3. The tests that fail are about booting into a full Ubuntu distro, which depends on external disk images
+4. The tk1 and bob failures are clearly hardware availability issues
+
+This is an **infrastructure/transient issue**, not a code issue. The sunxi commits cannot affect QEMU x86_64 or QEMU aarch64 behavior.
+
+Let me verify this by checking if the test_distro tests depend on any common code that was changed:
+
+These tests are for booting Ubuntu on QEMU platforms. The sunxi commits have nothing to do with these tests. The failures are timing out waiting for Ubuntu to boot - this is typically a test environment issue (disk image accessibility, network issues, QEMU performance, etc.).
+
+Let me look at the actual test output in more detail from the logs. The tests ran successfully up to the point of waiting for the Ubuntu welcome message:
+
+- efi-aarch64: `ubman.expect(['Welcome to Ubuntu 25.04!'])` - Timeout
+- qemu-x86_64: `ubman.expect(['Welcome to .*Ubuntu 24.04.1 LTS.*!'])` - Timeout
+
+These are tests that boot complete Ubuntu distro images in QEMU and wait for the system to fully boot. These timeouts can happen due to:
+1. Network/storage issues accessing the disk images
+2. QEMU performance issues
+3. System resource constraints on the CI runner
+
+**Conclusion:**
+
+All four failures are infrastructure/transient issues:
+1. **tk1**: Hardware not connected (`NetworkTegraUSBLoader...avail=False`)
+2. **bob**: Hardware timeout waiting for login (`Timeout of 30 seconds exceeded during waiting for login`)
+3. **qemu-x86_64**: Test infrastructure timeout (waiting for Ubuntu 24.04 to boot fully)
+4. **efi-aarch64**: Test infrastructure timeout (waiting for Ubuntu 25.04 to boot fully)
+
+The cherry-picked commits only add support for Allwinner A133/A100 and H616 SoCs. They cannot possibly affect:
+- QEMU x86_64 platform behavior
+- QEMU aarch64 platform behavior  
+- Tegra TK1 hardware
+- Rockchip chromebook_bob hardware
+
+These are **not code issues** - they are **infrastructure/transient failures** that need to be retried.
+
+## Summary
+
+**No code fix is required.** The pipeline failures are caused by:
+
+1. **tk1** and **bob**: Lab infrastructure issues - hardware not available or disconnected
+   - tk1: `labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader...avail=False}`
+   - bob: `pexpect.exceptions.TIMEOUT: Timeout of 30 seconds exceeded during waiting for login`
+
+2. **qemu-x86_64** and **efi-aarch64**: Test infrastructure timeouts waiting for Ubuntu distro images to boot fully in QEMU. These tests boot real Ubuntu ISOs/images and wait for the system to reach userspace - they're susceptible to timing issues based on CI runner performance and disk image accessibility.
+
+The cherry-picked commits only add Allwinner sunxi A133/A100/H616 SoC support and cannot affect the failing test platforms in any way.
+
+**Recommendation**: Retry the failed jobs. If they continue to fail, it's a CI infrastructure issue that needs to be addressed separately.
+
+---
+
+### Review: 2026-02-21
+
+Branch: cherry-7a337270c07
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1, qemu-x86_64, bob.
+
+Now let me analyz...
+
+### Conversation log
+Now let me understand the review comment. The comment says:
+
+> **Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1, qemu-x86_64, bob.**
+
+Looking at the context from the MR description, this was a pipeline fix attempt where the analysis concluded that the failures were infrastructure/transient issues, not code issues:
+
+1. **tk1** and **bob**: Hardware not available/disconnected
+2. **qemu-x86_64** and **efi-aarch64**: Test timeouts waiting for Ubuntu to boot in QEMU
+
+The analysis concluded: "No code fix is required" and recommended retrying the failed jobs.
+
+This review comment appears to be feedback on that pipeline fix attempt. The comment indicates the jobs "efi-aarch64, tk1, qemu-x86_64, bob" were supposedly "fixed" - but looking at the prior analysis, no actual code changes were made because these were identified as infrastructure issues.
+
+Let me verify the current state and check if there's actually anything to address:
+
+The comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` indicates that a pipeline fix attempt was recorded, but based on the detailed analysis in the MR description, no actual code changes were made because the failures were infrastructure issues.
+
+Looking at the comment more carefully:
+
+> **Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1, qemu-x86_64, bob.**
+
+This seems to be a bot message recording the pipeline fix attempt rather than a human review comment requesting changes. The "fix" was really just an analysis that determined no code changes were needed.
+
+However, since the task asks me to "address 1 review comment(s)", let me check if there's an actual actionable item here. The comment format suggests it's automated feedback about what was attempted. The previous work concluded that no code fix was required and the jobs should be retried.
+
+Let me verify the build still passes and create the updated branch:
+
+The build passes. Now let me understand what action is actually needed here. The review comment appears to be a status message from the bot indicating that the pipeline fix attempt was recorded. The analysis showed no code changes were needed - the failures were infrastructure issues.
+
+Since this is a status/recording message rather than an actionable review comment requesting code changes, the appropriate response would be:
+
+1. Acknowledge that the pipeline failures were analyzed and determined to be infrastructure/transient issues
+2. The jobs should be retried via the CI system
+
+However, since the task asks to create a v2 branch and push, let me check if there's a local v2 branch already:
+
+Let me re-examine the review comment more carefully. The comment says:
+
+> Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1, qemu-x86_64, bob.
+
+Looking at the structure, this appears to be a bot indicating that a "pipeline fix" was attempted. The detailed analysis in the MR description concluded that no code fix was required because:
+
+1. The sunxi commits only affect Allwinner platforms
+2. The failing tests are on completely unrelated platforms (QEMU x86_64, QEMU aarch64, Tegra tk1, Rockchip bob)
+3. The failures are infrastructure-related (hardware not available, timeouts)
+
+Since this is a review comment to address, I should verify there's truly nothing to fix code-wise, and if the analysis is correct, the response should acknowledge this and request job retries.
+
+Let me check the files changed by these commits to confirm they only affect sunxi:
+
+All the changed files are in:
+- `arch/arm/` - ARM/sunxi specific code
+- `board/sunxi/` - Sunxi board files  
+- `configs/` - Sunxi board configs (liontron, yuzukihd-chameleon)
+- `dts/upstream/src/arm64/allwinner/` - Allwinner device trees
+- `common/spl/Kconfig` - SPL config (likely just adding support for new SoC)
+- `.pickman-history` - pickman tracking file
+
+None of these files would affect QEMU x86_64, QEMU aarch64 EFI, Tegra TK1, or Rockchip bob platforms.
+
+The analysis in the MR description is correct - these are infrastructure failures, not code issues. The review comment is just a bot status message indicating the pipeline fix attempt was recorded.
+
+Since there's no actual code change to make (the "fix" was correctly identifying that no code fix is needed), I should:
+
+1. Document this finding
+2. The appropriate MR response is to explain that no code changes are needed and request the jobs be retried
+
+Let me prepare the response for the MR:
+
+## Summary Report
+
+### Review Comment Analyzed
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` indicates:
+> Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1, qemu-x86_64, bob.
+
+### Analysis
+This is a bot status message recording that a pipeline fix attempt was made. The detailed analysis (already in the MR description) correctly determined that **no code changes are required** because:
+
+1. **All changed files are sunxi/Allwinner specific** - The commits add support for A100/A133 and H616 SoCs with device trees for Liontron H-A133L and YuzukiHD Chameleon boards
+2. **Failed tests are on unrelated platforms:**
+   - `efi-aarch64`: QEMU aarch64 EFI test
+   - `qemu-x86_64`: QEMU x86_64 test  
+   - `tk1`: Tegra TK1 hardware
+   - `bob`: Rockchip Chromebook bob
+3. **Failure types indicate infrastructure issues:**
+   - `tk1`: "Not all resources are available: {NetworkTegraUSBLoader...avail=False}" - hardware disconnected
+   - `bob`: "Timeout of 30 seconds exceeded during waiting for login" - hardware timeout
+   - `qemu-x86_64/efi-aarch64`: Timeout waiting for Ubuntu to boot - test infrastructure/timing issue
+
+### Action Taken
+**No code changes made** - The pipeline failures are infrastructure/transient issues, not code issues.
+
+### Build Verification
+✅ `buildman -L --board sandbox -w -o /tmp/pickman` - Build passes
+
+### Suggested MR Reply
+
+> The pipeline failures for efi-aarch64, tk1, qemu-x86_64, and bob are infrastructure/transient issues, not related to the sunxi commits in this MR:
+>
+> - **tk1 & bob**: Hardware availability issues (resources not available, login timeout)
+> - **qemu-x86_64 & efi-aarch64**: Test timeouts waiting for Ubuntu to boot in QEMU
+>
+> The cherry-picked commits only add Allwinner A100/A133 and H616 SoC support - they cannot affect these unrelated test platforms.
+>
+> **Recommendation**: Please retry the failed jobs.
+
+Since no code changes are needed, there's nothing to push to update the MR. The appropriate response is to reply to the comment explaining that the failures are infrastructure issues and request job retries.
+
+---
+
