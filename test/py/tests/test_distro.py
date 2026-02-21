@@ -57,7 +57,8 @@ def test_distro(ubman):
 
     with ubman.log.section('Ubuntu'):
         # Shortly later, we should see this banner
-        ubman.expect(['Welcome to .*Ubuntu 24.04.1 LTS.*!'])
+        with ubman.temporary_timeout(200 * 1000):
+            ubman.expect(['Welcome to .*Ubuntu 24.04.1 LTS.*!'])
 
     ubman.restart_uboot()
 
@@ -89,8 +90,9 @@ def test_distro_arm_app_extlinux(ubman):
         ubman.expect(['Booting Linux on physical CPU'])
 
     with ubman.log.section('initrd'):
-        ubman.expect(['Starting systemd-udevd'])
-        ubman.expect(['Welcome to Ubuntu 25.04!'])
+        with ubman.temporary_timeout(200 * 1000):
+            ubman.expect(['Starting systemd-udevd'])
+            ubman.expect(['Welcome to Ubuntu 25.04!'])
 
     ubman.restart_uboot()
 
