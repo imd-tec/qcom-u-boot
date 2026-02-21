@@ -5787,6 +5787,41 @@ class TestGetFailedJobs(unittest.TestCase):
         self.assertIn('line 499', result[0].log_tail)
 
 
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_null_bytes_stripped(self, _mock_token, _mock_url):
+        """Test that null bytes in job logs are stripped"""
+        trace_bytes = b'before\x00after\nline2\x00end\n'
+
+        mock_job = self._make_mock_job(
+            1, 'build:sandbox', 'build', 'https://gitlab.com/job/1',
+            trace_bytes)
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = trace_bytes
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertEqual(len(result), 1)
+        self.assertNotIn('\0', result[0].log_tail)
+        self.assertIn('beforeafter', result[0].log_tail)
+        self.assertIn('line2end', result[0].log_tail)
+
+
 class TestBuildPipelineFixPrompt(unittest.TestCase):
     """Tests for build_pipeline_fix_prompt function."""
 

@@ -478,6 +478,7 @@ def get_failed_jobs(remote, pipeline_id, max_log_lines=200):
             full_job = project.jobs.get(job.id)
             try:
                 trace = full_job.trace().decode('utf-8', errors='replace')
+                trace = trace.replace('\0', '')
                 lines = trace.splitlines()
                 log_tail = '\n'.join(lines[-max_log_lines:])
             except (AttributeError, gitlab.exceptions.GitlabError):
