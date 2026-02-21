@@ -27006,3 +27006,141 @@ All 12 commits are present (11 real commits plus 1 empty/failed). Now let me run
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-14480c84dcd
+
+Commits:
+- 14480c84dcd cmd: remove duplicate DHCPv6 Kconfig definitions
+- 092f0c45f46 net: consolidate PXE processor architecture type Kconfig
+- ed2007d27b1 Merge patch series "net: consolidate PXE processor architecture type Kconfig"
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (14480c84dcd):
+
+There's a conflict on the first cherry-pick. Let me check if these commits are already present in ci/master with different hashes:
+
+The exact grep didn't find matches. Let me try partial searches and also look at the conflict to understand better:
+
+No matches found. Let me look at the conflict file and check recent commits in ci/master that touch cmd/Kconfig:
+
+Let me look at the actual conflict in cmd/Kconfig:
+
+I see the conflict. The original commit removes the `endif` and the `CMD_PCAP` config that was within `CMD_BOOTP`, but in ci/master there's additional code (the `endif # CMD_BOOTP` and `CMD_PCAP` block).
+
+Let me look at what the original commit is doing:
+
+I see - the original commit removes a DHCPv6-related Kconfig block. The conflict shows that in ci/master, there's different code in that position (an `endif  # CMD_BOOTP` and `CMD_PCAP` block).
+
+Let me check what's in the current HEAD at that location:
+
+Let me check if the DHCPv6 definitions that the commit is supposed to remove even exist in ci/master:
+
+The DHCP6 configs exist once in ci/master (around line 1942-1951). But the original commit is trying to remove duplicates. Let me check if there are duplicates in the us/next branch:
+
+So in us/next, after the commit, there are only 2 DHCP6 configs (not 3), and in ci/master there are 3 (the ones at lines 1942, 1948, 1951). The duplicates that were removed in us/next may not exist in ci/master at all because the base is different.
+
+Let me check what was there BEFORE the commit in us/next:
+
+Now I understand. Before the commit, there were duplicates (at lines 1867-1876 and 2009-2018). The commit removes the duplicates at lines 2009-2018. But in ci/master, the duplicates at those lines don't exist - there's only one set of DHCP6 configs.
+
+This means the issue being fixed by commit 14480c84dcd doesn't exist in ci/master. The duplicates were introduced in us/next via different patches that haven't been applied to ci/master.
+
+Let me verify this is truly the case by checking if there are duplicate DHCP6 configs in ci/master:
+
+Confirmed - there's only 1 occurrence in ci/master, not 2. The fix is not applicable because the problem doesn't exist in ci/master.
+
+In this case, the cherry-pick makes no sense because it tries to remove code that doesn't exist. The conflict shows that in ci/master the lines that would be removed are different (CMD_PCAP related code).
+
+Let me abort the cherry-pick and check if this commit and the others should be skipped:
+
+Now let me check the second commit:
+
+This second commit also depends on the first one - it references DHCP6_PXE_CLIENTARCH which is being consolidated. Let me check if ci/master has the relevant configs:
+
+ci/master has both DHCP6_PXE_CLIENTARCH (line 1942) and BOOTP_PXE_CLIENTARCH (line 2039). The second commit consolidates these into a single DHCP_PXE_CLIENTARCH. Let me look at these in more detail to see the context:
+
+The second commit seems like it should apply cleanly if the first commit were to be skipped (since the code it's modifying exists in ci/master).
+
+However, the series has dependencies:
+1. First commit: removes "duplicate" DHCP6 configs (but duplicates don't exist in ci/master)
+2. Second commit: consolidates DHCP6_PXE_CLIENTARCH and BOOTP_PXE_CLIENTARCH into DHCP_PXE_CLIENTARCH
+3. Third commit: merge commit for the series
+
+Let me try applying the second commit directly (since it's the one with actual changes that apply to ci/master):
+
+The second commit applied successfully. Now let me check the commit delta:
+
+The stats match exactly: 3 files changed, 22 insertions(+), 18 deletions(-). Now let me run the build test:
+
+Build succeeded. Now let me create an empty commit for the first commit (since it's not applicable to ci/master), then cherry-pick the merge commit. Wait - actually, I should first go back and handle the order properly.
+
+The original commit sequence was:
+1. 14480c84dcd - remove duplicate DHCPv6 (not applicable to ci/master)
+2. 092f0c45f46 - consolidate PXE arch (just applied)
+3. ed2007d27b1 - merge commit
+
+I already applied commit 2. Now I need to handle commit 1 (which can't be applied because the duplicates don't exist in ci/master) and commit 3 (merge commit).
+
+Let me first reset and apply them in order. The first commit should be an empty commit noting it's not applicable:
+
+Now let me create an empty commit for the first one (since it can't be applied - duplicates don't exist):
+
+Now let me cherry-pick the second commit:
+
+Let me verify delta and run build test:
+
+Build succeeded. Now let me cherry-pick the merge commit (ed2007d27b1):
+
+There's a conflict in the merge commit. Let me examine it:
+
+The merge commit is causing a conflict because it's trying to apply changes that include the removal of duplicates from the first commit. Since we already applied the second commit properly and the merge commit would effectively be empty (all changes are already applied), let me check if I should create an empty merge commit.
+
+The merge commit combines:
+- 14480c84dcd (first commit - remove duplicates, not applicable)
+- 092f0c45f46 (second commit - consolidate, already applied)
+
+Since we've already applied the meaningful changes from commit 2, and commit 1 is not applicable, the merge commit should be empty or nearly empty. Let me abort this cherry-pick and create an empty commit:
+
+Now let me verify the commit log:
+
+All 3 commits are present. Now let me run the final build test:
+
+Build succeeded.
+
+## Final Status Report
+
+### Cherry-pick Results
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 14480c84dcd | cmd: remove duplicate DHCPv6 Kconfig definitions | ⚠️ NOT APPLICABLE - created empty commit |
+| 092f0c45f46 | net: consolidate PXE processor architecture type Kconfig | ✅ Applied successfully |
+| ed2007d27b1 | Merge patch series "net: consolidate PXE processor architecture type Kconfig" | ⚠️ Empty commit created |
+
+### Build Result
+✅ **Build OK** - sandbox board builds successfully
+
+### Fix-ups Made
+1. **14480c84dcd**: Created as empty commit because the duplicate DHCP6 Kconfig definitions this commit removes do not exist in ci/master. The duplicates were introduced in us/next via different patches that are not present in ci/master.
+
+2. **ed2007d27b1**: Created as empty merge commit because:
+   - The first commit was not applicable
+   - The second commit was already applied directly
+   - The merge commit caused conflicts trying to apply both changes together
+
+### Delta Concerns
+- **092f0c45f46**: Delta matched exactly (3 files, +22/-18 lines) ✅
+
+### Branch Status
+The branch `cherry-14480c84dcd` is ready for pushing with 3 commits on top of ci/master:
+```
+9643e629462 Merge patch series "net: consolidate PXE processor architecture type Kconfig"
+8b93267dbbb net: consolidate PXE processor architecture type Kconfig
+7e5fa5bd382 cmd: remove duplicate DHCPv6 Kconfig definitions [NOT APPLICABLE]
+```
+
+---
+
