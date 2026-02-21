@@ -26478,3 +26478,97 @@ The branch has been pushed. This will trigger a new pipeline run. Since this was
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-7a337270c07
+
+Commits:
+- 7a337270c07 sunxi: A133: add DRAM init code
+- fb4c3b2a049 sunxi: add support for the Allwinner A100/A133 SoC
+- 2b2783a1c07 arm64: dts: allwinner: a100: set maximum MMC frequency
+- 1cc93d42b24 arm64: dts: allwinner: a100: add Liontron H-A133L board support
+- be5038f168e sunxi: add support for Liontron H-A133L board
+- 63c9c697809 arm64: dts: allwinner: h616: add YuzukiHD Chameleon support
+- babf74be60e sunxi: H616: add support for YuzukiHD Chameleon board
+- 0862a8c48f2 Merge branch 'next' of https://source.denx.de/u-boot/custodians/u-boot-sunxi into next
+
+### Conversation log
+Now let me start cherry-picking the commits one by one.
+
+The delta looks identical (9 files, 1722 insertions, 8 deletions). Now let me run the build test.
+
+Build passed. Now let me cherry-pick the second commit.
+
+Delta is identical (8 files, 28 insertions, 8 deletions). Build test:
+
+Build passed. Cherry-pick the third commit.
+
+Delta is identical (1 file, 3 insertions). Build test:
+
+Build passed. Cherry-pick the fourth commit.
+
+Delta is identical (1 file, 211 insertions). Build test:
+
+Build passed. Cherry-pick the fifth commit.
+
+Delta is identical (2 files, 42 insertions). Build test:
+
+Build passed. Cherry-pick the sixth commit.
+
+Delta is identical (1 file, 222 insertions). Build test:
+
+Build passed. Cherry-pick the seventh commit.
+
+Delta is identical (2 files, 35 insertions). Build test:
+
+Build passed. Now for the eighth commit - this is a merge commit marked as "maybe already applied". Let me first verify if it's already applied by comparing patches.
+
+The patches are completely different. The original `0862a8c48f2` is a merge commit from Tom Rini with a short message, while `702025856df` is a completely different commit (a "pickman" record with 841 commits). These are NOT the same commit - I should proceed with the cherry-pick.
+
+This is expected for a merge commit - since the actual changes were already cherry-picked earlier in the series, the merge commit results in an empty commit. I need to commit it with `--allow-empty` as instructed:
+
+Good, the merge commit was recorded. Now let me verify the commit delta:
+
+The merge commit was originally adding all the changes that were already cherry-picked individually. The cherry-picked version results in an empty commit (as expected, since all changes were already applied via individual commits). This is the expected behavior. Let me run the build test:
+
+Build passed. Now let me verify all 8 commits are present:
+
+All 8 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+All 8 commits have been cherry-picked from `us/next` branch to the new branch `cherry-7a337270c07` based on `ci/master`.
+
+### Commits Applied:
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 7a337270c07 | sunxi: A133: add DRAM init code | ✅ OK |
+| 2 | fb4c3b2a049 | sunxi: add support for the Allwinner A100/A133 SoC | ✅ OK |
+| 3 | 2b2783a1c07 | arm64: dts: allwinner: a100: set maximum MMC frequency | ✅ OK |
+| 4 | 1cc93d42b24 | arm64: dts: allwinner: a100: add Liontron H-A133L board support | ✅ OK |
+| 5 | be5038f168e | sunxi: add support for Liontron H-A133L board | ✅ OK |
+| 6 | 63c9c697809 | arm64: dts: allwinner: h616: add YuzukiHD Chameleon support | ✅ OK |
+| 7 | babf74be60e | sunxi: H616: add support for YuzukiHD Chameleon board | ✅ OK |
+| 8 | 0862a8c48f2 | Merge branch 'next' (merge commit) | ✅ OK (empty, as expected) |
+
+### Build Result: **OK**
+- All 8 builds passed with no warnings or errors
+
+### Fix-ups Made: **None**
+- No conflicts requiring manual resolution
+- Commits 2 (fb4c3b2a049) had auto-merging in `board/sunxi/board.c` and `common/spl/Kconfig` but no conflicts
+
+### Delta Notes:
+- All 7 regular commits had identical deltas between original and cherry-picked versions
+- Commit 8 (merge commit) resulted in an empty commit as expected, since all individual changes were already applied via the preceding cherry-picks
+
+### Concerning Deltas: **None**
+- All commit deltas matched exactly
+
+The branch `cherry-7a337270c07` is ready for pushing.
+
+---
+
