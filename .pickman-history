@@ -27306,3 +27306,78 @@ The branch `cherry-615620479e3` is ready for pushing with all 3 commits successf
 
 ---
 
+### Review: 2026-02-21
+
+Branch: cherry-615620479e3
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the repository location:
+
+Good, I'm in the right directory (`/home/sglass/dev/u-boot`). Let me check the current branch and fetch the latest from ci remote:
+
+I can see the branch has:
+- A pickman marker commit on top (6930d36417d)
+- The 3 cherry-picked commits below that
+- The old base is 8a8302ce32f
+
+And ci/master has advanced to 5f6719b94ba. Let me first get the commit stats from before the rebase for comparison:
+
+Commit 3 is empty (expected for merge commit). Let me now perform the rebase:
+
+Rebase successful. Now let me check the new commits and verify the deltas:
+
+Now let me verify the deltas of each commit after rebase:
+
+All deltas match:
+- Commit 1: 1 file changed, 1 insertion (+) ✅
+- Commit 2: 1 file changed, 1 insertion (+) ✅
+- Commit 3: empty (merge commit) ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check if there's already a -v2 or later branch and create the appropriate versioned branch:
+
+No existing versioned branches. Let me create -v2:
+
+Now let me force push to the original remote branch to update the MR:
+
+The branch has been force pushed successfully. Let me provide a summary:
+
+---
+
+## Rebase Summary
+
+**Branch:** `cherry-615620479e3` rebased onto latest `ci/master`
+
+### Rebase Details:
+
+| # | Original Hash | New Hash | Delta | Status |
+|---|---------------|----------|-------|--------|
+| 1 | `a3431e2faa6` | `a1f42f6bd5f` | 1 file, +1 line | ✅ Identical |
+| 2 | `b6bfffba820` | `87214208994` | 1 file, +1 line | ✅ Identical |
+| 3 | `f89c86ba768` | `5bea1a689d7` | empty (merge) | ✅ Identical |
+| 4 | `6930d36417d` | `b134d03fb58` | pickman marker | ✅ OK |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed
+
+### New Base:
+- Old base: `8a8302ce32f` (Merge branch 'cherry-7fd2795a4b8')
+- New base: `5f6719b94ba` (Merge branch 'cherry-a4a0edc6046')
+
+### Actions Taken:
+1. ✅ Rebased branch onto latest `ci/master`
+2. ✅ Verified all commit deltas match before/after rebase
+3. ✅ Build test passed
+4. ✅ Created local branch `cherry-615620479e3-v2`
+5. ✅ Force pushed to `ci/cherry-615620479e3` to update MR !603
+
+### Suggested MR Reply:
+
+> Rebased onto latest master. All commits verified with identical deltas and build passes.
+
+---
+
