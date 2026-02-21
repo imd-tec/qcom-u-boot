@@ -633,6 +633,8 @@ static int check_params(struct imgtool *itl, struct imgtool_funcs *tfuncs)
 
 static int process_fit(struct imgtool *itl, struct imgtool_funcs *tfuncs)
 {
+	int retval;
+
 	if (!tfuncs) {
 		fprintf(stderr, "%s: Missing FIT support\n",
 			itl->cmdname);
@@ -645,8 +647,16 @@ static int process_fit(struct imgtool *itl, struct imgtool_funcs *tfuncs)
 	 *
 	 * E.g. fit_handle_file for Fit file support
 	 */
-	if (tfuncs->fflag_handle && tfuncs->fflag_handle(itl))
-		return usage(itl, "Bad parameters for FIT image type");
+	if (tfuncs->fflag_handle) {
+		retval = tfuncs->fflag_handle(itl);
+		if (retval != EXIT_SUCCESS) {
+			if (retval == FDT_ERR_NOTFOUND) {
+				// Already printed error, exit cleanly
+				exit(EXIT_FAILURE);
+			}
+			return usage(itl, "Bad parameters for FIT image type");
+		}
+	}
 
 	return 0;
 }
