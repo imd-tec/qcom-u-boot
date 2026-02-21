@@ -26094,3 +26094,129 @@ All 4 commits are present. Let me run the final build test:
 
 ---
 
+## 2026-02-20: us/next
+
+Branch: cherry-0fd9a3480a0
+
+Commits:
+- 0fd9a3480a0 env: Rename OVERWRITE_ETHADDR_ONCE to ENV_OVERWRITE_ETHADDR_ONCE
+- 5fb88fa725d env: Rename SYS_REDUNDAND_ENVIRONMENT to ENV_REDUNDANT
+- 123682c7651 env: Rename SYS_RELOC_GD_ENV_ADDR to ENV_RELOC_GD_ENV_ADDR
+- 0f44d5549ed env: Rename SYS_MMC_ENV_DEV to ENV_MMC_DEVICE_INDEX
+- 31617b880ab env: Rename SYS_MMC_ENV_PART to ENV_MMC_EMMC_HW_PARTITION
+- ffc4914703a env: Rename ENV_MMC_PARTITION to ENV_MMC_SW_PARTITION
+- fb5235239aa env: Rename DEFAULT_ENV_FILE to ENV_DEFAULT_ENV_TEXT_FILE
+- 224224c9fa2 env: Drop DELAY_ENVIRONMENT
+- dbf7fd557a7 Merge patch series "Consistent Kconfig environment options CONFIG_ENV_ prefix"
+
+### Conversation log
+The repository is clean (only untracked files present). Let me create the new branch and start the cherry-pick process.
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me check the delta and run a build test:
+
+Deltas match (6 files, 6+/6-). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+There's a conflict. The file `configs/imx8qxp_capricorn.config` was deleted in the base but modified in the commit being cherry-picked. This is a modify/delete conflict. Since the file was deleted in ci/master, I should remove it and continue:
+
+I need to amend the commit to add a note about the fix-up:
+
+Now let me check the delta:
+
+The delta is close: 164 files vs 165 files (1 file difference due to the deleted capricorn config). This is expected. Now build test:
+
+Build passed. Now cherry-pick commit 3:
+
+There's a conflict in `configs/efi-x86_app64_defconfig`. Let me check the conflict:
+
+I see the conflict. The HEAD version has additional lines for FAT environment that need to be kept, and the rename should be applied. Let me fix this:
+
+I need to amend the commit to note the fix-up:
+
+Now let me check the delta and run build test:
+
+Deltas match (868 files, 870+/870-). Now build test:
+
+Build passed. Now cherry-pick commit 4:
+
+Good, commit 4 cherry-picked successfully. Let me check the delta:
+
+Deltas match. Now build test:
+
+Build passed. Now cherry-pick commit 5:
+
+Same conflict with `configs/imx8qxp_capricorn.config` (deleted in ci/master). Let me resolve it:
+
+Let me amend to note the fix-up:
+
+Now check delta:
+
+Delta is close (91 vs 92 files - 1 file difference due to deleted capricorn config). Build test:
+
+Build passed. Now cherry-pick commit 6:
+
+Good, commit 6 cherry-picked successfully. Let me check the delta:
+
+Deltas match. Build test:
+
+Build passed. Now cherry-pick commit 7:
+
+Good, commit 7 cherry-picked successfully. Check delta:
+
+Deltas match. Build test:
+
+Build passed. Now cherry-pick commit 8:
+
+Good, commit 8 cherry-picked successfully. Check delta:
+
+Deltas match. Build test:
+
+Build passed. Now cherry-pick the final commit (merge commit - commit 9):
+
+There's a conflict with the merge commit. Let me check what files are conflicting:
+
+Let me resolve these conflicts. The efi-x86_app64_defconfig had a conflict resolution earlier, and imx8qxp_capricorn.config was deleted:
+
+The HEAD version has the FAT env config that needs to be kept. Let me resolve this:
+
+Let me amend the commit to add a fix-up note:
+
+Now let me verify the log and run the final build test:
+
+All 9 commits are present. Now let me run the final build test:
+
+**Final Status Report:**
+
+All 9 commits were successfully cherry-picked from `us/next` to the new branch `cherry-0fd9a3480a0` (based on `ci/master`).
+
+## Summary
+
+| # | Commit | Subject | Status | Notes |
+|---|--------|---------|--------|-------|
+| 1 | 0fd9a3480a0 | env: Rename OVERWRITE_ETHADDR_ONCE to ENV_OVERWRITE_ETHADDR_ONCE | ✅ OK | Clean cherry-pick |
+| 2 | 5fb88fa725d | env: Rename SYS_REDUNDAND_ENVIRONMENT to ENV_REDUNDANT | ✅ OK | Fix-up: configs/imx8qxp_capricorn.config was deleted in ci/master |
+| 3 | 123682c7651 | env: Rename SYS_RELOC_GD_ENV_ADDR to ENV_RELOC_GD_ENV_ADDR | ✅ OK | Fix-up: configs/efi-x86_app64_defconfig conflict resolved, kept FAT env config |
+| 4 | 0f44d5549ed | env: Rename SYS_MMC_ENV_DEV to ENV_MMC_DEVICE_INDEX | ✅ OK | Clean cherry-pick |
+| 5 | 31617b880ab | env: Rename SYS_MMC_ENV_PART to ENV_MMC_EMMC_HW_PARTITION | ✅ OK | Fix-up: configs/imx8qxp_capricorn.config was deleted in ci/master |
+| 6 | ffc4914703a | env: Rename ENV_MMC_PARTITION to ENV_MMC_SW_PARTITION | ✅ OK | Clean cherry-pick |
+| 7 | fb5235239aa | env: Rename DEFAULT_ENV_FILE to ENV_DEFAULT_ENV_TEXT_FILE | ✅ OK | Clean cherry-pick |
+| 8 | 224224c9fa2 | env: Drop DELAY_ENVIRONMENT | ✅ OK | Clean cherry-pick |
+| 9 | dbf7fd557a7 | Merge patch series "Consistent Kconfig environment options CONFIG_ENV_ prefix" | ✅ OK | Fix-up: resolved conflicts in efi-x86_app64_defconfig and removed deleted capricorn.config |
+
+## Build Result
+**✅ OK** - Final build passed with no errors or warnings
+
+## Fix-ups Made
+1. **configs/imx8qxp_capricorn.config**: Removed - file was deleted in ci/master (affected commits 2, 5, 9)
+2. **configs/efi-x86_app64_defconfig**: Resolved conflict by keeping the FAT environment configuration (`CONFIG_ENV_IS_IN_FAT`, `CONFIG_ENV_FAT_INTERFACE`, `CONFIG_ENV_FAT_DEVICE_AND_PART`) that was added in ci/master (affected commits 3, 9)
+
+## Deltas
+All commit deltas matched or had minor expected differences (1 file difference) due to the deleted capricorn.config file that existed in us/next but not in ci/master.
+
+The branch `cherry-0fd9a3480a0` is ready for pushing.
+
+---
+
