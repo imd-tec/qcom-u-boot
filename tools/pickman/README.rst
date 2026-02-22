@@ -111,6 +111,39 @@ If there are no merge commits between the last processed commit and the branch
 tip, pickman includes all remaining commits in a single set. This is noted in
 the output as "no merge found".
 
+Subtree Merge Handling
+----------------------
+
+The source branch may contain subtree merges that update vendored trees such as
+``dts/upstream``, ``lib/mbedtls/external/mbedtls`` or ``lib/lwip/lwip``. These
+appear as a pair of commits on the first-parent chain:
+
+1. ``Squashed 'dts/upstream/' changes from <old>..<new>`` (the actual file
+   changes)
+2. ``Subtree merge tag '<tag>' of <repo> into dts/upstream`` (the merge commit
+   joining histories)
+
+These commits cannot be cherry-picked. Pickman detects them automatically by
+matching the merge subject against the pattern
+``Subtree merge tag '<tag>' of ... into <path>``. When a subtree merge is found,
+pickman:
+
+1. Checks out the target branch (e.g. ``ci/master``)
+2. Runs ``./tools/update-subtree.sh pull <name> <tag>`` to apply the update
+3. Pushes the target branch (if ``--push`` is active)
+4. Records both the squash and merge commits as 'applied' in the database
+5. Advances the source position past the merge and continues with the next batch
+
+This is works without manual intervention. The currently supported subtrees are:
+
+=================================  ===========
+Path                               Name
+=================================  ===========
+``dts/upstream``                   ``dts``
+``lib/mbedtls/external/mbedtls``   ``mbedtls``
+``lib/lwip/lwip``                  ``lwip``
+=================================  ===========
+
 Skipping MRs
 ------------
 
@@ -178,6 +211,39 @@ This ensures:
   commits
 - No manual intervention is required to continue
 - False positives are minimized by comparing actual patch content
+
+Pipeline Fix
+------------
+
+When a CI pipeline fails on a pickman MR, the ``step`` and ``poll`` commands
+can automatically diagnose and fix the failure using a Claude agent. This is
+useful when cherry-picks introduce build or test failures that need minor
+adjustments.
+
+**How it works**
+
+During each step, after processing review comments, pickman checks active MRs
+for failed pipelines. For each failed pipeline:
+
+1. Pickman fetches the failed job logs from GitLab
+2. A Claude agent analyses the logs, diagnoses the root cause, and makes
+   targeted fixes
+3. The fix is pushed to the MR branch, triggering a new pipeline
+4. The attempt is recorded in the database to avoid reprocessing
+
+**Retry behaviour**
+
+Each MR gets up to ``--fix-retries`` attempts (default: 3). If the limit is
+reached, pickman posts a comment on the MR indicating that manual intervention
+is required. Set ``--fix-retries 0`` to disable automatic pipeline fixing.
+
+Each attempt is tracked per pipeline ID, so a new pipeline triggered by a rebase
+or comment fix is treated independently.
+
+**Options**
+
+- ``-F, --fix-retries``: Maximum pipeline-fix attempts per MR (default: 3, 0 to
+  disable). Available on both ``step`` and ``poll`` commands.
 
 CI Pipelines
 ------------
@@ -415,6 +481,7 @@ review comments are handled automatically.
 
 Options for the step command:
 
+- ``-F, --fix-retries``: Max pipeline-fix attempts per MR (default: 3, 0 to disable)
 - ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
 - ``-t, --target``: Target branch for MR (default: master)
@@ -428,6 +495,7 @@ creating new MRs as previous ones are merged. Press Ctrl+C to stop.
 
 Options for the poll command:
 
+- ``-F, --fix-retries``: Max pipeline-fix attempts per MR (default: 3, 0 to disable)
 - ``-i, --interval``: Interval between steps in seconds (default: 300)
 - ``-m, --max-mrs``: Maximum open MRs allowed (default: 5)
 - ``-r, --remote``: Git remote for push (default: ci)
@@ -529,6 +597,19 @@ Tables
 
     This table prevents the same comment from being addressed multiple times
     when running ``review`` or ``poll`` commands.
+
+**pipeline_fix**
+    Tracks pipeline fix attempts per MR to avoid reprocessing.
+
+    - ``id``: Primary key
+    - ``mr_iid``: GitLab merge request IID
+    - ``pipeline_id``: GitLab pipeline ID
+    - ``attempt``: Attempt number
+    - ``status``: Result ('success', 'failure', 'skipped', 'no_jobs')
+    - ``created_at``: Timestamp when the attempt was made
+
+    The ``(mr_iid, pipeline_id)`` pair is unique, so each pipeline is only
+    processed once.
 
 Configuration
 -------------

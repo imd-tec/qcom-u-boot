@@ -42,13 +42,20 @@ class MrCreateError(Exception):
 # Use defaults for new fields so existing code doesn't break
 PickmanMr = namedtuple('PickmanMr', [
     'iid', 'title', 'web_url', 'source_branch', 'description',
-    'has_conflicts', 'needs_rebase'
-], defaults=[False, False])
+    'has_conflicts', 'needs_rebase', 'pipeline_status', 'pipeline_id'
+], defaults=[False, False, None, None])
 
 # Comment info returned by get_mr_comments()
 MrComment = namedtuple('MrComment', [
     'id', 'author', 'body', 'created_at', 'resolvable', 'resolved'
 ])
+
+# Pipeline info
+PipelineInfo = namedtuple('PipelineInfo', ['id', 'status', 'web_url'])
+
+# Failed job info from a pipeline
+FailedJob = namedtuple('FailedJob',
+                        ['id', 'name', 'stage', 'web_url', 'log_tail'])
 
 
 def check_available():
@@ -320,6 +327,9 @@ def get_pickman_mrs(remote, state='opened'):
 
                 # For open MRs, fetch full details since list() doesn't
                 # include accurate merge status fields
+                pipeline_status = None
+                pipeline_id = None
+
                 if state == 'opened':
                     full_mr = project.mergerequests.get(merge_req.iid)
                     has_conflicts = getattr(full_mr, 'has_conflicts', False)
@@ -333,6 +343,12 @@ def get_pickman_mrs(remote, state='opened'):
                         diverged = getattr(full_mr, 'diverged_commits_count', 0)
                         needs_rebase = diverged and diverged > 0
 
+                    # Extract pipeline info from head_pipeline
+                    head_pipeline = getattr(full_mr, 'head_pipeline', None)
+                    if head_pipeline:
+                        pipeline_status = head_pipeline.get('status')
+                        pipeline_id = head_pipeline.get('id')
+
                 pickman_mrs.append(PickmanMr(
                     iid=merge_req.iid,
                     title=merge_req.title,
@@ -341,6 +357,8 @@ def get_pickman_mrs(remote, state='opened'):
                     description=merge_req.description or '',
                     has_conflicts=has_conflicts,
                     needs_rebase=needs_rebase,
+                    pipeline_status=pipeline_status,
+                    pipeline_id=pipeline_id,
                 ))
         return pickman_mrs
     except gitlab.exceptions.GitlabError as exc:
@@ -418,6 +436,62 @@ def get_mr_comments(remote, mr_iid):
                 resolved=getattr(note, 'resolved', False),
             ))
         return comments
+    except gitlab.exceptions.GitlabError as exc:
+        tout.error(f'GitLab API error: {exc}')
+        return None
+
+
+def get_failed_jobs(remote, pipeline_id, max_log_lines=200):
+    """Get failed jobs from a pipeline
+
+    Args:
+        remote (str): Remote name
+        pipeline_id (int): Pipeline ID
+        max_log_lines (int): Maximum log lines to fetch per job
+
+    Returns:
+        list: List of FailedJob tuples, or None on failure
+    """
+    if not check_available():
+        return None
+
+    token = get_token()
+    if not token:
+        tout.error('GITLAB_TOKEN environment variable not set')
+        return None
+
+    remote_url = get_remote_url(remote)
+    host, proj_path = parse_url(remote_url)
+
+    if not host or not proj_path:
+        return None
+
+    try:
+        glab = gitlab.Gitlab(f'https://{host}', private_token=token)
+        project = glab.projects.get(proj_path)
+        pipeline = project.pipelines.get(pipeline_id)
+        jobs = pipeline.jobs.list(scope='failed', get_all=True)
+
+        failed_jobs = []
+        for job in jobs:
+            # Fetch full job to get trace
+            full_job = project.jobs.get(job.id)
+            try:
+                trace = full_job.trace().decode('utf-8', errors='replace')
+                trace = trace.replace('\0', '')
+                lines = trace.splitlines()
+                log_tail = '\n'.join(lines[-max_log_lines:])
+            except (AttributeError, gitlab.exceptions.GitlabError):
+                log_tail = ''
+
+            failed_jobs.append(FailedJob(
+                id=job.id,
+                name=job.name,
+                stage=job.stage,
+                web_url=job.web_url,
+                log_tail=log_tail,
+            ))
+        return failed_jobs
     except gitlab.exceptions.GitlabError as exc:
         tout.error(f'GitLab API error: {exc}')
         return None

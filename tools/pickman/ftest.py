@@ -6,6 +6,7 @@
 # pylint: disable=too-many-lines
 """Tests for pickman."""
 
+import asyncio
 import argparse
 import os
 import shutil
@@ -22,6 +23,7 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 # pylint: disable=wrong-import-position,import-error,cyclic-import
 from u_boot_pylib import command
 from u_boot_pylib import terminal
+from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 from pickman import __main__ as pickman
@@ -812,6 +814,90 @@ class TestDatabaseComment(unittest.TestCase):
 
             # Should still be processed
             self.assertTrue(dbs.comment_is_processed(123, 456))
+
+            dbs.close()
+
+
+class TestDatabasePipelineFix(unittest.TestCase):
+    """Tests for Database pipeline_fix functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_pfix_add(self):
+        """Test adding a pipeline fix record"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.pfix_add(123, 456, 1, 'success')
+            dbs.commit()
+
+            self.assertTrue(dbs.pfix_has(123, 456))
+
+            dbs.close()
+
+    def test_pfix_count(self):
+        """Test counting pipeline fix attempts"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            self.assertEqual(dbs.pfix_count(123), 0)
+
+            dbs.pfix_add(123, 100, 1, 'failure')
+            dbs.pfix_add(123, 200, 2, 'success')
+            dbs.commit()
+
+            self.assertEqual(dbs.pfix_count(123), 2)
+            # Different MR should have 0
+            self.assertEqual(dbs.pfix_count(999), 0)
+
+            dbs.close()
+
+    def test_pfix_has(self):
+        """Test checking if a pipeline was already handled"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            self.assertFalse(dbs.pfix_has(123, 456))
+
+            dbs.pfix_add(123, 456, 1, 'success')
+            dbs.commit()
+
+            self.assertTrue(dbs.pfix_has(123, 456))
+            # Different pipeline should not be handled
+            self.assertFalse(dbs.pfix_has(123, 789))
+            # Different MR should not be handled
+            self.assertFalse(dbs.pfix_has(999, 456))
+
+            dbs.close()
+
+    def test_pfix_unique(self):
+        """Test that duplicate mr_iid/pipeline_id pairs are ignored"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.pfix_add(123, 456, 1, 'failure')
+            dbs.commit()
+
+            # Adding same pair again should not raise (OR IGNORE)
+            dbs.pfix_add(123, 456, 2, 'success')
+            dbs.commit()
+
+            # Count should still be 1 (second insert ignored)
+            self.assertEqual(dbs.pfix_count(123), 1)
 
             dbs.close()
 
@@ -1633,8 +1719,9 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_token_from_config(self):
         """Test getting token from config file."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[gitlab]\ntoken = test-config-token\n')
+        tools.write_file(self.config_file,
+                         '[gitlab]\ntoken = test-config-token\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             token = gitlab.get_token()
@@ -1650,8 +1737,8 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_token_config_missing_section(self):
         """Test config file without gitlab section."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[other]\nkey = value\n')
+        tools.write_file(self.config_file, '[other]\nkey = value\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
@@ -1660,8 +1747,8 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_config_value(self):
         """Test get_config_value function."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[section1]\nkey1 = value1\n')
+        tools.write_file(self.config_file, '[section1]\nkey1 = value1\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             value = gitlab.get_config_value('section1', 'key1')
@@ -1974,16 +2061,21 @@ class TestStep(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
-                    args = argparse.Namespace(cmd='step', source='us/next',
-                                              remote='ci', target='master',
-                                              max_mrs=1)
-                    with terminal.capture():
-                        ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        args = argparse.Namespace(
+                            cmd='step', source='us/next', remote='ci',
+                            target='master', max_mrs=1, fix_retries=3)
+                        with terminal.capture():
+                            ret = control.do_step(args, None)
 
         self.assertEqual(ret, 0)
 
@@ -2022,18 +2114,23 @@ class TestStep(unittest.TestCase):
             source_branch='cherry-test',
             description='Test',
         )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=[mock_mr]):
-                    with mock.patch.object(control, 'do_apply',
-                                           return_value=0) as mock_apply:
-                        args = argparse.Namespace(cmd='step', source='us/next',
-                                                  remote='ci', target='master',
-                                                  max_mrs=5)
-                        with terminal.capture():
-                            ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(control, 'do_apply',
+                                               return_value=0) as mock_apply:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next', remote='ci',
+                                target='master', max_mrs=5, fix_retries=3)
+                            with terminal.capture():
+                                ret = control.do_step(args, None)
 
         # With 1 open MR and max_mrs=5, it should try to create a new one
         self.assertEqual(ret, 0)
@@ -2051,17 +2148,23 @@ class TestStep(unittest.TestCase):
             )
             for i in range(3)
         ]
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
         with mock.patch.object(control, 'run_git'):
             with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
                                    return_value=[]):
                 with mock.patch.object(gitlab, 'get_open_pickman_mrs',
                                        return_value=mock_mrs):
-                    with mock.patch.object(control, 'do_apply') as mock_apply:
-                        args = argparse.Namespace(cmd='step', source='us/next',
-                                                  remote='ci', target='master',
-                                                  max_mrs=3)
-                        with terminal.capture():
-                            ret = control.do_step(args, None)
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(control, 'do_apply') \
+                                as mock_apply:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next', remote='ci',
+                                target='master', max_mrs=3, fix_retries=3)
+                            with terminal.capture():
+                                ret = control.do_step(args, None)
 
         # With 3 open MRs and max_mrs=3, should not create new MR
         self.assertEqual(ret, 0)
@@ -2148,8 +2251,7 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
         # Check history file was created
         self.assertTrue(os.path.exists(control.HISTORY_FILE))
 
-        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
-            content = fhandle.read()
+        content = tools.read_file(control.HISTORY_FILE, binary=False)
 
         self.assertIn('### Review:', content)
         self.assertIn('Branch: cherry-abc123', content)
@@ -2160,8 +2262,8 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
     def test_update_history_appends(self):
         """Test that review handling appends to existing history."""
         # Create existing history
-        with open(control.HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('Existing history content\n')
+        tools.write_file(control.HISTORY_FILE,
+                         'Existing history content\n', binary=False)
         subprocess.run(['git', 'add', control.HISTORY_FILE],
                        check=True, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'Initial'],
@@ -2172,8 +2274,7 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
                                       resolved=False)]
         control.update_history('cherry-xyz', comms, 'Fixed it')
 
-        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
-            content = fhandle.read()
+        content = tools.read_file(control.HISTORY_FILE, binary=False)
 
         self.assertIn('Existing history content', content)
         self.assertIn('### Review:', content)
@@ -2495,15 +2596,14 @@ class TestGetHistory(unittest.TestCase):
         self.assertIn('- aaa111a First commit', commit_msg)
 
         # Verify file was written
-        with open(self.history_file, 'r', encoding='utf-8') as fhandle:
-            file_content = fhandle.read()
+        file_content = tools.read_file(self.history_file, binary=False)
         self.assertEqual(file_content, content)
 
     def test_get_history_with_existing(self):
         """Test get_history appends to existing content."""
         # Create existing file
-        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('Previous history content\n')
+        tools.write_file(self.history_file,
+                         'Previous history content\n', binary=False)
 
         commits = [
             control.CommitInfo('bbb222', 'bbb222b', 'New commit', 'Author 2'),
@@ -2534,8 +2634,7 @@ Old conversation
 
 Other content
 """
-        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write(existing)
+        tools.write_file(self.history_file, existing, binary=False)
 
         commits = [
             control.CommitInfo('ccc333', 'ccc333c', 'Updated commit', 'Author'),
@@ -2675,6 +2774,106 @@ class TestPrepareApply(unittest.TestCase):
 
             self.assertIsNotNone(info)
             self.assertEqual(info.branch_name, 'my-branch')
+            dbs.close()
+
+    def test_prepare_apply_deletes_existing_branch(self):
+        """Test prepare_apply deletes a branch that already exists."""
+        git_cmds = []
+
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                git_cmds.append(cmd)
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                if 'branch' in cmd and '--list' in cmd:
+                    return command.CommandResult(stdout='cherry-aaa111a\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            # Check that branch -D was called
+            self.assertTrue(
+                any('branch' in c and '-D' in c for c in git_cmds))
+            dbs.close()
+
+    def test_prepare_apply_merge_found(self):
+        """Test prepare_apply sets merge_found and advance_to."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            merge_hash = 'ccc333ccc333ccc333'
+
+            merge_info = control.NextCommitsInfo(
+                commits=[
+                    control.CommitInfo('aaa111', 'aaa111a', 'First commit',
+                                       'Author 1'),
+                    control.CommitInfo('bbb222', 'bbb222b', 'Second commit',
+                                       'Author 2'),
+                ],
+                merge_found=True,
+                advance_to=merge_hash,
+            )
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(merge_info, None)):
+                command.TEST_RESULT = mock_git
+                info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(info.advance_to, merge_hash)
+            self.assertEqual(len(info.commits), 2)
+            dbs.close()
+
+    def test_prepare_apply_no_merge(self):
+        """Test prepare_apply reports no merge found."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertFalse(info.merge_found)
             dbs.close()
 
 
@@ -2871,6 +3070,67 @@ class TestExecuteApply(unittest.TestCase):
             dbs.close()
 
 
+class TestRunAgentCollect(unittest.TestCase):
+    """Tests for run_agent_collect function."""
+
+    def test_success(self):
+        """Test successful agent run collects text blocks."""
+        block1 = mock.MagicMock()
+        block1.text = 'hello'
+        block2 = mock.MagicMock()
+        block2.text = 'world'
+        msg = mock.MagicMock()
+        msg.content = [block1, block2]
+
+        async def fake_query(**kwargs):
+            yield msg
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertTrue(success)
+        self.assertEqual(log, 'hello\n\nworld')
+
+    def test_failure(self):
+        """Test agent failure returns False with partial log."""
+        block = mock.MagicMock()
+        block.text = 'partial'
+        msg = mock.MagicMock()
+        msg.content = [block]
+
+        async def fake_query(**kwargs):
+            yield msg
+            raise RuntimeError('agent crashed')
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertFalse(success)
+        self.assertEqual(log, 'partial')
+
+    def test_no_content(self):
+        """Test messages without content are skipped."""
+        msg = mock.MagicMock(spec=[])
+
+        async def fake_query(**kwargs):
+            yield msg
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertTrue(success)
+        self.assertEqual(log, '')
+
+
 class TestSignalFile(unittest.TestCase):
     """Tests for signal file handling."""
 
@@ -2893,8 +3153,8 @@ class TestSignalFile(unittest.TestCase):
 
     def test_read_signal_file_already_applied(self):
         """Test read_signal_file with already_applied status."""
-        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('already_applied\nabc123def456\n')
+        tools.write_file(self.signal_path,
+                         'already_applied\nabc123def456\n', binary=False)
 
         status, commit = agent.read_signal_file(self.test_dir)
         self.assertEqual(status, 'already_applied')
@@ -2905,8 +3165,7 @@ class TestSignalFile(unittest.TestCase):
 
     def test_read_signal_file_status_only(self):
         """Test read_signal_file with only status line."""
-        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('conflict\n')
+        tools.write_file(self.signal_path, 'conflict\n', binary=False)
 
         status, commit = agent.read_signal_file(self.test_dir)
         self.assertEqual(status, 'conflict')
@@ -3364,24 +3623,28 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='mega|mega1|A|Merge branch next|'
                                'base second_parent\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch next')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges (found sub-merges)
                     return command.CommandResult(stdout='sub1\n')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # decompose: rev-parse ^@ for mega-merge
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 5:
+                if call_count[0] == 6:
                     # decompose: log -1 for mega-merge info
                     return command.CommandResult(
                         stdout='Mega merge|Author\n')
-                if call_count[0] == 6:
+                if call_count[0] == 7:
                     # decompose: mainline commits (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 7:
+                if call_count[0] == 8:
                     # decompose: sub-merge 1 commits
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Sub commit|base\n')
@@ -3423,31 +3686,35 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='mega|mega1|A|Merge branch next|'
                                'base second_parent\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch next')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges
                     return command.CommandResult(stdout='sub1\n')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # decompose: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nsecond_parent\n')
-                if call_count[0] == 5:
+                if call_count[0] == 6:
                     # decompose: log -1 for mega-merge info
                     return command.CommandResult(
                         stdout='Mega merge|Author\n')
-                if call_count[0] == 6:
+                if call_count[0] == 7:
                     # decompose: mainline (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 7:
+                if call_count[0] == 8:
                     # decompose: sub-merge 1 (in DB)
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Sub commit|base\n')
-                if call_count[0] == 8:
+                if call_count[0] == 9:
                     # decompose: remainder (empty)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 9:
+                if call_count[0] == 10:
                     # Remaining commits after mega-merge (empty)
                     return command.CommandResult(stdout='')
                 return command.CommandResult(stdout='')
@@ -3481,13 +3748,17 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
                         stdout='merge1|m1|A|Merge branch feat|'
                                'base side1\n')
                 if call_count[0] == 2:
+                    # Subtree check: log -1 --format=%s
+                    return command.CommandResult(
+                        stdout='Merge branch feat')
+                if call_count[0] == 3:
                     # detect_sub_merges: rev-parse ^@
                     return command.CommandResult(
                         stdout='base\nside1\n')
-                if call_count[0] == 3:
+                if call_count[0] == 4:
                     # detect_sub_merges: log --merges (no sub-merges)
                     return command.CommandResult(stdout='')
-                if call_count[0] == 4:
+                if call_count[0] == 5:
                     # Commits for this merge
                     return command.CommandResult(
                         stdout='aaa|aaa1|A|Commit 1|base\n'
@@ -3505,6 +3776,605 @@ class TestGetNextCommitsMegaMerge(unittest.TestCase):
             # Normal merge: advance_to is the merge hash
             self.assertEqual(info.advance_to, 'merge1')
             dbs.close()
+
+
+class TestSubtreeMergeDetection(unittest.TestCase):
+    """Tests for subtree merge detection in find_unprocessed_commits."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_detects_dts_subtree_merge(self):
+        """Test find_unprocessed_commits detects dts/upstream subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'v6.15-dts' of "
+                       "https://example.com/dts.git into dts/upstream")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertTrue(info.merge_found)
+            self.assertEqual(info.commits, [])
+            self.assertEqual(info.advance_to, 'merge1')
+            self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+            dbs.close()
+
+    def test_detects_mbedtls_subtree_merge(self):
+        """Test find_unprocessed_commits detects mbedtls subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'v3.6.2' of "
+                       "https://example.com/mbedtls.git into "
+                       "lib/mbedtls/external/mbedtls")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertEqual(info.subtree_update,
+                             ('mbedtls', 'v3.6.2'))
+            dbs.close()
+
+    def test_detects_lwip_subtree_merge(self):
+        """Test find_unprocessed_commits detects lwip subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            command.TEST_RESULT = command.CommandResult(
+                stdout="Subtree merge tag 'STABLE-2_2_0' of "
+                       "https://example.com/lwip.git into lib/lwip/lwip")
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertEqual(info.subtree_update,
+                             ('lwip', 'STABLE-2_2_0'))
+            dbs.close()
+
+    def test_skips_unknown_subtree_path(self):
+        """Test find_unprocessed_commits skips unknown subtree paths."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # Subject for merge1: unknown subtree
+                    return command.CommandResult(
+                        stdout="Subtree merge tag 'v1.0' of "
+                               "https://x.com/x.git into lib/unknown")
+                if call_count[0] == 2:
+                    # Subject for merge2: not a subtree merge
+                    return command.CommandResult(
+                        stdout='Normal merge commit')
+                if call_count[0] == 3:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='merge1\nside1\n')
+                if call_count[0] == 4:
+                    # detect_sub_merges: log --merges (no sub-merges)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 5:
+                    # Commits for merge2
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Commit 1|merge1\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1', 'merge2'])
+
+            # Should have skipped merge1 and found commits in merge2
+            self.assertIsNone(info.subtree_update)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 1)
+            self.assertEqual(info.commits[0].chash, 'aaa1')
+            dbs.close()
+
+    def test_subtree_merge_via_get_next_commits(self):
+        """Test get_next_commits returns subtree_update for subtree merge."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # First-parent log shows one merge
+                    return command.CommandResult(
+                        stdout='merge1|m1|A|Subtree merge tag '
+                               "'v6.15-dts' of https://x.com/dts.git"
+                               ' into dts/upstream|base second\n')
+                if call_count[0] == 2:
+                    # find_unprocessed: log -1 --format=%s for merge1
+                    return command.CommandResult(
+                        stdout="Subtree merge tag 'v6.15-dts' of "
+                               "https://x.com/dts.git into "
+                               "dts/upstream")
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, err = control.get_next_commits(dbs, 'us/next')
+
+            self.assertIsNone(err)
+            self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+            self.assertEqual(info.advance_to, 'merge1')
+            self.assertEqual(info.commits, [])
+            dbs.close()
+
+    def test_non_subtree_merge_has_no_subtree_update(self):
+        """Test normal merges have subtree_update=None."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            call_count = [0]
+
+            def mock_git(pipe_list):  # pylint: disable=unused-argument
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    # Subject: not a subtree merge
+                    return command.CommandResult(
+                        stdout='Merge branch some-feature')
+                if call_count[0] == 2:
+                    # detect_sub_merges: rev-parse ^@
+                    return command.CommandResult(
+                        stdout='base\nside1\n')
+                if call_count[0] == 3:
+                    # detect_sub_merges: log --merges (no sub-merges)
+                    return command.CommandResult(stdout='')
+                if call_count[0] == 4:
+                    # Commits in merge
+                    return command.CommandResult(
+                        stdout='aaa|aaa1|A|Commit 1|base\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info = control.find_unprocessed_commits(
+                dbs, 'base', 'us/next', ['merge1'])
+
+            self.assertIsNone(info.subtree_update)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(len(info.commits), 1)
+            dbs.close()
+
+
+class TestApplySubtreeUpdate(unittest.TestCase):
+    """Tests for apply_subtree_update function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_apply_success(self):
+        """Test apply_subtree_update succeeds and updates database."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    # Parents of merge: first_parent squash_hash
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    if 'squash_hash' in git_args:
+                        return "Squashed 'dts/upstream/' changes|Author"
+                    return "Subtree merge tag 'v6.15-dts'|Author"
+                return ''
+
+            mock_result = command.CommandResult(
+                'Subtree updated', '', '', 0)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 0)
+
+            # Source should be advanced past the merge
+            self.assertEqual(dbs.source_get('us/next'), 'merge_hash')
+
+            # Both commits should be in the database
+            squash = dbs.commit_get('squash_hash')
+            self.assertIsNotNone(squash)
+            merge = dbs.commit_get('merge_hash')
+            self.assertIsNotNone(merge)
+            dbs.close()
+
+    def test_apply_with_push(self):
+        """Test apply_subtree_update pushes when args.push is True."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=True, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    return 'Commit subject|Author'
+                return ''
+
+            pushed = [False]
+
+            def mock_push(remote, branch, skip_ci=False):
+                pushed[0] = True
+                return True
+
+            mock_result = command.CommandResult('ok', '', '', 0)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    with mock.patch.object(
+                            control.gitlab_api, 'push_branch',
+                            side_effect=mock_push):
+                        ret = control.apply_subtree_update(
+                            dbs, 'us/next', 'dts', 'v6.15-dts',
+                            'merge_hash', args)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(pushed[0])
+            dbs.close()
+
+    def test_apply_checkout_failure(self):
+        """Test apply_subtree_update returns 1 on checkout failure."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    raise Exception('checkout failed')
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                ret = control.apply_subtree_update(
+                    dbs, 'us/next', 'dts', 'v6.15-dts',
+                    'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_no_second_parent(self):
+        """Test apply_subtree_update returns 1 when merge has no 2nd parent."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            # Only one parent
+            with mock.patch.object(control, 'run_git',
+                                   return_value='single_parent'):
+                ret = control.apply_subtree_update(
+                    dbs, 'us/next', 'dts', 'v6.15-dts',
+                    'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_apply_script_exception(self):
+        """Test apply_subtree_update returns 1 on script exception."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        side_effect=Exception('script failed')):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_merge_conflict(self):
+        """Test apply_subtree_update aborts merge on non-zero exit."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            merge_aborted = [False]
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if 'merge' in git_args and '--abort' in git_args:
+                    merge_aborted[0] = True
+                    return ''
+                return ''
+
+            mock_result = command.CommandResult(
+                '', 'CONFLICT (content): Merge conflict', '', 1)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run',
+                        return_value=mock_result):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 1)
+            self.assertTrue(merge_aborted[0])
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+
+class TestPrepareApplySubtreeUpdate(unittest.TestCase):
+    """Tests for prepare_apply handling of subtree updates."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+        self.old_db_fname = control.DB_FNAME
+        control.DB_FNAME = self.db_path
+        database.Database.instances.clear()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        control.DB_FNAME = self.old_db_fname
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+        command.TEST_RESULT = None
+
+    def test_prepare_apply_calls_subtree_update(self):
+        """Test prepare_apply applies subtree update and retries."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+            normal_info = control.NextCommitsInfo([], False, None)
+
+            call_count = [0]
+
+            def mock_get_next(dbs_arg, source):
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return subtree_info, None
+                return normal_info, None
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   side_effect=mock_get_next):
+                with mock.patch.object(
+                        control, 'apply_subtree_update',
+                        return_value=0) as mock_apply:
+                    info, ret = control.prepare_apply(
+                        dbs, 'us/next', None, args)
+
+            # Should have called apply_subtree_update
+            mock_apply.assert_called_once_with(
+                dbs, 'us/next', 'dts', 'v6.15-dts', 'merge1', args)
+            # No commits after retry, so returns None/0
+            self.assertIsNone(info)
+            self.assertEqual(ret, 0)
+            dbs.close()
+
+    def test_prepare_apply_subtree_update_failure(self):
+        """Test prepare_apply returns error when subtree update fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(subtree_info, None)):
+                with mock.patch.object(
+                        control, 'apply_subtree_update',
+                        return_value=1):
+                    info, ret = control.prepare_apply(
+                        dbs, 'us/next', None, args)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+    def test_prepare_apply_subtree_without_args(self):
+        """Test prepare_apply returns error when subtree needs args=None."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            subtree_info = control.NextCommitsInfo(
+                [], True, 'merge1', ('dts', 'v6.15-dts'))
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(subtree_info, None)):
+                info, ret = control.prepare_apply(
+                    dbs, 'us/next', None)
+
+            self.assertIsNone(info)
+            self.assertEqual(ret, 1)
+            dbs.close()
+
+
+class TestNextCommitsInfoDefault(unittest.TestCase):
+    """Tests for NextCommitsInfo subtree_update default value."""
+
+    def test_default_subtree_update_is_none(self):
+        """Test NextCommitsInfo defaults subtree_update to None."""
+        info = control.NextCommitsInfo([], False, None)
+        self.assertIsNone(info.subtree_update)
+
+    def test_explicit_subtree_update(self):
+        """Test NextCommitsInfo accepts explicit subtree_update."""
+        info = control.NextCommitsInfo([], True, 'hash1',
+                                       ('dts', 'v6.15-dts'))
+        self.assertEqual(info.subtree_update, ('dts', 'v6.15-dts'))
+
+    def test_explicit_none_subtree_update(self):
+        """Test NextCommitsInfo accepts explicit None subtree_update."""
+        info = control.NextCommitsInfo([], False, None, None)
+        self.assertIsNone(info.subtree_update)
+
+
+class TestSubtreeMergeRegex(unittest.TestCase):
+    """Tests for RE_SUBTREE_MERGE regex pattern."""
+
+    def test_matches_dts_merge(self):
+        """Test regex matches dts subtree merge subject."""
+        subject = ("Subtree merge tag 'v6.15-dts' of "
+                   "https://git.kernel.org/pub/scm/linux/kernel/git/"
+                   "devicetree/devicetree-rebasing.git into dts/upstream")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'v6.15-dts')
+        self.assertEqual(match.group(2), 'dts/upstream')
+
+    def test_matches_mbedtls_merge(self):
+        """Test regex matches mbedtls subtree merge subject."""
+        subject = ("Subtree merge tag 'v3.6.2' of "
+                   "https://github.com/Mbed-TLS/mbedtls.git into "
+                   "lib/mbedtls/external/mbedtls")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'v3.6.2')
+        self.assertEqual(match.group(2), 'lib/mbedtls/external/mbedtls')
+
+    def test_matches_lwip_merge(self):
+        """Test regex matches lwip subtree merge subject."""
+        subject = ("Subtree merge tag 'STABLE-2_2_0' of "
+                   "https://git.savannah.gnu.org/git/lwip.git into "
+                   "lib/lwip/lwip")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), 'STABLE-2_2_0')
+        self.assertEqual(match.group(2), 'lib/lwip/lwip')
+
+    def test_no_match_normal_merge(self):
+        """Test regex does not match normal merge subjects."""
+        subject = "Merge branch 'feature-xyz' into main"
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNone(match)
+
+    def test_no_match_squash_commit(self):
+        """Test regex does not match subtree squash commits."""
+        subject = ("Squashed 'dts/upstream/' changes from "
+                   "v6.14-dts..v6.15-dts")
+        match = control.RE_SUBTREE_MERGE.match(subject)
+        self.assertIsNone(match)
 
 
 class TestDoCommitSourceResolveError(unittest.TestCase):
@@ -4780,6 +5650,577 @@ class TestDoPick(unittest.TestCase):
 
             self.assertEqual(ret, 1)
             dbs.close()
+
+
+class TestPickmanMrPipelineFields(unittest.TestCase):
+    """Tests for PickmanMr pipeline fields."""
+
+    def test_defaults_none(self):
+        """Test that pipeline fields default to None"""
+        pmr = gitlab.PickmanMr(
+            iid=1,
+            title='[pickman] Test',
+            web_url='https://example.com/mr/1',
+            source_branch='cherry-test',
+            description='Test',
+        )
+        self.assertIsNone(pmr.pipeline_status)
+        self.assertIsNone(pmr.pipeline_id)
+
+    def test_with_pipeline(self):
+        """Test creating PickmanMr with pipeline fields"""
+        pmr = gitlab.PickmanMr(
+            iid=1,
+            title='[pickman] Test',
+            web_url='https://example.com/mr/1',
+            source_branch='cherry-test',
+            description='Test',
+            pipeline_status='failed',
+            pipeline_id=42,
+        )
+        self.assertEqual(pmr.pipeline_status, 'failed')
+        self.assertEqual(pmr.pipeline_id, 42)
+
+
+class TestGetFailedJobs(unittest.TestCase):
+    """Tests for get_failed_jobs function."""
+
+    def _make_mock_job(self, job_id, name, stage, web_url, trace_bytes):
+        """Helper to create a mock job object"""
+        job = mock.MagicMock()
+        job.id = job_id
+        job.name = name
+        job.stage = stage
+        job.web_url = web_url
+        return job
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_success(self, _mock_token, _mock_url):
+        """Test successful retrieval of failed jobs"""
+        mock_job = self._make_mock_job(
+            1, 'build:sandbox', 'build', 'https://gitlab.com/job/1',
+            b'line1\nline2\nerror: build failed\n')
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = b'line1\nline2\nerror: build failed\n'
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, 'build:sandbox')
+        self.assertEqual(result[0].stage, 'build')
+        self.assertIn('error: build failed', result[0].log_tail)
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_empty(self, _mock_token, _mock_url):
+        """Test when no failed jobs exist"""
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = []
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 0)
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_log_truncation(self, _mock_token, _mock_url):
+        """Test that log output is truncated to max_log_lines"""
+        # Create a trace with 500 lines
+        trace_lines = [f'line {i}' for i in range(500)]
+        trace_bytes = '\n'.join(trace_lines).encode()
+
+        mock_job = self._make_mock_job(
+            1, 'test:sandbox', 'test', 'https://gitlab.com/job/1',
+            trace_bytes)
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = trace_bytes
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100, max_log_lines=50)
+
+        self.assertEqual(len(result), 1)
+        # Should only have last 50 lines
+        log_lines = result[0].log_tail.splitlines()
+        self.assertEqual(len(log_lines), 50)
+        self.assertIn('line 499', result[0].log_tail)
+
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_null_bytes_stripped(self, _mock_token, _mock_url):
+        """Test that null bytes in job logs are stripped"""
+        trace_bytes = b'before\x00after\nline2\x00end\n'
+
+        mock_job = self._make_mock_job(
+            1, 'build:sandbox', 'build', 'https://gitlab.com/job/1',
+            trace_bytes)
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = trace_bytes
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertEqual(len(result), 1)
+        self.assertNotIn('\0', result[0].log_tail)
+        self.assertIn('beforeafter', result[0].log_tail)
+        self.assertIn('line2end', result[0].log_tail)
+
+
+class TestBuildPipelineFixPrompt(unittest.TestCase):
+    """Tests for build_pipeline_fix_prompt function."""
+
+    def test_single_job(self):
+        """Test prompt with a single failed job"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error: undefined reference'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master',
+            'Test MR desc', 1)
+
+        self.assertIn('!42', prompt)
+        self.assertIn('cherry-abc123', prompt)
+        self.assertIn('build:sandbox', prompt)
+        self.assertIn('error: undefined reference', prompt)
+        self.assertIn('attempt 1', prompt)
+        self.assertIn('cherry-abc123-fix1', prompt)
+        self.assertIn('1 failed', task_desc)
+
+    def test_multiple_jobs(self):
+        """Test prompt with multiple failed jobs"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='build error'),
+            gitlab.FailedJob(
+                id=2, name='test:dm', stage='test',
+                web_url='https://gitlab.com/job/2',
+                log_tail='test failure'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('build:sandbox', prompt)
+        self.assertIn('test:dm', prompt)
+        self.assertIn('build error', prompt)
+        self.assertIn('test failure', prompt)
+        self.assertIn('2 failed', task_desc)
+
+    def test_attempt_number(self):
+        """Test that attempt number is reflected in prompt"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 3)
+
+        self.assertIn('attempt 3', prompt)
+        self.assertIn('cherry-abc123-fix3', prompt)
+        self.assertIn('attempt 3', task_desc)
+
+    def test_uses_um_build(self):
+        """Test that prompt uses 'um build sandbox' for sandbox"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('um build sandbox', prompt)
+
+    def test_extracts_board_names(self):
+        """Test that board names are extracted from job names"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:imx8mm_venice', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+            gitlab.FailedJob(
+                id=2, name='build:rpi_4', stage='build',
+                web_url='https://gitlab.com/job/2',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        # Should include both boards plus sandbox in the buildman command
+        self.assertIn('buildman', prompt)
+        self.assertIn('imx8mm_venice', prompt)
+        self.assertIn('rpi_4', prompt)
+        self.assertIn('sandbox', prompt)
+
+    def test_buildman_for_multiple_boards(self):
+        """Test that buildman is used for building multiple boards"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:coral', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('buildman -o /tmp/pickman', prompt)
+        self.assertIn('coral', prompt)
+
+
+class TestProcessPipelineFailures(unittest.TestCase):
+    """Tests for process_pipeline_failures function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def _make_mr(self, iid=1, pipeline_status='failed', pipeline_id=100,
+                 needs_rebase=False, has_conflicts=False):
+        """Helper to create a PickmanMr with pipeline fields"""
+        return gitlab.PickmanMr(
+            iid=iid,
+            title=f'[pickman] Test MR {iid}',
+            web_url=f'https://gitlab.com/mr/{iid}',
+            source_branch=f'cherry-test-{iid}',
+            description='Test description',
+            has_conflicts=has_conflicts,
+            needs_rebase=needs_rebase,
+            pipeline_status=pipeline_status,
+            pipeline_id=pipeline_id,
+        )
+
+    def test_skips_running(self):
+        """Test that running pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_status='running')]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_skips_success(self):
+        """Test that successful pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_status='success')]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_skips_already_processed(self):
+        """Test that already-processed pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record this pipeline
+            dbs.pfix_add(1, 100, 1, 'success')
+            dbs.commit()
+
+            mrs = [self._make_mr()]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_respects_retry_limit(self):
+        """Test that retry limit is respected"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record 3 attempts with different pipeline IDs
+            dbs.pfix_add(1, 10, 1, 'failure')
+            dbs.pfix_add(1, 20, 2, 'failure')
+            dbs.pfix_add(1, 30, 3, 'failure')
+            dbs.commit()
+
+            mrs = [self._make_mr(pipeline_id=40)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'reply_to_mr',
+                                       return_value=True):
+                    result = control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            # Should have been processed (comment posted) but not fixed
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_posts_comment_at_limit(self):
+        """Test that a comment is posted when retry limit is reached"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record 3 attempts
+            dbs.pfix_add(1, 10, 1, 'failure')
+            dbs.pfix_add(1, 20, 2, 'failure')
+            dbs.pfix_add(1, 30, 3, 'failure')
+            dbs.commit()
+
+            mrs = [self._make_mr(pipeline_id=40)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'reply_to_mr',
+                                       return_value=True) as mock_reply:
+                    control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            mock_reply.assert_called_once()
+            call_args = mock_reply.call_args
+            self.assertIn('retry limit', call_args[0][2])
+            dbs.close()
+
+    def test_processes_failed(self):
+        """Test processing a failed pipeline"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            failed_jobs = [
+                gitlab.FailedJob(id=1, name='build', stage='build',
+                                 web_url='https://gitlab.com/job/1',
+                                 log_tail='error'),
+            ]
+            mrs = [self._make_mr()]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'get_failed_jobs',
+                                       return_value=failed_jobs):
+                    with mock.patch.object(agent, 'fix_pipeline',
+                                           return_value=(True, 'Fixed it')):
+                        with mock.patch.object(
+                                gitlab, 'push_branch',
+                                return_value=True) as mock_push:
+                            with mock.patch.object(gitlab, 'update_mr_desc',
+                                                   return_value=True):
+                                with mock.patch.object(
+                                        gitlab, 'reply_to_mr',
+                                        return_value=True) as mock_reply:
+                                    with mock.patch.object(
+                                            control,
+                                            'update_history_pipeline_fix'):
+                                        result = \
+                                            control.process_pipeline_failures(
+                                                'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 1)
+            # Should be recorded in database
+            self.assertTrue(dbs.pfix_has(1, 100))
+            # Should push the branch
+            mock_push.assert_called_once_with(
+                'ci', 'cherry-test-1', force=True, skip_ci=False)
+            # Should post a comment on the MR
+            mock_reply.assert_called_once()
+            reply_msg = mock_reply.call_args[0][2]
+            self.assertIn('Fixed it', reply_msg)
+            self.assertIn('build', reply_msg)
+            dbs.close()
+
+    def test_skips_skipped_mr(self):
+        """Test that MRs without pipeline_id are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_id=None)]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_rebases_before_fix(self):
+        """Test that a branch needing rebase is rebased instead of fixed"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(needs_rebase=True)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(
+                        gitlab, 'push_branch',
+                        return_value=True) as mock_push:
+                    with mock.patch.object(agent, 'fix_pipeline') as mock_fix:
+                        result = control.process_pipeline_failures(
+                            'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 1)
+            # Should push the rebased branch, not call fix_pipeline
+            mock_push.assert_called_once_with(
+                'ci', 'cherry-test-1', force=True, skip_ci=False)
+            mock_fix.assert_not_called()
+            # Should be recorded as 'rebased' in database
+            self.assertTrue(dbs.pfix_has(1, 100))
+            dbs.close()
+
+    def test_rebase_with_conflicts_skips(self):
+        """Test that a failed rebase skips the pipeline fix"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(has_conflicts=True)]
+
+            def mock_run_git_fn(args):
+                if args[0] == 'rebase':
+                    raise command.CommandExc('conflict', None)
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=mock_run_git_fn):
+                with mock.patch.object(agent, 'fix_pipeline') as mock_fix:
+                    result = control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            mock_fix.assert_not_called()
+            dbs.close()
+
+    def test_disabled_with_zero(self):
+        """Test that fix_retries=0 is handled in do_step (not called)"""
+        mock_mr = gitlab.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+            pipeline_status='failed',
+            pipeline_id=100,
+        )
+        mock_info = control.NextCommitsInfo(
+            commits=['fake'], merge_found=True, advance_to='abc123')
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                                       return_value=[mock_mr]):
+                    with mock.patch.object(
+                            control, '_prepare_get_commits',
+                            return_value=(mock_info, None)):
+                        with mock.patch.object(
+                                control,
+                                'process_pipeline_failures') as mock_ppf:
+                            args = argparse.Namespace(
+                                cmd='step', source='us/next',
+                                remote='ci', target='master',
+                                max_mrs=1, fix_retries=0)
+                            with terminal.capture():
+                                control.do_step(args, None)
+
+        mock_ppf.assert_not_called()
+
+
+class TestStepFixRetries(unittest.TestCase):
+    """Tests for --fix-retries argument parsing."""
+
+    def test_default(self):
+        """Test default fix-retries value for step"""
+        args = pickman.parse_args(['step', 'us/next'])
+        self.assertEqual(args.fix_retries, 3)
+
+    def test_custom(self):
+        """Test custom fix-retries value for step"""
+        args = pickman.parse_args(['step', 'us/next', '--fix-retries', '5'])
+        self.assertEqual(args.fix_retries, 5)
+
+    def test_zero_disables(self):
+        """Test that fix-retries=0 is accepted"""
+        args = pickman.parse_args(['step', 'us/next', '--fix-retries', '0'])
+        self.assertEqual(args.fix_retries, 0)
+
+    def test_poll_default(self):
+        """Test default fix-retries value for poll"""
+        args = pickman.parse_args(['poll', 'us/next'])
+        self.assertEqual(args.fix_retries, 3)
+
+    def test_poll_custom(self):
+        """Test custom fix-retries value for poll"""
+        args = pickman.parse_args(['poll', 'us/next', '--fix-retries', '1'])
+        self.assertEqual(args.fix_retries, 1)
 
 
 if __name__ == '__main__':
