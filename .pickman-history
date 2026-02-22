@@ -27236,3 +27236,275 @@ All 7 commits are present. Let me provide a final summary:
 
 ---
 
+## 2026-02-21: us/next
+
+Branch: cherry-615620479e3
+
+Commits:
+- 615620479e3 test: disable TCG test on sandbox
+- d7aee0c5ce1 sandbox: enable CONFIG_CMD_BOOTEFI_SELFTEST by default
+- f2220962f9c Merge patch series "sandbox: enable CONFIG_CMD_BOOTEFI_SELFTEST by default"
+
+### Conversation log
+Let me find the repository location first:
+
+Good, the repository is clean (just an untracked file which is fine). Now let me create the branch based on ci/master:
+
+Now let me start cherry-picking the first commit (not a merge commit):
+
+First cherry-pick succeeded. Now let me verify the commit delta and run the build test:
+
+The delta matches exactly (1 file changed, 1 insertion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify the delta and run the build:
+
+Delta matches (1 file changed, 1 insertion). Now run the build test:
+
+Build passed. Now let me cherry-pick the third commit (this is a merge commit, so I need to use -m 1 --allow-empty):
+
+The merge commit is empty as expected (since the individual commits were already cherry-picked). Let me commit it as an empty commit:
+
+Now let me verify the commit delta for the merge commit and run the build:
+
+The merge commit is empty as expected - the original shows 2 files changed, but since we already cherry-picked those changes individually, the merge commit is empty. This is correct behavior. Now let me run the final build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 3 commits are present. Let me provide a final summary:
+
+---
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-615620479e3` (based on `ci/master`)
+
+### Commits Cherry-Picked:
+
+| # | Original Hash | New Hash | Status |
+|---|---------------|----------|--------|
+| 1 | `615620479e3` | `a3431e2faa6` | ✅ OK |
+| 2 | `d7aee0c5ce1` | `b6bfffba820` | ✅ OK |
+| 3 | `f2220962f9c` | `f89c86ba768` | ✅ OK (empty merge) |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed for all commits
+
+### Fix-ups Made:
+- None required
+
+### Delta Analysis:
+- **Commit 1:** Identical delta (1 file, +1 line)
+- **Commit 2:** Identical delta (1 file, +1 line)  
+- **Commit 3:** Empty commit (expected - this is a merge commit and the actual changes were already applied by commits 1 and 2)
+
+### Commits with Concerning Deltas:
+- None
+
+The branch `cherry-615620479e3` is ready for pushing with all 3 commits successfully cherry-picked.
+
+---
+
+### Review: 2026-02-21
+
+Branch: cherry-615620479e3
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the repository location:
+
+Good, I'm in the right directory (`/home/sglass/dev/u-boot`). Let me check the current branch and fetch the latest from ci remote:
+
+I can see the branch has:
+- A pickman marker commit on top (6930d36417d)
+- The 3 cherry-picked commits below that
+- The old base is 8a8302ce32f
+
+And ci/master has advanced to 5f6719b94ba. Let me first get the commit stats from before the rebase for comparison:
+
+Commit 3 is empty (expected for merge commit). Let me now perform the rebase:
+
+Rebase successful. Now let me check the new commits and verify the deltas:
+
+Now let me verify the deltas of each commit after rebase:
+
+All deltas match:
+- Commit 1: 1 file changed, 1 insertion (+) ✅
+- Commit 2: 1 file changed, 1 insertion (+) ✅
+- Commit 3: empty (merge commit) ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check if there's already a -v2 or later branch and create the appropriate versioned branch:
+
+No existing versioned branches. Let me create -v2:
+
+Now let me force push to the original remote branch to update the MR:
+
+The branch has been force pushed successfully. Let me provide a summary:
+
+---
+
+## Rebase Summary
+
+**Branch:** `cherry-615620479e3` rebased onto latest `ci/master`
+
+### Rebase Details:
+
+| # | Original Hash | New Hash | Delta | Status |
+|---|---------------|----------|-------|--------|
+| 1 | `a3431e2faa6` | `a1f42f6bd5f` | 1 file, +1 line | ✅ Identical |
+| 2 | `b6bfffba820` | `87214208994` | 1 file, +1 line | ✅ Identical |
+| 3 | `f89c86ba768` | `5bea1a689d7` | empty (merge) | ✅ Identical |
+| 4 | `6930d36417d` | `b134d03fb58` | pickman marker | ✅ OK |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed
+
+### New Base:
+- Old base: `8a8302ce32f` (Merge branch 'cherry-7fd2795a4b8')
+- New base: `5f6719b94ba` (Merge branch 'cherry-a4a0edc6046')
+
+### Actions Taken:
+1. ✅ Rebased branch onto latest `ci/master`
+2. ✅ Verified all commit deltas match before/after rebase
+3. ✅ Build test passed
+4. ✅ Created local branch `cherry-615620479e3-v2`
+5. ✅ Force pushed to `ci/cherry-615620479e3` to update MR !603
+
+### Suggested MR Reply:
+
+> Rebased onto latest master. All commits verified with identical deltas and build passes.
+
+---
+
+### Review: 2026-02-21
+
+Branch: cherry-615620479e3
+
+Comments addressed:
+
+
+### Conversation log
+The branch needs rebasing as ci/master has advanced. Let me first capture the commit deltas before rebase:
+
+Good. Commit 3 (the merge commit) is empty as expected. Now let me perform the rebase:
+
+Rebase successful. Let me check the new commits and verify deltas:
+
+All deltas match:
+- Commit 1: 1 file changed, 1 insertion ✅
+- Commit 2: 1 file changed, 1 insertion ✅
+- Commit 3: empty (merge commit) ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the appropriate one:
+
+There's already a -v2 branch. Let me create -v3:
+
+The branch has been force pushed successfully. Let me provide a summary:
+
+---
+
+## Rebase Summary
+
+**Branch:** `cherry-615620479e3` rebased onto latest `ci/master`
+
+### Rebase Details:
+
+| # | Original Hash | New Hash | Delta | Status |
+|---|---------------|----------|-------|--------|
+| 1 | `a1f42f6bd5f` | `82375e72d31` | 1 file, +1 line | ✅ Identical |
+| 2 | `87214208994` | `bc04d2cf50d` | 1 file, +1 line | ✅ Identical |
+| 3 | `5bea1a689d7` | `93ed5ea8a47` | empty (merge) | ✅ Identical |
+| 4 | `b134d03fb58` | `f65c78ad3c3` | pickman marker | ✅ OK |
+| 5 | `61f64d5f8f6` | `79dca515dbc` | pickman marker | ✅ OK |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed
+
+### New Base:
+- Old base: `5f6719b94ba` (Merge branch 'cherry-a4a0edc6046')
+- New base: `d011ffd2077` (Merge branch 'cherry-4600b595683')
+
+### Actions Taken:
+1. ✅ Rebased branch onto latest `ci/master`
+2. ✅ Verified all commit deltas match before/after rebase
+3. ✅ Build test passed
+4. ✅ Created local branch `cherry-615620479e3-v3`
+5. ✅ Force pushed to `ci/cherry-615620479e3` to update MR !603
+
+### Suggested MR Reply:
+
+> Rebased onto latest master. All commits verified with identical deltas and build passes.
+
+---
+
+### Review: 2026-02-21
+
+Branch: cherry-615620479e3
+
+Comments addressed:
+
+
+### Conversation log
+Good, the branch has 6 commits on top of ci/master that need to be rebased. Let me capture the deltas before rebasing:
+
+Commit 3 (merge) is empty as expected. Now let me perform the rebase:
+
+Rebase successful. Let me check the new commits and verify the deltas:
+
+All deltas match:
+- Commit 1: 1 file changed, 1 insertion ✅
+- Commit 2: 1 file changed, 1 insertion ✅
+- Commit 3: empty (merge commit) ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the appropriate one:
+
+There's already -v2 and -v3. Let me create -v4:
+
+The branch has been force pushed successfully. Let me provide a summary:
+
+---
+
+## Rebase Summary
+
+**Branch:** `cherry-615620479e3` rebased onto latest `ci/master`
+
+### Rebase Details:
+
+| # | Original Hash | New Hash | Delta | Status |
+|---|---------------|----------|-------|--------|
+| 1 | `82375e72d31` | `678fe4867b4` | 1 file, +1 line | ✅ Identical |
+| 2 | `bc04d2cf50d` | `e0120dfd46d` | 1 file, +1 line | ✅ Identical |
+| 3 | `93ed5ea8a47` | `4fba18bff0e` | empty (merge) | ✅ Identical |
+| 4 | `f65c78ad3c3` | `baeb3590ac5` | pickman marker | ✅ OK |
+| 5 | `79dca515dbc` | `fef54aef9ac` | pickman marker | ✅ OK |
+| 6 | `c53d1977e4c` | `00116a2395d` | pickman marker | ✅ OK |
+
+### Build Result:
+**OK** - `buildman -L --board sandbox -w -o /tmp/pickman` passed
+
+### New Base:
+- Old base: `d011ffd2077` (Merge branch 'cherry-4600b595683')
+- New base: `c42396807e2` (Merge branch 'cherry-4628730ee6c')
+
+### Actions Taken:
+1. ✅ Rebased branch onto latest `ci/master`
+2. ✅ Verified all commit deltas match before/after rebase
+3. ✅ Build test passed
+4. ✅ Created local branch `cherry-615620479e3-v4`
+5. ✅ Force pushed to `ci/cherry-615620479e3` to update MR !603
+
+### Suggested MR Reply:
+
+> Rebased onto latest master. All commits verified with identical deltas and build passes.
+
+---
+

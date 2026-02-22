@@ -865,7 +865,15 @@ static efi_status_t EFIAPI efi_set_virtual_address_map(
 			rt_code_sections++;
 	}
 
-	if (rt_code_sections != 1) {
+	if (IS_ENABLED(CONFIG_SANDBOX)) {
+		/*
+		 * Sandbox does not add runtime code to the memory map since
+		 * it cannot be mapped into the emulated address space. So
+		 * skip the relocation but allow event notification to proceed.
+		 */
+		if (rt_code_sections != 0)
+			goto out;
+	} else if (rt_code_sections != 1) {
 		/*
 		 * We expose exactly one single runtime code section, so
 		 * something is definitely going wrong.
@@ -923,10 +931,10 @@ static efi_status_t EFIAPI efi_set_virtual_address_map(
 
 			efi_relocate_runtime_table(new_offset);
 			efi_runtime_relocate(new_offset, map);
-			ret = EFI_SUCCESS;
-			goto out;
+			break;
 		}
 	}
+	ret = EFI_SUCCESS;
 
 out:
 	return EFI_EXIT(ret);
