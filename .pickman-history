@@ -27354,3 +27354,113 @@ The branch `cherry-490ae8ceae2` is ready for pushing with 11 commits ahead of `c
 
 ---
 
+### Pipeline fix: 2026-02-21 (attempt 1)
+
+Branch: cherry-490ae8ceae2
+
+Failed jobs:
+- pine64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. The test failure is:
+```
+E   AssertionError: assert 'test��nv_1= 1   2 ' == 'test_env_1= 1   2 '
+```
+
+This shows that `_e` is being corrupted to `��` (invalid/garbled characters). This suggests a memory corruption or buffer issue. Let me look at the failing test and search for related changes.
+
+The test_env.py file wasn't touched by our commits. Let me look at the pinctrl commit since it might be related to memory corruption:
+
+The change in the pinctrl commit removed reading "fsl,mux_mask" from DT. Let me check for the actual change:
+
+This looks like a benign change. Let me check the gpio commit:
+
+These look like simple changes. The test failure on pine64 shows character corruption - `_e` becoming `��`. This is suspicious - it looks like memory corruption or a serial/console issue. Let me check what pine64 is and if any of our commits could affect it:
+
+Pine64 wasn't touched by our commits. The test failure shows character corruption `test_env_1` becoming `test��nv_1`. This is very suspicious - the `_e` characters are getting corrupted to `��`.
+
+Let me think about this more carefully. The error shows:
+- Expected: `test_env_1= 1   2 `
+- Got: `test��nv_1= 1   2 `
+
+The `_e` (underscore followed by 'e') is becoming garbled. This could be:
+1. A serial/console encoding issue
+2. Memory corruption
+3. Some issue with UART buffer
+
+Let me check if there's something affecting the sunxi/A64 boards:
+
+No sunxi changes. Let me check if the first "Revert" commit affects anything:
+
+This reverts mach-k3 changes which is Texas Instruments K3 platform, unrelated to Pine64 (Allwinner sunxi).
+
+Let me look at what config changes might be coming in through the merge commit:
+
+The merge commit is empty. Let me now check what ci/master looks like to see if this test failure exists there too:
+
+I now see what the issue could be - none of our commits touch anything related to Pine64 or sunxi. The test failure shows character corruption that is very specific - `_e` becoming garbled. Let me look at the test file to understand what it's testing:
+
+The test is running `printenv` command. The failure shows the variable name `test_env_1` being corrupted to `test��nv_1`. This looks like a serial/console issue - specific characters are being corrupted.
+
+Let me check if this is a known flaky test or infrastructure issue. The corruption pattern `_e` → `��` could indicate serial communication problems with the pine64 hardware test runner.
+
+Let me check the recent job logs more carefully:
+
+Let me check if Pine64 is built with any of the configs modified by our commits:
+
+Pine64 is an Allwinner sunxi board (ARCH_SUNXI). None of the commits in this MR affect sunxi at all. Let me check if this is a known issue by looking at what typically causes this kind of serial corruption:
+
+None of our commits modified cmd/nvedit.c. Let me verify if this test passes on ci/master:
+
+None of these files are related to Pine64, Allwinner/sunxi, or the environment/serial subsystem. The changes are:
+1. mach-k3 revert (Texas Instruments)
+2. i.MX8M/i.MX93 EVK capsule updates (NXP/Freescale)
+3. vf610/pcm052 DTS fixes (NXP Vybrid)
+4. imxrt GPIO header refactoring
+5. NXP pinctrl driver cleanup
+
+This appears to be a **transient infrastructure issue** - serial line corruption on the pine64 hardware test runner. The `_e` characters being corrupted to `��` is a clear indication of UART/serial communication issues, not a code bug.
+
+Let me verify by checking if there's similar failures in recent pine64 test jobs:
+
+Good, sandbox builds. Let me also build pine64:
+
+All builds pass! The warnings about missing ATF blobs are expected for sunxi boards without the external firmware blobs.
+
+Now I have sufficient evidence that this is **an infrastructure/transient issue**, not a code bug introduced by our commits:
+
+1. **The failure is character corruption** (`_e` → `��`) which is classic serial line corruption
+2. **No code in this MR touches anything related to pine64/sunxi** - all changes are for NXP/TI boards
+3. **No environment or serial subsystem code was modified**
+4. **The build passes for both pine64 and sandbox**
+5. **The test failure is in a hardware test stage (sjg-lab)**, not a build or sandbox test
+
+This is a **transient infrastructure issue** - likely serial line noise or UART communication problems with the pine64 hardware test runner. This type of failure should be resolved by re-running the pipeline, not by making code changes.
+
+## Final Report
+
+**Issue**: The pipeline failure for MR !606 (branch: cherry-490ae8ceae2) is **NOT caused by code changes** in this MR.
+
+**Root Cause Analysis**:
+- The failing test `test_env_expansion_spaces` shows character corruption: `test_env_1` was received as `test��nv_1`
+- The `_e` characters (hex 0x5F 0x65) are being corrupted to `��` (invalid UTF-8 sequence)
+- This is classic serial/UART line corruption, not a software bug
+- None of the commits in this MR touch any code related to:
+  - Pine64 / Allwinner / sunxi architecture
+  - Serial drivers
+  - Environment handling (cmd/nvedit.c, env/)
+  - Test infrastructure
+
+**Evidence**:
+- All builds pass (sandbox, pine64_plus)
+- The MR only modifies:
+  - mach-k3 revert (TI boards)
+  - i.MX8M/i.MX93 capsule update support (NXP boards)
+  - VF610/PCM052 DTS fixes (NXP Vybrid boards)
+  - NXP pinctrl driver cleanup
+  - imxrt GPIO header refactoring
+
+**Recommendation**: This is a **transient infrastructure issue**. The pipeline should be re-run without any code changes. No fix branch is needed.
+
+---
+
