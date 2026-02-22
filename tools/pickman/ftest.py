@@ -6,6 +6,7 @@
 # pylint: disable=too-many-lines
 """Tests for pickman."""
 
+import asyncio
 import argparse
 import os
 import shutil
@@ -2969,6 +2970,67 @@ class TestExecuteApply(unittest.TestCase):
             source_commit = dbs.source_get('us/next')
             self.assertEqual(source_commit, 'hhh888')
             dbs.close()
+
+
+class TestRunAgentCollect(unittest.TestCase):
+    """Tests for run_agent_collect function."""
+
+    def test_success(self):
+        """Test successful agent run collects text blocks."""
+        block1 = mock.MagicMock()
+        block1.text = 'hello'
+        block2 = mock.MagicMock()
+        block2.text = 'world'
+        msg = mock.MagicMock()
+        msg.content = [block1, block2]
+
+        async def fake_query(**kwargs):
+            yield msg
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertTrue(success)
+        self.assertEqual(log, 'hello\n\nworld')
+
+    def test_failure(self):
+        """Test agent failure returns False with partial log."""
+        block = mock.MagicMock()
+        block.text = 'partial'
+        msg = mock.MagicMock()
+        msg.content = [block]
+
+        async def fake_query(**kwargs):
+            yield msg
+            raise RuntimeError('agent crashed')
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertFalse(success)
+        self.assertEqual(log, 'partial')
+
+    def test_no_content(self):
+        """Test messages without content are skipped."""
+        msg = mock.MagicMock(spec=[])
+
+        async def fake_query(**kwargs):
+            yield msg
+
+        with mock.patch.object(agent, 'query', fake_query, create=True):
+            with terminal.capture():
+                opts = mock.MagicMock()
+                success, log = asyncio.run(
+                    agent.run_agent_collect('prompt', opts))
+
+        self.assertTrue(success)
+        self.assertEqual(log, '')
 
 
 class TestSignalFile(unittest.TestCase):

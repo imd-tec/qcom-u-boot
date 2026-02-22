@@ -55,6 +55,34 @@ def check_available():
     return True
 
 
+async def run_agent_collect(prompt, options):
+    """Run a Claude agent and collect its conversation log
+
+    Sends the prompt to a Claude agent, streams output to stdout and
+    collects all text blocks into a conversation log.
+
+    Args:
+        prompt (str): The prompt to send to the agent
+        options (ClaudeAgentOptions): Agent configuration
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    conversation_log = []
+    try:
+        async for message in query(prompt=prompt, options=options):
+            if hasattr(message, 'content'):
+                for block in message.content:
+                    if hasattr(block, 'text'):
+                        print(block.text)
+                        conversation_log.append(block.text)
+        return True, '\n\n'.join(conversation_log)
+    except (RuntimeError, ValueError, OSError) as exc:
+        tout.error(f'Agent failed: {exc}')
+        return False, '\n\n'.join(conversation_log)
+
+
 def is_qconfig_commit(subject):
     """Check if a commit subject indicates a qconfig resync commit
 
@@ -228,19 +256,7 @@ this means the series was already applied via a different path. In this case:
     tout.info(f'Starting Claude agent to cherry-pick {len(commits)} commits...')
     tout.info('')
 
-    conversation_log = []
-    try:
-        async for message in query(prompt=prompt, options=options):
-            # Print agent output and capture it
-            if hasattr(message, 'content'):
-                for block in message.content:
-                    if hasattr(block, 'text'):
-                        print(block.text)
-                        conversation_log.append(block.text)
-        return True, '\n\n'.join(conversation_log)
-    except (RuntimeError, ValueError, OSError) as exc:
-        tout.error(f'Agent failed: {exc}')
-        return False, '\n\n'.join(conversation_log)
+    return await run_agent_collect(prompt, options)
 
 
 def read_signal_file(repo_path=None):
@@ -492,18 +508,7 @@ async def run_review_agent(mr_iid, branch_name, comments, remote,
     tout.info(f'Starting Claude agent to {task_desc}...')
     tout.info('')
 
-    conversation_log = []
-    try:
-        async for message in query(prompt=prompt, options=options):
-            if hasattr(message, 'content'):
-                for block in message.content:
-                    if hasattr(block, 'text'):
-                        print(block.text)
-                        conversation_log.append(block.text)
-        return True, '\n\n'.join(conversation_log)
-    except (RuntimeError, ValueError, OSError) as exc:
-        tout.error(f'Agent failed: {exc}')
-        return False, '\n\n'.join(conversation_log)
+    return await run_agent_collect(prompt, options)
 
 
 # pylint: disable=too-many-arguments
