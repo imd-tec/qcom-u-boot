@@ -26,6 +26,7 @@ from pickman import ftest
 from pickman import gitlab_api
 from u_boot_pylib import command
 from u_boot_pylib import terminal
+from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 # Default database filename
@@ -1458,8 +1459,7 @@ def get_history(fname, source, commits, branch_name, conv_log):
     # Read existing content
     existing = ''
     if os.path.exists(fname):
-        with open(fname, 'r', encoding='utf-8') as fhandle:
-            existing = fhandle.read()
+        existing = tools.read_file(fname, binary=False)
         # Remove existing entry for this branch (from ## header to ---)
         pattern = rf'## [^\n]+\n\nBranch: {re.escape(branch_name)}\n.*?---\n\n'
         existing = re.sub(pattern, '', existing, flags=re.DOTALL)
@@ -1467,8 +1467,7 @@ def get_history(fname, source, commits, branch_name, conv_log):
     content = existing + entry
 
     # Write updated history file
-    with open(fname, 'w', encoding='utf-8') as fhandle:
-        fhandle.write(content)
+    tools.write_file(fname, content, binary=False)
 
     # Generate commit message
     commit_msg = (f'pickman: Record cherry-pick of {len(commits)} commits '
@@ -2429,11 +2428,9 @@ Comments addressed:
     # Append to history file
     existing = ''
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
-            existing = fhandle.read()
+        existing = tools.read_file(HISTORY_FILE, binary=False)
 
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
-        fhandle.write(existing + entry)
+    tools.write_file(HISTORY_FILE, existing + entry, binary=False)
 
     # Commit the history file
     run_git(['add', '-f', HISTORY_FILE])

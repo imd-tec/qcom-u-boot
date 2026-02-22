@@ -14,6 +14,7 @@ our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
 
 # pylint: disable=wrong-import-position,import-error
+from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 # Signal file for agent to communicate status back to pickman
@@ -278,8 +279,8 @@ def read_signal_file(repo_path=None):
         return None, None
 
     try:
-        with open(signal_path, 'r', encoding='utf-8') as fhandle:
-            lines = fhandle.read().strip().split('\n')
+        data = tools.read_file(signal_path, binary=False)
+        lines = data.strip().split('\n')
         status = lines[0] if lines else None
         last_commit = lines[1] if len(lines) > 1 else None
 
