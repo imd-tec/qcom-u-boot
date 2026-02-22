@@ -1473,6 +1473,37 @@ def push_mr(args, branch_name, title, description):
     return bool(mr_url)
 
 
+def _prepare_get_commits(dbs, source):
+    """Get the next commits to apply, handling skips.
+
+    Fetches the next batch of commits from the source.
+
+    Args:
+        dbs (Database): Database instance
+        source (str): Source branch name
+
+    Returns:
+        tuple: (NextCommitsInfo, return_code) where return_code is None
+            on success, or an int (0 or 1) if there is nothing to do
+    """
+    info, err = get_next_commits(dbs, source)
+    if err:
+        tout.error(err)
+        return None, 1
+
+    if not info.commits:
+        if info.advance_to:
+            dbs.source_set(source, info.advance_to)
+            dbs.commit()
+            tout.info(f"Advanced source '{source}' to "
+                      f'{info.advance_to[:12]}')
+        else:
+            tout.info('No new commits to cherry-pick')
+        return None, 0
+
+    return info, None
+
+
 def prepare_apply(dbs, source, branch):
     """Prepare for applying commits from a source branch
 
@@ -1489,23 +1520,9 @@ def prepare_apply(dbs, source, branch):
             commits to apply, or None with return_code indicating the result
             (0 for no commits, 1 for error)
     """
-    info, err = get_next_commits(dbs, source)
-
-    if err:
-        tout.error(err)
-        return None, 1
-
-    if not info.commits:
-        # If advance_to is set, advance source past fully-processed merges
-        if info.advance_to:
-            dbs.source_set(source, info.advance_to)
-            dbs.commit()
-            tout.info(f"Advanced source '{source}' to "
-                      f'{info.advance_to[:12]}')
-            # Retry with updated position
-            return prepare_apply(dbs, source, branch)
-        tout.info('No new commits to cherry-pick')
-        return None, 0
+    info, ret = _prepare_get_commits(dbs, source)
+    if ret is not None:
+        return None, ret
 
     commits = info.commits
 
