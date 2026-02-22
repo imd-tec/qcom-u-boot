@@ -2677,6 +2677,105 @@ class TestPrepareApply(unittest.TestCase):
             self.assertEqual(info.branch_name, 'my-branch')
             dbs.close()
 
+    def test_prepare_apply_deletes_existing_branch(self):
+        """Test prepare_apply deletes a branch that already exists."""
+        git_cmds = []
+
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                git_cmds.append(cmd)
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                if 'branch' in cmd and '--list' in cmd:
+                    return command.CommandResult(stdout='cherry-aaa111a\n')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertTrue(
+                any('branch' in c and '-D' in c for c in git_cmds))
+            dbs.close()
+
+    def test_prepare_apply_merge_found(self):
+        """Test prepare_apply sets merge_found and advance_to."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            merge_hash = 'ccc333ccc333ccc333'
+
+            merge_info = control.NextCommitsInfo(
+                commits=[
+                    control.CommitInfo('aaa111', 'aaa111a', 'First commit',
+                                       'Author 1'),
+                    control.CommitInfo('bbb222', 'bbb222b', 'Second commit',
+                                       'Author 2'),
+                ],
+                merge_found=True,
+                advance_to=merge_hash,
+            )
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            with mock.patch.object(control, 'get_next_commits',
+                                   return_value=(merge_info, None)):
+                command.TEST_RESULT = mock_git
+                info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertTrue(info.merge_found)
+            self.assertEqual(info.advance_to, merge_hash)
+            self.assertEqual(len(info.commits), 2)
+            dbs.close()
+
+    def test_prepare_apply_no_merge(self):
+        """Test prepare_apply reports no merge found."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            log_output = 'aaa111|aaa111a|Author 1|First commit|abc123\n'
+
+            def mock_git(pipe_list):
+                cmd = pipe_list[0] if pipe_list else []
+                if 'log' in cmd:
+                    return command.CommandResult(stdout=log_output)
+                if 'rev-parse' in cmd:
+                    return command.CommandResult(stdout='master')
+                return command.CommandResult(stdout='')
+
+            command.TEST_RESULT = mock_git
+
+            info, ret = control.prepare_apply(dbs, 'us/next', None)
+
+            self.assertIsNotNone(info)
+            self.assertEqual(ret, 0)
+            self.assertFalse(info.merge_found)
+            dbs.close()
+
 
 class TestExecuteApply(unittest.TestCase):
     """Tests for execute_apply function."""
