@@ -818,6 +818,90 @@ class TestDatabaseComment(unittest.TestCase):
             dbs.close()
 
 
+class TestDatabasePipelineFix(unittest.TestCase):
+    """Tests for Database pipeline_fix functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def test_pfix_add(self):
+        """Test adding a pipeline fix record"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.pfix_add(123, 456, 1, 'success')
+            dbs.commit()
+
+            self.assertTrue(dbs.pfix_has(123, 456))
+
+            dbs.close()
+
+    def test_pfix_count(self):
+        """Test counting pipeline fix attempts"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            self.assertEqual(dbs.pfix_count(123), 0)
+
+            dbs.pfix_add(123, 100, 1, 'failure')
+            dbs.pfix_add(123, 200, 2, 'success')
+            dbs.commit()
+
+            self.assertEqual(dbs.pfix_count(123), 2)
+            # Different MR should have 0
+            self.assertEqual(dbs.pfix_count(999), 0)
+
+            dbs.close()
+
+    def test_pfix_has(self):
+        """Test checking if a pipeline was already handled"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            self.assertFalse(dbs.pfix_has(123, 456))
+
+            dbs.pfix_add(123, 456, 1, 'success')
+            dbs.commit()
+
+            self.assertTrue(dbs.pfix_has(123, 456))
+            # Different pipeline should not be handled
+            self.assertFalse(dbs.pfix_has(123, 789))
+            # Different MR should not be handled
+            self.assertFalse(dbs.pfix_has(999, 456))
+
+            dbs.close()
+
+    def test_pfix_unique(self):
+        """Test that duplicate mr_iid/pipeline_id pairs are ignored"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            dbs.pfix_add(123, 456, 1, 'failure')
+            dbs.commit()
+
+            # Adding same pair again should not raise (OR IGNORE)
+            dbs.pfix_add(123, 456, 2, 'success')
+            dbs.commit()
+
+            # Count should still be 1 (second insert ignored)
+            self.assertEqual(dbs.pfix_count(123), 1)
+
+            dbs.close()
+
+
 class TestListSources(unittest.TestCase):
     """Tests for list-sources command."""
 

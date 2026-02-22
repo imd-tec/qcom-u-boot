@@ -19,7 +19,7 @@ from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 3
+LATEST = 4
 
 # Default database filename
 DB_FNAME = '.pickman.db'
@@ -141,6 +141,19 @@ class Database:  # pylint: disable=too-many-public-methods
             'processed_at TEXT, '
             'UNIQUE(mr_iid, comment_id))')
 
+    def _create_v4(self):
+        """Migrate database to v4 schema - add pipeline_fix table"""
+        # Table for tracking pipeline fix attempts per MR
+        self.cur.execute(
+            'CREATE TABLE pipeline_fix ('
+            'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            'mr_iid INTEGER, '
+            'pipeline_id INTEGER, '
+            'attempt INTEGER, '
+            'status TEXT, '
+            'created_at TEXT, '
+            'UNIQUE(mr_iid, pipeline_id))')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -165,6 +178,8 @@ class Database:  # pylint: disable=too-many-public-methods
                 self._create_v2()
             elif version == 3:
                 self._create_v3()
+            elif version == 4:
+                self._create_v4()
 
             self.cur.execute('DELETE FROM schema_version')
             self.cur.execute(
@@ -481,3 +496,51 @@ class Database:  # pylint: disable=too-many-public-methods
             'SELECT comment_id FROM comment WHERE mr_iid = ?',
             (mr_iid,))
         return [row[0] for row in res.fetchall()]
+
+    # pipeline_fix functions
+
+    def pfix_count(self, mr_iid):
+        """Count fix attempts for an MR
+
+        Args:
+            mr_iid (int): Merge request IID
+
+        Return:
+            int: Number of fix attempts
+        """
+        res = self.execute(
+            'SELECT COUNT(*) FROM pipeline_fix WHERE mr_iid = ?',
+            (mr_iid,))
+        return res.fetchone()[0]
+
+    def pfix_add(self, mr_iid, pipeline_id, attempt, status):
+        """Record a pipeline fix attempt
+
+        Args:
+            mr_iid (int): Merge request IID
+            pipeline_id (int): Pipeline ID
+            attempt (int): Attempt number
+            status (str): Status ('success' or 'failure')
+        """
+        self.execute(
+            'INSERT OR IGNORE INTO pipeline_fix '
+            '(mr_iid, pipeline_id, attempt, status, created_at) '
+            'VALUES (?, ?, ?, ?, ?)',
+            (mr_iid, pipeline_id, attempt, status,
+             datetime.now().isoformat()))
+
+    def pfix_has(self, mr_iid, pipeline_id):
+        """Check if a pipeline has already been handled
+
+        Args:
+            mr_iid (int): Merge request IID
+            pipeline_id (int): Pipeline ID
+
+        Return:
+            bool: True if already handled
+        """
+        res = self.execute(
+            'SELECT id FROM pipeline_fix '
+            'WHERE mr_iid = ? AND pipeline_id = ?',
+            (mr_iid, pipeline_id))
+        return res.fetchone() is not None
