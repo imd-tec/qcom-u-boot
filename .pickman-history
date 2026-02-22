@@ -27464,3 +27464,76 @@ This is a **transient infrastructure issue** - likely serial line noise or UART 
 
 ---
 
+### Review: 2026-02-22
+
+Branch: cherry-490ae8ceae2
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+Now let me check the merge-base to understand what commits need to be rebased:
+
+I see there are 13 commits (11 cherry-picked commits + 2 pickman tracking commits). Let me save the original commit deltas before rebasing so I can compare after:
+
+Let me fix the command:
+
+Now let me perform the rebase:
+
+The rebase completed successfully without conflicts. Let me verify the commits and their deltas:
+
+Good, all 13 commits are present. Now let me verify the deltas of key commits match the original:
+
+The deltas match exactly. Now let me run the build test:
+
+Build passed. Now let me check if a -v2 branch already exists:
+
+The -v2 branch already exists. Let me update it or create -v3:
+
+It seems the -v2 branch still exists. Let me try again:
+
+Now let me force push to the original remote branch to update the MR:
+
+The branch has been force pushed. Let me verify the final state:
+
+## Summary Report
+
+### Task Completed: Rebase onto latest target branch
+
+**Actions Performed:**
+1. ✅ Checked out branch `cherry-490ae8ceae2`
+2. ✅ Rebased onto latest `ci/master` (94db9d52c93)
+3. ✅ Rebase completed cleanly without conflicts (13/13 commits)
+4. ✅ Verified commit deltas match original (same files changed, same line counts)
+5. ✅ Build test passed (`buildman -L --board sandbox -w -o /tmp/pickman`)
+6. ✅ Created local branch `cherry-490ae8ceae2-v2`
+7. ✅ Force pushed to remote branch `ci/cherry-490ae8ceae2`
+
+### Commits Rebased (13 total):
+
+| # | New Hash | Subject |
+|---|----------|---------|
+| 1 | 24db79a16d5 | Revert the last two mach-k3 changes |
+| 2 | b573d6baaa9 | imx8mp: evk: Add support for capsule update |
+| 3 | 97bd8ff6068 | imx8mm: evk: Add support for capsule update |
+| 4 | 8559e2da14a | imx8mn: evk: Add support for capsule update |
+| 5 | 91a8b39268f | imx93: evk: Add support for capsule update |
+| 6 | c257b972489 | imx8mq: evk: Add support for capsule update |
+| 7 | 694d701d39b | dts: pcm052: bk4: Use proper compatible for QSPI SPI-NOR memory |
+| 8 | c962a06525d | config: nxp: vf610: Remove CONFIG_SYS_MALLOC_F_LEN |
+| 9 | c51d925db81 | arm: pinctrl: Define .mux_mask field for NXP's SoC |
+| 10 | e011a741bdf | arch/arm/include/asm/arch-imxrt/gpio.h: imxrt gpio use common gpio.h |
+| 11 | 2bbb9324ba3 | Merge tag 'u-boot-imx-next-20250630' (empty merge) |
+| 12 | 0b64e070816 | pickman: Record cherry-pick of 11 commits from us/next |
+| 13 | 1be59ee7b43 | pickman: Record pipeline fix for cherry-490ae8ceae2 |
+
+### New Base: `94db9d52c93` (Merge branch 'picke' into 'master')
+
+### Suggested MR Reply:
+
+> Rebased onto latest ci/master (94db9d52c93). All 13 commits applied cleanly without conflicts. Build verified passing. A new pipeline has been triggered.
+
+---
+
