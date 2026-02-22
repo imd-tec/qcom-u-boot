@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(our_path, '..'))
 # pylint: disable=wrong-import-position,import-error,cyclic-import
 from u_boot_pylib import command
 from u_boot_pylib import terminal
+from u_boot_pylib import tools
 from u_boot_pylib import tout
 
 from pickman import __main__ as pickman
@@ -1634,8 +1635,9 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_token_from_config(self):
         """Test getting token from config file."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[gitlab]\ntoken = test-config-token\n')
+        tools.write_file(self.config_file,
+                         '[gitlab]\ntoken = test-config-token\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             token = gitlab.get_token()
@@ -1651,8 +1653,8 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_token_config_missing_section(self):
         """Test config file without gitlab section."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[other]\nkey = value\n')
+        tools.write_file(self.config_file, '[other]\nkey = value\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             with mock.patch.dict(os.environ, {'GITLAB_TOKEN': 'env-token'}):
@@ -1661,8 +1663,8 @@ class TestConfigFile(unittest.TestCase):
 
     def test_get_config_value(self):
         """Test get_config_value function."""
-        with open(self.config_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('[section1]\nkey1 = value1\n')
+        tools.write_file(self.config_file, '[section1]\nkey1 = value1\n',
+                         binary=False)
 
         with mock.patch.object(gitlab, 'CONFIG_FILE', self.config_file):
             value = gitlab.get_config_value('section1', 'key1')
@@ -2149,8 +2151,7 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
         # Check history file was created
         self.assertTrue(os.path.exists(control.HISTORY_FILE))
 
-        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
-            content = fhandle.read()
+        content = tools.read_file(control.HISTORY_FILE, binary=False)
 
         self.assertIn('### Review:', content)
         self.assertIn('Branch: cherry-abc123', content)
@@ -2161,8 +2162,8 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
     def test_update_history_appends(self):
         """Test that review handling appends to existing history."""
         # Create existing history
-        with open(control.HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('Existing history content\n')
+        tools.write_file(control.HISTORY_FILE,
+                         'Existing history content\n', binary=False)
         subprocess.run(['git', 'add', control.HISTORY_FILE],
                        check=True, capture_output=True)
         subprocess.run(['git', 'commit', '-m', 'Initial'],
@@ -2173,8 +2174,7 @@ class TestUpdateHistoryWithReview(unittest.TestCase):
                                       resolved=False)]
         control.update_history('cherry-xyz', comms, 'Fixed it')
 
-        with open(control.HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
-            content = fhandle.read()
+        content = tools.read_file(control.HISTORY_FILE, binary=False)
 
         self.assertIn('Existing history content', content)
         self.assertIn('### Review:', content)
@@ -2496,15 +2496,14 @@ class TestGetHistory(unittest.TestCase):
         self.assertIn('- aaa111a First commit', commit_msg)
 
         # Verify file was written
-        with open(self.history_file, 'r', encoding='utf-8') as fhandle:
-            file_content = fhandle.read()
+        file_content = tools.read_file(self.history_file, binary=False)
         self.assertEqual(file_content, content)
 
     def test_get_history_with_existing(self):
         """Test get_history appends to existing content."""
         # Create existing file
-        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('Previous history content\n')
+        tools.write_file(self.history_file,
+                         'Previous history content\n', binary=False)
 
         commits = [
             control.CommitInfo('bbb222', 'bbb222b', 'New commit', 'Author 2'),
@@ -2535,8 +2534,7 @@ Old conversation
 
 Other content
 """
-        with open(self.history_file, 'w', encoding='utf-8') as fhandle:
-            fhandle.write(existing)
+        tools.write_file(self.history_file, existing, binary=False)
 
         commits = [
             control.CommitInfo('ccc333', 'ccc333c', 'Updated commit', 'Author'),
@@ -3055,8 +3053,8 @@ class TestSignalFile(unittest.TestCase):
 
     def test_read_signal_file_already_applied(self):
         """Test read_signal_file with already_applied status."""
-        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('already_applied\nabc123def456\n')
+        tools.write_file(self.signal_path,
+                         'already_applied\nabc123def456\n', binary=False)
 
         status, commit = agent.read_signal_file(self.test_dir)
         self.assertEqual(status, 'already_applied')
@@ -3067,8 +3065,7 @@ class TestSignalFile(unittest.TestCase):
 
     def test_read_signal_file_status_only(self):
         """Test read_signal_file with only status line."""
-        with open(self.signal_path, 'w', encoding='utf-8') as fhandle:
-            fhandle.write('conflict\n')
+        tools.write_file(self.signal_path, 'conflict\n', binary=False)
 
         status, commit = agent.read_signal_file(self.test_dir)
         self.assertEqual(status, 'conflict')
