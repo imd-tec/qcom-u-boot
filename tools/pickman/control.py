@@ -2398,6 +2398,248 @@ def process_mr_reviews(remote, mrs, dbs, target='master'):
     return processed
 
 
+def _rebase_mr_branch(remote, merge_req, dbs, target):
+    """Rebase an MR branch onto the target before attempting a pipeline fix
+
+    When a branch needs rebasing, the pipeline failure may be caused by the
+    stale base rather than by the cherry-picked commits. Rebasing and pushing
+    triggers a fresh pipeline run.
+
+    Args:
+        remote (str): Remote name
+        merge_req (PickmanMr): MR with a failed pipeline
+        dbs (Database): Database instance for tracking fix attempts
+        target (str): Target branch
+
+    Returns:
+        True if the branch was rebased and pushed, False if the rebase
+        failed (conflicts), or None if no rebase is needed
+    """
+    if not merge_req.needs_rebase and not merge_req.has_conflicts:
+        return None
+
+    mr_iid = merge_req.iid
+    branch = merge_req.source_branch
+    if merge_req.has_conflicts:
+        tout.info(f'MR !{mr_iid}: has conflicts, rebasing before '
+                  f'pipeline fix...')
+    else:
+        tout.info(f'MR !{mr_iid}: needs rebase, rebasing before '
+                  f'pipeline fix...')
+    run_git(['checkout', branch])
+    try:
+        run_git(['rebase', f'{remote}/{target}'])
+    except command.CommandExc:
+        tout.warning(f'MR !{mr_iid}: rebase failed, aborting')
+        try:
+            run_git(['rebase', '--abort'])
+        except command.CommandExc:
+            pass
+        return False
+    gitlab_api.push_branch(remote, branch, force=True, skip_ci=False)
+    dbs.pfix_add(mr_iid, merge_req.pipeline_id, 0, 'rebased')
+    dbs.commit()
+    tout.info(f'MR !{mr_iid}: rebased and pushed, waiting for '
+              f'new pipeline')
+    return True
+
+
+def _attempt_pipeline_fix(remote, merge_req, dbs, target, attempt):
+    """Run the agent to fix a failed pipeline and report the result
+
+    Fetches the failed-job logs, invokes the fix agent, then pushes the
+    result and updates the MR description and history on success, or posts
+    a failure comment otherwise.
+
+    Args:
+        remote (str): Remote name
+        merge_req (PickmanMr): MR with a failed pipeline
+        dbs (Database): Database instance for tracking fix attempts
+        target (str): Target branch
+        attempt (int): Current fix attempt number
+
+    Returns:
+        bool: True if the fix was attempted, False if no failed jobs
+            were found
+    """
+    mr_iid = merge_req.iid
+
+    # Fetch failed jobs
+    failed_jobs = gitlab_api.get_failed_jobs(remote, merge_req.pipeline_id)
+    if not failed_jobs:
+        tout.info(f'MR !{mr_iid}: no failed jobs found')
+        dbs.pfix_add(mr_iid, merge_req.pipeline_id, attempt, 'no_jobs')
+        dbs.commit()
+        return False
+
+    # Run agent to fix the failures
+    success, conversation_log = agent.fix_pipeline(
+        mr_iid,
+        merge_req.source_branch,
+        failed_jobs,
+        remote,
+        target,
+        mr_description=merge_req.description,
+        attempt=attempt,
+    )
+
+    status = 'success' if success else 'failure'
+    dbs.pfix_add(mr_iid, merge_req.pipeline_id, attempt, status)
+    dbs.commit()
+
+    if success:
+        # Push the fix branch to the original MR branch
+        branch = merge_req.source_branch
+        gitlab_api.push_branch(remote, branch, force=True,
+                               skip_ci=False)
+
+        # Update MR description with fix log
+        old_desc = merge_req.description
+        job_names = ', '.join(j.name for j in failed_jobs)
+        new_desc = (f"{old_desc}\n\n### Pipeline fix (attempt {attempt})"
+                    f"\n\n**Failed jobs:** {job_names}\n\n"
+                    f"**Response:**\n{conversation_log}")
+        gitlab_api.update_mr_desc(remote, mr_iid, new_desc)
+
+        # Post a comment summarising the fix
+        gitlab_api.reply_to_mr(
+            remote, mr_iid,
+            f'Pipeline fix (attempt {attempt}): '
+            f'fixed failed job(s) {job_names}.\n\n'
+            f'{conversation_log[:2000]}')
+
+        # Update .pickman-history
+        update_history_pipeline_fix(merge_req.source_branch, failed_jobs,
+                                    conversation_log, attempt)
+
+        tout.info(f'MR !{mr_iid}: pipeline fix pushed (attempt {attempt})')
+    else:
+        gitlab_api.reply_to_mr(
+            remote, mr_iid,
+            f'Pipeline fix attempt {attempt} failed. '
+            f'Agent output:\n\n{conversation_log[:1000]}')
+        tout.error(f'MR !{mr_iid}: pipeline fix failed '
+                   f'(attempt {attempt})')
+
+    return True
+
+
+def process_pipeline_failures(remote, mrs, dbs, target, max_retries):
+    """Process pipeline failures on open MRs
+
+    Checks each MR for failed pipelines and uses Claude agent to diagnose
+    and fix them. Tracks attempts in the database to avoid reprocessing.
+
+    Args:
+        remote (str): Remote name
+        mrs (list): List of active (non-skipped) PickmanMr tuples
+        dbs (Database): Database instance for tracking fix attempts
+        target (str): Target branch
+        max_retries (int): Maximum fix attempts per MR
+
+    Returns:
+        int: Number of MRs with pipeline fixes attempted
+    """
+    # Save current branch to restore later
+    original_branch = run_git(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+    # Fetch to get latest remote state
+    tout.info(f'Fetching {remote}...')
+    run_git(['fetch', remote])
+
+    processed = 0
+    for merge_req in mrs:
+        mr_iid = merge_req.iid
+
+        # Skip if pipeline is not failed or has no pipeline
+        if merge_req.pipeline_status != 'failed':
+            continue
+        if merge_req.pipeline_id is None:
+            continue
+
+        # Skip if this pipeline was already handled
+        if dbs.pfix_has(mr_iid, merge_req.pipeline_id):
+            continue
+
+        rebased = _rebase_mr_branch(remote, merge_req, dbs, target)
+        if rebased is not None:
+            if rebased:
+                processed += 1
+            continue
+
+        attempt = dbs.pfix_count(mr_iid) + 1
+
+        # Check retry limit
+        if attempt > max_retries:
+            tout.info(f'MR !{mr_iid}: reached fix retry limit '
+                      f'({max_retries}), skipping')
+            gitlab_api.reply_to_mr(
+                remote, mr_iid,
+                f'Pipeline fix: reached retry limit ({max_retries} '
+                f'attempts). Manual intervention required.')
+            dbs.pfix_add(mr_iid, merge_req.pipeline_id, attempt, 'skipped')
+            dbs.commit()
+            continue
+
+        tout.info('')
+        tout.info(f'MR !{mr_iid}: pipeline {merge_req.pipeline_id} failed, '
+                  f'attempting fix (attempt {attempt}/{max_retries})...')
+
+        if _attempt_pipeline_fix(remote, merge_req, dbs, target, attempt):
+            processed += 1
+
+    # Restore original branch
+    if processed:
+        tout.info(f'Returning to {original_branch}')
+        run_git(['checkout', original_branch])
+
+    return processed
+
+
+def update_history_pipeline_fix(branch_name, failed_jobs, conversation_log,
+                                attempt):
+    """Append pipeline fix handling to .pickman-history
+
+    Args:
+        branch_name (str): Branch name for the MR
+        failed_jobs (list): List of FailedJob tuples that were fixed
+        conversation_log (str): Agent conversation log
+        attempt (int): Fix attempt number
+    """
+    job_summary = '\n'.join(
+        f'- {j.name} ({j.stage})'
+        for j in failed_jobs
+    )
+
+    entry = f'''### Pipeline fix: {date.today()} (attempt {attempt})
+
+Branch: {branch_name}
+
+Failed jobs:
+{job_summary}
+
+### Conversation log
+{conversation_log}
+
+---
+
+'''
+
+    # Append to history file
+    existing = ''
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as fhandle:
+            existing = fhandle.read()
+
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as fhandle:
+        fhandle.write(existing + entry)
+
+    # Commit the history file
+    run_git(['add', '-f', HISTORY_FILE])
+    run_git(['commit', '-m',
+             f'pickman: Record pipeline fix for {branch_name}'])
+
+
 def update_history(branch_name, comments, conversation_log):
     """Append review handling to .pickman-history
 
@@ -2603,6 +2845,11 @@ def do_step(args, dbs):
         # Process any review comments on all open MRs (including skipped,
         # in case they have an unskip request)
         process_mr_reviews(remote, mrs, dbs, args.target)
+
+        # Process pipeline failures on active MRs only
+        if active_mrs and args.fix_retries > 0:
+            process_pipeline_failures(remote, active_mrs, dbs,
+                                      args.target, args.fix_retries)
 
     # Only block new MR creation if we've reached the max allowed open MRs
     max_mrs = args.max_mrs

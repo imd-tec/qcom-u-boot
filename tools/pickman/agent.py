@@ -536,3 +536,180 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, target='master',
     return asyncio.run(run_review_agent(mr_iid, branch_name, comments, remote,
                                         target, needs_rebase, has_conflicts,
                                         mr_description, repo_path))
+
+
+# pylint: disable=too-many-arguments
+def build_pipeline_fix_prompt(mr_iid, branch_name, failed_jobs, remote,
+                               target, mr_description, attempt):
+    """Build prompt and task description for the pipeline fix agent
+
+    Args:
+        mr_iid (int): Merge request IID
+        branch_name (str): Source branch name
+        failed_jobs (list): List of FailedJob tuples
+        remote (str): Git remote name
+        target (str): Target branch
+        mr_description (str): MR description with context
+        attempt (int): Fix attempt number
+
+    Returns:
+        tuple: (prompt, task_desc) where prompt is the full agent prompt and
+            task_desc is a short description
+    """
+    task_desc = f'fix {len(failed_jobs)} failed pipeline job(s) (attempt {attempt})'
+
+    # Format failed jobs
+    job_sections = []
+    for job in failed_jobs:
+        job_sections.append(
+            f'### Job: {job.name} (stage: {job.stage})\n'
+            f'URL: {job.web_url}\n'
+            f'Log tail:\n```\n{job.log_tail}\n```'
+        )
+    jobs_text = '\n\n'.join(job_sections)
+
+    # Include MR description for context
+    context_section = ''
+    if mr_description:
+        context_section = f'''
+Context from MR description:
+
+{mr_description}
+'''
+
+    # Extract board names from failed job names for targeted builds.
+    # CI job names typically contain a board name (e.g. 'build:sandbox',
+    # 'test:venice_gw7905', 'world build <board>').  Collect unique names
+    # to pass to buildman so the agent can verify all affected boards.
+    board_names = set()
+    for job in failed_jobs:
+        # Try common CI patterns: 'build:<board>', 'test:<board>',
+        # or a board name token in the job name
+        for part in job.name.replace(':', ' ').replace('/', ' ').split():
+            # Skip generic tokens that are not board names
+            if part.lower() in ('build', 'test', 'world', 'check', 'lint',
+                                'ci', 'job', 'stage'):
+                continue
+            board_names.add(part)
+
+    # Always include sandbox for a basic sanity check
+    board_names.add('sandbox')
+    boards_csv = ','.join(sorted(board_names))
+
+    prompt = f"""Fix pipeline failures for merge request !{mr_iid} \
+(branch: {branch_name}, attempt {attempt}).
+{context_section}
+Failed jobs:
+
+{jobs_text}
+
+Steps to follow:
+1. Checkout the branch: git checkout {branch_name}
+2. Diagnose the root cause from the job logs above
+3. Identify which commit introduced the problem:
+   - Use 'git log --oneline' to list the commits on the branch
+   - Correlate the failing file/symbol with the commit that touched it
+   - Use 'git log --oneline -- <file>' if needed
+4. Apply the fix to the appropriate commit:
+   - If you can identify the responsible commit, use uman's rebase helpers
+     to amend it:
+     a) 'rf N' to start an interactive rebase going back N commits from
+        HEAD, stopping at the oldest (first) commit in the range
+     b) Make your fix, then amend the commit with a 1-2 line note appended
+        to the end of the commit message describing the fix, e.g.:
+        git add <files>
+        git commit --amend -m "$(git log -1 --format=%B)
+
+        [pickman] Fix <short description of what was fixed>"
+     c) 'rn' to advance to the next commit (or 'git rebase --continue'
+        to finish)
+   - If the cause spans multiple commits or cannot be pinpointed, add a new
+     fixup commit on top of the branch
+5. Build and verify:
+   a) Quick sandbox check: um build sandbox
+   b) Build all affected boards: \
+buildman -o /tmp/pickman {boards_csv}
+   Fix any build errors before proceeding.
+6. Create a local branch: {branch_name}-fix{attempt}
+7. Report what was fixed: which commit was responsible, what the root cause
+   was, and what change was made.  Do NOT push the branch; the caller
+   handles that.
+
+Important:
+- Keep changes minimal and focused on fixing the failures
+- Prefer amending the responsible commit over adding a new commit, so the
+  MR history stays clean
+- If the failure is an infrastructure or transient issue (network timeout, \
+runner problem, etc.), report this without making changes
+- Do not modify unrelated code
+- Use 'um build sandbox' for sandbox builds (fast, local)
+- Use 'buildman -o /tmp/pickman <board1> <board2> ...' to build multiple
+  boards in one go
+- Leave the result on local branch {branch_name}-fix{attempt}
+"""
+
+    return prompt, task_desc
+
+
+async def run_pipeline_fix_agent(mr_iid, branch_name, failed_jobs, remote,
+                                  target='master', mr_description='',
+                                  attempt=1, repo_path=None):
+    """Run the Claude agent to fix pipeline failures
+
+    Args:
+        mr_iid (int): Merge request IID
+        branch_name (str): Source branch name
+        failed_jobs (list): List of FailedJob tuples
+        remote (str): Git remote name
+        target (str): Target branch
+        mr_description (str): MR description with context
+        attempt (int): Fix attempt number
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    if not check_available():
+        return False, ''
+
+    if repo_path is None:
+        repo_path = os.getcwd()
+
+    prompt, task_desc = build_pipeline_fix_prompt(
+        mr_iid, branch_name, failed_jobs, remote, target,
+        mr_description, attempt)
+
+    options = ClaudeAgentOptions(
+        allowed_tools=['Bash', 'Read', 'Grep', 'Edit', 'Write'],
+        cwd=repo_path,
+        max_buffer_size=MAX_BUFFER_SIZE,
+    )
+
+    tout.info(f'Starting Claude agent to {task_desc}...')
+    tout.info('')
+
+    return await run_agent_collect(prompt, options)
+
+
+def fix_pipeline(mr_iid, branch_name, failed_jobs, remote, target='master',
+                 mr_description='', attempt=1, repo_path=None):
+    """Synchronous wrapper for running the pipeline fix agent
+
+    Args:
+        mr_iid (int): Merge request IID
+        branch_name (str): Source branch name
+        failed_jobs (list): List of FailedJob tuples
+        remote (str): Git remote name
+        target (str): Target branch
+        mr_description (str): MR description with context
+        attempt (int): Fix attempt number
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    return asyncio.run(run_pipeline_fix_agent(
+        mr_iid, branch_name, failed_jobs, remote, target,
+        mr_description, attempt, repo_path))

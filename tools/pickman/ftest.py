@@ -2068,7 +2068,7 @@ class TestStep(unittest.TestCase):
                                        return_value=[mock_mr]):
                     args = argparse.Namespace(cmd='step', source='us/next',
                                               remote='ci', target='master',
-                                              max_mrs=1)
+                                              max_mrs=1, fix_retries=3)
                     with terminal.capture():
                         ret = control.do_step(args, None)
 
@@ -2118,7 +2118,7 @@ class TestStep(unittest.TestCase):
                                            return_value=0) as mock_apply:
                         args = argparse.Namespace(cmd='step', source='us/next',
                                                   remote='ci', target='master',
-                                                  max_mrs=5)
+                                                  max_mrs=5, fix_retries=3)
                         with terminal.capture():
                             ret = control.do_step(args, None)
 
@@ -2146,7 +2146,7 @@ class TestStep(unittest.TestCase):
                     with mock.patch.object(control, 'do_apply') as mock_apply:
                         args = argparse.Namespace(cmd='step', source='us/next',
                                                   remote='ci', target='master',
-                                                  max_mrs=3)
+                                                  max_mrs=3, fix_retries=3)
                         with terminal.capture():
                             ret = control.do_step(args, None)
 
@@ -5634,6 +5634,536 @@ class TestDoPick(unittest.TestCase):
 
             self.assertEqual(ret, 1)
             dbs.close()
+
+
+class TestPickmanMrPipelineFields(unittest.TestCase):
+    """Tests for PickmanMr pipeline fields."""
+
+    def test_defaults_none(self):
+        """Test that pipeline fields default to None"""
+        pmr = gitlab.PickmanMr(
+            iid=1,
+            title='[pickman] Test',
+            web_url='https://example.com/mr/1',
+            source_branch='cherry-test',
+            description='Test',
+        )
+        self.assertIsNone(pmr.pipeline_status)
+        self.assertIsNone(pmr.pipeline_id)
+
+    def test_with_pipeline(self):
+        """Test creating PickmanMr with pipeline fields"""
+        pmr = gitlab.PickmanMr(
+            iid=1,
+            title='[pickman] Test',
+            web_url='https://example.com/mr/1',
+            source_branch='cherry-test',
+            description='Test',
+            pipeline_status='failed',
+            pipeline_id=42,
+        )
+        self.assertEqual(pmr.pipeline_status, 'failed')
+        self.assertEqual(pmr.pipeline_id, 42)
+
+
+class TestGetFailedJobs(unittest.TestCase):
+    """Tests for get_failed_jobs function."""
+
+    def _make_mock_job(self, job_id, name, stage, web_url, trace_bytes):
+        """Helper to create a mock job object"""
+        job = mock.MagicMock()
+        job.id = job_id
+        job.name = name
+        job.stage = stage
+        job.web_url = web_url
+        return job
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_success(self, _mock_token, _mock_url):
+        """Test successful retrieval of failed jobs"""
+        mock_job = self._make_mock_job(
+            1, 'build:sandbox', 'build', 'https://gitlab.com/job/1',
+            b'line1\nline2\nerror: build failed\n')
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = b'line1\nline2\nerror: build failed\n'
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, 'build:sandbox')
+        self.assertEqual(result[0].stage, 'build')
+        self.assertIn('error: build failed', result[0].log_tail)
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_empty(self, _mock_token, _mock_url):
+        """Test when no failed jobs exist"""
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = []
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 0)
+
+    @mock.patch.object(gitlab, 'get_remote_url',
+                       return_value=TEST_SSH_URL)
+    @mock.patch.object(gitlab, 'get_token', return_value='test-token')
+    @mock.patch.object(gitlab, 'AVAILABLE', True)
+    def test_log_truncation(self, _mock_token, _mock_url):
+        """Test that log output is truncated to max_log_lines"""
+        # Create a trace with 500 lines
+        trace_lines = [f'line {i}' for i in range(500)]
+        trace_bytes = '\n'.join(trace_lines).encode()
+
+        mock_job = self._make_mock_job(
+            1, 'test:sandbox', 'test', 'https://gitlab.com/job/1',
+            trace_bytes)
+
+        mock_full_job = mock.MagicMock()
+        mock_full_job.trace.return_value = trace_bytes
+
+        mock_pipeline = mock.MagicMock()
+        mock_pipeline.jobs.list.return_value = [mock_job]
+
+        mock_project = mock.MagicMock()
+        mock_project.pipelines.get.return_value = mock_pipeline
+        mock_project.jobs.get.return_value = mock_full_job
+
+        mock_glab = mock.MagicMock()
+        mock_glab.projects.get.return_value = mock_project
+
+        with mock.patch('gitlab.Gitlab', return_value=mock_glab):
+            with terminal.capture():
+                result = gitlab.get_failed_jobs('ci', 100, max_log_lines=50)
+
+        self.assertEqual(len(result), 1)
+        # Should only have last 50 lines
+        log_lines = result[0].log_tail.splitlines()
+        self.assertEqual(len(log_lines), 50)
+        self.assertIn('line 499', result[0].log_tail)
+
+
+class TestBuildPipelineFixPrompt(unittest.TestCase):
+    """Tests for build_pipeline_fix_prompt function."""
+
+    def test_single_job(self):
+        """Test prompt with a single failed job"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error: undefined reference'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master',
+            'Test MR desc', 1)
+
+        self.assertIn('!42', prompt)
+        self.assertIn('cherry-abc123', prompt)
+        self.assertIn('build:sandbox', prompt)
+        self.assertIn('error: undefined reference', prompt)
+        self.assertIn('attempt 1', prompt)
+        self.assertIn('cherry-abc123-fix1', prompt)
+        self.assertIn('1 failed', task_desc)
+
+    def test_multiple_jobs(self):
+        """Test prompt with multiple failed jobs"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='build error'),
+            gitlab.FailedJob(
+                id=2, name='test:dm', stage='test',
+                web_url='https://gitlab.com/job/2',
+                log_tail='test failure'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('build:sandbox', prompt)
+        self.assertIn('test:dm', prompt)
+        self.assertIn('build error', prompt)
+        self.assertIn('test failure', prompt)
+        self.assertIn('2 failed', task_desc)
+
+    def test_attempt_number(self):
+        """Test that attempt number is reflected in prompt"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, task_desc = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 3)
+
+        self.assertIn('attempt 3', prompt)
+        self.assertIn('cherry-abc123-fix3', prompt)
+        self.assertIn('attempt 3', task_desc)
+
+    def test_uses_um_build(self):
+        """Test that prompt uses 'um build sandbox' for sandbox"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('um build sandbox', prompt)
+
+    def test_extracts_board_names(self):
+        """Test that board names are extracted from job names"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:imx8mm_venice', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+            gitlab.FailedJob(
+                id=2, name='build:rpi_4', stage='build',
+                web_url='https://gitlab.com/job/2',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        # Should include both boards plus sandbox in the buildman command
+        self.assertIn('buildman', prompt)
+        self.assertIn('imx8mm_venice', prompt)
+        self.assertIn('rpi_4', prompt)
+        self.assertIn('sandbox', prompt)
+
+    def test_buildman_for_multiple_boards(self):
+        """Test that buildman is used for building multiple boards"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:coral', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+
+        self.assertIn('buildman -o /tmp/pickman', prompt)
+        self.assertIn('coral', prompt)
+
+
+class TestProcessPipelineFailures(unittest.TestCase):
+    """Tests for process_pipeline_failures function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        fd, self.db_path = tempfile.mkstemp(suffix='.db')
+        os.close(fd)
+        os.unlink(self.db_path)
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+        database.Database.instances.clear()
+
+    def _make_mr(self, iid=1, pipeline_status='failed', pipeline_id=100,
+                 needs_rebase=False, has_conflicts=False):
+        """Helper to create a PickmanMr with pipeline fields"""
+        return gitlab.PickmanMr(
+            iid=iid,
+            title=f'[pickman] Test MR {iid}',
+            web_url=f'https://gitlab.com/mr/{iid}',
+            source_branch=f'cherry-test-{iid}',
+            description='Test description',
+            has_conflicts=has_conflicts,
+            needs_rebase=needs_rebase,
+            pipeline_status=pipeline_status,
+            pipeline_id=pipeline_id,
+        )
+
+    def test_skips_running(self):
+        """Test that running pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_status='running')]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_skips_success(self):
+        """Test that successful pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_status='success')]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_skips_already_processed(self):
+        """Test that already-processed pipelines are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record this pipeline
+            dbs.pfix_add(1, 100, 1, 'success')
+            dbs.commit()
+
+            mrs = [self._make_mr()]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_respects_retry_limit(self):
+        """Test that retry limit is respected"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record 3 attempts with different pipeline IDs
+            dbs.pfix_add(1, 10, 1, 'failure')
+            dbs.pfix_add(1, 20, 2, 'failure')
+            dbs.pfix_add(1, 30, 3, 'failure')
+            dbs.commit()
+
+            mrs = [self._make_mr(pipeline_id=40)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'reply_to_mr',
+                                       return_value=True):
+                    result = control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            # Should have been processed (comment posted) but not fixed
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_posts_comment_at_limit(self):
+        """Test that a comment is posted when retry limit is reached"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            # Pre-record 3 attempts
+            dbs.pfix_add(1, 10, 1, 'failure')
+            dbs.pfix_add(1, 20, 2, 'failure')
+            dbs.pfix_add(1, 30, 3, 'failure')
+            dbs.commit()
+
+            mrs = [self._make_mr(pipeline_id=40)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'reply_to_mr',
+                                       return_value=True) as mock_reply:
+                    control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            mock_reply.assert_called_once()
+            call_args = mock_reply.call_args
+            self.assertIn('retry limit', call_args[0][2])
+            dbs.close()
+
+    def test_processes_failed(self):
+        """Test processing a failed pipeline"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            failed_jobs = [
+                gitlab.FailedJob(id=1, name='build', stage='build',
+                                 web_url='https://gitlab.com/job/1',
+                                 log_tail='error'),
+            ]
+            mrs = [self._make_mr()]
+
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(gitlab, 'get_failed_jobs',
+                                       return_value=failed_jobs):
+                    with mock.patch.object(agent, 'fix_pipeline',
+                                           return_value=(True, 'Fixed it')):
+                        with mock.patch.object(
+                                gitlab, 'push_branch',
+                                return_value=True) as mock_push:
+                            with mock.patch.object(gitlab, 'update_mr_desc',
+                                                   return_value=True):
+                                with mock.patch.object(
+                                        gitlab, 'reply_to_mr',
+                                        return_value=True) as mock_reply:
+                                    with mock.patch.object(
+                                            control,
+                                            'update_history_pipeline_fix'):
+                                        result = \
+                                            control.process_pipeline_failures(
+                                                'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 1)
+            # Should be recorded in database
+            self.assertTrue(dbs.pfix_has(1, 100))
+            # Should push the branch
+            mock_push.assert_called_once_with(
+                'ci', 'cherry-test-1', force=True, skip_ci=False)
+            # Should post a comment on the MR
+            mock_reply.assert_called_once()
+            reply_msg = mock_reply.call_args[0][2]
+            self.assertIn('Fixed it', reply_msg)
+            self.assertIn('build', reply_msg)
+            dbs.close()
+
+    def test_skips_skipped_mr(self):
+        """Test that MRs without pipeline_id are skipped"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(pipeline_id=None)]
+            with mock.patch.object(control, 'run_git'):
+                result = control.process_pipeline_failures(
+                    'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            dbs.close()
+
+    def test_rebases_before_fix(self):
+        """Test that a branch needing rebase is rebased instead of fixed"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(needs_rebase=True)]
+            with mock.patch.object(control, 'run_git'):
+                with mock.patch.object(
+                        gitlab, 'push_branch',
+                        return_value=True) as mock_push:
+                    with mock.patch.object(agent, 'fix_pipeline') as mock_fix:
+                        result = control.process_pipeline_failures(
+                            'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 1)
+            # Should push the rebased branch, not call fix_pipeline
+            mock_push.assert_called_once_with(
+                'ci', 'cherry-test-1', force=True, skip_ci=False)
+            mock_fix.assert_not_called()
+            # Should be recorded as 'rebased' in database
+            self.assertTrue(dbs.pfix_has(1, 100))
+            dbs.close()
+
+    def test_rebase_with_conflicts_skips(self):
+        """Test that a failed rebase skips the pipeline fix"""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+
+            mrs = [self._make_mr(has_conflicts=True)]
+
+            def mock_run_git_fn(args):
+                if args[0] == 'rebase':
+                    raise command.CommandExc('conflict', None)
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=mock_run_git_fn):
+                with mock.patch.object(agent, 'fix_pipeline') as mock_fix:
+                    result = control.process_pipeline_failures(
+                        'ci', mrs, dbs, 'master', 3)
+
+            self.assertEqual(result, 0)
+            mock_fix.assert_not_called()
+            dbs.close()
+
+    def test_disabled_with_zero(self):
+        """Test that fix_retries=0 is handled in do_step (not called)"""
+        mock_mr = gitlab.PickmanMr(
+            iid=123,
+            title='[pickman] Test MR',
+            web_url='https://gitlab.com/mr/123',
+            source_branch='cherry-test',
+            description='Test',
+            pipeline_status='failed',
+            pipeline_id=100,
+        )
+        with mock.patch.object(control, 'run_git'):
+            with mock.patch.object(gitlab, 'get_merged_pickman_mrs',
+                                   return_value=[]):
+                with mock.patch.object(gitlab, 'get_open_pickman_mrs',
+                                       return_value=[mock_mr]):
+                    with mock.patch.object(
+                            control, 'process_pipeline_failures') as mock_ppf:
+                        args = argparse.Namespace(
+                            cmd='step', source='us/next',
+                            remote='ci', target='master',
+                            max_mrs=1, fix_retries=0)
+                        with terminal.capture():
+                            control.do_step(args, None)
+
+        mock_ppf.assert_not_called()
+
+
+class TestStepFixRetries(unittest.TestCase):
+    """Tests for --fix-retries argument parsing."""
+
+    def test_default(self):
+        """Test default fix-retries value for step"""
+        args = pickman.parse_args(['step', 'us/next'])
+        self.assertEqual(args.fix_retries, 3)
+
+    def test_custom(self):
+        """Test custom fix-retries value for step"""
+        args = pickman.parse_args(['step', 'us/next', '--fix-retries', '5'])
+        self.assertEqual(args.fix_retries, 5)
+
+    def test_zero_disables(self):
+        """Test that fix-retries=0 is accepted"""
+        args = pickman.parse_args(['step', 'us/next', '--fix-retries', '0'])
+        self.assertEqual(args.fix_retries, 0)
+
+    def test_poll_default(self):
+        """Test default fix-retries value for poll"""
+        args = pickman.parse_args(['poll', 'us/next'])
+        self.assertEqual(args.fix_retries, 3)
+
+    def test_poll_custom(self):
+        """Test custom fix-retries value for poll"""
+        args = pickman.parse_args(['poll', 'us/next', '--fix-retries', '1'])
+        self.assertEqual(args.fix_retries, 1)
 
 
 if __name__ == '__main__':
