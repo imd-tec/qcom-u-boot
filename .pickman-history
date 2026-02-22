@@ -27537,3 +27537,72 @@ The branch has been force pushed. Let me verify the final state:
 
 ---
 
+## 2026-02-22: us/next
+
+Branch: cherry-1fde88de160
+
+Commits:
+- 1fde88de160 cmd: tpm: Fix attempt to return value not in enum
+- 8280d2a77ff tpm: Make use of TPM2_ALG_INVAL from enum
+- cff294c74ce Merge tag 'tpm-next-01072025' of https://source.denx.de/u-boot/custodians/u-boot-tpm into next
+
+### Conversation log
+Let me find the correct repository location:
+
+Good, the repository is essentially clean (just an untracked file). Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (1fde88de160: cmd: tpm: Fix attempt to return value not in enum):
+
+First cherry-pick successful. Let me verify the commit delta:
+
+The deltas match exactly (1 file changed, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (8280d2a77ff: tpm: Make use of TPM2_ALG_INVAL from enum):
+
+Second cherry-pick successful with auto-merge. Let me verify the commit delta:
+
+The deltas match exactly (2 files changed, 4 insertions, 4 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit which is a merge commit (cff294c74ce: Merge tag 'tpm-next-01072025'):
+
+The merge commit is empty (which is expected since we already cherry-picked the two commits that it merged). I need to commit it with --allow-empty as instructed:
+
+Now let me verify the commit deltas for the merge commit:
+
+The cherry-picked merge commit is empty (as expected since we already applied the individual commits), while the original shows the aggregate of the merged changes. This is expected behavior for merge commit cherry-picks - the individual commits have already been applied. Let me run the build test:
+
+Build passed. Now let me verify all 3 commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Summary
+Successfully cherry-picked all 3 commits from `us/next` branch to the new branch `cherry-1fde88de160` (based on `ci/master`).
+
+### Commits Cherry-picked
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 1fde88de160 | b95e3d84683 | cmd: tpm: Fix attempt to return value not in enum | ✅ Clean |
+| 2 | 8280d2a77ff | 73202ade0c7 | tpm: Make use of TPM2_ALG_INVAL from enum | ✅ Auto-merged |
+| 3 | cff294c74ce | f66602b7f41 | Merge tag 'tpm-next-01072025' | ✅ Empty (expected) |
+
+### Build Result
+**OK** - All builds passed with no warnings or errors.
+
+### Commit Delta Verification
+- **Commit 1**: Exact match (1 file, +2 lines)
+- **Commit 2**: Exact match (2 files, +4/-4 lines)
+- **Commit 3**: Empty as expected - this is normal for merge commits when the individual commits have already been cherry-picked
+
+### Fix-ups Made
+None required.
+
+### Concerning Deltas
+None - all deltas matched expectations.
+
+### Current Branch State
+The branch `cherry-1fde88de160` is ready for pushing with 3 commits ahead of `ci/master`.
+
+---
+
