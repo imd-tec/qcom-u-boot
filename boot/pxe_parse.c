@@ -775,7 +775,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 		case T_DEFAULT:
 		case T_ONTIMEOUT:
 			err = parse_sliteral(&p, &label_name, limit);
-			if (label_name) {
+			if (err >= 0 && label_name) {
 				if (cfg->default_label)
 					free(cfg->default_label);
 
@@ -784,7 +784,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 			break;
 		case T_FALLBACK:
 			err = parse_sliteral(&p, &label_name, limit);
-			if (label_name) {
+			if (err >= 0 && label_name) {
 				if (cfg->fallback_label)
 					free(cfg->fallback_label);
 
