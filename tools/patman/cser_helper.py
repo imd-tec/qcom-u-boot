@@ -118,12 +118,39 @@ class CseriesHelper:
             self.db.open_it()
 
     def _check_null_upstreams(self):
-        """Warn about series that have no upstream set"""
+        """Detect and warn about series that have no upstream set
+
+        For each series without an upstream, try to detect it from the
+        git branch's remote tracking configuration. Any series that
+        cannot be auto-detected are reported as a warning.
+        """
         names = self.db.series_get_null_upstream()
-        if names:
+        if not names:
+            return
+
+        still_null = []
+        git_dir = self.gitdir or '.git'
+        for name in names:
+            remote_name = None
+            if gitutil.check_branch(name, git_dir=self.gitdir):
+                us_ref, _ = gitutil.get_upstream(git_dir, name)
+                if us_ref and '/' in us_ref and not us_ref.startswith(
+                        'refs/'):
+                    remote_name = us_ref.split('/')[0]
+            if remote_name:
+                idnum = self.db.series_find_by_name(name)
+                self.db.series_set_upstream(idnum, remote_name)
+                tout.progress(f"Set upstream for series '{name}' to "
+                              f"'{remote_name}'", trailer='')
+            else:
+                still_null.append(name)
+
+        if len(still_null) < len(names):
+            self.db.commit()
+        if still_null:
             tout.warning(
-                f'{len(names)} series without an upstream:')
-            for name in names:
+                f'{len(still_null)} series without an upstream:')
+            for name in still_null:
                 tout.warning(f'  {name}')
 
     def close_database(self):

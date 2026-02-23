@@ -3367,11 +3367,20 @@ Date:   .*
 
     def test_migrate_upstream_warning(self):
         """Test that migrating to v5 warns about series without upstream"""
+        self.make_git_tree()
+
+        # Set 'first' branch to track a remote-style upstream so that
+        # auto-detection can find it
+        self.repo.config.set_multivar('branch.first.remote', '', 'origin')
+        self.repo.config.set_multivar('branch.first.merge', '',
+                                      'refs/heads/main')
+
         db = database.Database(f'{self.tmpdir}/.patman2.db')
         with terminal.capture():
             db.open_it()
 
-        # Create a v4 database with some series
+        # Create a v4 database with some series; 'first' has a matching
+        # branch with a detectable remote, 'second' and 'third' do not
         with terminal.capture() as (out, _):
             db.migrate_to(4)
         self.assertEqual(
@@ -3390,10 +3399,9 @@ Date:   .*
         db.commit()
         db.close()
 
-        # Now open via CseriesHelper which triggers migration and check
-        self.make_git_tree()
         cser = cseries.Cseries(self.tmpdir, terminal.COLOR_NEVER)
         cser.topdir = self.tmpdir
+        cser.gitdir = self.gitdir
 
         # Point at our v4 database
         database.Database.instances = {}
@@ -3403,17 +3411,21 @@ Date:   .*
             old_version = cser.db.start()
         self.assertEqual(4, old_version)
 
-        # Set upstream on one series so only two are reported
-        idnum = cser.db.series_find_by_name('second')
-        cser.db.series_set_upstream(idnum, 'us')
-        cser.db.commit()
-
-        with terminal.capture() as (_, err):
+        # 'first' should be auto-detected, 'second' and 'third' have no
+        # matching branch with a remote upstream
+        with terminal.capture() as (out, err):
             cser._check_null_upstreams()
+        self.assertIn("Set upstream for series 'first' to 'origin'",
+                      out.getvalue())
         lines = err.getvalue().strip().splitlines()
         self.assertEqual('2 series without an upstream:', lines[0])
-        self.assertEqual('  first', lines[1])
+        self.assertEqual('  second', lines[1])
         self.assertEqual('  third', lines[2])
+
+        # Check that 'first' was actually updated in the database
+        slist = cser.db.series_get_dict()
+        self.assertEqual('origin', slist['first'].upstream)
+        self.assertIsNone(slist['second'].upstream)
 
         cser.db.close()
 
