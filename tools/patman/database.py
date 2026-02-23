@@ -165,12 +165,12 @@ class Database:  # pylint:disable=R0904
         self.cur.execute('ALTER TABLE ser_ver ADD COLUMN archive_tag')
 
     def _migrate_to_v5(self):
-        """Add upstream support to series, settings and upstream tables
+        """Add upstream support to series, patchwork and upstream tables
 
         - Add upstream column to series table
-        - Recreate settings table without UNIQUE constraint on name, adding
-          an upstream column (since the same project can have multiple
-          remotes)
+        - Rename and recreate patchwork table (formerly 'settings') without
+          UNIQUE constraint on name, adding an upstream column (since the
+          same project can have multiple remotes)
         - Add patchwork_url, identity, series_to, no_maintainers and
           no_tags columns to upstream table
         - Add desc column to ser_ver table
@@ -178,17 +178,17 @@ class Database:  # pylint:disable=R0904
         self.cur.execute('ALTER TABLE series ADD COLUMN upstream')
 
         self.cur.execute(
-            'CREATE TABLE settings_new '
+            'CREATE TABLE patchwork_new '
             '(name, proj_id INT, link_name, upstream)')
         self.cur.execute(
-            'INSERT INTO settings_new SELECT name, proj_id, link_name, NULL '
+            'INSERT INTO patchwork_new SELECT name, proj_id, link_name, NULL '
             'FROM settings')
         self.cur.execute('DROP TABLE settings')
-        self.cur.execute('ALTER TABLE settings_new RENAME TO settings')
+        self.cur.execute('ALTER TABLE patchwork_new RENAME TO patchwork')
         default_ups = self.upstream_get_default()
         if default_ups:
             self.cur.execute(
-                'UPDATE settings SET upstream = ?', (default_ups,))
+                'UPDATE patchwork SET upstream = ?', (default_ups,))
 
         self.cur.execute('ALTER TABLE upstream ADD COLUMN patchwork_url')
         self.cur.execute('ALTER TABLE upstream ADD COLUMN identity')
@@ -867,32 +867,43 @@ class Database:  # pylint:disable=R0904
             udict[name] = url, is_default
         return udict
 
-    # settings functions
+    # patchwork functions
 
-    def settings_update(self, name, proj_id, link_name):
-        """Set the patchwork settings of the project
+    def patchwork_update(self, name, proj_id, link_name, ups=None):
+        """Set the patchwork project details for an upstream
 
         Args:
             name (str): Name of the project to use in patchwork
             proj_id (int): Project ID for the project
             link_name (str): Link name for the project
+            ups (str or None): Upstream name to associate with, or None
         """
-        self.execute('DELETE FROM settings')
         self.execute(
-                'INSERT INTO settings (name, proj_id, link_name) '
-                'VALUES (?, ?, ?)', (name, proj_id, link_name))
+            'DELETE FROM patchwork WHERE upstream IS ?', (ups,))
+        self.execute(
+            'INSERT INTO patchwork (name, proj_id, link_name, upstream) '
+            'VALUES (?, ?, ?, ?)', (name, proj_id, link_name, ups))
 
-    def settings_get(self):
-        """Get the patchwork settings of the project
+    def patchwork_get(self, ups=None):
+        """Get the patchwork project details for an upstream
+
+        Args:
+            ups (str or None): Upstream name to look up, or None for any
 
         Returns:
-            tuple or None if there are no settings:
+            tuple or None if there is no project set:
                 name (str): Project name, e.g. 'U-Boot'
                 proj_id (int): Patchworks project ID for this project
                 link_name (str): Patchwork's link-name for the project
         """
-        res = self.execute("SELECT name, proj_id, link_name FROM settings")
+        if ups is not None:
+            res = self.execute(
+                'SELECT name, proj_id, link_name FROM patchwork '
+                'WHERE upstream = ?', (ups,))
+        else:
+            res = self.execute(
+                'SELECT name, proj_id, link_name FROM patchwork')
         recs = res.fetchall()
-        if len(recs) != 1:
+        if not recs:
             return None
         return recs[0]

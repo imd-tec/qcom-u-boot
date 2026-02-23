@@ -659,7 +659,7 @@ class Cseries(cser_helper.CseriesHelper):
                 tout.detail(f'Name match: ID {proj_id}')
         if not proj_id:
             raise ValueError(f"Unknown project name '{name}'")
-        self.db.settings_update(name, proj_id, link_name)
+        self.db.patchwork_update(name, proj_id, link_name)
         self.commit()
         if not quiet:
             tout.notice(f"Project '{name}' patchwork-ID {proj_id} "
@@ -674,7 +674,7 @@ class Cseries(cser_helper.CseriesHelper):
                 proj_id (int): Patchworks project ID for this project
                 link_name (str): Patchwork's link-name for the project
         """
-        return self.db.settings_get()
+        return self.db.patchwork_get()
 
     def remove(self, name, dry_run=False):
         """Remove a series from the database

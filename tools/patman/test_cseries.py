@@ -2502,6 +2502,66 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
             out.getvalue().strip())
 
+    def test_patchwork_upstream(self):
+        """Test patchwork project with upstream association"""
+        cser = self.get_cser()
+
+        # Add two upstreams
+        cser.db.upstream_add('us', 'https://us.example.com')
+        cser.db.upstream_add('ci', 'https://ci.example.com')
+        cser.db.commit()
+
+        # Set project for a specific upstream
+        cser.db.patchwork_update('U-Boot', 6, 'uboot', 'us')
+        cser.db.commit()
+
+        # Look up by upstream
+        info = cser.db.patchwork_get('us')
+        self.assertEqual(('U-Boot', 6, 'uboot'), info)
+
+        # Different upstream has no project
+        self.assertIsNone(cser.db.patchwork_get('ci'))
+
+        # No upstream arg returns any match
+        info = cser.db.patchwork_get()
+        self.assertEqual(('U-Boot', 6, 'uboot'), info)
+
+        # Set a different project for ci
+        cser.db.patchwork_update('Linux', 10, 'linux', 'ci')
+        cser.db.commit()
+
+        self.assertEqual(('Linux', 10, 'linux'), cser.db.patchwork_get('ci'))
+        self.assertEqual(('U-Boot', 6, 'uboot'), cser.db.patchwork_get('us'))
+
+    def test_migrate_patchwork_upstream(self):
+        """Test that migrating to v5 renames settings to patchwork"""
+        db = database.Database(f'{self.tmpdir}/.patman3.db')
+        with terminal.capture():
+            db.open_it()
+
+        # Create a v4 database with an upstream and a patchwork row
+        with terminal.capture():
+            db.migrate_to(4)
+        db.execute(
+            "INSERT INTO upstream (name, url, is_default) "
+            "VALUES ('us', 'https://us.example.com', 1)")
+        db.execute(
+            "INSERT INTO settings (name, proj_id, link_name) "
+            "VALUES ('U-Boot', 6, 'uboot')")
+        db.commit()
+
+        # Migrate to v5
+        with terminal.capture():
+            db.migrate_to(5)
+
+        # The existing row should now be in 'patchwork' with the default upstream
+        res = db.execute(
+            'SELECT name, proj_id, link_name, upstream FROM patchwork')
+        recs = res.fetchall()
+        self.assertEqual(1, len(recs))
+        self.assertEqual(('U-Boot', 6, 'uboot', 'us'), recs[0])
+        db.close()
+
     def check_series_list_patches(self):
         """Test listing the patches for a series"""
         cser = self.get_cser()
