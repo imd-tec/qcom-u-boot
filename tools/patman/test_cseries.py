@@ -2483,23 +2483,29 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
 
         self.assertFalse(cser.project_get())
 
+        cser.db.upstream_add('us', 'https://us.example.com')
+        cser.db.commit()
+
         pwork = Patchwork.for_testing(self._fake_patchwork_cser)
         with terminal.capture() as (out, _):
             self.run_args('-P', 'https://url', 'patchwork', 'set-project',
-                          'U-Boot', pwork=pwork)
+                          'U-Boot', 'us', pwork=pwork)
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} "
+            f"link-name 'uboot' remote 'us'",
             out.getvalue().strip())
 
-        name, pwid, link_name = cser.project_get()
+        name, pwid, link_name = cser.project_get('us')
         self.assertEqual('U-Boot', name)
         self.assertEqual(6, pwid)
         self.assertEqual('uboot', link_name)
 
         with terminal.capture() as (out, _):
-            self.run_args('-P', 'https://url', 'patchwork', 'get-project')
+            self.run_args('-P', 'https://url', 'patchwork', 'get-project',
+                          'us')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} "
+            f"link-name 'uboot' remote 'us'",
             out.getvalue().strip())
 
     def test_patchwork_list(self):

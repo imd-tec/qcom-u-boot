@@ -666,7 +666,7 @@ class Cseries(cser_helper.CseriesHelper):
             msg = f"Project '{name}' patchwork-ID {proj_id} "
             msg += f"link-name '{link_name}'"
             if ups:
-                msg += f" upstream '{ups}'"
+                msg += f" remote '{ups}'"
             tout.notice(msg)
 
     def project_get(self, ups=None):
@@ -689,7 +689,7 @@ class Cseries(cser_helper.CseriesHelper):
         if not settings:
             print('No patchwork projects configured')
             return
-        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Upstream")
+        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Remote")
         border = f"{'-' * 20}  {'-' * 4}  {'-' * 15}  {'-' * 15}"
         print(border)
         for name, proj_id, link_name, ups in settings:

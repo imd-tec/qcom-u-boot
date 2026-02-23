@@ -272,12 +272,16 @@ def patchwork(args, test_db=None, pwork=None):
     try:
         cser.open_database()
         if args.subcmd == 'set-project':
+            if not args.remote:
+                raise ValueError('Please specify the remote name')
             if not pwork:
                 pwork = Patchwork(args.patchwork_url)
             cser.project_set(pwork, args.project_name,
-                             ups=args.upstream_name)
+                             ups=args.remote)
         elif args.subcmd == 'get-project':
-            ups = args.upstream_name
+            if not args.remote:
+                raise ValueError('Please specify the remote name')
+            ups = args.remote
             info = cser.project_get(ups)
             if not info:
                 raise ValueError(
@@ -287,7 +291,7 @@ def patchwork(args, test_db=None, pwork=None):
             msg = (f"Project '{name}' patchwork-ID {pwid} "
                    f"link-name '{link_name}'")
             if ups:
-                msg += f" upstream '{ups}'"
+                msg += f" remote '{ups}'"
             print(msg)
         elif args.subcmd == 'list':
             cser.project_list()
