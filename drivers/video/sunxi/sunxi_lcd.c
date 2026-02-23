@@ -137,9 +137,15 @@ static const struct dm_display_ops sunxi_lcd_ops = {
 	.enable = sunxi_lcd_enable,
 };
 
+static const struct udevice_id sunxi_lcd_ids[] = {
+	{ .compatible = "allwinner,sunxi-lcd" },
+	{ }
+};
+
 U_BOOT_DRIVER(sunxi_lcd) = {
 	.name   = "sunxi_lcd",
 	.id     = UCLASS_DISPLAY,
+	.of_match = sunxi_lcd_ids,
 	.ops    = &sunxi_lcd_ops,
 	.probe  = sunxi_lcd_probe,
 	.priv_auto	= sizeof(struct sunxi_lcd_priv),
