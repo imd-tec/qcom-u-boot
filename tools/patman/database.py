@@ -884,6 +884,21 @@ class Database:  # pylint:disable=R0904
             'INSERT INTO patchwork (name, proj_id, link_name, upstream) '
             'VALUES (?, ?, ?, ?)', (name, proj_id, link_name, ups))
 
+    def patchwork_get_list(self):
+        """Get all patchwork project configurations
+
+        Returns:
+            list of tuple:
+                name (str): Project name, e.g. 'U-Boot'
+                proj_id (int): Patchworks project ID for this project
+                link_name (str): Patchwork's link-name for the project
+                upstream (str or None): Upstream name
+        """
+        res = self.execute(
+            'SELECT name, proj_id, link_name, upstream FROM patchwork '
+            'ORDER BY upstream')
+        return res.fetchall()
+
     def patchwork_get(self, ups=None):
         """Get the patchwork project details for an upstream
 

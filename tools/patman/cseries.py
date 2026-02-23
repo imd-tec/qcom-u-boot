@@ -683,6 +683,19 @@ class Cseries(cser_helper.CseriesHelper):
         """
         return self.db.patchwork_get(ups)
 
+    def project_list(self):
+        """List all patchwork project configurations"""
+        settings = self.db.patchwork_get_list()
+        if not settings:
+            print('No patchwork projects configured')
+            return
+        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Upstream")
+        border = f"{'-' * 20}  {'-' * 4}  {'-' * 15}  {'-' * 15}"
+        print(border)
+        for name, proj_id, link_name, ups in settings:
+            print(f'{name:20}  {proj_id:4}  {link_name:15}  {ups or ""}')
+        print(border)
+
     def remove(self, name, dry_run=False):
         """Remove a series from the database
 

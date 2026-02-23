@@ -289,6 +289,8 @@ def patchwork(args, test_db=None, pwork=None):
             if ups:
                 msg += f" upstream '{ups}'"
             print(msg)
+        elif args.subcmd == 'list':
+            cser.project_list()
         else:
             raise ValueError(f"Unknown patchwork subcommand '{args.subcmd}'")
     finally:

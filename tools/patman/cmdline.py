@@ -169,6 +169,7 @@ def add_patchwork_subparser(subparsers):
     uset.add_argument(
         '-u', '--upstream-name',
         help='Upstream to associate this project with')
+    patchwork_subparsers.add_parser('list')
     return patchwork
 
 
