@@ -759,14 +759,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(5, len(lines))
         self.assertEqual(
             'Name             Description                               '
-            'Accepted  Versions', lines[0])
+            'Accepted  Us  Versions', lines[0])
         self.assertTrue(lines[1].startswith('--'))
         self.assertEqual(
             'first                                                      '
-            '     -/2  1', lines[2])
+            '     -/2      1', lines[2])
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[3])
+            '     1/3      1 2', lines[3])
         self.assertTrue(lines[4].startswith('--'))
 
     def test_series_list_archived(self):
@@ -780,7 +780,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(4, len(lines))
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[2])
+            '     1/3      1 2', lines[2])
 
         # Now list including archived series
         with terminal.capture() as (out, _):
@@ -789,10 +789,10 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(5, len(lines))
         self.assertEqual(
             'first                                                      '
-            '     -/2  1', lines[2])
+            '     -/2      1', lines[2])
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[3])
+            '     1/3      1 2', lines[3])
 
     def test_do_series_add(self):
         """Add a new cseries"""
@@ -821,7 +821,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertTrue(lines[1].startswith('--'))
         self.assertEqual(
             'first            my-description                                 '
-            '-/2  1', lines[2])
+            '-/2      1', lines[2])
 
     def test_do_series_add_cmdline(self):
         """Add a new cseries using the cmdline"""

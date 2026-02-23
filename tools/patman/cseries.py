@@ -408,18 +408,20 @@ class Cseries(cser_helper.CseriesHelper):
             include_archived (bool): True to include archived series also
         """
         sdict = self.db.series_get_dict(include_archived)
-        print(f"{'Name':15}  {'Description':40}  Accepted  Versions")
-        border = f"{'-' * 15}  {'-' * 40}  --------  {'-' * 15}"
+        print(f"{'Name':15}  {'Description':40}  Accepted  Us  Versions")
+        border = f"{'-' * 15}  {'-' * 40}  --------  --  {'-' * 15}"
         print(border)
         for name in sorted(sdict):
             ser = sdict[name]
             versions = self._get_version_list(ser.idnum)
             stat = self._series_get_version_stats(
                 ser.idnum, self._series_max_version(ser.idnum))[0]
+            ups = (ser.upstream or '')[:2]
 
             vlist = ' '.join([str(ver) for ver in sorted(versions)])
 
-            print(f'{name:16.16} {ser.desc:41.41} {stat.rjust(8)}  {vlist}')
+            print(f'{name:16.16} {ser.desc:41.41} {stat.rjust(8)}  '
+                  f'{ups:2}  {vlist}')
         print(border)
 
     def list_patches(self, series, version, show_commit=False,
