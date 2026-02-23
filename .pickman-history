@@ -27744,3 +27744,177 @@ The MR is ready and waiting for the pipeline to pass (or has already passed afte
 
 ---
 
+## 2026-02-22: us/next
+
+Branch: cherry-4b0414d1465
+
+Commits:
+- 4b0414d1465 disk: efi: Move logic to get a GPT entry into a helper function
+- f517d93842a disk: efi: expose the part_get_gpt_pte() helper function
+- 2fdfb802e30 efi_loader: disk: add EFI_PARTITION_INFO_PROTOCOL support
+- 4e103418bed efi_selftest: Add basic partition info check to block io test
+- 9d95a35715f efi_loader: Prevent dereferencing NULL pointer
+- 5753dc3f657 efi_loader: Prevent dereference of uninitialised variable
+- 9a64eecad67 efi_loader: Prevent free of uninitialised pointer
+- ed004a260ac cmd: eficonfig: add support for URI device path based boot options
+- 46a564d689b test: wget: add a test case for validating URI
+- aaf7be96c2c efi: add EFI_SYSTEM_TABLE_POINTER for debug
+- e7a85ec651e efi: add EFI_DEBUG_IMAGE_INFO_TABLE for debug
+- 3c08df58cc4 lib: efi_loader: efi_memory.c: add efi_realloc() for realloc memory
+- 146546138af efi: add EFI_DEBUG_IMAGE_INFO for debug
+- 2e5ca84aad3 efi: selftest: add selftest for EFI_DEBUG_SUPPORT
+- 95732f2bf87 efi_loader: add dbginfodump.efi
+- 218db7bdbd0 Merge tag 'efi-next-03072025' of https://source.denx.de/u-boot/custodians/u-boot-tpm into next
+
+### Conversation log
+The repository state is clean (only untracked files). Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build test:
+
+Delta matches (1 file, 40+/27-). Now running build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta matches. Running build test:
+
+Build passed. Continuing with commit 3:
+
+Build passed. Commit 4:
+
+Build passed. Commit 5:
+
+Build passed. Commit 6:
+
+Build passed. Commit 7:
+
+Build passed. Commit 8:
+
+Build passed. Commit 9:
+
+Build passed. Commit 10:
+
+Build passed. Commit 11:
+
+Build passed. Commit 12:
+
+We have a conflict. Let me examine and try to resolve it:
+
+I can see the conflict. The base has an `efi_free_pool_()` helper function, while the incoming commit adds `efi_realloc()`. The conflict is that the incoming patch expects `efi_free_pool()` directly, while our HEAD has it refactored to `efi_free_pool_()`. Let me check the full context of what's in HEAD:
+
+I see. The HEAD version has an `efi_free_pool_()` helper (a renamed/refactored version) and a wrapper `efi_free_pool()`. The incoming commit adds `efi_realloc()` before the old-style `efi_free_pool()`. Let me check the include/efi_loader.h conflict too:
+
+I can see the conflict - it's essentially a context conflict where both sides have similar efi_alloc_aligned_pages declarations. Let me resolve both conflicts:
+
+For include/efi_loader.h, we need to keep the HEAD version (which has full docstrings) and add the efi_realloc declaration.
+
+For lib/efi_loader/efi_memory.c, we need to add the efi_realloc function before the efi_free_pool_ helper.
+
+Now let me resolve the conflict. For the header, I need to keep HEAD's documented version and add the efi_realloc declaration:
+
+Now let me resolve the conflict in efi_memory.c. I need to add the efi_realloc function before the efi_free_pool_ helper:
+
+I need to understand the structure better. The HEAD has:
+- `efi_free_pool_()` - internal helper
+- `efi_free_pool()` - wrapper that calls `efi_free_pool_()`
+
+The incoming commit has:
+- `efi_realloc()` - new function that calls `efi_free_pool()`
+- `efi_free_pool()` - was the original implementation
+
+I need to adapt the incoming `efi_realloc()` to work with the new structure. The `efi_realloc()` function should remain the same since it uses `efi_free_pool()` which still exists in our HEAD version. Let me view more of the HEAD's efi_free_pool functions:
+
+So in HEAD:
+- Line 651: `efi_free_pool_()` - static internal helper
+- Line 679: `efi_free_pool()` - public wrapper
+
+The incoming commit's `efi_realloc()` uses `efi_free_pool()` which is fine. I just need to insert the `efi_realloc()` function before `efi_free_pool_()` and keep the existing HEAD structure.
+
+There's still a conflict marker in efi_memory.c. Let me see what's remaining:
+
+The script didn't work because it didn't find the pattern (maybe newline differences). Let me try a different approach:
+
+Now I need to adapt this function to work with our HEAD version which uses `map_to_sysmem()` for `efi_check_allocated()`. Let me check how it's used in HEAD's `efi_free_pool_()`:
+
+I see - HEAD uses `map_to_sysmem(buffer)` for `efi_check_allocated()`. I need to add the `efi_realloc()` function before `efi_free_pool_()` and update it to use `map_to_sysmem()`. Let me insert the function:
+
+Now let me verify there are no conflict markers and stage the files:
+
+Now let me check the delta and run the build:
+
+Close match (69 vs 68 insertions - just 1 line difference due to conflict resolution formatting). Now build:
+
+Build passed. Now let me amend the commit to note the fix-up:
+
+Now continue with commit 13:
+
+Build passed. Commit 14:
+
+Build passed. Commit 15:
+
+Build passed. Now commit 16 - the merge commit:
+
+There are conflicts in the merge commit. Let me check and resolve them:
+
+This conflict is due to an `efi_dp_str` declaration that's already present elsewhere in HEAD. Let me check:
+
+So the incoming merge commit tries to add `efi_dp_str` declaration, but we only have it in the conflict marker. Let me see the other conflicts:
+
+These conflicts are essentially identical to what we resolved before. The merge commit is trying to re-apply the changes that are already in our current branch (since we already applied the individual commits). These should be resolved by keeping the HEAD version since the changes are already there.
+
+Let me check the efi_memory.c conflict:
+
+I can see this is a situation where the merge commit wants to add the same content we've already added via individual cherry-picks. The safest approach is to accept HEAD's version since the commits are already applied. Let me resolve these by keeping HEAD:
+
+The merge commit was successfully cherry-picked. Let me verify the delta:
+
+The difference in delta is expected - the original merge commit had changes from 22 files (1072 insertions), but since we've already cherry-picked all the individual commits, the merge commit only results in 4 insertions (the efi_api.h additions that weren't covered by the individual patches). This is correct behavior for cherry-picking a merge commit when the merged commits are already applied.
+
+Build passed. Now let me verify all 16 commits are present:
+
+All 16 commits are present. Now run the final build test:
+
+Excellent! The final build passes.
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+**Branch:** `cherry-4b0414d1465` (based on `ci/master`)
+
+**Build result:** ✅ OK - All builds passed
+
+**16 commits cherry-picked:**
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | 4b0414d1465 | disk: efi: Move logic to get a GPT entry into a helper function | ✅ Clean |
+| 2 | f517d93842a | disk: efi: expose the part_get_gpt_pte() helper function | ✅ Clean |
+| 3 | 2fdfb802e30 | efi_loader: disk: add EFI_PARTITION_INFO_PROTOCOL support | ✅ Clean |
+| 4 | 4e103418bed | efi_selftest: Add basic partition info check to block io test | ✅ Clean |
+| 5 | 9d95a35715f | efi_loader: Prevent dereferencing NULL pointer | ✅ Clean |
+| 6 | 5753dc3f657 | efi_loader: Prevent dereference of uninitialised variable | ✅ Clean |
+| 7 | 9a64eecad67 | efi_loader: Prevent free of uninitialised pointer | ✅ Clean |
+| 8 | ed004a260ac | cmd: eficonfig: add support for URI device path based boot options | ✅ Clean |
+| 9 | 46a564d689b | test: wget: add a test case for validating URI | ✅ Clean |
+| 10 | aaf7be96c2c | efi: add EFI_SYSTEM_TABLE_POINTER for debug | ✅ Clean |
+| 11 | e7a85ec651e | efi: add EFI_DEBUG_IMAGE_INFO_TABLE for debug | ✅ Clean |
+| 12 | 3c08df58cc4 | lib: efi_loader: efi_memory.c: add efi_realloc() for realloc memory | ⚠️ **Fixed** |
+| 13 | 146546138af | efi: add EFI_DEBUG_IMAGE_INFO for debug | ✅ Clean |
+| 14 | 2e5ca84aad3 | efi: selftest: add selftest for EFI_DEBUG_SUPPORT | ✅ Clean |
+| 15 | 95732f2bf87 | efi_loader: add dbginfodump.efi | ✅ Clean |
+| 16 | 218db7bdbd0 | Merge tag 'efi-next-03072025' (merge commit) | ✅ Resolved |
+
+**Fix-ups made:**
+
+1. **Commit 12 (3c08df58cc4):** Conflict resolved - adapted `efi_check_allocated()` call to use `map_to_sysmem()` to match the refactored API in ci/master. The commit message was amended to note this fix.
+
+2. **Commit 16 (218db7bdbd0):** Merge commit conflicts resolved by keeping HEAD's version since all individual commits were already applied.
+
+**Concerning deltas:** None. All commit deltas matched or were minor differences due to conflict resolution.
+
+The branch `cherry-4b0414d1465` is ready for pushing.
+
+---
+
