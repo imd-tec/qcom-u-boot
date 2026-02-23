@@ -298,6 +298,10 @@ def add_series_subparser(subparsers):
     ren.add_argument('-N', '--new-name', help='New name for the series')
 
     series_subparsers.add_parser('rm')
+
+    sup = series_subparsers.add_parser('set-upstream')
+    sup.add_argument('upstream_name', nargs='?',
+                     help='Name of the upstream for this series')
     series_subparsers.add_parser('rm-version', aliases=ALIASES['rm-version'])
 
     scan = series_subparsers.add_parser('scan')

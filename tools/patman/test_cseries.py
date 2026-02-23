@@ -1909,6 +1909,23 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         slist = cser.db.series_get_dict()
         self.assertIsNone(slist['first'].upstream)
 
+    def test_series_set_upstream(self):
+        """Test setting upstream via the set-upstream command"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', '', allow_unmarked=True)
+
+        self.db_close()
+        with terminal.capture() as (out, _):
+            self.run_args('series', '-s', 'first', 'set-upstream',
+                          'origin')
+        self.assertIn("Set upstream for series 'first' to 'origin'",
+                      out.getvalue())
+
+        self.db_open()
+        slist = cser.db.series_get_dict()
+        self.assertEqual('origin', slist['first'].upstream)
+
     def test_series_add_mark(self):
         """Test marking a cseries with Change-Id fields"""
         cser = self.get_cser()

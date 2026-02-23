@@ -770,6 +770,31 @@ class Cseries(cser_helper.CseriesHelper):
         if dry_run:
             tout.info('Dry run completed')
 
+    def set_upstream(self, series, ups, dry_run=False):
+        """Set the upstream for a series
+
+        Args:
+            series (str): Name of series to use, or None to use current branch
+            ups (str): Name of the upstream to set
+            dry_run (bool): True to do a dry run
+        """
+        if not ups:
+            raise ValueError('Please specify the upstream name')
+        ser, _ = self._parse_series_and_version(series, None)
+        if not ser.idnum:
+            raise ValueError(f"Series '{ser.name}' not found in database")
+
+        self.db.series_set_upstream(ser.idnum, ups)
+
+        if not dry_run:
+            self.commit()
+        else:
+            self.rollback()
+
+        tout.notice(f"Set upstream for series '{ser.name}' to '{ups}'")
+        if dry_run:
+            tout.info('Dry run completed')
+
     def scan(self, branch_name, mark=False, allow_unmarked=False, end=None,
              dry_run=False):
         """Scan a branch and make updates to the database if it has changed
