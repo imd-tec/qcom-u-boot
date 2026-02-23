@@ -41,7 +41,7 @@ Pcommit = namedtuple(
     'idnum,seq,subject,svid,change_id,state,patch_id,num_comments')
 
 
-class Database:
+class Database:  # pylint:disable=R0904
     """Database of information used by patman"""
 
     # dict of databases:

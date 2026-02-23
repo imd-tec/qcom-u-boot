@@ -255,11 +255,16 @@ class CseriesHelper:
     def prep_series(self, name, end=None):
         """Prepare to work with a series
 
+        Parse the branch name to determine the series name and version
+        number, then count the commits from the upstream branch (or up to the
+        end commit if provided) and collect the series metadata from those
+        commits.
+
         Args:
             name (str): Branch name with version appended, e.g. 'fix2'
             end (str or None): Commit to end at, e.g. 'my_branch~16'. Only
-                commits up to that are processed. None to process commits up to
-                the upstream branch
+                commits up to that are processed. Use None to process commits up
+                to the upstream branch
 
         Return: tuple:
             str: Series name, e.g. 'fix'
