@@ -135,11 +135,15 @@ def do_series(args, test_db=None, pwork=None, cser=None):
         if args.subcmd in needs_patchwork:
             if not pwork:
                 pwork = Patchwork(args.patchwork_url)
-                proj = cser.project_get()
+                ups = cser.get_series_upstream(args.series)
+                proj = cser.project_get(ups)
+                if not proj:
+                    proj = cser.project_get()
                 if not proj:
                     raise ValueError(
-                        "Please set project ID with 'patman patchwork set-project'")
-                _, proj_id, link_name = cser.project_get()
+                        "Please set project ID with "
+                        "'patman patchwork set-project'")
+                _, proj_id, link_name = proj
                 pwork.project_set(proj_id, link_name)
         elif pwork and pwork is not True:
             raise ValueError(
@@ -270,13 +274,21 @@ def patchwork(args, test_db=None, pwork=None):
         if args.subcmd == 'set-project':
             if not pwork:
                 pwork = Patchwork(args.patchwork_url)
-            cser.project_set(pwork, args.project_name)
+            cser.project_set(pwork, args.project_name,
+                             ups=args.upstream_name)
         elif args.subcmd == 'get-project':
-            info = cser.project_get()
+            ups = args.upstream_name
+            info = cser.project_get(ups)
             if not info:
-                raise ValueError("Project has not been set; use 'patman patchwork set-project'")
+                raise ValueError(
+                    "Project has not been set; use "
+                    "'patman patchwork set-project'")
             name, pwid, link_name = info
-            print(f"Project '{name}' patchwork-ID {pwid} link-name '{link_name}'")
+            msg = (f"Project '{name}' patchwork-ID {pwid} "
+                   f"link-name '{link_name}'")
+            if ups:
+                msg += f" upstream '{ups}'"
+            print(msg)
         else:
             raise ValueError(f"Unknown patchwork subcommand '{args.subcmd}'")
     finally:

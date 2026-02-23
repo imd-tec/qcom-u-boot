@@ -159,10 +159,16 @@ def add_patchwork_subparser(subparsers):
         ['set-project', 'U-Boot'],
     ]
     patchwork_subparsers = patchwork.add_subparsers(dest='subcmd')
-    patchwork_subparsers.add_parser('get-project')
+    gproj = patchwork_subparsers.add_parser('get-project')
+    gproj.add_argument(
+        '-u', '--upstream-name',
+        help='Upstream to get the project for')
     uset = patchwork_subparsers.add_parser('set-project')
     uset.add_argument(
         'project_name', help="Patchwork project name, e.g. 'U-Boot'")
+    uset.add_argument(
+        '-u', '--upstream-name',
+        help='Upstream to associate this project with')
     return patchwork
 
 
