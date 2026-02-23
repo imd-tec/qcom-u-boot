@@ -1145,16 +1145,24 @@ class Cseries(cser_helper.CseriesHelper):
                 self.rollback()
                 tout.info('Dry run completed')
 
-    def upstream_add(self, name, url):
+    def upstream_add(self, name, url, project=None, pwork=None):
         """Add a new upstream tree
 
         Args:
             name (str): Name of the tree
             url (str): URL for the tree
+            project (str or None): Patchwork project name to associate
+            pwork (Patchwork or None): Patchwork object for looking up
+                the project
         """
         self.db.upstream_add(name, url)
+        if project:
+            self.project_set(pwork, project, ups=name, quiet=True)
         self.commit()
-        tout.notice(f"Added upstream '{name}' ({url})")
+        msg = f"Added upstream '{name}' ({url})"
+        if project:
+            msg += f" project '{project}'"
+        tout.notice(msg)
 
     def upstream_list(self):
         """List the upstream repos

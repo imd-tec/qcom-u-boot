@@ -239,7 +239,11 @@ def upstream(args, test_db=None):
     try:
         cser.open_database()
         if args.subcmd == 'add':
-            cser.upstream_add(args.remote_name, args.url)
+            pwork = None
+            if args.project_name:
+                pwork = Patchwork(args.patchwork_url)
+            cser.upstream_add(args.remote_name, args.url,
+                              args.project_name, pwork)
         elif args.subcmd == 'default':
             if args.unset:
                 cser.upstream_set_default(None)

@@ -406,7 +406,7 @@ def add_upstream_subparser(subparsers):
     upstream = subparsers.add_parser('upstream', aliases=ALIASES['upstream'],
                                      help='Manage upstream destinations')
     upstream.defaults_cmds = [
-        ['add', 'us', 'http://fred'],
+        ['add', 'us', 'http://fred', 'U-Boot'],
         ['delete', 'us'],
     ]
     upstream_subparsers = upstream.add_subparsers(dest='subcmd')
@@ -416,6 +416,9 @@ def add_upstream_subparser(subparsers):
     uadd.add_argument(
         'url', help='URL to use for this upstream, e.g. '
                     "'https://gitlab.denx.de/u-boot/u-boot.git'")
+    uadd.add_argument(
+        'project_name', nargs='?',
+        help="Patchwork project name, e.g. 'U-Boot'")
     udel = upstream_subparsers.add_parser('delete')
     udel.add_argument(
         'remote_name',
