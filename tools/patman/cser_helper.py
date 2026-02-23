@@ -426,6 +426,22 @@ class CseriesHelper:
 
         self.db.pcommit_add_list(svid, to_add)
 
+    def get_series_upstream(self, name):
+        """Get the upstream for a series
+
+        Args:
+            name (str): Name of series, or None to use current branch
+
+        Return:
+            str or None: Upstream name, or None if not found
+        """
+        if not name:
+            name = gitutil.get_branch()
+        ser = self.get_series_by_name(name)
+        if ser:
+            return ser.upstream
+        return None
+
     def get_series_by_name(self, name, include_archived=False):
         """Get a Series object from the database by name
 
