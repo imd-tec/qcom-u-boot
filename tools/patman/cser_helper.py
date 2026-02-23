@@ -110,10 +110,21 @@ class CseriesHelper:
         # For the first instance, start it up with the expected schema
         self.db, is_new = Database.get_instance(fname)
         if is_new:
-            self.db.start()
+            old_version = self.db.start()
+            if old_version is not None and old_version < 5:
+                self._check_null_upstreams()
         else:
             # If a previous test has already checked the schema, just open it
             self.db.open_it()
+
+    def _check_null_upstreams(self):
+        """Warn about series that have no upstream set"""
+        names = self.db.series_get_null_upstream()
+        if names:
+            tout.warning(
+                f'{len(names)} series without an upstream:')
+            for name in names:
+                tout.warning(f'  {name}')
 
     def close_database(self):
         """Close the database"""

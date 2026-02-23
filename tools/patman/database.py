@@ -84,7 +84,12 @@ class Database:  # pylint:disable=R0904
         return Database(db_path), True
 
     def start(self):
-        """Open the database read for use, migrate to latest schema"""
+        """Open the database ready for use, migrate to latest schema
+
+        Return:
+            int or None: Schema version before migration, or None if no
+                migration was needed
+        """
         self.open_it()
         old_version = self.get_schema_version()
         if old_version > LATEST:
@@ -93,6 +98,9 @@ class Database:  # pylint:disable=R0904
                 f'Database version {old_version} is too new (max'
                 f' {LATEST}); please update patman')
         self.migrate_to(LATEST)
+        if old_version == LATEST:
+            return None
+        return old_version
 
     def open_it(self):
         """Open the database, creating it if necessary"""
@@ -495,6 +503,16 @@ class Database:  # pylint:disable=R0904
         self.execute(
             'UPDATE series SET upstream = ? WHERE id = ?',
             (ups, series_idnum))
+
+    def series_get_null_upstream(self):
+        """Get a list of series names that have no upstream set
+
+        Return:
+            list of str: Series names with NULL upstream
+        """
+        res = self.execute(
+            'SELECT name FROM series WHERE upstream IS NULL')
+        return [row[0] for row in res.fetchall()]
 
     # ser_ver functions
 

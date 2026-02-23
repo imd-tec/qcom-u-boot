@@ -3365,6 +3365,58 @@ Date:   .*
                 db.start()
         self.assertIn('is too new', err.getvalue())
 
+    def test_migrate_upstream_warning(self):
+        """Test that migrating to v5 warns about series without upstream"""
+        db = database.Database(f'{self.tmpdir}/.patman2.db')
+        with terminal.capture():
+            db.open_it()
+
+        # Create a v4 database with some series
+        with terminal.capture() as (out, _):
+            db.migrate_to(4)
+        self.assertEqual(
+            'Update database to v1\nUpdate database to v2\n'
+            'Update database to v3\nUpdate database to v4',
+            out.getvalue().strip())
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('first', 'desc1', 0)")
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('second', 'desc2', 0)")
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('third', 'desc3', 0)")
+        db.commit()
+        db.close()
+
+        # Now open via CseriesHelper which triggers migration and check
+        self.make_git_tree()
+        cser = cseries.Cseries(self.tmpdir, terminal.COLOR_NEVER)
+        cser.topdir = self.tmpdir
+
+        # Point at our v4 database
+        database.Database.instances = {}
+        cser.db, _ = database.Database.get_instance(
+            f'{self.tmpdir}/.patman2.db')
+        with terminal.capture() as (_, err):
+            old_version = cser.db.start()
+        self.assertEqual(4, old_version)
+
+        # Set upstream on one series so only two are reported
+        idnum = cser.db.series_find_by_name('second')
+        cser.db.series_set_upstream(idnum, 'us')
+        cser.db.commit()
+
+        with terminal.capture() as (_, err):
+            cser._check_null_upstreams()
+        lines = err.getvalue().strip().splitlines()
+        self.assertEqual('2 series without an upstream:', lines[0])
+        self.assertEqual('  first', lines[1])
+        self.assertEqual('  third', lines[2])
+
+        cser.db.close()
+
     def test_series_scan(self):
         """Test scanning a series for updates"""
         cser, _ = self.setup_second()
