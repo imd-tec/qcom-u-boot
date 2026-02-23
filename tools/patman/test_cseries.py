@@ -3318,6 +3318,23 @@ Date:   .*
             self.assertEqual(version, db.get_schema_version())
         self.assertEqual(4, database.LATEST)
 
+    def test_migrate_future_version(self):
+        """Test that a database newer than patman is rejected"""
+        db = database.Database(f'{self.tmpdir}/.patman.db')
+        with terminal.capture():
+            db.start()
+
+        # Set the schema version beyond what patman supports
+        db.cur.execute(
+            f'UPDATE schema_version SET version = {database.LATEST + 1}')
+        db.commit()
+        db.close()
+
+        with self.assertRaises(SystemExit):
+            with terminal.capture() as (_, err):
+                db.start()
+        self.assertIn('is too new', err.getvalue())
+
     def test_series_scan(self):
         """Test scanning a series for updates"""
         cser, _ = self.setup_second()

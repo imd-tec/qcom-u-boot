@@ -86,6 +86,12 @@ class Database:  # pylint:disable=R0904
     def start(self):
         """Open the database read for use, migrate to latest schema"""
         self.open_it()
+        old_version = self.get_schema_version()
+        if old_version > LATEST:
+            self.close()
+            tout.fatal(
+                f'Database version {old_version} is too new (max'
+                f' {LATEST}); please update patman')
         self.migrate_to(LATEST)
 
     def open_it(self):
