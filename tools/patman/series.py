@@ -72,11 +72,12 @@ class Series(dict):
         return self[name]
 
     @staticmethod
-    def from_fields(idnum, name, desc):
+    def from_fields(idnum, name, desc, ups):
         ser = Series()
         ser.idnum = idnum
         ser.name = name
         ser.desc = desc
+        ser.upstream = ups
         return ser
 
     def AddTag(self, commit, line, name, value):

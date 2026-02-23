@@ -295,10 +295,11 @@ class Database:  # pylint:disable=R0904
             list of Series
         """
         res = self.execute(
-            'SELECT id, name, desc FROM series ' +
+            'SELECT id, name, desc, upstream FROM series ' +
             ('WHERE archived = 0' if not include_archived else ''))
-        return [Series.from_fields(idnum=idnum, name=name, desc=desc)
-                for idnum, name, desc in res.fetchall()]
+        return [Series.from_fields(idnum=idnum, name=name, desc=desc,
+                                   ups=ups)
+                for idnum, name, desc, ups in res.fetchall()]
 
     # series functions
 
@@ -349,12 +350,14 @@ class Database:  # pylint:disable=R0904
         Return: tuple:
             str: Series name
             str: Series description
+            str or None: Upstream name
 
         Raises:
             ValueError: Series is not found
         """
-        res = self.execute('SELECT name, desc FROM series WHERE id = ?',
-                           (idnum,))
+        res = self.execute(
+            'SELECT name, desc, upstream FROM series WHERE id = ?',
+            (idnum,))
         recs = res.fetchall()
         if len(recs) != 1:
             raise ValueError(f'No series found (id {idnum} len {len(recs)})')
@@ -417,7 +420,7 @@ class Database:  # pylint:disable=R0904
             'GROUP BY series_id')
         return res.fetchall()
 
-    def series_add(self, name, desc):
+    def series_add(self, name, desc, ups=None):
         """Add a new series record
 
         The new record is set to not archived
@@ -425,13 +428,14 @@ class Database:  # pylint:disable=R0904
         Args:
             name (str): Series name
             desc (str): Series description
+            ups (str or None): Name of the upstream for this series
 
         Return:
             int: ID num of the new series record
         """
         self.execute(
-            'INSERT INTO series (name, desc, archived) '
-            f"VALUES ('{name}', '{desc}', 0)")
+            'INSERT INTO series (name, desc, archived, upstream) '
+            'VALUES (?, ?, 0, ?)', (name, desc, ups))
         return self.lastrowid()
 
     def series_remove(self, idnum):
@@ -480,6 +484,17 @@ class Database:  # pylint:disable=R0904
         """
         self.execute(
             'UPDATE series SET name = ? WHERE id = ?', (name, series_idnum))
+
+    def series_set_upstream(self, series_idnum, ups):
+        """Update upstream for a series
+
+        Args:
+            series_idnum (int): ID num of the series
+            ups (str or None): Name of the upstream, or None to clear
+        """
+        self.execute(
+            'UPDATE series SET upstream = ? WHERE id = ?',
+            (ups, series_idnum))
 
     # ser_ver functions
 

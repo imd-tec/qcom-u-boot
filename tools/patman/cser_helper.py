@@ -246,6 +246,7 @@ class CseriesHelper:
         Return: tuple:
             str: Series name
             str: Series description
+            str or None: Upstream name
 
         Raises:
             ValueError: Series is not found
@@ -400,9 +401,9 @@ class CseriesHelper:
         idnum = self.db.series_find_by_name(name, include_archived)
         if not idnum:
             return None
-        name, desc = self.db.series_get_info(idnum)
+        name, desc, ups = self.db.series_get_info(idnum)
 
-        return Series.from_fields(idnum, name, desc)
+        return Series.from_fields(idnum, name, desc, ups)
 
     def _get_branch_name(self, name, version):
         """Get the branch name for a particular version
@@ -1441,7 +1442,7 @@ class CseriesHelper:
             int: Number of version which need a 'scan'
         """
         max_vers = self._series_max_version(ser.idnum)
-        name, desc = self._get_series_info(ser.idnum)
+        name, desc, ups = self._get_series_info(ser.idnum)
         coloured = self.col.build(self.col.BLACK, desc, bright=False,
                                   back=self.col.YELLOW)
         versions = self._get_version_list(ser.idnum)
@@ -1487,7 +1488,7 @@ class CseriesHelper:
                 all series
         """
         max_vers = self._series_max_version(ser.idnum)
-        name, desc = self._get_series_info(ser.idnum)
+        name, desc, ups = self._get_series_info(ser.idnum)
         stats, pwc = self._series_get_version_stats(ser.idnum, max_vers)
         states = {x.state for x in pwc.values()}
         state = 'accepted'

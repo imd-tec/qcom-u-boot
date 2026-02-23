@@ -1879,6 +1879,36 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('upstream', 'list')
         self.assertFalse(out.getvalue().strip())
 
+    def test_series_upstream(self):
+        """Test upstream field in the series table"""
+        cser = self.get_cser()
+
+        # Add a series without upstream
+        cser.db.series_add('first', 'my desc')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+
+        # Add a series with upstream
+        cser.db.series_add('second', 'desc2', ups='us')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+        self.assertEqual('us', slist['second'].upstream)
+
+        # Update upstream on existing series
+        idnum = cser.db.series_find_by_name('first')
+        cser.db.series_set_upstream(idnum, 'ci')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertEqual('ci', slist['first'].upstream)
+
+        # Clear upstream
+        cser.db.series_set_upstream(idnum, None)
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+
     def test_series_add_mark(self):
         """Test marking a cseries with Change-Id fields"""
         cser = self.get_cser()
