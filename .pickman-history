@@ -27992,3 +27992,69 @@ The branch `cherry-d192a0876af` is ready for pushing.
 
 ---
 
+## 2026-02-23: us/next
+
+Branch: cherry-2d72a0bc43b
+
+Commits:
+- 2d72a0bc43b configs: verdin-am62: enable RNG support for KASLR
+- ba57c79c6f7 configs: verdin-am62p: enable RNG support for KASLR
+- 3403e4469b8 Merge patch series "Enable RNG support for KASLR on Toradex arm64 TI SoMs"
+
+### Conversation log
+The repository state is clean (only untracked files). Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (regular commit, not a merge):
+
+First cherry-pick succeeded. Let me verify the delta and run build test:
+
+The delta is identical (1 file changed, 4 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta and run build test:
+
+Delta is identical (1 file changed, 4 insertions). Now build test:
+
+Build passed. Now let me cherry-pick the third commit which is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (as expected since we already cherry-picked the individual commits it merged). Let me commit it with --allow-empty as instructed:
+
+Now let me verify the delta and run build test:
+
+The cherry-picked merge commit is empty (as expected since the changes were already applied via the individual cherry-picks), while the original showed 2 files changed, 8 insertions. This is expected behavior for merge commits when the constituent commits have already been cherry-picked. Now run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+All 3 commits from `us/next` branch have been cherry-picked to branch `cherry-2d72a0bc43b`:
+
+| Original Hash | New Hash | Subject |
+|--------------|----------|---------|
+| 2d72a0bc43b | 0547b722fdb | configs: verdin-am62: enable RNG support for KASLR |
+| ba57c79c6f7 | 6cc8ab07423 | configs: verdin-am62p: enable RNG support for KASLR |
+| 3403e4469b8 | db5c942d126 | Merge patch series "Enable RNG support for KASLR on Toradex arm64 TI SoMs" |
+
+### Build Result
+✅ **OK** - All builds passed (sandbox board)
+
+### Fix-ups Made
+- None required
+
+### Delta Notes
+- Commits 1 & 2: Identical deltas (4 lines each)
+- Commit 3 (merge): Cherry-picked as empty commit (expected behavior - the individual commits were already applied via cherry-picks 1 & 2, so the merge commit preserves only the merge metadata/message)
+
+### Branch Status
+The branch `cherry-2d72a0bc43b` is ready for pushing:
+- Based on: `ci/master`
+- Ahead by: 3 commits
+
+---
+
