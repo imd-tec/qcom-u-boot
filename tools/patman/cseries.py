@@ -637,12 +637,13 @@ class Cseries(cser_helper.CseriesHelper):
                         'subjects which mismatch their patches and need to be '
                         'scanned')
 
-    def project_set(self, pwork, name, quiet=False):
-        """Set the name of the project
+    def project_set(self, pwork, name, ups=None, quiet=False):
+        """Set the name of the project for an upstream
 
         Args:
             pwork (Patchwork): Patchwork object to use
             name (str): Name of the project to use in patchwork
+            ups (str or None): Upstream name to associate with
             quiet (bool): True to skip writing the message
         """
         tout.detail(f"Patchwork URL '{pwork.url}': finding name '{name}'")
@@ -659,14 +660,20 @@ class Cseries(cser_helper.CseriesHelper):
                 tout.detail(f'Name match: ID {proj_id}')
         if not proj_id:
             raise ValueError(f"Unknown project name '{name}'")
-        self.db.patchwork_update(name, proj_id, link_name)
+        self.db.patchwork_update(name, proj_id, link_name, ups)
         self.commit()
         if not quiet:
-            tout.notice(f"Project '{name}' patchwork-ID {proj_id} "
-                        f"link-name '{link_name}'")
+            msg = f"Project '{name}' patchwork-ID {proj_id} "
+            msg += f"link-name '{link_name}'"
+            if ups:
+                msg += f" upstream '{ups}'"
+            tout.notice(msg)
 
-    def project_get(self):
-        """Get the details of the project
+    def project_get(self, ups=None):
+        """Get the details of the project for an upstream
+
+        Args:
+            ups (str or None): Upstream name to look up, or None for any
 
         Returns:
             tuple or None if there are no settings:
@@ -674,7 +681,7 @@ class Cseries(cser_helper.CseriesHelper):
                 proj_id (int): Patchworks project ID for this project
                 link_name (str): Patchwork's link-name for the project
         """
-        return self.db.patchwork_get()
+        return self.db.patchwork_get(ups)
 
     def remove(self, name, dry_run=False):
         """Remove a series from the database
