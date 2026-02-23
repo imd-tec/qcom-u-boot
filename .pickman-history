@@ -27809,3 +27809,83 @@ All 4 commits are present. Let me run the final build test:
 
 ---
 
+## 2026-02-23: us/next
+
+Branch: cherry-01feea9ab07
+
+Commits:
+- 01feea9ab07 include/ndisc.h: Audit include list
+- 643607b3f8e include/part.h: Audit include list
+- 7788df3e926 include/sata.h: Audit include list
+- a591af1123a include/spl_gpio.h: Audit include list
+- e3574b27140 include/vsc9953.h: Audit include list
+- 3833600dbaa Merge patch series "include/ndisc.h: Audit include list"
+
+### Conversation log
+The repository is clean (untracked files won't affect cherry-picking). Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run build test:
+
+Delta matches exactly (1 file, 2 deletions). Let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked successfully. Let me verify the delta and run build test:
+
+Delta matches (1 file, 1 deletion). Build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked successfully. Let me verify delta and run build test:
+
+Delta matches (1 file, 2 insertions, 1 deletion). Build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Fourth commit cherry-picked successfully. Let me verify delta and run build test:
+
+Delta matches (3 files, 3 insertions, 1 deletion). Build test:
+
+Build passed. Now let me cherry-pick the fifth commit:
+
+Fifth commit cherry-picked successfully. Let me verify delta and run build test:
+
+Delta matches (1 file, 2 deletions). Build test:
+
+Build passed. Now let me cherry-pick the sixth commit (the merge commit):
+
+The merge commit is empty (expected since the changes are already in the previous commits). Let me create the empty commit as instructed:
+
+Merge commit created. Let me verify the delta and run build test:
+
+The cherry-picked merge commit is empty (as expected since all changes were already in the individual commits), while the original merge commit shows the combined changes. This is correct behavior for a merge commit being cherry-picked after its constituent commits. Let me run the build test:
+
+Build passed. Now let me verify the git log shows all 6 commits:
+
+All 6 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**✅ All 6 commits cherry-picked successfully**
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 01feea9ab07 → 484706bdb79 | include/ndisc.h: Audit include list | ✅ OK |
+| 2 | 643607b3f8e → 49f8e518829 | include/part.h: Audit include list | ✅ OK |
+| 3 | 7788df3e926 → eaf8a1feab2 | include/sata.h: Audit include list | ✅ OK |
+| 4 | a591af1123a → 68147bb14e4 | include/spl_gpio.h: Audit include list | ✅ OK |
+| 5 | e3574b27140 → 2a6de5c3ac4 | include/vsc9953.h: Audit include list | ✅ OK |
+| 6 | 3833600dbaa → 55f70148b6d | Merge patch series "include/ndisc.h: Audit include list" | ✅ OK (empty commit) |
+
+**Build result:** ✅ OK - sandbox builds successfully
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None - all deltas matched exactly
+
+**Branch:** `cherry-01feea9ab07` is ready for pushing (6 commits ahead of ci/master)
+
+---
+
