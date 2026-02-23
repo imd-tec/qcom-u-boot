@@ -2518,11 +2518,13 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual('No patchwork projects configured',
                          out.getvalue().strip())
 
-        # Add projects for two upstreams
+        # Add two remotes for U-Boot and one for Linux
         cser.db.upstream_add('us', 'https://us.example.com')
         cser.db.upstream_add('ci', 'https://ci.example.com')
+        cser.db.upstream_add('linus', 'https://linus.example.com')
         cser.db.patchwork_update('U-Boot', 6, 'uboot', 'us')
-        cser.db.patchwork_update('Linux', 10, 'linux', 'ci')
+        cser.db.patchwork_update('U-Boot', 6, 'uboot', 'ci')
+        cser.db.patchwork_update('Linux', 10, 'linux', 'linus')
         cser.db.commit()
 
         with terminal.capture() as (out, _):
@@ -2530,8 +2532,9 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         lines = out.getvalue().splitlines()
         self.assertEqual(5, len(lines))
         self.assertIn('Linux', lines[2])
-        self.assertIn('ci', lines[2])
+        self.assertIn('linus', lines[2])
         self.assertIn('U-Boot', lines[3])
+        self.assertIn('ci', lines[3])
         self.assertIn('us', lines[3])
 
     def test_patchwork_upstream(self):

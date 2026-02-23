@@ -689,11 +689,20 @@ class Cseries(cser_helper.CseriesHelper):
         if not settings:
             print('No patchwork projects configured')
             return
-        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Remote")
+        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Remotes")
         border = f"{'-' * 20}  {'-' * 4}  {'-' * 15}  {'-' * 15}"
         print(border)
+
+        # Group remotes by project
+        projects = OrderedDict()
         for name, proj_id, link_name, ups in settings:
-            print(f'{name:20}  {proj_id:4}  {link_name:15}  {ups or ""}')
+            key = (name, proj_id, link_name)
+            projects.setdefault(key, [])
+            if ups:
+                projects[key].append(ups)
+        for (name, proj_id, link_name), remotes in projects.items():
+            rlist = ' '.join(sorted(remotes))
+            print(f'{name:20}  {proj_id:4}  {link_name:15}  {rlist}')
         print(border)
 
     def remove(self, name, dry_run=False):

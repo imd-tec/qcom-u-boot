@@ -896,7 +896,7 @@ class Database:  # pylint:disable=R0904
         """
         res = self.execute(
             'SELECT name, proj_id, link_name, upstream FROM patchwork '
-            'ORDER BY upstream')
+            'ORDER BY name, upstream')
         return res.fetchall()
 
     def patchwork_get(self, ups=None):
