@@ -136,6 +136,7 @@ Shell commands
    cmd/sleep
    cmd/sm
    cmd/smbios
+   cmd/sntp
    cmd/sound
    cmd/source
    cmd/tcpm
