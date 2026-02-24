@@ -1730,14 +1730,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_add('us', 'https://one')
         ulist = cser.get_upstream_dict()
         self.assertEqual(1, len(ulist))
-        self.assertEqual(('https://one', None), ulist['us'])
+        self.assertEqual(('https://one', None, None), ulist['us'])
 
         with terminal.capture():
             cser.upstream_add('ci', 'git@two')
         ulist = cser.get_upstream_dict()
         self.assertEqual(2, len(ulist))
-        self.assertEqual(('https://one', None), ulist['us'])
-        self.assertEqual(('git@two', None), ulist['ci'])
+        self.assertEqual(('https://one', None, None), ulist['us'])
+        self.assertEqual(('git@two', None, None), ulist['ci'])
 
         # Try to add a duplicate
         with self.assertRaises(ValueError) as exc:
@@ -1748,8 +1748,39 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_list()
         lines = out.getvalue().splitlines()
         self.assertEqual(2, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
-        self.assertEqual('ci                       git@two', lines[1])
+        self.assertEqual(
+            'us                                       https://one',
+            lines[0])
+        self.assertEqual(
+            'ci                                       git@two',
+            lines[1])
+
+    def test_upstream_add_patchwork_url(self):
+        """Test adding an upstream with a patchwork URL"""
+        cser = self.get_cser()
+
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one',
+                              patchwork_url='https://pw.example.com')
+        ulist = cser.get_upstream_dict()
+        self.assertEqual(1, len(ulist))
+        self.assertEqual(
+            ('https://one', None, 'https://pw.example.com'), ulist['us'])
+
+        # Check that the patchwork URL shows in the list
+        with terminal.capture() as (out, _):
+            cser.upstream_list()
+        lines = out.getvalue().splitlines()
+        self.assertEqual(1, len(lines))
+        self.assertIn('pw:https://pw.example.com', lines[0])
+
+        # Check database lookup
+        pw_url = cser.db.upstream_get_patchwork_url('us')
+        self.assertEqual('https://pw.example.com', pw_url)
+
+        # Non-existent upstream returns None
+        pw_url = cser.db.upstream_get_patchwork_url('nonexistent')
+        self.assertIsNone(pw_url)
 
     def test_upstream_add_cmdline(self):
         """Test adding an upsream with cmdline"""
@@ -1760,7 +1791,9 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('upstream', 'list')
         lines = out.getvalue().splitlines()
         self.assertEqual(1, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
+        self.assertEqual(
+            'us                                       https://one',
+            lines[0])
 
     def test_upstream_default(self):
         """Operation of the default upstream"""
@@ -1791,8 +1824,12 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_list()
         lines = out.getvalue().splitlines()
         self.assertEqual(2, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
-        self.assertEqual('ci              default  git@two', lines[1])
+        self.assertEqual(
+            'us                                       https://one',
+            lines[0])
+        self.assertEqual(
+            'ci         default                       git@two',
+            lines[1])
 
         cser.upstream_set_default(None)
         self.assertIsNone(cser.upstream_get_default())

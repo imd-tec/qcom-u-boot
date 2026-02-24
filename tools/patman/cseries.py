@@ -16,6 +16,7 @@ from u_boot_pylib import terminal
 from u_boot_pylib import tout
 
 from patman import patchstream
+from patman.patchwork import Patchwork
 from patman import cser_helper
 from patman.cser_helper import AUTOLINK, oid
 from patman import send
@@ -1145,7 +1146,8 @@ class Cseries(cser_helper.CseriesHelper):
                 self.rollback()
                 tout.info('Dry run completed')
 
-    def upstream_add(self, name, url, project=None, pwork=None):
+    def upstream_add(self, name, url, project=None, pwork=None,
+                     patchwork_url=None):
         """Add a new upstream tree
 
         Args:
@@ -1154,12 +1156,21 @@ class Cseries(cser_helper.CseriesHelper):
             project (str or None): Patchwork project name to associate
             pwork (Patchwork or None): Patchwork object for looking up
                 the project
+            patchwork_url (str or None): URL of the patchwork server for
+                this upstream
         """
-        self.db.upstream_add(name, url)
+        self.db.upstream_add(name, url, patchwork_url)
         if project:
+            if not pwork:
+                if not patchwork_url:
+                    raise ValueError(
+                        'Patchwork URL is required when setting a project')
+                pwork = Patchwork(patchwork_url)
             self.project_set(pwork, project, ups=name, quiet=True)
         self.commit()
         msg = f"Added upstream '{name}' ({url})"
+        if patchwork_url:
+            msg += f" patchwork '{patchwork_url}'"
         if project:
             msg += f" project '{project}'"
         tout.notice(msg)
@@ -1167,14 +1178,20 @@ class Cseries(cser_helper.CseriesHelper):
     def upstream_list(self):
         """List the upstream repos
 
-        Shows a list of the repos, obtained from the database
+        Shows a list of the repos, obtained from the database, along with
+        any associated patchwork project
         """
         udict = self.get_upstream_dict()
 
         for name, items in udict.items():
-            url, is_default = items
+            url, is_default, patchwork_url = items
             default = 'default' if is_default else ''
-            print(f'{name:15.15} {default:8} {url}')
+            proj = self.db.patchwork_get(name)
+            proj_name = proj[0] if proj else ''
+            line = f'{name:10.10} {default:8} {proj_name:20} {url}'
+            if patchwork_url:
+                line += f'  pw:{patchwork_url}'
+            print(line)
 
     def upstream_set_default(self, name):
         """Set the default upstream target

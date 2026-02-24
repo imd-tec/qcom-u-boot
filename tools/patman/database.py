@@ -791,19 +791,21 @@ class Database:  # pylint:disable=R0904
 
     # upstream functions
 
-    def upstream_add(self, name, url):
+    def upstream_add(self, name, url, patchwork_url=None):
         """Add a new upstream record
 
         Args:
             name (str): Name of the tree
             url (str): URL for the tree
+            patchwork_url (str or None): URL of the patchwork server
 
         Raises:
             ValueError if the name already exists in the database
         """
         try:
             self.execute(
-                'INSERT INTO upstream (name, url) VALUES (?, ?)', (name, url))
+                'INSERT INTO upstream (name, url, patchwork_url) '
+                'VALUES (?, ?, ?)', (name, url, patchwork_url))
         except sqlite3.IntegrityError as exc:
             if 'UNIQUE constraint failed: upstream.name' in str(exc):
                 raise ValueError(f"Upstream '{name}' already exists") from exc
@@ -853,18 +855,38 @@ class Database:  # pylint:disable=R0904
             self.rollback()
             raise ValueError(f"No such upstream '{name}'")
 
+    def upstream_get_patchwork_url(self, name):
+        """Get the patchwork URL for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            str or None: Patchwork URL, or None if not set
+        """
+        res = self.execute(
+            'SELECT patchwork_url FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
     def upstream_get_dict(self):
         """Get a list of upstream entries from the database
 
         Return:
             OrderedDict:
                 key (str): upstream name
-                value (str): url
+                value: tuple:
+                    str: url
+                    bool: is_default
+                    str or None: patchwork_url
         """
-        res = self.execute('SELECT name, url, is_default FROM upstream')
+        res = self.execute(
+            'SELECT name, url, is_default, patchwork_url FROM upstream')
         udict = OrderedDict()
-        for name, url, is_default in res.fetchall():
-            udict[name] = url, is_default
+        for name, url, is_default, patchwork_url in res.fetchall():
+            udict[name] = url, is_default, patchwork_url
         return udict
 
     # patchwork functions

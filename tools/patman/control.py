@@ -134,8 +134,18 @@ def do_series(args, test_db=None, pwork=None, cser=None):
         cser.open_database()
         if args.subcmd in needs_patchwork:
             if not pwork:
-                pwork = Patchwork(args.patchwork_url)
                 ups = cser.get_series_upstream(args.series)
+                pw_url = None
+                if ups:
+                    pw_url = cser.db.upstream_get_patchwork_url(ups)
+                if not pw_url:
+                    pw_url = args.patchwork_url
+                if not pw_url:
+                    raise ValueError(
+                        'No patchwork URL found for upstream '
+                        f"'{ups}'; use 'patman upstream add' with "
+                        '-p or pass --patchwork-url')
+                pwork = Patchwork(pw_url)
                 proj = cser.project_get(ups)
                 if not proj:
                     proj = cser.project_get()
@@ -239,11 +249,9 @@ def upstream(args, test_db=None):
     try:
         cser.open_database()
         if args.subcmd == 'add':
-            pwork = None
-            if args.project_name:
-                pwork = Patchwork(args.patchwork_url)
             cser.upstream_add(args.remote_name, args.url,
-                              args.project_name, pwork)
+                              args.project_name,
+                              patchwork_url=args.patchwork_url)
         elif args.subcmd == 'default':
             if args.unset:
                 cser.upstream_set_default(None)
@@ -279,7 +287,15 @@ def patchwork(args, test_db=None, pwork=None):
             if not args.remote:
                 raise ValueError('Please specify the remote name')
             if not pwork:
-                pwork = Patchwork(args.patchwork_url)
+                pw_url = cser.db.upstream_get_patchwork_url(args.remote)
+                if not pw_url:
+                    pw_url = args.patchwork_url
+                if not pw_url:
+                    raise ValueError(
+                        f"No patchwork URL for remote '{args.remote}'"
+                        "; use 'patman upstream add' with -p"
+                        ' or pass --patchwork-url')
+                pwork = Patchwork(pw_url)
             cser.project_set(pwork, args.project_name,
                              ups=args.remote)
         elif args.subcmd == 'get-project':
