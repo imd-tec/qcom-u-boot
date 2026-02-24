@@ -51,7 +51,7 @@ static void scsi_setup_cmd(const struct blk_desc *desc, struct scsi_cmd *pccb,
 
 static void scsi_setup_read16(const struct blk_desc *desc,
 			      struct scsi_cmd *pccb, lbaint_t start,
-			      ulong blocks)
+			      lbaint_t blocks)
 {
 	scsi_setup_cmd(desc, pccb, SCSI_READ16);
 	put_unaligned_be64(start, &pccb->cmd[2]);
@@ -86,7 +86,7 @@ static void scsi_setup_inquiry(const struct blk_desc *desc,
 }
 
 static void scsi_setup_sync_cache(struct scsi_cmd *pccb, lbaint_t start,
-				  unsigned short blocks)
+				  lbaint_t blocks)
 {
 	pccb->cmd[0] = SCSI_SYNC_CACHE;
 	pccb->cmd[1] = 0;
@@ -104,7 +104,7 @@ static void scsi_setup_sync_cache(struct scsi_cmd *pccb, lbaint_t start,
 
 static void scsi_setup_read_ext(const struct blk_desc *desc,
 				struct scsi_cmd *pccb, lbaint_t start,
-				unsigned short blocks)
+				lbaint_t blocks)
 {
 	scsi_setup_cmd(desc, pccb, SCSI_READ10);
 	pccb->cmd[2] = (unsigned char)(start >> 24) & 0xff;
@@ -125,7 +125,7 @@ static void scsi_setup_read_ext(const struct blk_desc *desc,
 
 static void scsi_setup_write_ext(const struct blk_desc *desc,
 				 struct scsi_cmd *pccb, lbaint_t start,
-				 unsigned short blocks)
+				 lbaint_t blocks)
 {
 	scsi_setup_cmd(desc, pccb, SCSI_WRITE10);
 	pccb->cmd[2] = (unsigned char)(start >> 24) & 0xff;
@@ -146,7 +146,7 @@ static void scsi_setup_write_ext(const struct blk_desc *desc,
 }
 
 static void scsi_setup_erase_ext(struct scsi_cmd *pccb, lbaint_t start,
-				 unsigned short blocks)
+				 lbaint_t blocks)
 {
 	u8 *param = tempbuff;
 	const u8 param_size = 24;
@@ -198,7 +198,7 @@ static ulong scsi_read(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 	struct udevice *bdev = dev->parent;
 	struct scsi_plat *uc_plat = dev_get_uclass_plat(bdev);
 	lbaint_t start, blks, max_blks;
-	unsigned short smallblks = 0;
+	lbaint_t blocks = 0;
 	uintptr_t buf_addr;
 
 	/* Setup device */
@@ -229,16 +229,16 @@ static ulong scsi_read(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		} else if (to_read > max_blks) {
 			to_read = max_blks;
 			pccb->datalen = desc->blksz * to_read;
-			smallblks = to_read;
-			scsi_setup_read_ext(desc, pccb, start, smallblks);
+			blocks = to_read;
+			scsi_setup_read_ext(desc, pccb, start, blocks);
 		} else {
 			pccb->datalen = desc->blksz * to_read;
-			smallblks = (unsigned short)to_read;
-			scsi_setup_read_ext(desc, pccb, start, smallblks);
+			blocks = to_read;
+			scsi_setup_read_ext(desc, pccb, start, blocks);
 		}
 		debug("scsi_read_ext: startblk " LBAF
-		      ", blccnt %x buffer %lX\n",
-		      start, smallblks, buf_addr);
+		      ", blccnt " LBAF " buffer %lX\n",
+		      start, blocks, buf_addr);
 		if (scsi_exec(bdev, pccb)) {
 			scsi_print_error(pccb);
 			break;
@@ -250,7 +250,7 @@ static ulong scsi_read(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		buf_addr += pccb->datalen;
 	} while (blks);
 	debug("scsi_read_ext: end startblk " LBAF
-	      ", blccnt %x buffer %lX\n", start, smallblks, buf_addr);
+	      ", blccnt " LBAF " buffer %lX\n", start, blocks, buf_addr);
 
 	/* Report an I/O error if nothing was read */
 	if (blks == blkcnt)
@@ -271,7 +271,7 @@ static ulong scsi_write(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 	struct udevice *bdev = dev->parent;
 	struct scsi_plat *uc_plat = dev_get_uclass_plat(bdev);
 	lbaint_t start, blks, max_blks;
-	unsigned short smallblks;
+	lbaint_t blocks;
 	uintptr_t buf_addr;
 
 	/* Setup device */
@@ -296,15 +296,15 @@ static ulong scsi_write(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 		if (to_write > max_blks) {
 			to_write = max_blks;
 			pccb->datalen = desc->blksz * to_write;
-			smallblks = to_write;
+			blocks = to_write;
 			scsi_setup_write_ext(desc, pccb, start, to_write);
 		} else {
 			pccb->datalen = desc->blksz * to_write;
-			smallblks = (unsigned short)to_write;
-			scsi_setup_write_ext(desc, pccb, start, smallblks);
+			blocks = to_write;
+			scsi_setup_write_ext(desc, pccb, start, blocks);
 		}
-		debug("%s: startblk " LBAF ", blccnt %x buffer %lx\n",
-		      __func__, start, smallblks, buf_addr);
+		debug("%s: startblk " LBAF ", blccnt " LBAF " buffer %lx\n",
+		      __func__, start, blocks, buf_addr);
 		if (scsi_exec(bdev, pccb)) {
 			scsi_print_error(pccb);
 			break;
@@ -321,8 +321,8 @@ static ulong scsi_write(struct udevice *dev, lbaint_t blknr, lbaint_t blkcnt,
 	if (scsi_exec(bdev, pccb))
 		scsi_print_error(pccb);
 
-	debug("%s: end startblk " LBAF ", blccnt %x buffer %lX\n",
-	      __func__, start, smallblks, buf_addr);
+	debug("%s: end startblk " LBAF ", blccnt " LBAF " buffer %lX\n",
+	      __func__, start, blocks, buf_addr);
 
 	/* Report an I/O error if nothing was written */
 	if (blks == blkcnt)
