@@ -237,7 +237,7 @@ def add_series_subparser(subparsers):
     add.add_argument('-D', '--desc',
                      help='Series description / cover-letter title')
     add.add_argument(
-        '-u', '--use-commit', action='store_true',
+        '-1', '--use-first-commit', action='store_true',
         help="Use the first commit's subject as series description if needed")
     add.add_argument(
         '-f', '--force-version', action='store_true',

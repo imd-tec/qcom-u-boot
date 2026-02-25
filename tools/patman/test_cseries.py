@@ -455,7 +455,7 @@ class TestCseries(unittest.TestCase, TestCommon):
             str(exc.exception))
 
         with terminal.capture() as (out, _):
-            self.run_args('series', '-s', 'first', 'add', '--use-commit',
+            self.run_args('series', '-s', 'first', 'add', '--use-first-commit',
                         '--allow-unmarked', pwork=True)
         lines = out.getvalue().splitlines()
         self.assertEqual(
@@ -799,7 +799,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.make_git_tree()
         args = Namespace(subcmd='add', desc='my-description', series='first',
                          mark=False, allow_unmarked=True, upstream=None,
-                         use_commit=False, dry_run=False)
+                         use_first_commit=False, dry_run=False)
         with terminal.capture() as (out, _):
             control.do_series(args, test_db=self.tmpdir, pwork=True)
 
@@ -847,7 +847,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
                          force=True)
         args = Namespace(subcmd='add', series=None, mark=False,
                          allow_unmarked=True, upstream=None, dry_run=False,
-                         desc=None, use_commit=False)
+                         desc=None, use_first_commit=False)
         with terminal.capture():
             control.do_series(args, test_db=self.tmpdir, pwork=True)
 
