@@ -19,7 +19,7 @@ from u_boot_pylib import tout
 from patman.series import Series
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 4
+LATEST = 5
 
 # Information about a series/version record
 SerVer = namedtuple(
@@ -156,6 +156,40 @@ class Database:  # pylint:disable=R0904
         """Add an archive tag for each ser_ver"""
         self.cur.execute('ALTER TABLE ser_ver ADD COLUMN archive_tag')
 
+    def _migrate_to_v5(self):
+        """Add upstream support to series, settings and upstream tables
+
+        - Add upstream column to series table
+        - Recreate settings table without UNIQUE constraint on name, adding
+          an upstream column (since the same project can have multiple
+          remotes)
+        - Add patchwork_url, identity, series_to, no_maintainers and
+          no_tags columns to upstream table
+        - Add desc column to ser_ver table
+        """
+        self.cur.execute('ALTER TABLE series ADD COLUMN upstream')
+
+        self.cur.execute(
+            'CREATE TABLE settings_new '
+            '(name, proj_id INT, link_name, upstream)')
+        self.cur.execute(
+            'INSERT INTO settings_new SELECT name, proj_id, link_name, NULL '
+            'FROM settings')
+        self.cur.execute('DROP TABLE settings')
+        self.cur.execute('ALTER TABLE settings_new RENAME TO settings')
+        default_ups = self.upstream_get_default()
+        if default_ups:
+            self.cur.execute(
+                'UPDATE settings SET upstream = ?', (default_ups,))
+
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN patchwork_url')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN identity')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN series_to')
+        self.cur.execute(
+            'ALTER TABLE upstream ADD COLUMN no_maintainers BIT')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN no_tags BIT')
+        self.cur.execute('ALTER TABLE ser_ver ADD COLUMN desc')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -182,6 +216,8 @@ class Database:  # pylint:disable=R0904
                 self._migrate_to_v3()
             elif version == 4:
                 self._migrate_to_v4()
+            elif version == 5:
+                self._migrate_to_v5()
 
             # Save the new version if we have a schema_version table
             if version > 1:

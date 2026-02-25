@@ -3316,7 +3316,7 @@ Date:   .*
             self.assertEqual(f'Update database to v{version}',
                              out.getvalue().strip())
             self.assertEqual(version, db.get_schema_version())
-        self.assertEqual(4, database.LATEST)
+        self.assertEqual(5, database.LATEST)
 
     def test_migrate_future_version(self):
         """Test that a database newer than patman is rejected"""
