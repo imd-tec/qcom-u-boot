@@ -932,6 +932,13 @@ class Cseries(cser_helper.CseriesHelper):
 
         self.db.pcommit_delete(svid)
         self._add_series_commits(ser, svid)
+
+        # Update series description if the cover letter has changed
+        branch_desc = ser.cover[0] if ser.cover else None  # pylint: disable=E1136
+        if branch_desc and branch_desc != ser.desc:
+            self.db.series_set_desc(ser.idnum, branch_desc)
+            tout.notice(f"Updated description to '{branch_desc}'")
+
         if not dry_run:
             self.commit()
             seq = len(ser.commits)
