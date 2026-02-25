@@ -29427,3 +29427,82 @@ The branch `cherry-b476530a841` is ready for pushing.
 
 ---
 
+
+---
+
+## 2026-02-24: us/next
+
+Branch: cherry-189d0b44770
+
+Commits:
+- 189d0b44770 drivers/net/airoha_eth: add missing terminator for compatible devices list
+- 5d49fa9e56b drivers/net/airoha_eth: fix packet transmission errors
+- 997786bbf47 drivers/net/airoha_eth: fix stalling in package receiving
+- 0e59a2ca9d2 drivers/net/airoha_eth: enable hw padding of short tx packets
+- 2af7f4a456a Merge patch series "drivers/net/airoha_eth: fixes"
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let's cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run a build test:
+
+Delta looks identical (1 file changed, 1 insertion). Now let me run the build test:
+
+Build passed. Now let's cherry-pick the second commit:
+
+Let me verify the delta and run a build test:
+
+Deltas are identical (1 file, 27 insertions, 6 deletions). Now build test:
+
+Build passed. Now the third commit:
+
+Deltas are identical. Now build test:
+
+Build passed. Now the fourth commit:
+
+Deltas are identical. Now build test:
+
+Build passed. Now the fifth and final commit - which is a merge commit (has "Merge" in the subject), so I need to use `-m 1 --allow-empty`:
+
+As expected, the merge commit is empty since all the content was already cherry-picked. Let me commit it as an empty commit to preserve the history:
+
+Let me verify the cherry-picked commit:
+
+The merge commit is empty as expected (since all its content was already cherry-picked via the individual commits). The original shows combined stats because it's a merge with changes from the merged branch.
+
+Now let me run the final build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 5 commits are present in the correct order.
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Build Result
+✅ **OK** - All builds passed with no warnings or errors
+
+### Commits Cherry-picked (5 of 5)
+
+| # | Original Hash | New Hash | Status | Delta Check |
+|---|--------------|----------|--------|-------------|
+| 1 | 189d0b44770 | cbfddda852a | ✅ Applied | Identical (1 file, +1) |
+| 2 | 5d49fa9e56b | 3024e418093 | ✅ Applied | Identical (1 file, +27/-6) |
+| 3 | 997786bbf47 | e02c1fb3a5a | ✅ Applied | Identical (1 file, +26/-9) |
+| 4 | 0e59a2ca9d2 | 5e50a8c7dfc | ✅ Applied | Identical (1 file, +11/-2) |
+| 5 | 2af7f4a456a | 1d6c92e7a1f | ✅ Applied (empty) | Merge commit, empty as expected |
+
+### Fix-ups Made
+None required - all cherry-picks applied cleanly.
+
+### Commits with Concerning Deltas
+None - all deltas matched perfectly.
+
+### Branch Status
+The branch `cherry-189d0b44770` is ready for pushing. It contains all 5 commits cherry-picked from `us/next` onto `ci/master`.
+
+---
+
