@@ -30596,3 +30596,151 @@ The branch `cherry-b052fba5993` was **already rebased** onto the latest `ci/mast
 
 ---
 
+## 2026-02-25: us/next
+
+Branch: cherry-f2f451d9d6d
+
+Commits:
+- f2f451d9d6d MAINTAINERS: Update email of Anatolij Gustschin
+- 7d413639771 configs: KASLR OPTEE RNG support for K3 devices
+- 50ef42c9485 board: toradex: Fix variant (wifi/non-wifi) selection
+- 01548afc437 arm: fix lmb region reservation when PRAM is defined
+- b9db211e390 lmb: Remove unreachable code
+- 187ac12927c binman: Fix typing for python >= 3.7
+- babae80169d include: env: ti_common: remove bootm_size
+- afca60620ad drivers: fastboot: Add support for SPI flash memory
+- 23d2c182d4b fastboot: Fix off by 1 error
+- b408cca7b76 km: qrio: fix set_gpio read/modify/write
+- 97e71c09bd7 km: drop KM_RESERVED_PRAM
+- 6175371f66b arm: ls1021a-pg-wcom: add i2c mux node and eeprom
+- cec0a39b58c km: pg-wcom-ls102xa: add netdev in board env file
+- f1b5cb6f50e km: pg-wcom-ls102xa: call qrio deblock cfg earlier
+- ef7bb0ee1f9 km: pg-wcom-ls1021xa: update MAINTAINERS
+- a7d1214d2c9 bootstd: rauc: Fix potential memory leak
+- 84cef694e73 bootstd: rauc: Fix segfault occurring during private struct access
+- f271b062700 bootstd: rauc: Only scan all partitions instead of boot files
+- a9aed78a6dc Merge patch series "bootstd: rauc: Small fixes"
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Let me check what refs match ci/master:
+
+There's both a local branch and a remote. Let me use the remote explicitly:
+
+Now let me cherry-pick the first commit:
+
+Cherry-pick successful. Let me verify the delta and run the build test:
+
+Delta looks identical (4 files, 3 insertions, 4 deletions). Now let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+There's a conflict. Let me check the conflict:
+
+I can see the conflict. The HEAD has `fs_legacy.h` and the incoming commit has `fb_spi_flash.h` and `fs.h`. We need both `fb_spi_flash.h` and `fs_legacy.h` (not `fs.h` since that was renamed in ci/master). Let me check what the original commit looks like:
+
+The original commit adds `fb_spi_flash.h` and expects `fs.h` which was renamed to `fs_legacy.h` in ci/master. I need to resolve by keeping `fs_legacy.h` and adding `fb_spi_flash.h`:
+
+I can see the conflict in lines 11-16. I need to resolve it by keeping `fb_spi_flash.h` (the new addition from the patch) and `fs_legacy.h` (the renamed header in ci/master). Let me resolve this:
+
+The conflict is resolved. Now let me add the file and continue the cherry-pick:
+
+The cherry-pick succeeded. I need to amend the commit to add a note about the conflict resolution. Let me first compare the deltas:
+
+Delta is identical (7 files, 326 insertions, 4 deletions). Now I need to amend the commit to add a note about the conflict resolution:
+
+Good, the commit is from the original author. Let me amend with a fix-up note:
+
+Now let's run the build test:
+
+Build passed. Continue with the ninth commit:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Delta identical. Build test:
+
+Now the last one is a merge commit. Let me cherry-pick it with -m 1 --allow-empty:
+
+The merge commit is empty since all the patches were already cherry-picked individually. Let me commit it as an empty commit to preserve the history:
+
+The merge commit was picked (empty since all changes were already included). Now let's run the final build test:
+
+Now let me verify the final state with git log:
+
+All 19 commits are present (plus we can see the base from ci/master). Now let me run the final build test:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+All builds passed successfully with no warnings or errors.
+
+### Cherry-pick Summary
+
+Successfully cherry-picked all **19 commits** from `us/next` branch to new branch `cherry-f2f451d9d6d`:
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | f2f451d9d6d | MAINTAINERS: Update email of Anatolij Gustschin | ✅ Clean |
+| 2 | 7d413639771 | configs: KASLR OPTEE RNG support for K3 devices | ✅ Clean |
+| 3 | 50ef42c9485 | board: toradex: Fix variant (wifi/non-wifi) selection | ✅ Clean |
+| 4 | 01548afc437 | arm: fix lmb region reservation when PRAM is defined | ✅ Clean |
+| 5 | b9db211e390 | lmb: Remove unreachable code | ✅ Clean |
+| 6 | 187ac12927c | binman: Fix typing for python >= 3.7 | ✅ Clean |
+| 7 | babae80169d | include: env: ti_common: remove bootm_size | ✅ Clean |
+| 8 | afca60620ad | drivers: fastboot: Add support for SPI flash memory | ⚠️ Fix-up |
+| 9 | 23d2c182d4b | fastboot: Fix off by 1 error | ✅ Clean |
+| 10 | b408cca7b76 | km: qrio: fix set_gpio read/modify/write | ✅ Clean |
+| 11 | 97e71c09bd7 | km: drop KM_RESERVED_PRAM | ✅ Clean |
+| 12 | 6175371f66b | arm: ls1021a-pg-wcom: add i2c mux node and eeprom | ✅ Clean |
+| 13 | cec0a39b58c | km: pg-wcom-ls102xa: add netdev in board env file | ✅ Clean |
+| 14 | f1b5cb6f50e | km: pg-wcom-ls102xa: call qrio deblock cfg earlier | ✅ Clean |
+| 15 | ef7bb0ee1f9 | km: pg-wcom-ls1021xa: update MAINTAINERS | ✅ Clean |
+| 16 | a7d1214d2c9 | bootstd: rauc: Fix potential memory leak | ✅ Clean |
+| 17 | 84cef694e73 | bootstd: rauc: Fix segfault occurring during private struct access | ✅ Clean |
+| 18 | f271b062700 | bootstd: rauc: Only scan all partitions instead of boot files | ✅ Clean |
+| 19 | a9aed78a6dc | Merge patch series "bootstd: rauc: Small fixes" | ✅ Empty (expected) |
+
+### Fix-ups Made
+
+**Commit 8 (afca60620ad)**: Conflict resolved in `drivers/fastboot/fb_getvar.c`
+- Conflict: `#include <fs.h>` (from original commit) vs `#include <fs_legacy.h>` (renamed in ci/master)
+- Resolution: Used both `#include <fb_spi_flash.h>` (new addition) and `#include <fs_legacy.h>` (ci/master renamed header)
+- Note added to commit message documenting the fix-up
+
+### Concerning Deltas
+None - all commit deltas matched exactly between original and cherry-picked versions.
+
+### Branch Status
+The branch `cherry-f2f451d9d6d` is now ready for pushing with 19 commits on top of `ci/master`.
+
+---
+
