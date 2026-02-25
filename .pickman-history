@@ -29712,3 +29712,144 @@ Rebased onto latest ci/master.
 
 ---
 
+## 2026-02-24: us/next
+
+Branch: cherry-cadc0abe65f
+
+Commits:
+- cadc0abe65f arm: imx: Update ELE get_info structure for i.MX94
+- cb06e1082a8 tools: imx8image: Add 2 new commands CMD_CNTR_VERSION and CMD_DUMMY_DDR
+- 42337445b55 spl: imx: Add support for new PQC container
+- 9936724aa9b imx95_evk: Add i.MX95 B0 support
+- 2a32b4f340d phycore-imx8mp: Enable standard boot
+- 795f6bd2941 brppt2: Use the correct MMC driver
+- 7e42f3671d7 arm: imx: Remove unused mxcmmc driver
+- d4a9ce26cb6 nxp: Move FSL_SEC_MON related options to arch/Kconfig.nxp
+- c71ea4b9a40 soc: imx8ulp: Add celsius unit for temperature
+- 94354e3a925 armv8: ls1043a: make some erratas dependent from USB
+- 393c3de7715 venice: lpddr4_timing_imx8mm: add DDRC_ADDRMAP7 config
+- c2bfdb24c80 venice: lpddr4_timing_imx8mm: add 4gb single die support
+- 2c692bff831 venice: lpddr4_timing_imx8mm: update ddr phy config for mscale_v3.10
+- 6dc91a84081 venice: display DRAM MR registers and decoding if debug enabled
+- 0f83825802d Merge tag 'u-boot-imx-master-20250717' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+Let me find the repository location:
+
+Good, I'm in the u-boot repository. Let me check the git status:
+
+The repository is clean. Now let me create a new branch based on ci/master:
+
+Let me check available refs for ci/master:
+
+I see there's both a local and remote ci/master. Let me use the remote one:
+
+Let me stash the changes first:
+
+Now let me set up the todo list and start cherry-picking the commits one by one. First, let me verify the commits exist in us/next:
+
+All 15 commits are confirmed. Let me start cherry-picking them one by one. Starting with the first commit:
+
+First commit succeeded. Let me verify the delta and run build test:
+
+Delta matches. Now build test:
+
+Build passed. Moving to next commit:
+
+Delta matches. Build test:
+
+Commit 3:
+
+Delta matches. Build test:
+
+Commit 4:
+
+Delta matches. Build test:
+
+Commit 5:
+
+Delta matches. Build test:
+
+Commit 6:
+
+Delta matches. Build test:
+
+Commit 7:
+
+Delta matches. Build test:
+
+Commit 8:
+
+Delta matches. Build test:
+
+Commit 9:
+
+Delta matches. Build test:
+
+Commit 10:
+
+Delta matches. Build test:
+
+Commit 11:
+
+Delta matches. Build test:
+
+Commit 12:
+
+Delta matches. Build test:
+
+Commit 13:
+
+Delta matches. Build test:
+
+Commit 14:
+
+Delta matches. Build test:
+
+Commit 15 (the merge commit):
+
+The merge commit is empty (since all its changes are already applied individually). Let me commit it with --allow-empty to preserve the merge commit message:
+
+Now let me verify the delta for the merge commit:
+
+The merge commit is empty as expected (since we cherry-picked all the individual commits first). Build test:
+
+Now let me verify the final commit log and run the final build test:
+
+All 15 commits are present. Now let me run the final build test:
+
+Let me also verify git status:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary:
+- **Branch:** `cherry-cadc0abe65f` (15 commits ahead of `ci/master`)
+- **Build result:** ✅ OK (sandbox builds successfully)
+- **Fix-ups:** None needed
+- **Commits with concerning deltas:** None - all commits applied cleanly
+
+### All 15 commits cherry-picked:
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 7c602b2c91e | arm: imx: Update ELE get_info structure for i.MX94 |
+| 2 | 4f4035c389d | tools: imx8image: Add 2 new commands CMD_CNTR_VERSION and CMD_DUMMY_DDR |
+| 3 | ccffcb0eb82 | spl: imx: Add support for new PQC container |
+| 4 | 857a995c722 | imx95_evk: Add i.MX95 B0 support |
+| 5 | 803b8a2f228 | phycore-imx8mp: Enable standard boot |
+| 6 | 5c651203581 | brppt2: Use the correct MMC driver |
+| 7 | 90266f35732 | arm: imx: Remove unused mxcmmc driver |
+| 8 | ebee53e412e | nxp: Move FSL_SEC_MON related options to arch/Kconfig.nxp |
+| 9 | 0a768fa9454 | soc: imx8ulp: Add celsius unit for temperature |
+| 10 | 8ba74786c64 | armv8: ls1043a: make some erratas dependent from USB |
+| 11 | 3d9e6340e74 | venice: lpddr4_timing_imx8mm: add DDRC_ADDRMAP7 config |
+| 12 | 822540cd5c4 | venice: lpddr4_timing_imx8mm: add 4gb single die support |
+| 13 | 42708bc898f | venice: lpddr4_timing_imx8mm: update ddr phy config for mscale_v3.10 |
+| 14 | cd7f892dda6 | venice: display DRAM MR registers and decoding if debug enabled |
+| 15 | ddff52d2146 | Merge tag 'u-boot-imx-master-20250717' (empty - changes already applied) |
+
+The branch `cherry-cadc0abe65f` is ready for pushing.
+
+---
+
