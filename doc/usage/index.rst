@@ -16,6 +16,7 @@ Use U-Boot
    tkey-fde
    netconsole
    partitions
+   pxe
    cmdline
    semihosting
    smbios
