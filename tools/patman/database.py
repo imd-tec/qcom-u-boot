@@ -214,7 +214,7 @@ class Database:  # pylint:disable=R0904
                              tools.read_file(self.db_path))
 
             version += 1
-            tout.info(f'Update database to v{version}')
+            tout.notice(f'Update database to v{version}')
             self.open_it()
             if version == 1:
                 self.create_v1()
