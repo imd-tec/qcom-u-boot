@@ -941,8 +941,6 @@ class Cseries(cser_helper.CseriesHelper):
                 identity, series_to, no_maintainers, no_tags = settings
                 if identity and not getattr(args, 'identity', None):
                     args.identity = identity
-                    print(f"Using sendemail identity '{identity}'"
-                          f" from upstream '{ups}'")
                 if series_to:
                     args.series_to = series_to
                 if no_maintainers:
@@ -1220,8 +1218,8 @@ class Cseries(cser_helper.CseriesHelper):
         """
         udict = self.get_upstream_dict()
 
-        print(f"{'Name':6} {'Def':3} {'Project':10} {'URL':40} Options")
-        border = (f"{'-' * 6} {'-' * 3} {'-' * 10} {'-' * 40} "
+        print(f"{'Name':6} {'Def':3} {'Project':10} {'URL':44} Options")
+        border = (f"{'-' * 6} {'-' * 3} {'-' * 10} {'-' * 44} "
                   f"{'-' * 20}")
         print(border)
         for name, items in udict.items():
@@ -1241,7 +1239,7 @@ class Cseries(cser_helper.CseriesHelper):
                 opts.append('no-maintainers')
             if no_tags:
                 opts.append('no-tags')
-            print(f'{name:6} {default:3} {proj_name:10} {url:40} '
+            print(f'{name:6} {default:3} {proj_name:10} {url:44} '
                   f'{" ".join(opts)}')
 
     def upstream_set(self, name, **kwargs):

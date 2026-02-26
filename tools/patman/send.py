@@ -190,8 +190,9 @@ def send(args, git_dir=None, cwd=None):
     if series_to:
         to_list = series.get('to', [])
         if to_list and series_to not in to_list:
-            print(f"WARNING: Series-to tag {to_list} does not include "
-                  f"expected '{series_to}' from upstream settings")
+            raise ValueError(
+                f"Series-to tag {to_list} does not match "
+                f"expected '{series_to}' from upstream settings")
         if not to_list:
             series['to'] = [series_to]
 
@@ -200,12 +201,16 @@ def send(args, git_dir=None, cwd=None):
 
     ok = ok and gitutil.check_suppress_cc_config()
 
+    identity = getattr(args, 'identity', None)
+    if identity:
+        print(f"Using sendemail identity '{identity}'")
+
     its_a_go = ok or args.ignore_errors
     cmd = email_patches(
         col, series, cover_fname, patch_files, args.process_tags,
         its_a_go, args.ignore_bad_tags, args.add_maintainers,
         args.get_maintainer_script, args.limit, args.dry_run,
         args.in_reply_to, args.thread, args.smtp_server,
-        identity=getattr(args, 'identity', None), cwd=cwd)
+        identity=identity, cwd=cwd)
 
     return cmd and its_a_go and not args.dry_run
