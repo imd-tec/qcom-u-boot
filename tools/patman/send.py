@@ -47,7 +47,8 @@ def check_patches(series, patch_files, run_checkpatch, verbose, use_tree, cwd):
 
 def email_patches(col, series, cover_fname, patch_files, process_tags, its_a_go,
                   ignore_bad_tags, add_maintainers, get_maintainer_script, limit,
-                  dry_run, in_reply_to, thread, smtp_server, cwd=None):
+                  dry_run, in_reply_to, thread, smtp_server, identity=None,
+                  cwd=None):
     """Email patches to the recipients
 
     This emails out the patches and cover letter using 'git send-email'. Each
@@ -86,6 +87,7 @@ def email_patches(col, series, cover_fname, patch_files, process_tags, its_a_go,
         thread (bool): True to add --thread to git send-email (make all patches
             reply to cover-letter or first patch in series)
         smtp_server (str): SMTP server to use to send patches (None for default)
+        identity (str or None): Git sendemail identity to use
         cwd (str): Path to use for patch files (None to use current dir)
 
     Return:
@@ -101,7 +103,8 @@ def email_patches(col, series, cover_fname, patch_files, process_tags, its_a_go,
         cmd = gitutil.email_patches(
             series, cover_fname, patch_files, dry_run, not ignore_bad_tags,
             cc_file, alias=settings.alias, in_reply_to=in_reply_to,
-            thread=thread, smtp_server=smtp_server, cwd=cwd)
+            thread=thread, smtp_server=smtp_server, identity=identity,
+            cwd=cwd)
     else:
         print(col.build(col.RED, "Not sending emails due to errors/warnings"))
 
@@ -182,6 +185,16 @@ def send(args, git_dir=None, cwd=None):
         col, args.branch, args.count, args.start, args.end,
         args.ignore_binary, args.add_signoff,
         keep_change_id=args.keep_change_id, git_dir=git_dir, cwd=cwd)
+
+    series_to = getattr(args, 'series_to', None)
+    if series_to:
+        to_list = series.get('to', [])
+        if to_list and series_to not in to_list:
+            print(f"WARNING: Series-to tag {to_list} does not include "
+                  f"expected '{series_to}' from upstream settings")
+        if not to_list:
+            series['to'] = [series_to]
+
     ok = check_patches(series, patch_files, args.check_patch,
                        args.verbose, args.check_patch_use_tree, cwd)
 
@@ -192,6 +205,7 @@ def send(args, git_dir=None, cwd=None):
         col, series, cover_fname, patch_files, args.process_tags,
         its_a_go, args.ignore_bad_tags, args.add_maintainers,
         args.get_maintainer_script, args.limit, args.dry_run,
-        args.in_reply_to, args.thread, args.smtp_server, cwd=cwd)
+        args.in_reply_to, args.thread, args.smtp_server,
+        identity=getattr(args, 'identity', None), cwd=cwd)
 
     return cmd and its_a_go and not args.dry_run
