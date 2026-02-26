@@ -411,6 +411,7 @@ def add_upstream_subparser(subparsers):
     upstream.defaults_cmds = [
         ['add', 'us', 'http://fred', '-p', 'http://pw', 'U-Boot'],
         ['delete', 'us'],
+        ['set', 'us'],
     ]
     upstream_subparsers = upstream.add_subparsers(dest='subcmd')
     uadd = upstream_subparsers.add_parser('add')
@@ -443,6 +444,30 @@ def add_upstream_subparser(subparsers):
         'remote_name',
         help="Git remote name used for this upstream, e.g. 'us'")
     upstream_subparsers.add_parser('ls', aliases=['list'])
+    uset = upstream_subparsers.add_parser('set')
+    uset.add_argument('remote_name',
+                      help="Git remote name used for this upstream, e.g. 'us'")
+    uset.add_argument(
+        '-p', '--patchwork-url',
+        help='URL of patchwork server for this upstream')
+    uset.add_argument(
+        '-I', '--identity',
+        help="Git sendemail identity to use, e.g. 'chromium'")
+    uset.add_argument(
+        '-t', '--series-to',
+        help="Patman alias for the To address, e.g. 'u-boot'")
+    uset.add_argument(
+        '-m', '--no-maintainers', action='store_true', default=None,
+        help='Skip get_maintainer.pl for this upstream')
+    uset.add_argument(
+        '--maintainers', action='store_true', default=None,
+        help='Enable get_maintainer.pl for this upstream')
+    uset.add_argument(
+        '--no-tags', action='store_true', default=None,
+        help='Skip subject-tag alias processing for this upstream')
+    uset.add_argument(
+        '--tags', action='store_true', default=None,
+        help='Enable subject-tag alias processing for this upstream')
     udef = upstream_subparsers.add_parser('default')
     udef.add_argument('-u', '--unset', action='store_true',
                       help='Unset the default upstream')

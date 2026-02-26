@@ -1237,6 +1237,20 @@ class Cseries(cser_helper.CseriesHelper):
                 line += '  no-tags'
             print(line)
 
+    def upstream_set(self, name, **kwargs):
+        """Update settings on an existing upstream
+
+        See Database.upstream_set() for permitted kwargs.
+
+        Args:
+            name (str): Name of the upstream remote to update
+            kwargs: Fields to update
+        """
+        self.db.upstream_set(name, **kwargs)
+        self.commit()
+        parts = [f'{k}={v!r}' for k, v in kwargs.items()]
+        tout.notice(f"Updated upstream '{name}': {', '.join(parts)}")
+
     def upstream_set_default(self, name):
         """Set the default upstream target
 

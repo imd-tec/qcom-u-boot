@@ -1813,6 +1813,56 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             'us                                       https://one',
             lines[0])
 
+    def test_upstream_set(self):
+        """Test updating settings on an existing upstream"""
+        cser = self.get_cser()
+
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one')
+
+        # Set identity and series_to
+        with terminal.capture():
+            cser.upstream_set('us', identity='chromium', series_to='concept')
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertEqual('chromium', settings[0])
+        self.assertEqual('concept', settings[1])
+
+        # Set boolean flags
+        with terminal.capture():
+            cser.upstream_set('us', no_maintainers=True, no_tags=True)
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertTrue(settings[2])
+        self.assertTrue(settings[3])
+
+        # Clear boolean flags
+        with terminal.capture():
+            cser.upstream_set('us', no_maintainers=False, no_tags=False)
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertFalse(settings[2])
+        self.assertFalse(settings[3])
+
+        # Non-existent upstream
+        with self.assertRaises(ValueError) as exc:
+            cser.upstream_set('nonexistent', identity='x')
+        self.assertIn('nonexistent', str(exc.exception))
+
+    def test_upstream_set_cmdline(self):
+        """Test upstream set via the command line"""
+        with terminal.capture():
+            self.run_args('upstream', 'add', 'us', 'https://one')
+
+        with terminal.capture():
+            self.run_args('upstream', 'set', 'us', '-I', 'chromium',
+                          '-t', 'concept', '-m', '--no-tags')
+
+        with terminal.capture() as (out, _):
+            self.run_args('upstream', 'list')
+        line = out.getvalue().strip()
+        self.assertIn('id:chromium', line)
+        self.assertIn('to:concept', line)
+        self.assertIn('no-maintainers', line)
+        self.assertIn('no-tags', line)
+
     def test_upstream_default(self):
         """Operation of the default upstream"""
         cser = self.get_cser()

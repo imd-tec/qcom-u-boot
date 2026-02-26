@@ -267,6 +267,25 @@ def upstream(args, test_db=None):
                 print(result if result else 'unset')
         elif args.subcmd == 'delete':
             cser.upstream_delete(args.remote_name)
+        elif args.subcmd == 'set':
+            kwargs = {}
+            if args.patchwork_url is not None:
+                kwargs['patchwork_url'] = args.patchwork_url
+            if args.identity is not None:
+                kwargs['identity'] = args.identity
+            if args.series_to is not None:
+                kwargs['series_to'] = args.series_to
+            if args.no_maintainers:
+                kwargs['no_maintainers'] = True
+            elif args.maintainers:
+                kwargs['no_maintainers'] = False
+            if args.no_tags:
+                kwargs['no_tags'] = True
+            elif args.tags:
+                kwargs['no_tags'] = False
+            if not kwargs:
+                raise ValueError('No settings to update')
+            cser.upstream_set(args.remote_name, **kwargs)
         elif args.subcmd == 'ls':
             cser.upstream_list()
         else:

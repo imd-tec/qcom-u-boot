@@ -863,6 +863,40 @@ class Database:  # pylint:disable=R0904
             self.rollback()
             raise ValueError(f"No such upstream '{name}'")
 
+    def upstream_set(self, name, **kwargs):
+        """Update fields on an existing upstream
+
+        Args:
+            name (str): Name of the upstream remote to update
+            kwargs: Fields to update, each being one of:
+                patchwork_url (str): URL of the patchwork server, e.g.
+                    'patchwork.ozlabs.org'
+                identity (str): Git sendemail identity to use when
+                    sending, corresponding to a [sendemail "<identity>"]
+                    section in .gitconfig
+                series_to (str): Mailing-list address to use as the
+                    default To: for this upstream
+                no_maintainers (bool): True to skip
+                    get_maintainer.pl when sending
+                no_tags (bool): True to skip processing of subject
+                    tags (e.g. 'dm:') when sending
+
+        Raises:
+            ValueError: Upstream does not exist or invalid field
+        """
+        valid = {'patchwork_url', 'identity', 'series_to',
+                 'no_maintainers', 'no_tags'}
+        invalid = set(kwargs) - valid
+        if invalid:
+            raise ValueError(f"Invalid upstream field(s): {invalid}")
+        for field, value in kwargs.items():
+            self.execute(
+                f'UPDATE upstream SET {field} = ? WHERE name = ?',
+                (value, name))
+            if self.rowcount() != 1:
+                self.rollback()
+                raise ValueError(f"No such upstream '{name}'")
+
     def upstream_get_patchwork_url(self, name):
         """Get the patchwork URL for an upstream
 
