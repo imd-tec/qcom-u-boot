@@ -936,6 +936,173 @@ Here is a sample 'progress' view:
   :width: 800
   :alt: Patman showing the progress view
 
+Multiple upstreams
+~~~~~~~~~~~~~~~~~~
+
+If you send patches to more than one upstream tree (e.g. U-Boot mainline and
+the U-Boot concept tree), you can configure patman with multiple upstreams so
+that each series automatically uses the correct send settings for its
+destination. The trees may use different mailing lists, patchwork servers and
+SMTP credentials.
+
+The key concepts are:
+
+**Upstream**
+    A remote git repository that you send patches to. Each upstream has a name
+    (e.g. ``us``, ``ci``) and a URL. Upstreams can also carry send settings:
+    a patchwork URL, a sendemail identity, a To address and flags controlling
+    ``get_maintainer.pl`` and subject-tag processing. Use ``patman upstream``
+    commands to manage these.
+
+**Patchwork project**
+    The patchwork server tracks patches for a project (e.g. ``U-Boot``).
+    Each upstream can point to a different patchwork server, and patman needs
+    to know the project name on that server so it can look up series links.
+    Use ``patman patchwork set-project`` to configure this per upstream.
+
+**Sendemail identity**
+    Git supports multiple SMTP configurations via ``[sendemail "<name>"]``
+    sections in ``.gitconfig``. An upstream can reference one of these
+    identities so that patman passes ``--identity`` to ``git send-email``
+    automatically.
+
+**Series upstream**
+    Each series can be associated with an upstream. When you send the series,
+    patman looks up the upstream's settings and applies them. This means the
+    correct identity, To address and patchwork server are used without any
+    extra flags on the command line.
+
+Here is a step-by-step guide for a developer who sends to both U-Boot
+mainline and the U-Boot concept tree.
+
+Step 1: Add your upstreams
+..........................
+
+First, add each upstream with its git remote URL, patchwork URL and send
+settings::
+
+    patman upstream add us https://source.denx.de/u-boot/u-boot.git \
+        -p https://patchwork.ozlabs.org -t u-boot
+
+    patman upstream add ci https://concept.u-boot.org/u-boot/u-boot.git \
+        -p https://patchwork.u-boot.org -t concept -I concept -m --no-tags
+
+The options are:
+
+``-p`` / ``--patchwork-url``
+    URL of the patchwork server for this upstream
+
+``-t`` / ``--series-to``
+    Patman alias for the To address (from your ``~/.patman`` alias file)
+
+``-I`` / ``--identity``
+    Git sendemail identity (selects ``[sendemail "<identity>"]`` from
+    ``.gitconfig``)
+
+``-m`` / ``--no-maintainers``
+    Skip running ``get_maintainer.pl``
+
+``--no-tags``
+    Skip subject-tag alias processing
+
+You can check your upstreams with::
+
+    patman upstream ls
+
+You can also set a default upstream::
+
+    patman upstream default us
+
+Step 2: Configure git sendemail identities
+..........................................
+
+If your upstreams use different SMTP servers or credentials, set up git
+sendemail identities in your ``.gitconfig``. Each identity is a
+``[sendemail "<name>"]`` section that overrides the base ``[sendemail]``
+settings.
+
+For example, to use one SMTP server by default and a different one for the
+concept tree (server names and credentials are just examples; substitute your
+own)::
+
+    [sendemail]
+        smtpserver = smtp.denx.de
+        smtpserverport = 587
+        smtpencryption = tls
+
+    [sendemail "concept"]
+        smtpserver = smtp.gmail.com
+        smtpserverport = 587
+        smtpencryption = tls
+        smtpuser = user@gmail.com
+
+The base ``[sendemail]`` settings are used when no identity is specified. When
+you add ``-I concept`` to an upstream, patman passes ``--identity=concept`` to
+``git send-email``, which selects the matching section.
+
+Step 3: Set up patchwork projects
+.................................
+
+Each upstream needs a patchwork project so that patman can find your series on
+the server::
+
+    patman patchwork set-project U-Boot us
+    patman patchwork set-project U-Boot ci
+
+This looks up the project on the patchwork server associated with the upstream
+and stores the project ID locally.
+
+Step 4: Set up aliases
+......................
+
+Add To-address aliases to your ``~/.patman`` file::
+
+    [alias]
+    u-boot: U-Boot Mailing List <u-boot@lists.denx.de>
+    concept: U-Boot Concept <concept@u-boot.org>
+
+These are the names referenced by ``--series-to`` above.
+
+Step 5: Add series with an upstream
+....................................
+
+When adding a series, specify which upstream it targets::
+
+    patman series add -S us
+
+If you omit ``-S``, you can set it later with::
+
+    patman series set-upstream <series> <upstream>
+
+Step 6: Send
+............
+
+When you send a series, patman automatically applies the upstream's settings::
+
+    patman series send
+
+This looks up the upstream for the series and:
+
+- passes ``--identity`` to ``git send-email`` if configured
+- sets the To address from ``--series-to`` if no ``Series-to:`` tag is present
+- skips ``get_maintainer.pl`` if ``--no-maintainers`` is set
+- skips tag processing if ``--no-tags`` is set
+
+If the series has a ``Series-to:`` tag that does not match the upstream's
+expected To address, patman raises an error. This prevents accidentally sending
+to the wrong mailing list.
+
+Updating upstream settings
+..........................
+
+To change settings on an existing upstream, use ``upstream set``::
+
+    patman upstream set ci -I chromium
+    patman upstream set us -p https://patchwork.ozlabs.org
+
+The same flags as ``upstream add`` are available, plus ``--maintainers`` and
+``--tags`` to re-enable options that were previously disabled.
+
 General points
 --------------
 
