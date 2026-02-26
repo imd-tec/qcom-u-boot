@@ -30744,6 +30744,7 @@ The branch `cherry-f2f451d9d6d` is now ready for pushing with 19 commits on top 
 
 ---
 
+
 ### Review: 2026-02-25
 
 Branch: cherry-4d104f0f5e1
@@ -31040,6 +31041,70 @@ The branch has been pushed and the MR is updated. Let me verify the final state:
 ---
 
 Rebased onto latest ci/master (`0d02e154c4d`). All 16 commits successfully rebased with deltas intact. Resolved conflict in `.pickman-history` (expected for this log file). Sandbox build passes.
+
+## 2026-02-25: us/next
+
+Branch: cherry-f7b03695d46
+
+Commits:
+- f7b03695d46 arm: k3-am65-iot2050: Fix invalid default configuration reference
+- edb4bf38688 tools: fit_image: validate existence of default configuration node
+- 93d09d3bd8e test: fit: add test case for invalid default configuration reference
+- d0b9b9a80f4 Merge patch series "mkimage: validate default configuration reference"
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Let me check for the correct remote/branch name:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Now let me check the delta and run the build test:
+
+Delta looks identical (1 file, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked successfully. Let me check the delta:
+
+Delta looks identical (1 file, 10 insertions). Now build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked successfully. Let me check the delta:
+
+Delta looks identical (1 file, 45 insertions). Now build test:
+
+Build passed. Now let me cherry-pick the fourth commit (the merge commit):
+
+The merge commit is empty as expected (since we already cherry-picked the individual commits). Let me commit it as an empty commit to preserve history:
+
+Merge commit preserved. Let me check the delta and run the build test:
+
+The merge commit is empty in our cherry-pick (which is expected since individual commits were already applied), while the original shows the cumulative changes. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 4 commits are present. Let me run the final build test:
+
+## Final Status
+
+**All 4 commits successfully cherry-picked!**
+
+| Commit | Subject | Status | Delta |
+|--------|---------|--------|-------|
+| f7b03695d46 → 38e99935e23 | arm: k3-am65-iot2050: Fix invalid default configuration reference | ✅ OK | Identical (1 file, +2/-2) |
+| edb4bf38688 → 5194731e167 | tools: fit_image: validate existence of default configuration node | ✅ OK | Identical (1 file, +10) |
+| 93d09d3bd8e → 7461d66f71c | test: fit: add test case for invalid default configuration reference | ✅ OK | Identical (1 file, +45) |
+| d0b9b9a80f4 → ffec34546f5 | Merge patch series "mkimage: validate default configuration reference" | ✅ OK (empty commit) | Expected empty merge |
+
+**Build result:** ✅ OK - All builds passed with no warnings or errors
+
+**Fix-ups made:** None
+
+**Commits with concerning deltas:** None
+
+**Branch status:** `cherry-f7b03695d46` is ready for pushing (4 commits ahead of `ci/master`)
 
 ---
 
