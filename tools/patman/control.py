@@ -263,7 +263,7 @@ def upstream(args, test_db=None):
                 print(result if result else 'unset')
         elif args.subcmd == 'delete':
             cser.upstream_delete(args.remote_name)
-        elif args.subcmd == 'list':
+        elif args.subcmd == 'ls':
             cser.upstream_list()
         else:
             raise ValueError(f"Unknown upstream subcommand '{args.subcmd}'")
@@ -314,7 +314,7 @@ def patchwork(args, test_db=None, pwork=None):
             if ups:
                 msg += f" remote '{ups}'"
             print(msg)
-        elif args.subcmd == 'list':
+        elif args.subcmd == 'ls':
             cser.project_list()
         else:
             raise ValueError(f"Unknown patchwork subcommand '{args.subcmd}'")

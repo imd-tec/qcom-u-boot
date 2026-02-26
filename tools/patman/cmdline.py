@@ -27,10 +27,11 @@ ALIASES = {
     'patchwork': ['pw'],
     'upstream': ['us'],
 
-    # Series aliases
+    # Subcommand aliases
     'archive': ['ar'],
     'autolink': ['au'],
     'gather': ['g'],
+    'ls': ['list'],
     'open': ['o'],
     'progress': ['p', 'pr', 'prog'],
     'rm-version': ['rmv'],
@@ -169,7 +170,7 @@ def add_patchwork_subparser(subparsers):
     uset.add_argument(
         'remote', nargs='?',
         help='Remote to associate with this project')
-    patchwork_subparsers.add_parser('list')
+    patchwork_subparsers.add_parser('ls', aliases=['list'])
     return patchwork
 
 
@@ -279,7 +280,7 @@ def add_series_subparser(subparsers):
 
     series_subparsers.add_parser('get-link')
     series_subparsers.add_parser('inc')
-    ls = series_subparsers.add_parser('ls')
+    ls = series_subparsers.add_parser('ls', aliases=['list'])
     _add_archived(ls)
 
     mar = series_subparsers.add_parser('mark')
@@ -429,7 +430,7 @@ def add_upstream_subparser(subparsers):
     udel.add_argument(
         'remote_name',
         help="Git remote name used for this upstream, e.g. 'us'")
-    upstream_subparsers.add_parser('list')
+    upstream_subparsers.add_parser('ls', aliases=['list'])
     udef = upstream_subparsers.add_parser('default')
     udef.add_argument('-u', '--unset', action='store_true',
                       help='Unset the default upstream')
