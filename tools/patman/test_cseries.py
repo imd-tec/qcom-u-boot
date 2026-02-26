@@ -1747,14 +1747,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_add('us', 'https://one')
         ulist = cser.get_upstream_dict()
         self.assertEqual(1, len(ulist))
-        self.assertEqual(('https://one', None, None), ulist['us'])
+        self.assertEqual(('https://one', None, None, None, None, 0, 0), ulist['us'])
 
         with terminal.capture():
             cser.upstream_add('ci', 'git@two')
         ulist = cser.get_upstream_dict()
         self.assertEqual(2, len(ulist))
-        self.assertEqual(('https://one', None, None), ulist['us'])
-        self.assertEqual(('git@two', None, None), ulist['ci'])
+        self.assertEqual(('https://one', None, None, None, None, 0, 0), ulist['us'])
+        self.assertEqual(('git@two', None, None, None, None, 0, 0), ulist['ci'])
 
         # Try to add a duplicate
         with self.assertRaises(ValueError) as exc:
@@ -1782,7 +1782,8 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         ulist = cser.get_upstream_dict()
         self.assertEqual(1, len(ulist))
         self.assertEqual(
-            ('https://one', None, 'https://pw.example.com'), ulist['us'])
+            ('https://one', None, 'https://pw.example.com', None, None, 0, 0),
+            ulist['us'])
 
         # Check that the patchwork URL shows in the list
         with terminal.capture() as (out, _):

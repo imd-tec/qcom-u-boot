@@ -791,21 +791,29 @@ class Database:  # pylint:disable=R0904
 
     # upstream functions
 
-    def upstream_add(self, name, url, patchwork_url=None):
+    def upstream_add(self, name, url, patchwork_url=None, identity=None,
+                     series_to=None, no_maintainers=False, no_tags=False):
         """Add a new upstream record
 
         Args:
             name (str): Name of the tree
             url (str): URL for the tree
             patchwork_url (str or None): URL of the patchwork server
+            identity (str or None): Git sendemail identity to use
+            series_to (str or None): Patman alias for the To address
+            no_maintainers (bool): True to skip get_maintainer.pl
+            no_tags (bool): True to skip subject-tag alias processing
 
         Raises:
             ValueError if the name already exists in the database
         """
         try:
             self.execute(
-                'INSERT INTO upstream (name, url, patchwork_url) '
-                'VALUES (?, ?, ?)', (name, url, patchwork_url))
+                'INSERT INTO upstream (name, url, patchwork_url, identity,'
+                ' series_to, no_maintainers, no_tags) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (name, url, patchwork_url, identity, series_to,
+                 no_maintainers, no_tags))
         except sqlite3.IntegrityError as exc:
             if 'UNIQUE constraint failed: upstream.name' in str(exc):
                 raise ValueError(f"Upstream '{name}' already exists") from exc
@@ -871,6 +879,43 @@ class Database:  # pylint:disable=R0904
             return rec[0]
         return None
 
+    def upstream_get_identity(self, name):
+        """Get the sendemail identity for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            str or None: Identity name, or None if not set
+        """
+        res = self.execute(
+            'SELECT identity FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
+    def upstream_get_send_settings(self, name):
+        """Get the send settings for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            tuple or None:
+                str or None: identity
+                str or None: series_to
+                bool: no_maintainers
+                bool: no_tags
+        """
+        res = self.execute(
+            'SELECT identity, series_to, no_maintainers, no_tags '
+            'FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec
+        return None
+
     def upstream_get_dict(self):
         """Get a list of upstream entries from the database
 
@@ -881,12 +926,17 @@ class Database:  # pylint:disable=R0904
                     str: url
                     bool: is_default
                     str or None: patchwork_url
+                    str or None: identity
+                    str or None: series_to
+                    bool: no_maintainers
+                    bool: no_tags
         """
         res = self.execute(
-            'SELECT name, url, is_default, patchwork_url FROM upstream')
+            'SELECT name, url, is_default, patchwork_url, identity,'
+            ' series_to, no_maintainers, no_tags FROM upstream')
         udict = OrderedDict()
-        for name, url, is_default, patchwork_url in res.fetchall():
-            udict[name] = url, is_default, patchwork_url
+        for rec in res.fetchall():
+            udict[rec[0]] = rec[1:]
         return udict
 
     # patchwork functions

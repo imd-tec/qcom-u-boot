@@ -932,6 +932,15 @@ class Cseries(cser_helper.CseriesHelper):
         if not ser.idnum:
             raise ValueError(f"Series '{ser.name}' not found in database")
 
+        if not getattr(args, 'identity', None):
+            ups = self.get_series_upstream(name)
+            if ups:
+                identity = self.db.upstream_get_identity(ups)
+                if identity:
+                    args.identity = identity
+                    print(f"Using sendemail identity '{identity}'"
+                          f" from upstream '{ups}'")
+
         args.branch = self._get_branch_name(ser.name, version)
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
 
@@ -1150,7 +1159,7 @@ class Cseries(cser_helper.CseriesHelper):
                 tout.info('Dry run completed')
 
     def upstream_add(self, name, url, project=None, pwork=None,
-                     patchwork_url=None):
+                     patchwork_url=None, identity=None):
         """Add a new upstream tree
 
         Args:
@@ -1161,8 +1170,9 @@ class Cseries(cser_helper.CseriesHelper):
                 the project
             patchwork_url (str or None): URL of the patchwork server for
                 this upstream
+            identity (str or None): Git sendemail identity to use
         """
-        self.db.upstream_add(name, url, patchwork_url)
+        self.db.upstream_add(name, url, patchwork_url, identity=identity)
         if project:
             if not pwork:
                 if not patchwork_url:
@@ -1174,6 +1184,8 @@ class Cseries(cser_helper.CseriesHelper):
         msg = f"Added upstream '{name}' ({url})"
         if patchwork_url:
             msg += f" patchwork '{patchwork_url}'"
+        if identity:
+            msg += f" identity '{identity}'"
         if project:
             msg += f" project '{project}'"
         tout.notice(msg)
@@ -1187,13 +1199,22 @@ class Cseries(cser_helper.CseriesHelper):
         udict = self.get_upstream_dict()
 
         for name, items in udict.items():
-            url, is_default, patchwork_url = items
+            (url, is_default, patchwork_url, identity, series_to,
+             no_maintainers, no_tags) = items
             default = 'default' if is_default else ''
             proj = self.db.patchwork_get(name)
             proj_name = proj[0] if proj else ''
             line = f'{name:10.10} {default:8} {proj_name:20} {url}'
             if patchwork_url:
                 line += f'  pw:{patchwork_url}'
+            if identity:
+                line += f'  id:{identity}'
+            if series_to:
+                line += f'  to:{series_to}'
+            if no_maintainers:
+                line += '  no-maintainers'
+            if no_tags:
+                line += '  no-tags'
             print(line)
 
     def upstream_set_default(self, name):
