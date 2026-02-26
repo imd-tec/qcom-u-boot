@@ -242,6 +242,8 @@ def add_series_subparser(subparsers):
     add.add_argument(
         '-f', '--force-version', action='store_true',
         help='Change the Series-version on a series to match its branch')
+    add.add_argument('-S', '--set-upstream',
+                     help='Set the upstream for this series')
     _add_mark(add)
     _add_allow_unmarked(add)
     _upstream_add(add)

@@ -161,7 +161,8 @@ def do_series(args, test_db=None, pwork=None, cser=None):
         if args.subcmd == 'add':
             cser.add(args.series, args.desc, mark=args.mark,
                      allow_unmarked=args.allow_unmarked, end=args.upstream,
-                     use_commit=args.use_first_commit, dry_run=args.dry_run)
+                     use_commit=args.use_first_commit,
+                     ups=args.set_upstream, dry_run=args.dry_run)
         elif args.subcmd == 'archive':
             cser.archive(args.series)
         elif args.subcmd == 'autolink':

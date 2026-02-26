@@ -39,7 +39,8 @@ class Cseries(cser_helper.CseriesHelper):
         super().__init__(topdir, colour)
 
     def add(self, branch_name, desc=None, mark=False, allow_unmarked=False,
-            end=None, use_commit=False, force_version=False, dry_run=False):
+            end=None, use_commit=False, force_version=False, ups=None,
+            dry_run=False):
         """Add a series (or new version of a series) to the database
 
         Args:
@@ -47,13 +48,13 @@ class Cseries(cser_helper.CseriesHelper):
             desc (str): Description to use, or None to use the series subject
             mark (str): True to mark each commit with a change ID
             allow_unmarked (str): True to not require each commit to be marked
-            end (str): Add only commits up to but exclu
-            use_commit (bool)): True to use the first commit's subject as the
+            end (str): Add only commits up to but excluding this commit
+            use_commit (bool): True to use the first commit's subject as the
                 series description, if none is available in the series or
-                provided in 'desc')
-
+                provided in 'desc'
             force_version (bool): True if ignore a Series-version tag that
                 doesn't match its branch name
+            ups (str or None): Name of the upstream for this series
             dry_run (bool): True to do a dry run
         """
         name, ser, version, msg = self.prep_series(branch_name, end)
@@ -70,7 +71,7 @@ class Cseries(cser_helper.CseriesHelper):
                     raise ValueError(f"Branch '{name}' has no cover letter - "
                                     'please provide description')
             if not desc:
-                desc = ser['cover'][0]
+                desc = ser.cover[0]  # pylint: disable=E1136
 
         ser = self._handle_mark(name, ser, version, mark, allow_unmarked,
                                 force_version, dry_run)
@@ -80,9 +81,11 @@ class Cseries(cser_helper.CseriesHelper):
         added = False
         series_id = self.db.series_find_by_name(ser.name)
         if not series_id:
-            series_id = self.db.series_add(ser.name, desc)
+            series_id = self.db.series_add(ser.name, desc, ups=ups)
             added = True
             msg += f" series '{ser.name}'"
+        elif ups:
+            self.db.series_set_upstream(series_id, ups)
 
         if version not in self._get_version_list(series_id):
             svid = self.db.ser_ver_add(series_id, version, link)

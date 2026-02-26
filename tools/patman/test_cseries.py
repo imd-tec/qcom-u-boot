@@ -799,6 +799,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.make_git_tree()
         args = Namespace(subcmd='add', desc='my-description', series='first',
                          mark=False, allow_unmarked=True, upstream=None,
+                         set_upstream=None,
                          use_first_commit=False, dry_run=False)
         with terminal.capture() as (out, _):
             control.do_series(args, test_db=self.tmpdir, pwork=True)
@@ -822,6 +823,21 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(
             'first            my-description                                 '
             '-/2      1', lines[2])
+
+    def test_do_series_add_upstream(self):
+        """Test that series add can set the upstream"""
+        self.make_git_tree()
+        args = Namespace(subcmd='add', desc='my-description', series='first',
+                         mark=False, allow_unmarked=True, upstream=None,
+                         set_upstream='origin',
+                         use_first_commit=False, dry_run=False)
+        with terminal.capture():
+            control.do_series(args, test_db=self.tmpdir, pwork=True)
+
+        cser = self.get_database()
+        slist = cser.db.series_get_dict()
+        ser = slist.get('first')
+        self.assertEqual('origin', ser.upstream)
 
     def test_do_series_add_cmdline(self):
         """Add a new cseries using the cmdline"""
@@ -847,6 +863,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
                          force=True)
         args = Namespace(subcmd='add', series=None, mark=False,
                          allow_unmarked=True, upstream=None, dry_run=False,
+                         set_upstream=None,
                          desc=None, use_first_commit=False)
         with terminal.capture():
             control.do_series(args, test_db=self.tmpdir, pwork=True)
