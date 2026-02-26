@@ -84,11 +84,13 @@ class Cseries(cser_helper.CseriesHelper):
             series_id = self.db.series_add(ser.name, desc, ups=ups)
             added = True
             msg += f" series '{ser.name}'"
-        elif ups:
-            self.db.series_set_upstream(series_id, ups)
+        else:
+            if ups:
+                self.db.series_set_upstream(series_id, ups)
+            self.db.series_set_desc(series_id, desc)
 
         if version not in self._get_version_list(series_id):
-            svid = self.db.ser_ver_add(series_id, version, link)
+            svid = self.db.ser_ver_add(series_id, version, link, desc)
             msg += f" v{version}"
             if not added:
                 msg += f" to existing series '{ser.name}'"

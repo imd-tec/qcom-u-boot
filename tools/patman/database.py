@@ -25,7 +25,7 @@ LATEST = 5
 SerVer = namedtuple(
     'SER_VER',
     'idnum,series_id,version,link,cover_id,cover_num_comments,name,'
-    'archive_tag')
+    'archive_tag,desc')
 
 # Record from the pcommit table:
 # idnum (int): record ID
@@ -493,6 +493,17 @@ class Database:  # pylint:disable=R0904
         self.execute(
             'UPDATE series SET name = ? WHERE id = ?', (name, series_idnum))
 
+    def series_set_desc(self, series_idnum, desc):
+        """Update description for a series
+
+        Args:
+            series_idnum (int): ID num of the series
+            desc (str): New description
+        """
+        self.execute(
+            'UPDATE series SET desc = ? WHERE id = ?',
+            (desc, series_idnum))
+
     def series_set_upstream(self, series_idnum, ups):
         """Update upstream for a series
 
@@ -617,7 +628,7 @@ class Database:  # pylint:disable=R0904
         if self.rowcount() != 1:
             raise ValueError(f'No ser_ver updated (svid {svid})')
 
-    def ser_ver_add(self, series_idnum, version, link=None):
+    def ser_ver_add(self, series_idnum, version, link=None, desc=None):
         """Add a new ser_ver record
 
         Args:
@@ -625,13 +636,15 @@ class Database:  # pylint:disable=R0904
                 version
             version (int): Version number to add
             link (str): Patchwork link, or None if not known
+            desc (str or None): Series description for this version
 
         Return:
             int: ID num of the new ser_ver record
         """
         self.execute(
-            'INSERT INTO ser_ver (series_id, version, link) VALUES (?, ?, ?)',
-            (series_idnum, version, link))
+            'INSERT INTO ser_ver (series_id, version, link, desc) '
+            'VALUES (?, ?, ?, ?)',
+            (series_idnum, version, link, desc))
         return self.lastrowid()
 
     def ser_ver_get_for_series(self, series_idnum, version=None):
@@ -648,8 +661,8 @@ class Database:  # pylint:disable=R0904
             ValueError: There is no matching idnum/version
         """
         base = ('SELECT id, series_id, version, link, cover_id, '
-                'cover_num_comments, name, archive_tag FROM ser_ver '
-                'WHERE series_id = ?')
+                'cover_num_comments, name, archive_tag, desc '
+                'FROM ser_ver WHERE series_id = ?')
         if version:
             res = self.execute(base + ' AND version = ?',
                                (series_idnum, version))
@@ -690,7 +703,7 @@ class Database:  # pylint:disable=R0904
         """
         res = self.execute(
             'SELECT id, series_id, version, link, cover_id, '
-            'cover_num_comments, name, archive_tag FROM ser_ver')
+            'cover_num_comments, name, archive_tag, desc FROM ser_ver')
         items = res.fetchall()
         return [SerVer(*x) for x in items]
 
