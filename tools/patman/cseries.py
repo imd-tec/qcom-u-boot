@@ -932,14 +932,21 @@ class Cseries(cser_helper.CseriesHelper):
         if not ser.idnum:
             raise ValueError(f"Series '{ser.name}' not found in database")
 
-        if not getattr(args, 'identity', None):
-            ups = self.get_series_upstream(name)
-            if ups:
-                identity = self.db.upstream_get_identity(ups)
-                if identity:
+        ups = self.get_series_upstream(name)
+        if ups:
+            settings = self.db.upstream_get_send_settings(ups)
+            if settings:
+                identity, series_to, no_maintainers, no_tags = settings
+                if identity and not getattr(args, 'identity', None):
                     args.identity = identity
                     print(f"Using sendemail identity '{identity}'"
                           f" from upstream '{ups}'")
+                if series_to:
+                    args.series_to = series_to
+                if no_maintainers:
+                    args.add_maintainers = False
+                if no_tags:
+                    args.process_tags = False
 
         args.branch = self._get_branch_name(ser.name, version)
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
@@ -1159,7 +1166,8 @@ class Cseries(cser_helper.CseriesHelper):
                 tout.info('Dry run completed')
 
     def upstream_add(self, name, url, project=None, pwork=None,
-                     patchwork_url=None, identity=None):
+                     patchwork_url=None, identity=None, series_to=None,
+                     no_maintainers=False, no_tags=False):
         """Add a new upstream tree
 
         Args:
@@ -1171,8 +1179,14 @@ class Cseries(cser_helper.CseriesHelper):
             patchwork_url (str or None): URL of the patchwork server for
                 this upstream
             identity (str or None): Git sendemail identity to use
+            series_to (str or None): Patman alias for the To address
+            no_maintainers (bool): True to skip get_maintainer.pl
+            no_tags (bool): True to skip subject-tag alias processing
         """
-        self.db.upstream_add(name, url, patchwork_url, identity=identity)
+        self.db.upstream_add(name, url, patchwork_url, identity=identity,
+                             series_to=series_to,
+                             no_maintainers=no_maintainers,
+                             no_tags=no_tags)
         if project:
             if not pwork:
                 if not patchwork_url:
@@ -1186,6 +1200,12 @@ class Cseries(cser_helper.CseriesHelper):
             msg += f" patchwork '{patchwork_url}'"
         if identity:
             msg += f" identity '{identity}'"
+        if series_to:
+            msg += f" to '{series_to}'"
+        if no_maintainers:
+            msg += ' no-maintainers'
+        if no_tags:
+            msg += ' no-tags'
         if project:
             msg += f" project '{project}'"
         tout.notice(msg)

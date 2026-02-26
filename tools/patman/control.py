@@ -252,7 +252,11 @@ def upstream(args, test_db=None):
         if args.subcmd == 'add':
             cser.upstream_add(args.remote_name, args.url,
                               args.project_name,
-                              patchwork_url=args.patchwork_url)
+                              patchwork_url=args.patchwork_url,
+                              identity=args.identity,
+                              series_to=args.series_to,
+                              no_maintainers=args.no_maintainers,
+                              no_tags=args.no_tags)
         elif args.subcmd == 'default':
             if args.unset:
                 cser.upstream_set_default(None)

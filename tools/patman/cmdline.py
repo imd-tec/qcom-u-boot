@@ -424,6 +424,18 @@ def add_upstream_subparser(subparsers):
         help='URL of patchwork server for this upstream, e.g. '
              "'https://patchwork.ozlabs.org'")
     uadd.add_argument(
+        '-I', '--identity',
+        help="Git sendemail identity to use, e.g. 'chromium'")
+    uadd.add_argument(
+        '-t', '--series-to',
+        help="Patman alias for the To address, e.g. 'u-boot'")
+    uadd.add_argument(
+        '-m', '--no-maintainers', action='store_true', default=False,
+        help='Skip get_maintainer.pl for this upstream')
+    uadd.add_argument(
+        '--no-tags', action='store_true', default=False,
+        help='Skip subject-tag alias processing for this upstream')
+    uadd.add_argument(
         'project_name', nargs='?',
         help="Patchwork project name, e.g. 'U-Boot'")
     udel = upstream_subparsers.add_parser('delete')
