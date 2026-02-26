@@ -27,10 +27,11 @@ ALIASES = {
     'patchwork': ['pw'],
     'upstream': ['us'],
 
-    # Series aliases
+    # Subcommand aliases
     'archive': ['ar'],
     'autolink': ['au'],
     'gather': ['g'],
+    'ls': ['list'],
     'open': ['o'],
     'progress': ['p', 'pr', 'prog'],
     'rm-version': ['rmv'],
@@ -156,13 +157,20 @@ def add_patchwork_subparser(subparsers):
         'patchwork', aliases=ALIASES['patchwork'],
         help='Manage patchwork connection')
     patchwork.defaults_cmds = [
-        ['set-project', 'U-Boot'],
+        ['set-project', 'U-Boot', 'us'],
     ]
     patchwork_subparsers = patchwork.add_subparsers(dest='subcmd')
-    patchwork_subparsers.add_parser('get-project')
+    gproj = patchwork_subparsers.add_parser('get-project')
+    gproj.add_argument(
+        'remote', nargs='?',
+        help='Remote to get the project for')
     uset = patchwork_subparsers.add_parser('set-project')
     uset.add_argument(
         'project_name', help="Patchwork project name, e.g. 'U-Boot'")
+    uset.add_argument(
+        'remote', nargs='?',
+        help='Remote to associate with this project')
+    patchwork_subparsers.add_parser('ls', aliases=['list'])
     return patchwork
 
 
@@ -230,11 +238,13 @@ def add_series_subparser(subparsers):
     add.add_argument('-D', '--desc',
                      help='Series description / cover-letter title')
     add.add_argument(
-        '-u', '--use-commit', action='store_true',
+        '-1', '--use-first-commit', action='store_true',
         help="Use the first commit's subject as series description if needed")
     add.add_argument(
         '-f', '--force-version', action='store_true',
         help='Change the Series-version on a series to match its branch')
+    add.add_argument('-S', '--set-upstream',
+                     help='Set the upstream for this series')
     _add_mark(add)
     _add_allow_unmarked(add)
     _upstream_add(add)
@@ -270,7 +280,7 @@ def add_series_subparser(subparsers):
 
     series_subparsers.add_parser('get-link')
     series_subparsers.add_parser('inc')
-    ls = series_subparsers.add_parser('ls')
+    ls = series_subparsers.add_parser('ls', aliases=['list'])
     _add_archived(ls)
 
     mar = series_subparsers.add_parser('mark')
@@ -298,6 +308,10 @@ def add_series_subparser(subparsers):
     ren.add_argument('-N', '--new-name', help='New name for the series')
 
     series_subparsers.add_parser('rm')
+
+    sup = series_subparsers.add_parser('set-upstream')
+    sup.add_argument('upstream_name', nargs='?',
+                     help='Name of the upstream for this series')
     series_subparsers.add_parser('rm-version', aliases=ALIASES['rm-version'])
 
     scan = series_subparsers.add_parser('scan')
@@ -395,8 +409,9 @@ def add_upstream_subparser(subparsers):
     upstream = subparsers.add_parser('upstream', aliases=ALIASES['upstream'],
                                      help='Manage upstream destinations')
     upstream.defaults_cmds = [
-        ['add', 'us', 'http://fred'],
+        ['add', 'us', 'http://fred', '-p', 'http://pw', 'U-Boot'],
         ['delete', 'us'],
+        ['set', 'us'],
     ]
     upstream_subparsers = upstream.add_subparsers(dest='subcmd')
     uadd = upstream_subparsers.add_parser('add')
@@ -405,11 +420,54 @@ def add_upstream_subparser(subparsers):
     uadd.add_argument(
         'url', help='URL to use for this upstream, e.g. '
                     "'https://gitlab.denx.de/u-boot/u-boot.git'")
+    uadd.add_argument(
+        '-p', '--patchwork-url',
+        help='URL of patchwork server for this upstream, e.g. '
+             "'https://patchwork.ozlabs.org'")
+    uadd.add_argument(
+        '-I', '--identity',
+        help="Git sendemail identity to use, e.g. 'chromium'")
+    uadd.add_argument(
+        '-t', '--series-to',
+        help="Patman alias for the To address, e.g. 'u-boot'")
+    uadd.add_argument(
+        '-m', '--no-maintainers', action='store_true', default=False,
+        help='Skip get_maintainer.pl for this upstream')
+    uadd.add_argument(
+        '--no-tags', action='store_true', default=False,
+        help='Skip subject-tag alias processing for this upstream')
+    uadd.add_argument(
+        'project_name', nargs='?',
+        help="Patchwork project name, e.g. 'U-Boot'")
     udel = upstream_subparsers.add_parser('delete')
     udel.add_argument(
         'remote_name',
         help="Git remote name used for this upstream, e.g. 'us'")
-    upstream_subparsers.add_parser('list')
+    upstream_subparsers.add_parser('ls', aliases=['list'])
+    uset = upstream_subparsers.add_parser('set')
+    uset.add_argument('remote_name',
+                      help="Git remote name used for this upstream, e.g. 'us'")
+    uset.add_argument(
+        '-p', '--patchwork-url',
+        help='URL of patchwork server for this upstream')
+    uset.add_argument(
+        '-I', '--identity',
+        help="Git sendemail identity to use, e.g. 'chromium'")
+    uset.add_argument(
+        '-t', '--series-to',
+        help="Patman alias for the To address, e.g. 'u-boot'")
+    uset.add_argument(
+        '-m', '--no-maintainers', action='store_true', default=None,
+        help='Skip get_maintainer.pl for this upstream')
+    uset.add_argument(
+        '--maintainers', action='store_true', default=None,
+        help='Enable get_maintainer.pl for this upstream')
+    uset.add_argument(
+        '--no-tags', action='store_true', default=None,
+        help='Skip subject-tag alias processing for this upstream')
+    uset.add_argument(
+        '--tags', action='store_true', default=None,
+        help='Enable subject-tag alias processing for this upstream')
     udef = upstream_subparsers.add_parser('default')
     udef.add_argument('-u', '--unset', action='store_true',
                       help='Unset the default upstream')

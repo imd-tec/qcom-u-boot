@@ -16,6 +16,7 @@ from u_boot_pylib import terminal
 from u_boot_pylib import tout
 
 from patman import patchstream
+from patman.patchwork import Patchwork
 from patman import cser_helper
 from patman.cser_helper import AUTOLINK, oid
 from patman import send
@@ -38,7 +39,8 @@ class Cseries(cser_helper.CseriesHelper):
         super().__init__(topdir, colour)
 
     def add(self, branch_name, desc=None, mark=False, allow_unmarked=False,
-            end=None, use_commit=False, force_version=False, dry_run=False):
+            end=None, use_commit=False, force_version=False, ups=None,
+            dry_run=False):
         """Add a series (or new version of a series) to the database
 
         Args:
@@ -46,13 +48,13 @@ class Cseries(cser_helper.CseriesHelper):
             desc (str): Description to use, or None to use the series subject
             mark (str): True to mark each commit with a change ID
             allow_unmarked (str): True to not require each commit to be marked
-            end (str): Add only commits up to but exclu
-            use_commit (bool)): True to use the first commit's subject as the
+            end (str): Add only commits up to but excluding this commit
+            use_commit (bool): True to use the first commit's subject as the
                 series description, if none is available in the series or
-                provided in 'desc')
-
+                provided in 'desc'
             force_version (bool): True if ignore a Series-version tag that
                 doesn't match its branch name
+            ups (str or None): Name of the upstream for this series
             dry_run (bool): True to do a dry run
         """
         name, ser, version, msg = self.prep_series(branch_name, end)
@@ -69,7 +71,7 @@ class Cseries(cser_helper.CseriesHelper):
                     raise ValueError(f"Branch '{name}' has no cover letter - "
                                     'please provide description')
             if not desc:
-                desc = ser['cover'][0]
+                desc = ser.cover[0]  # pylint: disable=E1136
 
         ser = self._handle_mark(name, ser, version, mark, allow_unmarked,
                                 force_version, dry_run)
@@ -79,12 +81,16 @@ class Cseries(cser_helper.CseriesHelper):
         added = False
         series_id = self.db.series_find_by_name(ser.name)
         if not series_id:
-            series_id = self.db.series_add(ser.name, desc)
+            series_id = self.db.series_add(ser.name, desc, ups=ups)
             added = True
             msg += f" series '{ser.name}'"
+        else:
+            if ups:
+                self.db.series_set_upstream(series_id, ups)
+            self.db.series_set_desc(series_id, desc)
 
         if version not in self._get_version_list(series_id):
-            svid = self.db.ser_ver_add(series_id, version, link)
+            svid = self.db.ser_ver_add(series_id, version, link, desc)
             msg += f" v{version}"
             if not added:
                 msg += f" to existing series '{ser.name}'"
@@ -278,26 +284,57 @@ class Cseries(cser_helper.CseriesHelper):
         start = self.get_time()
         stop = start + wait_s
         sleep_time = 5
+        last_options = None
         while True:
             pws, options, name, version, desc = self.link_search(
                 pwork, series, version)
             if pws:
+                tout.clear_progress()
                 if wait_s:
                     tout.notice('Link completed after '
                                 f'{self.get_time() - start} seconds')
                 break
 
-            print(f"Possible matches for '{name}' v{version} desc '{desc}':")
+            if not wait_s or self.get_time() > stop:
+                tout.clear_progress()
+                if options != last_options:
+                    self._show_autolink_matches(name, version, desc,
+                                                options)
+                delay = f' after {wait_s} seconds' if wait_s else ''
+                raise ValueError(
+                    f"Cannot find series '{desc}'{delay}; "
+                    'to try again later:\n'
+                    f"  patman series autolink -s {name} -V {version}")
+
+            if options != last_options:
+                tout.clear_progress()
+                self._show_autolink_matches(name, version, desc, options)
+                last_options = options
+
+            elapsed = int(self.get_time() - start)
+            tout.progress(
+                f'Waiting for series on patchwork ({elapsed}s)')
+            self.sleep(sleep_time)
+            sleep_time = min(sleep_time + 5, 30)
+
+        self.link_set(name, version, pws, update_commit)
+
+    def _show_autolink_matches(self, name, version, desc, options):
+        """Show possible autolink matches
+
+        Args:
+            name (str): Series name
+            version (int): Series version
+            desc (str): Series description
+            options (list of dict): Possible matches from patchwork
+        """
+        print(f"Possible matches for '{name}' v{version} desc '{desc}':")
+        if options:
             print('  Link  Version  Description')
             for opt in options:
                 print(f"{opt['id']:6}  {opt['version']:7}  {opt['name']}")
-            if not wait_s or self.get_time() > stop:
-                delay = f' after {wait_s} seconds' if wait_s else ''
-                raise ValueError(f"Cannot find series '{desc}{delay}'")
-
-            self.sleep(sleep_time)
-
-        self.link_set(name, version, pws, update_commit)
+        else:
+            print('  (none)')
 
     def link_auto_all(self, pwork, update_commit, link_all_versions,
                       replace_existing, dry_run, show_summary=True):
@@ -408,18 +445,20 @@ class Cseries(cser_helper.CseriesHelper):
             include_archived (bool): True to include archived series also
         """
         sdict = self.db.series_get_dict(include_archived)
-        print(f"{'Name':15}  {'Description':40}  Accepted  Versions")
-        border = f"{'-' * 15}  {'-' * 40}  --------  {'-' * 15}"
+        print(f"{'Name':15}  {'Description':40}  Accepted  Us  Versions")
+        border = f"{'-' * 15}  {'-' * 40}  --------  --  {'-' * 15}"
         print(border)
         for name in sorted(sdict):
             ser = sdict[name]
             versions = self._get_version_list(ser.idnum)
             stat = self._series_get_version_stats(
                 ser.idnum, self._series_max_version(ser.idnum))[0]
+            ups = (ser.upstream or '')[:2]
 
             vlist = ' '.join([str(ver) for ver in sorted(versions)])
 
-            print(f'{name:16.16} {ser.desc:41.41} {stat.rjust(8)}  {vlist}')
+            print(f'{name:16.16} {ser.desc:41.41} {stat.rjust(8)}  '
+                  f'{ups:2}  {vlist}')
         print(border)
 
     def list_patches(self, series, version, show_commit=False,
@@ -635,12 +674,13 @@ class Cseries(cser_helper.CseriesHelper):
                         'subjects which mismatch their patches and need to be '
                         'scanned')
 
-    def project_set(self, pwork, name, quiet=False):
-        """Set the name of the project
+    def project_set(self, pwork, name, ups=None, quiet=False):
+        """Set the name of the project for an upstream
 
         Args:
             pwork (Patchwork): Patchwork object to use
             name (str): Name of the project to use in patchwork
+            ups (str or None): Upstream name to associate with
             quiet (bool): True to skip writing the message
         """
         tout.detail(f"Patchwork URL '{pwork.url}': finding name '{name}'")
@@ -657,14 +697,20 @@ class Cseries(cser_helper.CseriesHelper):
                 tout.detail(f'Name match: ID {proj_id}')
         if not proj_id:
             raise ValueError(f"Unknown project name '{name}'")
-        self.db.settings_update(name, proj_id, link_name)
+        self.db.patchwork_update(name, proj_id, link_name, ups)
         self.commit()
         if not quiet:
-            tout.notice(f"Project '{name}' patchwork-ID {proj_id} "
-                        f"link-name '{link_name}'")
+            msg = f"Project '{name}' patchwork-ID {proj_id} "
+            msg += f"link-name '{link_name}'"
+            if ups:
+                msg += f" remote '{ups}'"
+            tout.notice(msg)
 
-    def project_get(self):
-        """Get the details of the project
+    def project_get(self, ups=None):
+        """Get the details of the project for an upstream
+
+        Args:
+            ups (str or None): Upstream name to look up, or None for any
 
         Returns:
             tuple or None if there are no settings:
@@ -672,7 +718,29 @@ class Cseries(cser_helper.CseriesHelper):
                 proj_id (int): Patchworks project ID for this project
                 link_name (str): Patchwork's link-name for the project
         """
-        return self.db.settings_get()
+        return self.db.patchwork_get(ups)
+
+    def project_list(self):
+        """List all patchwork project configurations"""
+        settings = self.db.patchwork_get_list()
+        if not settings:
+            print('No patchwork projects configured')
+            return
+        print(f"{'Project':20}  {'ID':>4}  {'Link name':15}  Remotes")
+        border = f"{'-' * 20}  {'-' * 4}  {'-' * 15}  {'-' * 15}"
+        print(border)
+
+        # Group remotes by project
+        projects = OrderedDict()
+        for name, proj_id, link_name, ups in settings:
+            key = (name, proj_id, link_name)
+            projects.setdefault(key, [])
+            if ups:
+                projects[key].append(ups)
+        for (name, proj_id, link_name), remotes in projects.items():
+            rlist = ' '.join(sorted(remotes))
+            print(f'{name:20}  {proj_id:4}  {link_name:15}  {rlist}')
+        print(border)
 
     def remove(self, name, dry_run=False):
         """Remove a series from the database
@@ -768,6 +836,31 @@ class Cseries(cser_helper.CseriesHelper):
         if dry_run:
             tout.info('Dry run completed')
 
+    def set_upstream(self, series, ups, dry_run=False):
+        """Set the upstream for a series
+
+        Args:
+            series (str): Name of series to use, or None to use current branch
+            ups (str): Name of the upstream to set
+            dry_run (bool): True to do a dry run
+        """
+        if not ups:
+            raise ValueError('Please specify the upstream name')
+        ser, _ = self._parse_series_and_version(series, None)
+        if not ser.idnum:
+            raise ValueError(f"Series '{ser.name}' not found in database")
+
+        self.db.series_set_upstream(ser.idnum, ups)
+
+        if not dry_run:
+            self.commit()
+        else:
+            self.rollback()
+
+        tout.notice(f"Set upstream for series '{ser.name}' to '{ups}'")
+        if dry_run:
+            tout.info('Dry run completed')
+
     def scan(self, branch_name, mark=False, allow_unmarked=False, end=None,
              dry_run=False):
         """Scan a branch and make updates to the database if it has changed
@@ -839,6 +932,13 @@ class Cseries(cser_helper.CseriesHelper):
 
         self.db.pcommit_delete(svid)
         self._add_series_commits(ser, svid)
+
+        # Update series description if the cover letter has changed
+        branch_desc = ser.cover[0] if ser.cover else None  # pylint: disable=E1136
+        if branch_desc and branch_desc != ser.desc:
+            self.db.series_set_desc(ser.idnum, branch_desc)
+            tout.notice(f"Updated description to '{branch_desc}'")
+
         if not dry_run:
             self.commit()
             seq = len(ser.commits)
@@ -871,6 +971,20 @@ class Cseries(cser_helper.CseriesHelper):
         ser, version = self._parse_series_and_version(name, None)
         if not ser.idnum:
             raise ValueError(f"Series '{ser.name}' not found in database")
+
+        ups = self.get_series_upstream(name)
+        if ups:
+            settings = self.db.upstream_get_send_settings(ups)
+            if settings:
+                identity, series_to, no_maintainers, no_tags = settings
+                if identity and not getattr(args, 'identity', None):
+                    args.identity = identity
+                if series_to:
+                    args.series_to = series_to
+                if no_maintainers:
+                    args.add_maintainers = False
+                if no_tags:
+                    args.process_tags = False
 
         args.branch = self._get_branch_name(ser.name, version)
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
@@ -1089,28 +1203,96 @@ class Cseries(cser_helper.CseriesHelper):
                 self.rollback()
                 tout.info('Dry run completed')
 
-    def upstream_add(self, name, url):
+    def upstream_add(self, name, url, project=None, pwork=None,
+                     patchwork_url=None, identity=None, series_to=None,
+                     no_maintainers=False, no_tags=False):
         """Add a new upstream tree
 
         Args:
             name (str): Name of the tree
             url (str): URL for the tree
+            project (str or None): Patchwork project name to associate
+            pwork (Patchwork or None): Patchwork object for looking up
+                the project
+            patchwork_url (str or None): URL of the patchwork server for
+                this upstream
+            identity (str or None): Git sendemail identity to use
+            series_to (str or None): Patman alias for the To address
+            no_maintainers (bool): True to skip get_maintainer.pl
+            no_tags (bool): True to skip subject-tag alias processing
         """
-        self.db.upstream_add(name, url)
+        self.db.upstream_add(name, url, patchwork_url, identity=identity,
+                             series_to=series_to,
+                             no_maintainers=no_maintainers,
+                             no_tags=no_tags)
+        if project:
+            if not pwork:
+                if not patchwork_url:
+                    raise ValueError(
+                        'Patchwork URL is required when setting a project')
+                pwork = Patchwork(patchwork_url)
+            self.project_set(pwork, project, ups=name, quiet=True)
         self.commit()
-        tout.notice(f"Added upstream '{name}' ({url})")
+        msg = f"Added upstream '{name}' ({url})"
+        if patchwork_url:
+            msg += f" patchwork '{patchwork_url}'"
+        if identity:
+            msg += f" identity '{identity}'"
+        if series_to:
+            msg += f" to '{series_to}'"
+        if no_maintainers:
+            msg += ' no-maintainers'
+        if no_tags:
+            msg += ' no-tags'
+        if project:
+            msg += f" project '{project}'"
+        tout.notice(msg)
 
     def upstream_list(self):
         """List the upstream repos
 
-        Shows a list of the repos, obtained from the database
+        Shows a list of the repos, obtained from the database, along with
+        any associated patchwork project
         """
         udict = self.get_upstream_dict()
 
+        print(f"{'Name':6} {'Def':3} {'Project':10} {'URL':44} Options")
+        border = (f"{'-' * 6} {'-' * 3} {'-' * 10} {'-' * 44} "
+                  f"{'-' * 20}")
+        print(border)
         for name, items in udict.items():
-            url, is_default = items
-            default = 'default' if is_default else ''
-            print(f'{name:15.15} {default:8} {url}')
+            (url, is_default, patchwork_url, identity, series_to,
+             no_maintainers, no_tags) = items
+            default = '*' if is_default else ''
+            proj = self.db.patchwork_get(name)
+            proj_name = proj[0] if proj else ''
+            opts = []
+            if patchwork_url:
+                opts.append(f'pw:{patchwork_url}')
+            if identity:
+                opts.append(f'id:{identity}')
+            if series_to:
+                opts.append(f'to:{series_to}')
+            if no_maintainers:
+                opts.append('no-maintainers')
+            if no_tags:
+                opts.append('no-tags')
+            print(f'{name:6} {default:3} {proj_name:10} {url:44} '
+                  f'{" ".join(opts)}')
+
+    def upstream_set(self, name, **kwargs):
+        """Update settings on an existing upstream
+
+        See Database.upstream_set() for permitted kwargs.
+
+        Args:
+            name (str): Name of the upstream remote to update
+            kwargs: Fields to update
+        """
+        self.db.upstream_set(name, **kwargs)
+        self.commit()
+        parts = [f'{k}={v!r}' for k, v in kwargs.items()]
+        tout.notice(f"Updated upstream '{name}': {', '.join(parts)}")
 
     def upstream_set_default(self, name):
         """Set the default upstream target

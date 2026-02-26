@@ -19,13 +19,13 @@ from u_boot_pylib import tout
 from patman.series import Series
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 4
+LATEST = 5
 
 # Information about a series/version record
 SerVer = namedtuple(
     'SER_VER',
     'idnum,series_id,version,link,cover_id,cover_num_comments,name,'
-    'archive_tag')
+    'archive_tag,desc')
 
 # Record from the pcommit table:
 # idnum (int): record ID
@@ -41,7 +41,7 @@ Pcommit = namedtuple(
     'idnum,seq,subject,svid,change_id,state,patch_id,num_comments')
 
 
-class Database:
+class Database:  # pylint:disable=R0904
     """Database of information used by patman"""
 
     # dict of databases:
@@ -84,9 +84,23 @@ class Database:
         return Database(db_path), True
 
     def start(self):
-        """Open the database read for use, migrate to latest schema"""
+        """Open the database ready for use, migrate to latest schema
+
+        Return:
+            int or None: Schema version before migration, or None if no
+                migration was needed
+        """
         self.open_it()
+        old_version = self.get_schema_version()
+        if old_version > LATEST:
+            self.close()
+            tout.fatal(
+                f'Database version {old_version} is too new (max'
+                f' {LATEST}); please update patman')
         self.migrate_to(LATEST)
+        if old_version == LATEST:
+            return None
+        return old_version
 
     def open_it(self):
         """Open the database, creating it if necessary"""
@@ -150,6 +164,40 @@ class Database:
         """Add an archive tag for each ser_ver"""
         self.cur.execute('ALTER TABLE ser_ver ADD COLUMN archive_tag')
 
+    def _migrate_to_v5(self):
+        """Add upstream support to series, patchwork and upstream tables
+
+        - Add upstream column to series table
+        - Rename and recreate patchwork table (formerly 'settings') without
+          UNIQUE constraint on name, adding an upstream column (since the
+          same project can have multiple remotes)
+        - Add patchwork_url, identity, series_to, no_maintainers and
+          no_tags columns to upstream table
+        - Add desc column to ser_ver table
+        """
+        self.cur.execute('ALTER TABLE series ADD COLUMN upstream')
+
+        self.cur.execute(
+            'CREATE TABLE patchwork_new '
+            '(name, proj_id INT, link_name, upstream)')
+        self.cur.execute(
+            'INSERT INTO patchwork_new SELECT name, proj_id, link_name, NULL '
+            'FROM settings')
+        self.cur.execute('DROP TABLE settings')
+        self.cur.execute('ALTER TABLE patchwork_new RENAME TO patchwork')
+        default_ups = self.upstream_get_default()
+        if default_ups:
+            self.cur.execute(
+                'UPDATE patchwork SET upstream = ?', (default_ups,))
+
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN patchwork_url')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN identity')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN series_to')
+        self.cur.execute(
+            'ALTER TABLE upstream ADD COLUMN no_maintainers BIT')
+        self.cur.execute('ALTER TABLE upstream ADD COLUMN no_tags BIT')
+        self.cur.execute('ALTER TABLE ser_ver ADD COLUMN desc')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -166,7 +214,7 @@ class Database:
                              tools.read_file(self.db_path))
 
             version += 1
-            tout.info(f'Update database to v{version}')
+            tout.notice(f'Update database to v{version}')
             self.open_it()
             if version == 1:
                 self.create_v1()
@@ -176,6 +224,8 @@ class Database:
                 self._migrate_to_v3()
             elif version == 4:
                 self._migrate_to_v4()
+            elif version == 5:
+                self._migrate_to_v5()
 
             # Save the new version if we have a schema_version table
             if version > 1:
@@ -253,10 +303,11 @@ class Database:
             list of Series
         """
         res = self.execute(
-            'SELECT id, name, desc FROM series ' +
+            'SELECT id, name, desc, upstream FROM series ' +
             ('WHERE archived = 0' if not include_archived else ''))
-        return [Series.from_fields(idnum=idnum, name=name, desc=desc)
-                for idnum, name, desc in res.fetchall()]
+        return [Series.from_fields(idnum=idnum, name=name, desc=desc,
+                                   ups=ups)
+                for idnum, name, desc, ups in res.fetchall()]
 
     # series functions
 
@@ -307,12 +358,14 @@ class Database:
         Return: tuple:
             str: Series name
             str: Series description
+            str or None: Upstream name
 
         Raises:
             ValueError: Series is not found
         """
-        res = self.execute('SELECT name, desc FROM series WHERE id = ?',
-                           (idnum,))
+        res = self.execute(
+            'SELECT name, desc, upstream FROM series WHERE id = ?',
+            (idnum,))
         recs = res.fetchall()
         if len(recs) != 1:
             raise ValueError(f'No series found (id {idnum} len {len(recs)})')
@@ -375,7 +428,7 @@ class Database:
             'GROUP BY series_id')
         return res.fetchall()
 
-    def series_add(self, name, desc):
+    def series_add(self, name, desc, ups=None):
         """Add a new series record
 
         The new record is set to not archived
@@ -383,13 +436,14 @@ class Database:
         Args:
             name (str): Series name
             desc (str): Series description
+            ups (str or None): Name of the upstream for this series
 
         Return:
             int: ID num of the new series record
         """
         self.execute(
-            'INSERT INTO series (name, desc, archived) '
-            f"VALUES ('{name}', '{desc}', 0)")
+            'INSERT INTO series (name, desc, archived, upstream) '
+            'VALUES (?, ?, 0, ?)', (name, desc, ups))
         return self.lastrowid()
 
     def series_remove(self, idnum):
@@ -438,6 +492,38 @@ class Database:
         """
         self.execute(
             'UPDATE series SET name = ? WHERE id = ?', (name, series_idnum))
+
+    def series_set_desc(self, series_idnum, desc):
+        """Update description for a series
+
+        Args:
+            series_idnum (int): ID num of the series
+            desc (str): New description
+        """
+        self.execute(
+            'UPDATE series SET desc = ? WHERE id = ?',
+            (desc, series_idnum))
+
+    def series_set_upstream(self, series_idnum, ups):
+        """Update upstream for a series
+
+        Args:
+            series_idnum (int): ID num of the series
+            ups (str or None): Name of the upstream, or None to clear
+        """
+        self.execute(
+            'UPDATE series SET upstream = ? WHERE id = ?',
+            (ups, series_idnum))
+
+    def series_get_null_upstream(self):
+        """Get a list of series names that have no upstream set
+
+        Return:
+            list of str: Series names with NULL upstream
+        """
+        res = self.execute(
+            'SELECT name FROM series WHERE upstream IS NULL')
+        return [row[0] for row in res.fetchall()]
 
     # ser_ver functions
 
@@ -542,7 +628,7 @@ class Database:
         if self.rowcount() != 1:
             raise ValueError(f'No ser_ver updated (svid {svid})')
 
-    def ser_ver_add(self, series_idnum, version, link=None):
+    def ser_ver_add(self, series_idnum, version, link=None, desc=None):
         """Add a new ser_ver record
 
         Args:
@@ -550,13 +636,15 @@ class Database:
                 version
             version (int): Version number to add
             link (str): Patchwork link, or None if not known
+            desc (str or None): Series description for this version
 
         Return:
             int: ID num of the new ser_ver record
         """
         self.execute(
-            'INSERT INTO ser_ver (series_id, version, link) VALUES (?, ?, ?)',
-            (series_idnum, version, link))
+            'INSERT INTO ser_ver (series_id, version, link, desc) '
+            'VALUES (?, ?, ?, ?)',
+            (series_idnum, version, link, desc))
         return self.lastrowid()
 
     def ser_ver_get_for_series(self, series_idnum, version=None):
@@ -573,8 +661,8 @@ class Database:
             ValueError: There is no matching idnum/version
         """
         base = ('SELECT id, series_id, version, link, cover_id, '
-                'cover_num_comments, name, archive_tag FROM ser_ver '
-                'WHERE series_id = ?')
+                'cover_num_comments, name, archive_tag, desc '
+                'FROM ser_ver WHERE series_id = ?')
         if version:
             res = self.execute(base + ' AND version = ?',
                                (series_idnum, version))
@@ -615,7 +703,7 @@ class Database:
         """
         res = self.execute(
             'SELECT id, series_id, version, link, cover_id, '
-            'cover_num_comments, name, archive_tag FROM ser_ver')
+            'cover_num_comments, name, archive_tag, desc FROM ser_ver')
         items = res.fetchall()
         return [SerVer(*x) for x in items]
 
@@ -716,19 +804,29 @@ class Database:
 
     # upstream functions
 
-    def upstream_add(self, name, url):
+    def upstream_add(self, name, url, patchwork_url=None, identity=None,
+                     series_to=None, no_maintainers=False, no_tags=False):
         """Add a new upstream record
 
         Args:
             name (str): Name of the tree
             url (str): URL for the tree
+            patchwork_url (str or None): URL of the patchwork server
+            identity (str or None): Git sendemail identity to use
+            series_to (str or None): Patman alias for the To address
+            no_maintainers (bool): True to skip get_maintainer.pl
+            no_tags (bool): True to skip subject-tag alias processing
 
         Raises:
             ValueError if the name already exists in the database
         """
         try:
             self.execute(
-                'INSERT INTO upstream (name, url) VALUES (?, ?)', (name, url))
+                'INSERT INTO upstream (name, url, patchwork_url, identity,'
+                ' series_to, no_maintainers, no_tags) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (name, url, patchwork_url, identity, series_to,
+                 no_maintainers, no_tags))
         except sqlite3.IntegrityError as exc:
             if 'UNIQUE constraint failed: upstream.name' in str(exc):
                 raise ValueError(f"Upstream '{name}' already exists") from exc
@@ -778,46 +876,168 @@ class Database:
             self.rollback()
             raise ValueError(f"No such upstream '{name}'")
 
+    def upstream_set(self, name, **kwargs):
+        """Update fields on an existing upstream
+
+        Args:
+            name (str): Name of the upstream remote to update
+            kwargs: Fields to update, each being one of:
+                patchwork_url (str): URL of the patchwork server, e.g.
+                    'patchwork.ozlabs.org'
+                identity (str): Git sendemail identity to use when
+                    sending, corresponding to a [sendemail "<identity>"]
+                    section in .gitconfig
+                series_to (str): Mailing-list address to use as the
+                    default To: for this upstream
+                no_maintainers (bool): True to skip
+                    get_maintainer.pl when sending
+                no_tags (bool): True to skip processing of subject
+                    tags (e.g. 'dm:') when sending
+
+        Raises:
+            ValueError: Upstream does not exist or invalid field
+        """
+        valid = {'patchwork_url', 'identity', 'series_to',
+                 'no_maintainers', 'no_tags'}
+        invalid = set(kwargs) - valid
+        if invalid:
+            raise ValueError(f"Invalid upstream field(s): {invalid}")
+        for field, value in kwargs.items():
+            self.execute(
+                f'UPDATE upstream SET {field} = ? WHERE name = ?',
+                (value, name))
+            if self.rowcount() != 1:
+                self.rollback()
+                raise ValueError(f"No such upstream '{name}'")
+
+    def upstream_get_patchwork_url(self, name):
+        """Get the patchwork URL for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            str or None: Patchwork URL, or None if not set
+        """
+        res = self.execute(
+            'SELECT patchwork_url FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
+    def upstream_get_identity(self, name):
+        """Get the sendemail identity for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            str or None: Identity name, or None if not set
+        """
+        res = self.execute(
+            'SELECT identity FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
+    def upstream_get_send_settings(self, name):
+        """Get the send settings for an upstream
+
+        Args:
+            name (str): Upstream name
+
+        Return:
+            tuple or None:
+                str or None: identity
+                str or None: series_to
+                bool: no_maintainers
+                bool: no_tags
+        """
+        res = self.execute(
+            'SELECT identity, series_to, no_maintainers, no_tags '
+            'FROM upstream WHERE name = ?', (name,))
+        rec = res.fetchone()
+        if rec:
+            return rec
+        return None
+
     def upstream_get_dict(self):
         """Get a list of upstream entries from the database
 
         Return:
             OrderedDict:
                 key (str): upstream name
-                value (str): url
+                value: tuple:
+                    str: url
+                    bool: is_default
+                    str or None: patchwork_url
+                    str or None: identity
+                    str or None: series_to
+                    bool: no_maintainers
+                    bool: no_tags
         """
-        res = self.execute('SELECT name, url, is_default FROM upstream')
+        res = self.execute(
+            'SELECT name, url, is_default, patchwork_url, identity,'
+            ' series_to, no_maintainers, no_tags FROM upstream')
         udict = OrderedDict()
-        for name, url, is_default in res.fetchall():
-            udict[name] = url, is_default
+        for rec in res.fetchall():
+            udict[rec[0]] = rec[1:]
         return udict
 
-    # settings functions
+    # patchwork functions
 
-    def settings_update(self, name, proj_id, link_name):
-        """Set the patchwork settings of the project
+    def patchwork_update(self, name, proj_id, link_name, ups=None):
+        """Set the patchwork project details for an upstream
 
         Args:
             name (str): Name of the project to use in patchwork
             proj_id (int): Project ID for the project
             link_name (str): Link name for the project
+            ups (str or None): Upstream name to associate with, or None
         """
-        self.execute('DELETE FROM settings')
         self.execute(
-                'INSERT INTO settings (name, proj_id, link_name) '
-                'VALUES (?, ?, ?)', (name, proj_id, link_name))
+            'DELETE FROM patchwork WHERE upstream IS ?', (ups,))
+        self.execute(
+            'INSERT INTO patchwork (name, proj_id, link_name, upstream) '
+            'VALUES (?, ?, ?, ?)', (name, proj_id, link_name, ups))
 
-    def settings_get(self):
-        """Get the patchwork settings of the project
+    def patchwork_get_list(self):
+        """Get all patchwork project configurations
 
         Returns:
-            tuple or None if there are no settings:
+            list of tuple:
+                name (str): Project name, e.g. 'U-Boot'
+                proj_id (int): Patchworks project ID for this project
+                link_name (str): Patchwork's link-name for the project
+                upstream (str or None): Upstream name
+        """
+        res = self.execute(
+            'SELECT name, proj_id, link_name, upstream FROM patchwork '
+            'ORDER BY name, upstream')
+        return res.fetchall()
+
+    def patchwork_get(self, ups=None):
+        """Get the patchwork project details for an upstream
+
+        Args:
+            ups (str or None): Upstream name to look up, or None for any
+
+        Returns:
+            tuple or None if there is no project set:
                 name (str): Project name, e.g. 'U-Boot'
                 proj_id (int): Patchworks project ID for this project
                 link_name (str): Patchwork's link-name for the project
         """
-        res = self.execute("SELECT name, proj_id, link_name FROM settings")
+        if ups is not None:
+            res = self.execute(
+                'SELECT name, proj_id, link_name FROM patchwork '
+                'WHERE upstream = ?', (ups,))
+        else:
+            res = self.execute(
+                'SELECT name, proj_id, link_name FROM patchwork')
         recs = res.fetchall()
-        if len(recs) != 1:
+        if not recs:
             return None
         return recs[0]

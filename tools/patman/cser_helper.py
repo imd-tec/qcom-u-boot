@@ -110,10 +110,48 @@ class CseriesHelper:
         # For the first instance, start it up with the expected schema
         self.db, is_new = Database.get_instance(fname)
         if is_new:
-            self.db.start()
+            old_version = self.db.start()
+            if old_version is not None and old_version < 5:
+                self._check_null_upstreams()
         else:
             # If a previous test has already checked the schema, just open it
             self.db.open_it()
+
+    def _check_null_upstreams(self):
+        """Detect and warn about series that have no upstream set
+
+        For each series without an upstream, try to detect it from the
+        git branch's remote tracking configuration. Any series that
+        cannot be auto-detected are reported as a warning.
+        """
+        names = self.db.series_get_null_upstream()
+        if not names:
+            return
+
+        still_null = []
+        git_dir = self.gitdir or '.git'
+        for name in names:
+            remote_name = None
+            if gitutil.check_branch(name, git_dir=self.gitdir):
+                us_ref, _ = gitutil.get_upstream(git_dir, name)
+                if us_ref and '/' in us_ref and not us_ref.startswith(
+                        'refs/'):
+                    remote_name = us_ref.split('/')[0]
+            if remote_name:
+                idnum = self.db.series_find_by_name(name)
+                self.db.series_set_upstream(idnum, remote_name)
+                tout.progress(f"Set upstream for series '{name}' to "
+                              f"'{remote_name}'", trailer='')
+            else:
+                still_null.append(name)
+
+        if len(still_null) < len(names):
+            self.db.commit()
+        if still_null:
+            tout.warning(
+                f'{len(still_null)} series without an upstream:')
+            for name in still_null:
+                tout.warning(f'  {name}')
 
     def close_database(self):
         """Close the database"""
@@ -167,7 +205,6 @@ class CseriesHelper:
         Args:
             time_s (float): Amount of seconds to sleep for
         """
-        print(f'Sleeping for {time_s} seconds')
         if self._fake_time is not None:
             self._fake_sleep(time_s)
         else:
@@ -246,6 +283,7 @@ class CseriesHelper:
         Return: tuple:
             str: Series name
             str: Series description
+            str or None: Upstream name
 
         Raises:
             ValueError: Series is not found
@@ -255,11 +293,16 @@ class CseriesHelper:
     def prep_series(self, name, end=None):
         """Prepare to work with a series
 
+        Parse the branch name to determine the series name and version
+        number, then count the commits from the upstream branch (or up to the
+        end commit if provided) and collect the series metadata from those
+        commits.
+
         Args:
             name (str): Branch name with version appended, e.g. 'fix2'
             end (str or None): Commit to end at, e.g. 'my_branch~16'. Only
-                commits up to that are processed. None to process commits up to
-                the upstream branch
+                commits up to that are processed. Use None to process commits up
+                to the upstream branch
 
         Return: tuple:
             str: Series name, e.g. 'fix'
@@ -382,6 +425,22 @@ class CseriesHelper:
 
         self.db.pcommit_add_list(svid, to_add)
 
+    def get_series_upstream(self, name):
+        """Get the upstream for a series
+
+        Args:
+            name (str): Name of series, or None to use current branch
+
+        Return:
+            str or None: Upstream name, or None if not found
+        """
+        if not name:
+            name = gitutil.get_branch()
+        ser = self.get_series_by_name(name)
+        if ser:
+            return ser.upstream
+        return None
+
     def get_series_by_name(self, name, include_archived=False):
         """Get a Series object from the database by name
 
@@ -395,9 +454,9 @@ class CseriesHelper:
         idnum = self.db.series_find_by_name(name, include_archived)
         if not idnum:
             return None
-        name, desc = self.db.series_get_info(idnum)
+        name, desc, ups = self.db.series_get_info(idnum)
 
-        return Series.from_fields(idnum, name, desc)
+        return Series.from_fields(idnum, name, desc, ups)
 
     def _get_branch_name(self, name, version):
         """Get the branch name for a particular version
@@ -1309,10 +1368,10 @@ class CseriesHelper:
                     updated += 1
         if cover:
             info = SerVer(svid, None, None, None, cover.id,
-                           cover.num_comments, cover.name, None)
+                           cover.num_comments, cover.name, None, None)
         else:
             info = SerVer(svid, None, None, None, None, None, patches[0].name,
-                           None)
+                           None, None)
         self.db.ser_ver_set_info(info)
 
         return updated, 1 if cover else 0
@@ -1436,7 +1495,7 @@ class CseriesHelper:
             int: Number of version which need a 'scan'
         """
         max_vers = self._series_max_version(ser.idnum)
-        name, desc = self._get_series_info(ser.idnum)
+        name, desc, ups = self._get_series_info(ser.idnum)
         coloured = self.col.build(self.col.BLACK, desc, bright=False,
                                   back=self.col.YELLOW)
         versions = self._get_version_list(ser.idnum)
@@ -1482,7 +1541,7 @@ class CseriesHelper:
                 all series
         """
         max_vers = self._series_max_version(ser.idnum)
-        name, desc = self._get_series_info(ser.idnum)
+        name, desc, ups = self._get_series_info(ser.idnum)
         stats, pwc = self._series_get_version_stats(ser.idnum, max_vers)
         states = {x.state for x in pwc.values()}
         state = 'accepted'

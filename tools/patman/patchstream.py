@@ -23,6 +23,10 @@ from u_boot_pylib import gitutil
 RE_REMOVE = re.compile(r'^BUG=|^TEST=|^BRANCH=|^Review URL:'
                        r'|Reviewed-on:|Commit-\w*:')
 
+# AI co-developer tags to remove (noreply@ indicates non-human)
+RE_AI_TAG = re.compile(r'^(Co-developed-by|Co-Authored-By):.*noreply@',
+                       re.IGNORECASE)
+
 # Lines which are allowed after a TEST= line
 RE_ALLOWED_AFTER_TEST = re.compile('^Signed-off-by:')
 
@@ -445,7 +449,8 @@ class PatchStream:
             self.commit.subject = line
 
         # Detect the tags we want to remove, and skip blank lines
-        elif RE_REMOVE.match(line) and not commit_tag_match:
+        elif (RE_REMOVE.match(line) or RE_AI_TAG.match(line)
+              ) and not commit_tag_match:
             self.skip_blank = True
 
             # TEST= should be the last thing in the commit, so remove

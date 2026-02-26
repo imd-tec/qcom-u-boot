@@ -455,7 +455,7 @@ class TestCseries(unittest.TestCase, TestCommon):
             str(exc.exception))
 
         with terminal.capture() as (out, _):
-            self.run_args('series', '-s', 'first', 'add', '--use-commit',
+            self.run_args('series', '-s', 'first', 'add', '--use-first-commit',
                         '--allow-unmarked', pwork=True)
         lines = out.getvalue().splitlines()
         self.assertEqual(
@@ -759,14 +759,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(5, len(lines))
         self.assertEqual(
             'Name             Description                               '
-            'Accepted  Versions', lines[0])
+            'Accepted  Us  Versions', lines[0])
         self.assertTrue(lines[1].startswith('--'))
         self.assertEqual(
             'first                                                      '
-            '     -/2  1', lines[2])
+            '     -/2      1', lines[2])
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[3])
+            '     1/3      1 2', lines[3])
         self.assertTrue(lines[4].startswith('--'))
 
     def test_series_list_archived(self):
@@ -780,7 +780,7 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(4, len(lines))
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[2])
+            '     1/3      1 2', lines[2])
 
         # Now list including archived series
         with terminal.capture() as (out, _):
@@ -789,17 +789,18 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertEqual(5, len(lines))
         self.assertEqual(
             'first                                                      '
-            '     -/2  1', lines[2])
+            '     -/2      1', lines[2])
         self.assertEqual(
             'second           Series for my board                       '
-            '     1/3  1 2', lines[3])
+            '     1/3      1 2', lines[3])
 
     def test_do_series_add(self):
         """Add a new cseries"""
         self.make_git_tree()
         args = Namespace(subcmd='add', desc='my-description', series='first',
                          mark=False, allow_unmarked=True, upstream=None,
-                         use_commit=False, dry_run=False)
+                         set_upstream=None,
+                         use_first_commit=False, dry_run=False)
         with terminal.capture() as (out, _):
             control.do_series(args, test_db=self.tmpdir, pwork=True)
 
@@ -821,7 +822,22 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         self.assertTrue(lines[1].startswith('--'))
         self.assertEqual(
             'first            my-description                                 '
-            '-/2  1', lines[2])
+            '-/2      1', lines[2])
+
+    def test_do_series_add_upstream(self):
+        """Test that series add can set the upstream"""
+        self.make_git_tree()
+        args = Namespace(subcmd='add', desc='my-description', series='first',
+                         mark=False, allow_unmarked=True, upstream=None,
+                         set_upstream='origin',
+                         use_first_commit=False, dry_run=False)
+        with terminal.capture():
+            control.do_series(args, test_db=self.tmpdir, pwork=True)
+
+        cser = self.get_database()
+        slist = cser.db.series_get_dict()
+        ser = slist.get('first')
+        self.assertEqual('origin', ser.upstream)
 
     def test_do_series_add_cmdline(self):
         """Add a new cseries using the cmdline"""
@@ -847,7 +863,8 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
                          force=True)
         args = Namespace(subcmd='add', series=None, mark=False,
                          allow_unmarked=True, upstream=None, dry_run=False,
-                         desc=None, use_commit=False)
+                         set_upstream=None,
+                         desc=None, use_first_commit=False)
         with terminal.capture():
             control.do_series(args, test_db=self.tmpdir, pwork=True)
 
@@ -1730,14 +1747,14 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             cser.upstream_add('us', 'https://one')
         ulist = cser.get_upstream_dict()
         self.assertEqual(1, len(ulist))
-        self.assertEqual(('https://one', None), ulist['us'])
+        self.assertEqual(('https://one', None, None, None, None, 0, 0), ulist['us'])
 
         with terminal.capture():
             cser.upstream_add('ci', 'git@two')
         ulist = cser.get_upstream_dict()
         self.assertEqual(2, len(ulist))
-        self.assertEqual(('https://one', None), ulist['us'])
-        self.assertEqual(('git@two', None), ulist['ci'])
+        self.assertEqual(('https://one', None, None, None, None, 0, 0), ulist['us'])
+        self.assertEqual(('git@two', None, None, None, None, 0, 0), ulist['ci'])
 
         # Try to add a duplicate
         with self.assertRaises(ValueError) as exc:
@@ -1747,9 +1764,38 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.upstream_list()
         lines = out.getvalue().splitlines()
-        self.assertEqual(2, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
-        self.assertEqual('ci                       git@two', lines[1])
+        self.assertEqual(4, len(lines))
+        self.assertIn('Name', lines[0])
+        self.assertIn('https://one', lines[2])
+        self.assertIn('git@two', lines[3])
+
+    def test_upstream_add_patchwork_url(self):
+        """Test adding an upstream with a patchwork URL"""
+        cser = self.get_cser()
+
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one',
+                              patchwork_url='https://pw.example.com')
+        ulist = cser.get_upstream_dict()
+        self.assertEqual(1, len(ulist))
+        self.assertEqual(
+            ('https://one', None, 'https://pw.example.com', None, None, 0, 0),
+            ulist['us'])
+
+        # Check that the patchwork URL shows in the list
+        with terminal.capture() as (out, _):
+            cser.upstream_list()
+        lines = out.getvalue().splitlines()
+        self.assertEqual(3, len(lines))
+        self.assertIn('pw:https://pw.example.com', lines[2])
+
+        # Check database lookup
+        pw_url = cser.db.upstream_get_patchwork_url('us')
+        self.assertEqual('https://pw.example.com', pw_url)
+
+        # Non-existent upstream returns None
+        pw_url = cser.db.upstream_get_patchwork_url('nonexistent')
+        self.assertIsNone(pw_url)
 
     def test_upstream_add_cmdline(self):
         """Test adding an upsream with cmdline"""
@@ -1759,8 +1805,59 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'list')
         lines = out.getvalue().splitlines()
-        self.assertEqual(1, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
+        self.assertEqual(3, len(lines))
+        self.assertIn('us', lines[2])
+        self.assertIn('https://one', lines[2])
+
+    def test_upstream_set(self):
+        """Test updating settings on an existing upstream"""
+        cser = self.get_cser()
+
+        with terminal.capture():
+            cser.upstream_add('us', 'https://one')
+
+        # Set identity and series_to
+        with terminal.capture():
+            cser.upstream_set('us', identity='chromium', series_to='concept')
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertEqual('chromium', settings[0])
+        self.assertEqual('concept', settings[1])
+
+        # Set boolean flags
+        with terminal.capture():
+            cser.upstream_set('us', no_maintainers=True, no_tags=True)
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertTrue(settings[2])
+        self.assertTrue(settings[3])
+
+        # Clear boolean flags
+        with terminal.capture():
+            cser.upstream_set('us', no_maintainers=False, no_tags=False)
+        settings = cser.db.upstream_get_send_settings('us')
+        self.assertFalse(settings[2])
+        self.assertFalse(settings[3])
+
+        # Non-existent upstream
+        with self.assertRaises(ValueError) as exc:
+            cser.upstream_set('nonexistent', identity='x')
+        self.assertIn('nonexistent', str(exc.exception))
+
+    def test_upstream_set_cmdline(self):
+        """Test upstream set via the command line"""
+        with terminal.capture():
+            self.run_args('upstream', 'add', 'us', 'https://one')
+
+        with terminal.capture():
+            self.run_args('upstream', 'set', 'us', '-I', 'chromium',
+                          '-t', 'concept', '-m', '--no-tags')
+
+        with terminal.capture() as (out, _):
+            self.run_args('upstream', 'list')
+        line = out.getvalue().strip()
+        self.assertIn('id:chromium', line)
+        self.assertIn('to:concept', line)
+        self.assertIn('no-maintainers', line)
+        self.assertIn('no-tags', line)
 
     def test_upstream_default(self):
         """Operation of the default upstream"""
@@ -1790,9 +1887,9 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.upstream_list()
         lines = out.getvalue().splitlines()
-        self.assertEqual(2, len(lines))
-        self.assertEqual('us                       https://one', lines[0])
-        self.assertEqual('ci              default  git@two', lines[1])
+        self.assertEqual(4, len(lines))
+        self.assertNotIn('*', lines[2])
+        self.assertIn('*', lines[3])
 
         cser.upstream_set_default(None)
         self.assertIsNone(cser.upstream_get_default())
@@ -1877,7 +1974,55 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('upstream', 'delete', 'ci')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'list')
-        self.assertFalse(out.getvalue().strip())
+        lines = out.getvalue().splitlines()
+        self.assertEqual(2, len(lines))
+
+    def test_series_upstream(self):
+        """Test upstream field in the series table"""
+        cser = self.get_cser()
+
+        # Add a series without upstream
+        cser.db.series_add('first', 'my desc')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+
+        # Add a series with upstream
+        cser.db.series_add('second', 'desc2', ups='us')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+        self.assertEqual('us', slist['second'].upstream)
+
+        # Update upstream on existing series
+        idnum = cser.db.series_find_by_name('first')
+        cser.db.series_set_upstream(idnum, 'ci')
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertEqual('ci', slist['first'].upstream)
+
+        # Clear upstream
+        cser.db.series_set_upstream(idnum, None)
+        cser.db.commit()
+        slist = cser.db.series_get_dict()
+        self.assertIsNone(slist['first'].upstream)
+
+    def test_series_set_upstream(self):
+        """Test setting upstream via the set-upstream command"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', '', allow_unmarked=True)
+
+        self.db_close()
+        with terminal.capture() as (out, _):
+            self.run_args('series', '-s', 'first', 'set-upstream',
+                          'origin')
+        self.assertIn("Set upstream for series 'first' to 'origin'",
+                      out.getvalue())
+
+        self.db_open()
+        slist = cser.db.series_get_dict()
+        self.assertEqual('origin', slist['first'].upstream)
 
     def test_series_add_mark(self):
         """Test marking a cseries with Change-Id fields"""
@@ -2436,24 +2581,119 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
 
         self.assertFalse(cser.project_get())
 
+        cser.db.upstream_add('us', 'https://us.example.com')
+        cser.db.commit()
+
         pwork = Patchwork.for_testing(self._fake_patchwork_cser)
         with terminal.capture() as (out, _):
             self.run_args('-P', 'https://url', 'patchwork', 'set-project',
-                          'U-Boot', pwork=pwork)
+                          'U-Boot', 'us', pwork=pwork)
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} "
+            f"link-name 'uboot' remote 'us'",
             out.getvalue().strip())
 
-        name, pwid, link_name = cser.project_get()
+        name, pwid, link_name = cser.project_get('us')
         self.assertEqual('U-Boot', name)
         self.assertEqual(6, pwid)
         self.assertEqual('uboot', link_name)
 
         with terminal.capture() as (out, _):
-            self.run_args('-P', 'https://url', 'patchwork', 'get-project')
+            self.run_args('-P', 'https://url', 'patchwork', 'get-project',
+                          'us')
         self.assertEqual(
-            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} link-name 'uboot'",
+            f"Project 'U-Boot' patchwork-ID {self.PROJ_ID} "
+            f"link-name 'uboot' remote 'us'",
             out.getvalue().strip())
+
+    def test_patchwork_list(self):
+        """Test listing patchwork project configurations"""
+        cser = self.get_cser()
+
+        # No projects configured
+        with terminal.capture() as (out, _):
+            cser.project_list()
+        self.assertEqual('No patchwork projects configured',
+                         out.getvalue().strip())
+
+        # Add two remotes for U-Boot and one for Linux
+        cser.db.upstream_add('us', 'https://us.example.com')
+        cser.db.upstream_add('ci', 'https://ci.example.com')
+        cser.db.upstream_add('linus', 'https://linus.example.com')
+        cser.db.patchwork_update('U-Boot', 6, 'uboot', 'us')
+        cser.db.patchwork_update('U-Boot', 6, 'uboot', 'ci')
+        cser.db.patchwork_update('Linux', 10, 'linux', 'linus')
+        cser.db.commit()
+
+        with terminal.capture() as (out, _):
+            cser.project_list()
+        lines = out.getvalue().splitlines()
+        self.assertEqual(5, len(lines))
+        self.assertIn('Linux', lines[2])
+        self.assertIn('linus', lines[2])
+        self.assertIn('U-Boot', lines[3])
+        self.assertIn('ci', lines[3])
+        self.assertIn('us', lines[3])
+
+    def test_patchwork_upstream(self):
+        """Test patchwork project with upstream association"""
+        cser = self.get_cser()
+
+        # Add two upstreams
+        cser.db.upstream_add('us', 'https://us.example.com')
+        cser.db.upstream_add('ci', 'https://ci.example.com')
+        cser.db.commit()
+
+        # Set project for a specific upstream
+        cser.db.patchwork_update('U-Boot', 6, 'uboot', 'us')
+        cser.db.commit()
+
+        # Look up by upstream
+        info = cser.db.patchwork_get('us')
+        self.assertEqual(('U-Boot', 6, 'uboot'), info)
+
+        # Different upstream has no project
+        self.assertIsNone(cser.db.patchwork_get('ci'))
+
+        # No upstream arg returns any match
+        info = cser.db.patchwork_get()
+        self.assertEqual(('U-Boot', 6, 'uboot'), info)
+
+        # Set a different project for ci
+        cser.db.patchwork_update('Linux', 10, 'linux', 'ci')
+        cser.db.commit()
+
+        self.assertEqual(('Linux', 10, 'linux'), cser.db.patchwork_get('ci'))
+        self.assertEqual(('U-Boot', 6, 'uboot'), cser.db.patchwork_get('us'))
+
+    def test_migrate_patchwork_upstream(self):
+        """Test that migrating to v5 renames settings to patchwork"""
+        db = database.Database(f'{self.tmpdir}/.patman3.db')
+        with terminal.capture():
+            db.open_it()
+
+        # Create a v4 database with an upstream and a patchwork row
+        with terminal.capture():
+            db.migrate_to(4)
+        db.execute(
+            "INSERT INTO upstream (name, url, is_default) "
+            "VALUES ('us', 'https://us.example.com', 1)")
+        db.execute(
+            "INSERT INTO settings (name, proj_id, link_name) "
+            "VALUES ('U-Boot', 6, 'uboot')")
+        db.commit()
+
+        # Migrate to v5
+        with terminal.capture():
+            db.migrate_to(5)
+
+        # The existing row should now be in 'patchwork' with the default upstream
+        res = db.execute(
+            'SELECT name, proj_id, link_name, upstream FROM patchwork')
+        recs = res.fetchall()
+        self.assertEqual(1, len(recs))
+        self.assertEqual(('U-Boot', 6, 'uboot', 'us'), recs[0])
+        db.close()
 
     def check_series_list_patches(self):
         """Test listing the patches for a series"""
@@ -3316,7 +3556,88 @@ Date:   .*
             self.assertEqual(f'Update database to v{version}',
                              out.getvalue().strip())
             self.assertEqual(version, db.get_schema_version())
-        self.assertEqual(4, database.LATEST)
+        self.assertEqual(5, database.LATEST)
+
+    def test_migrate_future_version(self):
+        """Test that a database newer than patman is rejected"""
+        db = database.Database(f'{self.tmpdir}/.patman.db')
+        with terminal.capture():
+            db.start()
+
+        # Set the schema version beyond what patman supports
+        db.cur.execute(
+            f'UPDATE schema_version SET version = {database.LATEST + 1}')
+        db.commit()
+        db.close()
+
+        with self.assertRaises(SystemExit):
+            with terminal.capture() as (_, err):
+                db.start()
+        self.assertIn('is too new', err.getvalue())
+
+    def test_migrate_upstream_warning(self):
+        """Test that migrating to v5 warns about series without upstream"""
+        self.make_git_tree()
+
+        # Set 'first' branch to track a remote-style upstream so that
+        # auto-detection can find it
+        self.repo.config.set_multivar('branch.first.remote', '', 'origin')
+        self.repo.config.set_multivar('branch.first.merge', '',
+                                      'refs/heads/main')
+
+        db = database.Database(f'{self.tmpdir}/.patman2.db')
+        with terminal.capture():
+            db.open_it()
+
+        # Create a v4 database with some series; 'first' has a matching
+        # branch with a detectable remote, 'second' and 'third' do not
+        with terminal.capture() as (out, _):
+            db.migrate_to(4)
+        self.assertEqual(
+            'Update database to v1\nUpdate database to v2\n'
+            'Update database to v3\nUpdate database to v4',
+            out.getvalue().strip())
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('first', 'desc1', 0)")
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('second', 'desc2', 0)")
+        db.execute(
+            "INSERT INTO series (name, desc, archived) "
+            "VALUES ('third', 'desc3', 0)")
+        db.commit()
+        db.close()
+
+        cser = cseries.Cseries(self.tmpdir, terminal.COLOR_NEVER)
+        cser.topdir = self.tmpdir
+        cser.gitdir = self.gitdir
+
+        # Point at our v4 database
+        database.Database.instances = {}
+        cser.db, _ = database.Database.get_instance(
+            f'{self.tmpdir}/.patman2.db')
+        with terminal.capture() as (_, err):
+            old_version = cser.db.start()
+        self.assertEqual(4, old_version)
+
+        # 'first' should be auto-detected, 'second' and 'third' have no
+        # matching branch with a remote upstream
+        with terminal.capture() as (out, err):
+            cser._check_null_upstreams()
+        self.assertIn("Set upstream for series 'first' to 'origin'",
+                      out.getvalue())
+        lines = err.getvalue().strip().splitlines()
+        self.assertEqual('2 series without an upstream:', lines[0])
+        self.assertEqual('  second', lines[1])
+        self.assertEqual('  third', lines[2])
+
+        # Check that 'first' was actually updated in the database
+        slist = cser.db.series_get_dict()
+        self.assertEqual('origin', slist['first'].upstream)
+        self.assertIsNone(slist['second'].upstream)
+
+        cser.db.close()
 
     def test_series_scan(self):
         """Test scanning a series for updates"""
@@ -3429,15 +3750,25 @@ Date:   .*
         with terminal.capture() as (out, _):
             cser.link_auto(pwork, 'second3', 3, True, 50)
         itr = iter(out.getvalue().splitlines())
-        for i in range(7):
-            self.assertEqual(
-                "Possible matches for 'second' v3 desc 'Series for my board':",
-                next(itr), f'failed at i={i}')
-            self.assertEqual('  Link  Version  Description', next(itr))
-            self.assertEqual('   456        1  Series for my board', next(itr))
-            self.assertEqual('   457        2  Series for my board', next(itr))
-            self.assertEqual('Sleeping for 5 seconds', next(itr))
-        self.assertEqual('Link completed after 35 seconds', next(itr))
+
+        # Matches shown only once (they don't change between retries)
+        self.assertEqual(
+            "Possible matches for 'second' v3 desc 'Series for my board':",
+            next(itr))
+        self.assertEqual('  Link  Version  Description', next(itr))
+        self.assertEqual('   456        1  Series for my board', next(itr))
+        self.assertEqual('   457        2  Series for my board', next(itr))
+
+        # Progress messages with backoff (5, 10, 15, 20s sleeps)
+        self.assertEqual(
+            'Waiting for series on patchwork (0s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (5s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (15s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (30s)...', next(itr))
+        self.assertEqual('Link completed after 50 seconds', next(itr))
         self.assertRegex(
             next(itr), 'Checking out upstream commit refs/heads/base: .*')
         self.assertEqual(

@@ -134,12 +134,26 @@ def do_series(args, test_db=None, pwork=None, cser=None):
         cser.open_database()
         if args.subcmd in needs_patchwork:
             if not pwork:
-                pwork = Patchwork(args.patchwork_url)
-                proj = cser.project_get()
+                ups = cser.get_series_upstream(args.series)
+                pw_url = None
+                if ups:
+                    pw_url = cser.db.upstream_get_patchwork_url(ups)
+                if not pw_url:
+                    pw_url = args.patchwork_url
+                if not pw_url:
+                    raise ValueError(
+                        'No patchwork URL found for upstream '
+                        f"'{ups}'; use 'patman upstream add' with "
+                        '-p or pass --patchwork-url')
+                pwork = Patchwork(pw_url)
+                proj = cser.project_get(ups)
+                if not proj:
+                    proj = cser.project_get()
                 if not proj:
                     raise ValueError(
-                        "Please set project ID with 'patman patchwork set-project'")
-                _, proj_id, link_name = cser.project_get()
+                        "Please set project ID with "
+                        "'patman patchwork set-project'")
+                _, proj_id, link_name = proj
                 pwork.project_set(proj_id, link_name)
         elif pwork and pwork is not True:
             raise ValueError(
@@ -147,7 +161,8 @@ def do_series(args, test_db=None, pwork=None, cser=None):
         if args.subcmd == 'add':
             cser.add(args.series, args.desc, mark=args.mark,
                      allow_unmarked=args.allow_unmarked, end=args.upstream,
-                     use_commit=args.use_commit, dry_run=args.dry_run)
+                     use_commit=args.use_first_commit,
+                     ups=args.set_upstream, dry_run=args.dry_run)
         elif args.subcmd == 'archive':
             cser.archive(args.series)
         elif args.subcmd == 'autolink':
@@ -191,6 +206,9 @@ def do_series(args, test_db=None, pwork=None, cser=None):
             cser.version_remove(args.series, args.version, dry_run=args.dry_run)
         elif args.subcmd == 'rename':
             cser.rename(args.series, args.new_name, dry_run=args.dry_run)
+        elif args.subcmd == 'set-upstream':
+            cser.set_upstream(args.series, args.upstream_name,
+                              dry_run=args.dry_run)
         elif args.subcmd == 'scan':
             cser.scan(args.series, mark=args.mark,
                       allow_unmarked=args.allow_unmarked, end=args.upstream,
@@ -232,7 +250,13 @@ def upstream(args, test_db=None):
     try:
         cser.open_database()
         if args.subcmd == 'add':
-            cser.upstream_add(args.remote_name, args.url)
+            cser.upstream_add(args.remote_name, args.url,
+                              args.project_name,
+                              patchwork_url=args.patchwork_url,
+                              identity=args.identity,
+                              series_to=args.series_to,
+                              no_maintainers=args.no_maintainers,
+                              no_tags=args.no_tags)
         elif args.subcmd == 'default':
             if args.unset:
                 cser.upstream_set_default(None)
@@ -243,7 +267,26 @@ def upstream(args, test_db=None):
                 print(result if result else 'unset')
         elif args.subcmd == 'delete':
             cser.upstream_delete(args.remote_name)
-        elif args.subcmd == 'list':
+        elif args.subcmd == 'set':
+            kwargs = {}
+            if args.patchwork_url is not None:
+                kwargs['patchwork_url'] = args.patchwork_url
+            if args.identity is not None:
+                kwargs['identity'] = args.identity
+            if args.series_to is not None:
+                kwargs['series_to'] = args.series_to
+            if args.no_maintainers:
+                kwargs['no_maintainers'] = True
+            elif args.maintainers:
+                kwargs['no_maintainers'] = False
+            if args.no_tags:
+                kwargs['no_tags'] = True
+            elif args.tags:
+                kwargs['no_tags'] = False
+            if not kwargs:
+                raise ValueError('No settings to update')
+            cser.upstream_set(args.remote_name, **kwargs)
+        elif args.subcmd == 'ls':
             cser.upstream_list()
         else:
             raise ValueError(f"Unknown upstream subcommand '{args.subcmd}'")
@@ -265,15 +308,37 @@ def patchwork(args, test_db=None, pwork=None):
     try:
         cser.open_database()
         if args.subcmd == 'set-project':
+            if not args.remote:
+                raise ValueError('Please specify the remote name')
             if not pwork:
-                pwork = Patchwork(args.patchwork_url)
-            cser.project_set(pwork, args.project_name)
+                pw_url = cser.db.upstream_get_patchwork_url(args.remote)
+                if not pw_url:
+                    pw_url = args.patchwork_url
+                if not pw_url:
+                    raise ValueError(
+                        f"No patchwork URL for remote '{args.remote}'"
+                        "; use 'patman upstream add' with -p"
+                        ' or pass --patchwork-url')
+                pwork = Patchwork(pw_url)
+            cser.project_set(pwork, args.project_name,
+                             ups=args.remote)
         elif args.subcmd == 'get-project':
-            info = cser.project_get()
+            if not args.remote:
+                raise ValueError('Please specify the remote name')
+            ups = args.remote
+            info = cser.project_get(ups)
             if not info:
-                raise ValueError("Project has not been set; use 'patman patchwork set-project'")
+                raise ValueError(
+                    "Project has not been set; use "
+                    "'patman patchwork set-project'")
             name, pwid, link_name = info
-            print(f"Project '{name}' patchwork-ID {pwid} link-name '{link_name}'")
+            msg = (f"Project '{name}' patchwork-ID {pwid} "
+                   f"link-name '{link_name}'")
+            if ups:
+                msg += f" remote '{ups}'"
+            print(msg)
+        elif args.subcmd == 'ls':
+            cser.project_list()
         else:
             raise ValueError(f"Unknown patchwork subcommand '{args.subcmd}'")
     finally:

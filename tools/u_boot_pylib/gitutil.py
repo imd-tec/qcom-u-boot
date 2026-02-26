@@ -459,7 +459,7 @@ def check_suppress_cc_config():
 
 def email_patches(series, cover_fname, args, dry_run, warn_on_error, cc_fname,
                   alias, self_only=False, in_reply_to=None, thread=False,
-                  smtp_server=None, cwd=None):
+                  smtp_server=None, identity=None, cwd=None):
     """Email a patch series.
 
     Args:
@@ -479,6 +479,7 @@ def email_patches(series, cover_fname, args, dry_run, warn_on_error, cc_fname,
         thread (bool): True to add --thread to git send-email (make
             all patches reply to cover-letter or first patch in series)
         smtp_server (str or None): SMTP server to use to send patches
+        identity (str or None): Git sendemail identity to use
         cwd (str): Path to use for patch files (None to use current dir)
 
     Returns:
@@ -537,6 +538,8 @@ send --cc-cmd cc-fname" cover p1 p2'
                               warn_on_error)
         cc = []
     cmd = ['git', 'send-email', '--annotate']
+    if identity:
+        cmd.append(f'--identity={identity}')
     if smtp_server:
         cmd.append(f'--smtp-server={smtp_server}')
     if in_reply_to:
