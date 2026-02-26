@@ -66,6 +66,7 @@ class TestCommon:
         self.gitdir = os.path.join(self.tmpdir, '.git')
         tout.init(tout.DEBUG if self.verbosity else tout.INFO,
                   allow_colour=False)
+        tout.stdout_is_tty = False
 
     def tearDown(self):
         """Delete the temporary dir"""

@@ -3750,15 +3750,25 @@ Date:   .*
         with terminal.capture() as (out, _):
             cser.link_auto(pwork, 'second3', 3, True, 50)
         itr = iter(out.getvalue().splitlines())
-        for i in range(7):
-            self.assertEqual(
-                "Possible matches for 'second' v3 desc 'Series for my board':",
-                next(itr), f'failed at i={i}')
-            self.assertEqual('  Link  Version  Description', next(itr))
-            self.assertEqual('   456        1  Series for my board', next(itr))
-            self.assertEqual('   457        2  Series for my board', next(itr))
-            self.assertEqual('Sleeping for 5 seconds', next(itr))
-        self.assertEqual('Link completed after 35 seconds', next(itr))
+
+        # Matches shown only once (they don't change between retries)
+        self.assertEqual(
+            "Possible matches for 'second' v3 desc 'Series for my board':",
+            next(itr))
+        self.assertEqual('  Link  Version  Description', next(itr))
+        self.assertEqual('   456        1  Series for my board', next(itr))
+        self.assertEqual('   457        2  Series for my board', next(itr))
+
+        # Progress messages with backoff (5, 10, 15, 20s sleeps)
+        self.assertEqual(
+            'Waiting for series on patchwork (0s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (5s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (15s)...', next(itr))
+        self.assertEqual(
+            'Waiting for series on patchwork (30s)...', next(itr))
+        self.assertEqual('Link completed after 50 seconds', next(itr))
         self.assertRegex(
             next(itr), 'Checking out upstream commit refs/heads/base: .*')
         self.assertEqual(

@@ -284,26 +284,57 @@ class Cseries(cser_helper.CseriesHelper):
         start = self.get_time()
         stop = start + wait_s
         sleep_time = 5
+        last_options = None
         while True:
             pws, options, name, version, desc = self.link_search(
                 pwork, series, version)
             if pws:
+                tout.clear_progress()
                 if wait_s:
                     tout.notice('Link completed after '
                                 f'{self.get_time() - start} seconds')
                 break
 
-            print(f"Possible matches for '{name}' v{version} desc '{desc}':")
+            if not wait_s or self.get_time() > stop:
+                tout.clear_progress()
+                if options != last_options:
+                    self._show_autolink_matches(name, version, desc,
+                                                options)
+                delay = f' after {wait_s} seconds' if wait_s else ''
+                raise ValueError(
+                    f"Cannot find series '{desc}'{delay}; "
+                    'to try again later:\n'
+                    f"  patman series autolink -s {name} -V {version}")
+
+            if options != last_options:
+                tout.clear_progress()
+                self._show_autolink_matches(name, version, desc, options)
+                last_options = options
+
+            elapsed = int(self.get_time() - start)
+            tout.progress(
+                f'Waiting for series on patchwork ({elapsed}s)')
+            self.sleep(sleep_time)
+            sleep_time = min(sleep_time + 5, 30)
+
+        self.link_set(name, version, pws, update_commit)
+
+    def _show_autolink_matches(self, name, version, desc, options):
+        """Show possible autolink matches
+
+        Args:
+            name (str): Series name
+            version (int): Series version
+            desc (str): Series description
+            options (list of dict): Possible matches from patchwork
+        """
+        print(f"Possible matches for '{name}' v{version} desc '{desc}':")
+        if options:
             print('  Link  Version  Description')
             for opt in options:
                 print(f"{opt['id']:6}  {opt['version']:7}  {opt['name']}")
-            if not wait_s or self.get_time() > stop:
-                delay = f' after {wait_s} seconds' if wait_s else ''
-                raise ValueError(f"Cannot find series '{desc}{delay}'")
-
-            self.sleep(sleep_time)
-
-        self.link_set(name, version, pws, update_commit)
+        else:
+            print('  (none)')
 
     def link_auto_all(self, pwork, update_commit, link_all_versions,
                       replace_existing, dry_run, show_summary=True):

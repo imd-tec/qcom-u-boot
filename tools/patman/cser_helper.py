@@ -205,7 +205,6 @@ class CseriesHelper:
         Args:
             time_s (float): Amount of seconds to sleep for
         """
-        print(f'Sleeping for {time_s} seconds')
         if self._fake_time is not None:
             self._fake_sleep(time_s)
         else:
