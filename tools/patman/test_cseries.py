@@ -1764,13 +1764,10 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.upstream_list()
         lines = out.getvalue().splitlines()
-        self.assertEqual(2, len(lines))
-        self.assertEqual(
-            'us                                       https://one',
-            lines[0])
-        self.assertEqual(
-            'ci                                       git@two',
-            lines[1])
+        self.assertEqual(4, len(lines))
+        self.assertIn('Name', lines[0])
+        self.assertIn('https://one', lines[2])
+        self.assertIn('git@two', lines[3])
 
     def test_upstream_add_patchwork_url(self):
         """Test adding an upstream with a patchwork URL"""
@@ -1789,8 +1786,8 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.upstream_list()
         lines = out.getvalue().splitlines()
-        self.assertEqual(1, len(lines))
-        self.assertIn('pw:https://pw.example.com', lines[0])
+        self.assertEqual(3, len(lines))
+        self.assertIn('pw:https://pw.example.com', lines[2])
 
         # Check database lookup
         pw_url = cser.db.upstream_get_patchwork_url('us')
@@ -1808,10 +1805,9 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'list')
         lines = out.getvalue().splitlines()
-        self.assertEqual(1, len(lines))
-        self.assertEqual(
-            'us                                       https://one',
-            lines[0])
+        self.assertEqual(3, len(lines))
+        self.assertIn('us', lines[2])
+        self.assertIn('https://one', lines[2])
 
     def test_upstream_set(self):
         """Test updating settings on an existing upstream"""
@@ -1891,13 +1887,9 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
         with terminal.capture() as (out, _):
             cser.upstream_list()
         lines = out.getvalue().splitlines()
-        self.assertEqual(2, len(lines))
-        self.assertEqual(
-            'us                                       https://one',
-            lines[0])
-        self.assertEqual(
-            'ci         default                       git@two',
-            lines[1])
+        self.assertEqual(4, len(lines))
+        self.assertNotIn('*', lines[2])
+        self.assertIn('*', lines[3])
 
         cser.upstream_set_default(None)
         self.assertIsNone(cser.upstream_get_default())
@@ -1982,7 +1974,8 @@ Tested-by: Mary Smith <msmith@wibble.com>   # yak
             self.run_args('upstream', 'delete', 'ci')
         with terminal.capture() as (out, _):
             self.run_args('upstream', 'list')
-        self.assertFalse(out.getvalue().strip())
+        lines = out.getvalue().splitlines()
+        self.assertEqual(2, len(lines))
 
     def test_series_upstream(self):
         """Test upstream field in the series table"""

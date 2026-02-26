@@ -1218,24 +1218,29 @@ class Cseries(cser_helper.CseriesHelper):
         """
         udict = self.get_upstream_dict()
 
+        print(f"{'Name':6} {'Def':3} {'Project':10} {'URL':40} Options")
+        border = (f"{'-' * 6} {'-' * 3} {'-' * 10} {'-' * 40} "
+                  f"{'-' * 20}")
+        print(border)
         for name, items in udict.items():
             (url, is_default, patchwork_url, identity, series_to,
              no_maintainers, no_tags) = items
-            default = 'default' if is_default else ''
+            default = '*' if is_default else ''
             proj = self.db.patchwork_get(name)
             proj_name = proj[0] if proj else ''
-            line = f'{name:10.10} {default:8} {proj_name:20} {url}'
+            opts = []
             if patchwork_url:
-                line += f'  pw:{patchwork_url}'
+                opts.append(f'pw:{patchwork_url}')
             if identity:
-                line += f'  id:{identity}'
+                opts.append(f'id:{identity}')
             if series_to:
-                line += f'  to:{series_to}'
+                opts.append(f'to:{series_to}')
             if no_maintainers:
-                line += '  no-maintainers'
+                opts.append('no-maintainers')
             if no_tags:
-                line += '  no-tags'
-            print(line)
+                opts.append('no-tags')
+            print(f'{name:6} {default:3} {proj_name:10} {url:40} '
+                  f'{" ".join(opts)}')
 
     def upstream_set(self, name, **kwargs):
         """Update settings on an existing upstream
