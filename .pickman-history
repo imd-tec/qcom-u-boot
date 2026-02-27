@@ -31989,3 +31989,74 @@ No code changes are needed. Please retry the pipeline.
 
 ---
 
+### Pipeline fix: 2026-02-26 (attempt 2)
+
+Branch: cherry-10322524bb1
+
+Failed jobs:
+- opi_pc (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failure. Looking at the log:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is clearly a **lab infrastructure failure** - the hardware board (Orange Pi PC) didn't respond during login. The labgrid framework tried to connect to the physical board and timed out waiting for the U-Boot prompt.
+
+Let me verify this is indeed an infrastructure issue by checking what changes are on the branch:
+
+None of the cherry-picked commits touch the Orange Pi PC board (sunxi platform). Let me verify:
+
+The diff is empty - no changes to Orange Pi PC related files. Let me also check if any common/core code was modified that could affect all boards:
+
+All the changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards) and don't touch anything related to the Orange Pi PC (sunxi platform). The only non-board-specific changes are:
+- `common/spl/spl_imx_container.c` - IMX container specific
+- `drivers/adc/imx93-adc.c` - IMX93 specific
+- `drivers/power/domain/imx8m-power-domain.c` - IMX8M specific
+
+None of these affect the Orange Pi PC board.
+
+Based on my analysis:
+
+## Conclusion
+
+The **opi_pc** job failure is a **lab infrastructure failure**, NOT caused by any code changes.
+
+**Evidence:**
+1. The error message clearly states: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login` followed by `Lab failure: Marking connection bad - no other tests will run`
+2. This is the labgrid framework timing out trying to connect to the physical Orange Pi PC hardware board
+3. The cherry-picked commits don't touch any sunxi/Orange Pi related code:
+   - No changes to `board/sunxi/`
+   - No changes to `configs/orangepi_pc_defconfig`
+   - No changes to `arch/arm/dts/sun8i-h3-orangepi*`
+4. All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+5. The only common code changes (`common/spl/spl_imx_container.c`, `drivers/adc/imx93-adc.c`, `drivers/power/domain/imx8m-power-domain.c`) are all IMX-specific and don't affect sunxi boards
+
+**No code changes are needed.** This is a transient lab infrastructure issue where the physical hardware board failed to respond.
+
+## Report
+
+### Pipeline Failure Analysis: opi_pc job
+
+**Root Cause:** Lab infrastructure failure - the Orange Pi PC hardware board timed out during login
+
+**Error:**
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+**Verification:**
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes to Orange Pi PC related files
+- All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+- No common code paths that would affect sunxi boards were modified
+
+**Actions Taken:** None - this is a transient infrastructure issue unrelated to the code changes.
+
+**Recommendation:** Retry the pipeline.
+
+---
+
