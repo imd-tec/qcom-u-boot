@@ -32587,3 +32587,73 @@ The branch `cherry-f02e64d0117` is ready for pushing.
 
 ---
 
+### Pipeline fix: 2026-02-27 (attempt 1)
+
+Branch: cherry-f02e64d0117
+
+Failed jobs:
+- play (sjg-lab)
+
+### Conversation log
+Looking at the job log, I can see this is a **hardware lab test failure**, not a build failure. The key lines are:
+
+```
+Lab failure: Timeout executing 'dm tree
+': Marking connection bad - no other tests will run
+```
+
+This is happening on the BeaglePlay board during pytest execution. The board is booting a completely different firmware (`U-Boot SPL 2021.01-gb248392d (Jan 04 2023)`) - which is the board's existing firmware, not the code being tested. The test is timing out while trying to execute the `dm tree` command.
+
+Let me verify this is an infrastructure/transient issue by checking the branch and the commits:
+
+Now let me analyze the failure more carefully. Looking at the log:
+
+1. The job is `play (stage: sjg-lab)` - this is a hardware lab test
+2. The board being tested is `am62x_beagleplay_a53`
+3. The error is: `Lab failure: Timeout executing 'dm tree': Marking connection bad - no other tests will run`
+4. The board shows it's running `U-Boot SPL 2021.01-gb248392d (Jan 04 2023)` - this is OLD firmware from 2023, not the code being tested (which should be `2026.02-g0408af78a5c1`)
+
+Looking more closely at the log:
+```
+{lab ready in 1.5s: U-Boot Concept 2026.02-g0408af78a5c1 (Feb 27 2026 - 14:07:44 -0700)}
+Terminal ready...press Ctrl-] twice to exit=>                                            version
+U-Boot Concept 2026.02-g0408af78a5c1 (Feb 27 2026 - 14:07:44 -0700)
+```
+
+The TEST version (built from cherry-f02e64d0117) is `2026.02-g0408af78a5c1`, and the lab shows it's ready with that version. But then the board boots into the OLD SPL from 2021/2023. This is a **hardware/lab infrastructure issue** - the board is not booting the new firmware correctly, possibly because:
+
+1. The board's on-device firmware (in eMMC/flash) is taking over instead of the test firmware
+2. There's a communication/timeout issue with the hardware lab
+3. The board's state was not properly reset
+
+Let me verify the commits don't touch anything related to BeaglePlay:
+
+No cherry-picked commits touch BeaglePlay or AM62 files. Let me also verify the commits are all about Allwinner A523:
+
+All commits touch only Allwinner/sunxi-related files. None of them touch any TI/BeaglePlay/AM62 code. 
+
+This is clearly an **infrastructure/transient issue**:
+
+1. **The failure is a lab timeout** - `Lab failure: Timeout executing 'dm tree': Marking connection bad`
+2. **The BeaglePlay board is showing old firmware** - It's booting `U-Boot SPL 2021.01-gb248392d (Jan 04 2023)` instead of the test firmware
+3. **The cherry-picked commits are unrelated** - They only add Allwinner A523 support and don't touch anything related to TI/AM62/BeaglePlay
+4. **The test version was correctly built** - The log shows `U-Boot Concept 2026.02-g0408af78a5c1` was built, but the board didn't load it properly
+
+## Summary
+
+**This is an infrastructure/transient issue, NOT a code problem.**
+
+The `play (sjg-lab)` job failed because:
+- The BeaglePlay hardware lab board failed to boot the test firmware
+- Instead, it booted its old on-device firmware from 2021/2023
+- The `dm tree` command timed out because the board was stuck in its bootloader menu trying to load from microSD
+
+The cherry-picked commits (all 21 of them) only add Allwinner A523 SoC support and do not modify any code related to:
+- TI AM62x / BeaglePlay
+- Device tree or driver code used by BeaglePlay
+- Any test infrastructure
+
+**No code changes are needed.** This failure should be retried - it's a hardware lab environment issue where the board didn't properly load the test firmware.
+
+---
+
