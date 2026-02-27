@@ -33030,3 +33030,161 @@ This is a **transient infrastructure/hardware issue** - serial line corruption b
 
 ---
 
+Branch: cherry-1d782a3f229
+
+Commits:
+- 1d782a3f229 Docker, CI: Update to latest Ubuntu and Dockerfile
+- 2ea95795236 efi: Rename the lib/efi directory
+- 0029f2447bd efi: Rename CONFIG_EFI to CONFIG_EFI_CLIENT
+- 81ce639e61c efi: Create a new CONFIG_EFI
+- ca0b03ba60b efi: Update maintainers for EFI_CLIENT
+- 62b3dbfc5ef doc: board: ti: Add defconfigs for AM69-SK
+- b9bb2627bbb efi_selftest: check system table pointer
+- aa703a816a6 efi_loader: efi_realloc() must check efi_alloc() return value
+- 7e2506e3a24 efi_loader: correct EFI_DEBUG_TABLE_ENTRY_SIZE
+- ca01c847f6c efi_selftest: fix ESRT creation tests
+- 5bab07296c1 efi_loader: add missing check in FMP.GetImageInfo()
+- afd5426043b docs: Update FIT signature testing instructions
+- 4c3b5fcd810 Merge tag 'efi-2025-10-rc1' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+The repository is essentially clean (just untracked files). Let me create the new branch and start the cherry-pick process.
+
+Now let me cherry-pick the first commit:
+
+There's a conflict. As per instructions, let me check if this commit might already be applied with a different hash:
+
+These are different commits - the ci/master one is an older update from 2024, while the new one is from 2025 with different version tags. They aren't the same commit. Let me check all the commits that were flagged as "maybe already applied":
+
+Now let me check if all these EFI commits are already applied by looking for their subject lines:
+
+All 4 EFI commits flagged as "maybe already applied" ARE in ci/master. Let me also check for the other commits:
+
+So commits 1-9 in the "other" list are NOT in ci/master. Let me search more broadly for any of these:
+
+These are different commits. Let me now check the remaining EFI commits:
+
+Most of the commits are not in ci/master. Now let me proceed with the cherry-pick. I'll retry the cherry-pick of the first commit and try to resolve the conflict:
+
+The conflicts are in CI configuration files - they're updating the docker image tag. Let me see what the original commit is trying to do:
+
+The commit is simply updating the docker image tag from the old to new version. The conflict is because ci/master has a different format for the gitlab-ci.yml. Let me resolve these conflicts properly:
+
+For azure-pipelines.yml, I'll take the new version (from the cherry-pick). For gitlab-ci.yml, the structure is different - ci/master has a more complex structure. Let me look at the full context:
+
+I see - the ci/master has a different structure with variables section and default section. The incoming commit has a simpler structure with just a top-level image. I need to keep the ci/master structure but update the docker image tag. Let me resolve both conflicts:
+
+There's a duplicate line and an empty line. Let me fix it:
+
+Good. Now let me fix the gitlab-ci.yml. The structure is very different - ci/master has a different format. I need to keep the ci/master structure but update the image tag:
+
+The ci/master version has the new image format with variables and default sections. The incoming commit has an older format. I should keep the ci/master structure and just update the docker image tag from `jammy-20250404-20feb26b` to `jammy-20250714-25Jul2025`:
+
+Good. But I notice it's using `sjg20/u-boot-gitlab-ci-runner` but the commit wants `trini/u-boot-gitlab-ci-runner`. The original commit from us/next uses trini's image, but ci/master uses sjg20's. Let me check what the original commit is changing:
+
+The original commit changes `trini/u-boot-gitlab-ci-runner:jammy-20250404-29Apr2025` to `trini/u-boot-gitlab-ci-runner:jammy-20250714-25Jul2025`. But ci/master uses `sjg20/u-boot-gitlab-ci-runner`. The key change is the date tag from 20250404 to 20250714 and the build date suffix. For the ci/master variant, I should update the tag but keep the sjg20 image.
+
+Let me check what the current tag in ci/master is:
+
+So ci/master uses `sjg20/u-boot-gitlab-ci-runner:jammy-20250404-20feb26b`. The new commit is updating from 20250404 to 20250714 tags. I've updated the tag correctly - I only changed the date suffix from `jammy-20250404-20feb26b` to `jammy-20250714-25Jul2025` while keeping the sjg20 prefix. This is a reasonable adaptation of the change.
+
+Now let me add the fixed files and complete the cherry-pick:
+
+Now let me verify the delta and run the build test:
+
+Stats match (3 files, 3 insertions, 3 deletions). Now let's run the build test:
+
+The build failed, but this is not related to the cherry-pick - it's a pre-existing issue with a missing `capsule_esl_file` and something in test/fdt_overlay. Let me check if this was already broken:
+
+The build is already broken on ci/master with the same error - this is a pre-existing issue, not caused by the cherry-pick. Let me switch back to the cherry-pick branch and continue:
+
+Good, the first commit is applied. The build failure is pre-existing on ci/master. Now let's continue with the 4 EFI commits that may already be applied. Let me verify them properly:
+
+These commits are renaming lib/efi to lib/efi_client, but the original has fewer files (12 vs 16). The core idea is the same, but the commits are slightly different. Since the result (lib/efi renamed to lib/efi_client) is already in ci/master, the cherry-pick will likely have no effect. Let me try to cherry-pick and see:
+
+Too many conflicts - this confirms the commit is already applied in a different form (5f4327ec9f3). Let me abort and skip this commit since the efi directory rename is already in ci/master:
+
+Now let's try the next EFI commit:
+
+Now let's continue with the remaining commits that are NOT marked as potentially applied. First, the AM69-SK defconfigs commit:
+
+Stats match. Now continue:
+
+Good. Continue:
+
+Now the last commit is a merge commit:
+
+The merge commit has conflicts because it contains the same EFI changes that were already applied to ci/master. The merge commit `4c3b5fcd810` is the merge of the EFI subsystem PR which includes all those EFI changes. Since those changes are already in ci/master via a different path, this merge commit will conflict.
+
+Let me check what this merge commit actually brings:
+
+This merge commit contains all the commits I've been cherry-picking! Since I've already applied all the individual commits (the ones not already in ci/master), the merge commit itself would just bring the same changes again. In this case, it's appropriate to create an empty commit to preserve the merge history:
+
+Now let me verify all commits are applied:
+
+I have 9 commits applied:
+1. Docker, CI: Update to latest Ubuntu and Dockerfile
+2. doc: board: ti: Add defconfigs for AM69-SK
+3. efi_selftest: check system table pointer
+4. efi_loader: efi_realloc() must check efi_alloc() return value
+5. efi_loader: correct EFI_DEBUG_TABLE_ENTRY_SIZE
+6. efi_selftest: fix ESRT creation tests
+7. efi_loader: add missing check in FMP.GetImageInfo()
+8. docs: Update FIT signature testing instructions
+9. Merge tag 'efi-2025-10-rc1' (empty)
+
+4 commits were skipped as already applied:
+- 2ea95795236: efi: Rename the lib/efi directory (already as 5f4327ec9f3)
+- 0029f2447bd: efi: Rename CONFIG_EFI to CONFIG_EFI_CLIENT (already as ca1f2dbd8e7)
+- 81ce639e61c: efi: Create a new CONFIG_EFI (already as a07abd67dac)
+- ca0b03ba60b: efi: Update maintainers for EFI_CLIENT (already as c787cb9d278)
+
+Let me run a final build test:
+
+The build failure is the same pre-existing issue on ci/master (not caused by any of the cherry-picked commits).
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+**Requested commits:** 13
+**Successfully cherry-picked:** 9 (including 1 empty merge marker)
+**Skipped (already applied):** 4
+
+### Commits Applied:
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 1d782a3f229 | Docker, CI: Update to latest Ubuntu and Dockerfile | ✅ Applied (conflict resolved - adapted to ci/master's gitlab-ci.yml structure) |
+| 2 | 2ea95795236 | efi: Rename the lib/efi directory | ⏭️ SKIPPED - already applied as 5f4327ec9f3 |
+| 3 | 0029f2447bd | efi: Rename CONFIG_EFI to CONFIG_EFI_CLIENT | ⏭️ SKIPPED - already applied as ca1f2dbd8e7 |
+| 4 | 81ce639e61c | efi: Create a new CONFIG_EFI | ⏭️ SKIPPED - already applied as a07abd67dac |
+| 5 | ca0b03ba60b | efi: Update maintainers for EFI_CLIENT | ⏭️ SKIPPED - already applied as c787cb9d278 |
+| 6 | 62b3dbfc5ef | doc: board: ti: Add defconfigs for AM69-SK | ✅ Applied |
+| 7 | b9bb2627bbb | efi_selftest: check system table pointer | ✅ Applied |
+| 8 | aa703a816a6 | efi_loader: efi_realloc() must check efi_alloc() return value | ✅ Applied |
+| 9 | 7e2506e3a24 | efi_loader: correct EFI_DEBUG_TABLE_ENTRY_SIZE | ✅ Applied |
+| 10 | ca01c847f6c | efi_selftest: fix ESRT creation tests | ✅ Applied |
+| 11 | 5bab07296c1 | efi_loader: add missing check in FMP.GetImageInfo() | ✅ Applied |
+| 12 | afd5426043b | docs: Update FIT signature testing instructions | ✅ Applied |
+| 13 | 4c3b5fcd810 | Merge tag 'efi-2025-10-rc1' | ✅ Applied as empty commit (individual commits already applied) |
+
+### Fix-ups Made:
+1. **1d782a3f229**: Resolved conflict in `.azure-pipelines.yml` and `.gitlab-ci.yml` by keeping ci/master's structure (with `sjg20/` image prefix and variables/default sections) while updating the docker image tag from `jammy-20250404` to `jammy-20250714-25Jul2025`.
+
+### Build Result:
+**FAIL** - Pre-existing issue on ci/master:
+```
+FATAL ERROR: Couldn't open "capsule_esl_file": No such file or directory
+make[3]: *** [scripts/Makefile.lib:456: test/fdt_overlay/test-fdt-base.dtb] Error 1
+```
+This build failure exists on ci/master before any cherry-picks were applied.
+
+### Commits with Concerning Deltas:
+None - all applied commits have matching stats with their originals.
+
+### Branch Status:
+Branch `cherry-1d782a3f229` is ready with 9 commits ahead of ci/master.
+
+---
+
