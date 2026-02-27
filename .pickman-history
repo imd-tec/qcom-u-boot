@@ -31499,3 +31499,91 @@ f7e07e5d189 cmd: fpga: improve user feedback in case of bitstream load failure
 
 ---
 
+## 2026-02-26: us/next
+
+Branch: cherry-70bf6e33e15
+
+Commits:
+- 70bf6e33e15 uclass: Cleanup uclass_find_next_device
+- b56066e03ca drivers: misc: k3_bist: Add K3 BIST driver
+- a7ddab97aae arm: mach-k3: j784s4_init: Trigger LBIST and PBIST on MAIN R5 2_0
+- 70a4d1fa1dd treewide: Remove empty board_init() function from all boards
+- 5c0827eeded sandbox: eth-raw: Prevent possible buffer overflow
+- 8f3820dc3a2 fs: exfat: Remove unused label code
+- a70bbc4436b arm: dts: ast2600.dtsi: Fix typo of uart11 reg address
+- 6d68ac9730c arm: dts: k3: use SPL_TEXT_BASE for R5 SPL load address
+- 896f570d567 Merge patch series "Add support for K3 BIST"
+
+### Conversation log
+The delta looks identical. Now running build test:
+
+Build passed. Now cherry-pick the second commit:
+
+There are conflicts. Let me check what the conflicts are:
+
+Many conflicts in configs files. Let me look at the conflicts to see if they're resolvable:
+
+The conflict is simple - the incoming change adds `# CONFIG_BOARD_INIT is not set` and there's a duplicate `CONFIG_SPL_MAX_SIZE=0x58000` line. Let me resolve all conflicts:
+
+The conflicts are in defconfig files. Looking at the pattern, the conflict is about adding `# CONFIG_BOARD_INIT is not set`. Let me analyze if these are auto-resolvable:
+
+I see - the conflicts are due to the original commit trying to add `# CONFIG_BOARD_INIT is not set` but in HEAD that section doesn't have SPL_MAX_SIZE there. Let me check if this pattern is the same for all conflicts:
+
+The conflicts are about config format changes (`# CONFIG_X is not set` vs `CONFIG_X=n`). These are semantically equivalent and HEAD version should be preferred. Also there's the deleted k230_canmv board conflict. Let me handle all of them:
+
+Now let me resolve the config conflicts by keeping HEAD version and only adding the `# CONFIG_BOARD_INIT is not set` line:
+
+Good, no more unmerged files. Now continue with the cherry-pick:
+
+Now I need to amend the commit to note the conflict resolution:
+
+The delta is small (222 vs 224 files - difference is 2 files for k230_canmv which were already deleted in ci/master). Let me amend the commit to note the conflict resolution and run build test:
+
+Now for the merge commit (with -m 1 --allow-empty):
+
+The merge commit is empty (expected since we already cherry-picked the individual commits). I need to commit it anyway to preserve the merge commit history:
+
+The merge commit is now empty (expected since we cherry-picked individual commits first). Let me run build test:
+
+Now let me verify all commits and run final build:
+
+All 9 commits are present. Let me run the final build:
+
+## Summary
+
+All 9 commits have been successfully cherry-picked from `us/next` branch to the new `cherry-70bf6e33e15` branch based on `ci/master`.
+
+### Final Status
+
+**Build Result:** ✅ OK - sandbox build passes
+
+**Cherry-picked Commits (in order):**
+1. `e7d73a96035` - uclass: Cleanup uclass_find_next_device
+2. `2c358502c6a` - drivers: misc: k3_bist: Add K3 BIST driver
+3. `2c10d42f866` - arm: mach-k3: j784s4_init: Trigger LBIST and PBIST on MAIN R5 2_0
+4. `a683c6399b7` - treewide: Remove empty board_init() function from all boards ⚠️
+5. `85609735721` - sandbox: eth-raw: Prevent possible buffer overflow
+6. `ebb3498e902` - fs: exfat: Remove unused label code
+7. `3abf9fcecec` - arm: dts: ast2600.dtsi: Fix typo of uart11 reg address
+8. `858db7fa0b2` - arm: dts: k3: use SPL_TEXT_BASE for R5 SPL load address
+9. `1a0b50426b9` - Merge patch series "Add support for K3 BIST" (empty merge commit)
+
+### Fix-ups Made
+
+**Commit 4 (70a4d1fa1dd - treewide: Remove empty board_init()):**
+- Conflicts in ~20 defconfig files (config format changes `# CONFIG_X is not set` vs `CONFIG_X=n`)
+- Resolved by keeping HEAD format and adding `# CONFIG_BOARD_INIT is not set`
+- `k230_canmv` board files were already deleted in ci/master (removed from cherry-pick)
+- Delta: 222 files vs 224 files original (2 files difference for k230_canmv)
+
+**Commit 9 (896f570d567 - Merge commit):**
+- Empty commit (expected since individual commits were cherry-picked first)
+- Created with `--allow-empty` to preserve merge commit history
+
+### Commits with No Concerning Deltas
+All other commits (1, 2, 3, 5, 6, 7, 8) applied cleanly with identical deltas.
+
+The branch `cherry-70bf6e33e15` is ready for pushing.
+
+---
+
