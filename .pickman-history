@@ -31210,3 +31210,161 @@ The branch has been force-pushed. Let me verify the final state:
 
 ---
 
+## 2026-02-26: us/next
+
+Branch: cherry-67c791dcdf8
+
+Commits:
+- 67c791dcdf8 patman: Update test for Anatolij's new email address
+- 71c96a8b2ab Azure: Temporarily switch to GitHub mirror of u-boot-test-hooks
+- d29c1092ebe abuf: Remove code that prevented test code running
+- 25d3e0509c7 cmd: gpt: Fix off by 1 errors
+- cf13f33d3a6 sysreset: psci: Fix SPL dependency
+- 3532f1f5edf block: Remove blk_find_first/next
+- 4381d7bb332 mmc: s5p_sdhci: remove duplicated card detect code
+- 95f8a22e2a8 mmc: s5p_sdhci: add samsung,exynos4210-sdhci compatible
+- bda1e3f0e7d mmc: exynos_dw_mmc: add exynos5420 compatibles
+- 1080815650a Fix emmc error state after mmc write timeout
+- 47b4a9b1a6d Merge tag 'mmc-master-2025-07-24' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master.
+
+There's ambiguity between the local `ci/master` branch and `remotes/ci/master`. Let me use the remote reference explicitly:
+
+Now let me start cherry-picking the commits one at a time. First, let me verify the commits exist in us/next:
+
+Good, the commits exist. Now let me start cherry-picking. Starting with the first commit:
+
+The first cherry-pick results in an empty commit - this suggests the commit may already be applied. Let me check if it's already in ci/master:
+
+Let me search more specifically:
+
+This shows the change is already applied in ci/master (the file already has the new email address). Let me verify this for all commits systematically:
+
+The search was too broad. Let me search more precisely for exact commit subjects:
+
+None of the commits are found by their exact subject in ci/master. Let me compare the actual patches for each commit. Since the first one resulted in an empty commit, the change may have been applied via a different route:
+
+So commit 1 is already applied (same change present), but commit 2 is NOT applied (ci/master uses denx.de, not github.com).
+
+Let me check all commits more thoroughly:
+
+Now let me verify each file state to determine what's already applied. First, let me check for the block commit which was reported found in ci/master earlier:
+
+So ci/master has the OLD code (`> PART_NAME_LEN`) and the commit changes it to `>= PART_NAME_LEN`. The gpt fix is NOT applied yet.
+
+Now I understand: Commit 1 is already applied (the email change was made), but the rest may still be pending. Let me restart the cherry-pick process. The branch was left in a cherry-pick state, let me abort and start fresh:
+
+Good. Now let me try cherry-picking again - for commit 1, since it's already applied, I'll use --allow-empty to preserve it:
+
+The commit is empty because the change was already applied. Let me commit it as an empty commit to preserve the sequence:
+
+Now let me verify the commit and run build test (for the empty commit, we just need to verify the build still works):
+
+Build passes. Now cherry-pick commit 2:
+
+Delta matches. Run build test:
+
+Now commit 3:
+
+Conflict! Let me examine it:
+
+I can see the conflicts. The original commit wants to use `HUGE_ALLOC_SIZE` instead of `TOTAL_MALLOC_LEN`. Let me look at the HEAD version and see what the intended resolution should be:
+
+So HEAD has TOTAL_MALLOC_LEN and the commit wants to replace it with a new define HUGE_ALLOC_SIZE. The commit also adds this define. Let me look at the full diff of the original commit:
+
+This is a significant commit that removes early `return 0` statements and changes some checks. The conflict arises because there's been a change in the target branch that uses `TOTAL_MALLOC_LEN` instead of `CONFIG_SYS_MALLOC_LEN`.
+
+Let me check what's in the current HEAD version at these lines:
+
+I see the HUGE_ALLOC_SIZE define is already present. That's helpful - this means part of the commit was already applied. The conflict is because the target branch (ci/master) already has `HUGE_ALLOC_SIZE` defined but uses `TOTAL_MALLOC_LEN` in the test code, whereas the commit wants to use `HUGE_ALLOC_SIZE`.
+
+The intention is clear: use `HUGE_ALLOC_SIZE` from the incoming commit. Let me also check the second conflict region and the `ptr` reference:
+
+I understand the conflicts:
+1. Line 253-257: Replace `TOTAL_MALLOC_LEN` with `HUGE_ALLOC_SIZE`
+2. Line 276-281: Replace `TOTAL_MALLOC_LEN` with `HUGE_ALLOC_SIZE` AND remove the `ptr` check line
+
+The incoming commit's intent is to:
+1. Use `HUGE_ALLOC_SIZE` instead of `TOTAL_MALLOC_LEN` (or `CONFIG_SYS_MALLOC_LEN`)
+2. Remove the pointer comparison check (`ut_asserteq_ptr(ptr, buf.data)`)
+
+Let me resolve these conflicts:
+
+No more conflict markers. Let me verify the changes look correct:
+
+Good, the conflicts are resolved with `HUGE_ALLOC_SIZE` used as intended. Now add the file and continue the cherry-pick:
+
+Let me verify the delta:
+
+Deltas match (7 insertions, 39 deletions in both). Now I need to amend the commit to note the conflict resolution:
+
+Now build test:
+
+Now cherry-pick commit 4:
+
+Now commit 5:
+
+Now commit 6:
+
+Now commit 7:
+
+Now commit 8:
+
+Now commit 9:
+
+Now commit 10:
+
+Now the final commit - the merge commit. This needs special handling with -m 1 --allow-empty:
+
+The merge commit is empty because we already cherry-picked all the individual commits. Let me commit it as an empty commit to preserve the history:
+
+Now let me verify the git log and run the final build:
+
+All 11 commits are present. Now run the final build test:
+
+All cherry-picks completed successfully. Here is the final status report:
+
+## Cherry-pick Summary
+
+**Branch:** `cherry-67c791dcdf8` (based on `ci/master`, 11 commits ahead)
+
+### Build Result
+✅ **Build: OK** - sandbox build passes with no warnings or errors
+
+### Commits Cherry-picked
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 67c791dcdf8 | patman: Update test for Anatolij's new email address | ✅ Empty (already applied) |
+| 2 | 71c96a8b2ab | Azure: Temporarily switch to GitHub mirror of u-boot-test-hooks | ✅ Clean |
+| 3 | d29c1092ebe | abuf: Remove code that prevented test code running | ✅ Conflict resolved |
+| 4 | 25d3e0509c7 | cmd: gpt: Fix off by 1 errors | ✅ Clean |
+| 5 | cf13f33d3a6 | sysreset: psci: Fix SPL dependency | ✅ Clean |
+| 6 | 3532f1f5edf | block: Remove blk_find_first/next | ✅ Clean |
+| 7 | 4381d7bb332 | mmc: s5p_sdhci: remove duplicated card detect code | ✅ Clean |
+| 8 | 95f8a22e2a8 | mmc: s5p_sdhci: add samsung,exynos4210-sdhci compatible | ✅ Clean |
+| 9 | bda1e3f0e7d | mmc: exynos_dw_mmc: add exynos5420 compatibles | ✅ Clean |
+| 10 | 1080815650a | Fix emmc error state after mmc write timeout | ✅ Clean |
+| 11 | 47b4a9b1a6d | Merge tag 'mmc-master-2025-07-24' | ✅ Empty (constituents cherry-picked above) |
+
+### Fix-ups Made
+
+1. **Commit 1 (67c791dcdf8):** Committed as empty - the email address change was already present in ci/master. Commit message notes this.
+
+2. **Commit 3 (d29c1092ebe):** Resolved conflict in `test/lib/abuf.c`:
+   - ci/master used `TOTAL_MALLOC_LEN` while the commit changed `CONFIG_SYS_MALLOC_LEN` to `HUGE_ALLOC_SIZE`
+   - Resolution: Used `HUGE_ALLOC_SIZE` as intended by the original commit
+   - Also removed the `ut_asserteq_ptr(ptr, buf.data)` check as intended by the original commit
+   - Delta verified: 7 insertions, 39 deletions (matches original)
+
+3. **Commit 11 (47b4a9b1a6d - merge commit):** Committed as empty - the constituent commits (7-10) were cherry-picked individually above.
+
+### Concerning Deltas
+None - all deltas matched between cherry-picked and original commits.
+
+The branch `cherry-67c791dcdf8` is ready for pushing.
+
+---
+
