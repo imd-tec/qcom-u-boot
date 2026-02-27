@@ -32474,3 +32474,116 @@ The branch `cherry-4f8755fe086` is ready for pushing and is 3 commits ahead of `
 
 ---
 
+## 2026-02-27: us/next
+
+Branch: cherry-f02e64d0117
+
+Commits:
+- f02e64d0117 sunxi: clock: H6: unify PLL control bit definitions
+- ff4dda1db2c sunxi: clock: H6: factor out clock_set_pll()
+- 915ac864f41 sunxi: clock: H6: factor out H6/H616 CPU clock setup
+- 17b47bbc348 sunxi: clock: H6: add A523 CPU PLL support
+- 1482481817a sunxi: spl: add support for Allwinner A523 watchdog
+- 1d0b1d46ccf clk: sunxi: Add support for the A523 CCU
+- d508d995d11 clk: sunxi: Add support for the A523 -R CCU
+- 14c66b9e351 pinctrl: sunxi: add Allwinner A523 pinctrl description
+- 869d396191e sunxi: mmc: add support for Allwinner A523 MMC mod clock
+- 1063678a701 power: regulator: add AXP323 support
+- 7a5170a6fc7 sunxi: update cpu_sunxi_ncat2.h
+- d157dec118f sunxi: sun50i_h6: add A523 SPL clock setup code
+- 39a6a2a8a24 sunxi: A523: add DRAM initialisation routine
+- 45310eb74b4 sunxi: A523: add DDR3 DRAM support
+- 08f3f477c62 sunxi: add basic A523 support
+- f3782678125 arm64: dts: allwinner: Add Allwinner A523 .dtsi file
+- 184b599533d arm64: dts: allwinner: a523: add X96Q-Pro+ support
+- 499d9317517 arm64: dts: allwinner: a523: add Radxa A5E support
+- 4112b26537c arm64: dts: allwinner: a523: add Avaota-A1 router support
+- 0199794b304 sunxi: A523: add defconfigs for three boards
+- 14dd807a48c Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sunxi
+
+### Conversation log
+Let me find the repository first:
+
+Good, the repository is clean (untracked files are fine). Let me create and checkout the new branch:
+
+Now let me start cherry-picking the commits one by one. Let's start with the first commit:
+
+First commit applied successfully. Let me verify the delta and run the build test:
+
+Delta matches perfectly. Now run the build test:
+
+This appears to be a pre-existing build issue not related to our cherry-pick. Let me check if this is a baseline issue with ci/master:
+
+The build failure is pre-existing in ci/master, so it's not related to our cherry-picks. Let me continue with the cherry-picks since the build issue is a baseline problem. Let me go back to our branch and continue:
+
+Good. Since the build issue is a baseline problem with ci/master, I'll skip the build tests and continue with the cherry-picks. Let me proceed with the remaining commits:
+
+Delta matches. Continue with commit 3:
+
+Now for the final commit, which is marked as "maybe already applied". Let me first verify if it's already applied:
+
+The two commits have different content - they are merging different branches with different parents. Let me look at them more closely:
+
+These are indeed different merge commits. The original is from Tom Rini merging sunxi branch, while the found one is from Simon Glass merging a cherry-pick branch. The original has the actual detailed commit message we want. Let me cherry-pick the merge commit:
+
+The merge commit is empty because all the content was already cherry-picked with the individual commits. Let me commit it with --allow-empty as instructed:
+
+All 21 commits have been cherry-picked. Let me verify the log:
+
+All 21 commits are present (the 21 cherry-picked commits are shown from commit `0408af78a5c` down to `27bd3adf918`). The base commit (`a338dd49c6f`) is from ci/master.
+
+Now let me run the final build test:
+
+The build failure is the same pre-existing issue from ci/master (missing capsule_esl_file), not caused by our cherry-picks.
+
+Let me provide a final summary:
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-f02e64d0117` based on `ci/master`
+
+### All 21 commits successfully cherry-picked:
+
+| # | Hash (new) | Subject |
+|---|------------|---------|
+| 1 | 27bd3adf918 | sunxi: clock: H6: unify PLL control bit definitions |
+| 2 | e3dc686c296 | sunxi: clock: H6: factor out clock_set_pll() |
+| 3 | 5585dade21a | sunxi: clock: H6: factor out H6/H616 CPU clock setup |
+| 4 | c06360cfaa2 | sunxi: clock: H6: add A523 CPU PLL support |
+| 5 | 4348cf619ff | sunxi: spl: add support for Allwinner A523 watchdog |
+| 6 | 317f832d4b3 | clk: sunxi: Add support for the A523 CCU |
+| 7 | 4585d73ee8b | clk: sunxi: Add support for the A523 -R CCU |
+| 8 | 6249815360f | pinctrl: sunxi: add Allwinner A523 pinctrl description |
+| 9 | c6d6dec30a4 | sunxi: mmc: add support for Allwinner A523 MMC mod clock |
+| 10 | 8bbdf606ebd | power: regulator: add AXP323 support |
+| 11 | c6b53dc27f8 | sunxi: update cpu_sunxi_ncat2.h |
+| 12 | 0998b632b02 | sunxi: sun50i_h6: add A523 SPL clock setup code |
+| 13 | aed10d06acb | sunxi: A523: add DRAM initialisation routine |
+| 14 | f36ee16d576 | sunxi: A523: add DDR3 DRAM support |
+| 15 | 40303146f65 | sunxi: add basic A523 support |
+| 16 | 8ea5809da37 | arm64: dts: allwinner: Add Allwinner A523 .dtsi file |
+| 17 | 45c4495cb3c | arm64: dts: allwinner: a523: add X96Q-Pro+ support |
+| 18 | 5cc5f1277f9 | arm64: dts: allwinner: a523: add Radxa A5E support |
+| 19 | cf23062aea7 | arm64: dts: allwinner: a523: add Avaota-A1 router support |
+| 20 | 4fadab778ba | sunxi: A523: add defconfigs for three boards |
+| 21 | 0408af78a5c | Merge branch 'master' of u-boot-sunxi (empty - content already applied) |
+
+### Build Result:
+- **Status:** Pre-existing failure (not caused by cherry-picks)
+- **Error:** Missing `capsule_esl_file` in test/fdt_overlay - this failure exists in ci/master baseline
+
+### Fix-ups Made:
+- None required - all commits applied cleanly
+
+### Commits with Auto-merge:
+- Commit #15 (sunxi: add basic A523 support) - auto-merged `board/sunxi/board.c` and `common/spl/Kconfig` cleanly
+- Commit #21 (Merge commit) - resulted in empty commit as expected (all content was in individual commits)
+
+### Notes:
+- The merge commit `14dd807a48c` was verified to be different from `a6dbeb77d15` - the original has Tom Rini's detailed description of the A523 series while the found commit was a pickman merge. Both were kept.
+- All deltas matched between original and cherry-picked commits
+
+The branch `cherry-f02e64d0117` is ready for pushing.
+
+---
+
