@@ -31678,6 +31678,603 @@ Build verification:
 
 The fix is complete and the branch is ready.
 ```
+Branch: cherry-10322524bb1
+
+Commits:
+- 10322524bb1 board: phytec: phycore-imx93: Drop unused PMIC define
+- 51b140f9f38 board: phytec: phycore-imx93: Drop unused include files
+- cada57d5b91 toradex: tdx-cfg-block: add verdin i.mx8m mini 0216 pid4
+- 7056aad6962 imx6dl-sielaff: Convert to OF_UPSTREAM
+- 25140f89086 configs: imx6dl_sielaff: Set CONFIG_SDP_LOADADDR to fix SDP boot
+- 4a9d6b2e1d9 imx: power-domain: Fix crash due to uninitialized 'id' field
+- e6e8c601ed7 board: phytec: migrate imx8mm boards to standard boot
+- 110a23e479d imx93: adc: local variable ret should not be unsigned
+- eb6d6490656 imx93_evk: Fix the board name in MAINTAINERS title
+- 98eae17dd34 imx93_evk: Remove unneeded header files
+- e01fa565dfb imx93_evk: Remove PMIC and USB header files
+- 10b6d472d2a spl: spl_imx_container: Delete uninitialized variable
+- b40c9b0c227 imx93_frdm: Add initial board support
+- 021783860f7 Merge tag 'u-boot-imx-master-20250724' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. Starting with the first commit:
+
+First commit succeeded. Let me verify the delta and run build test:
+
+Delta matches (1 file, 5 deletions). Running build test:
+
+The build failed, but this appears to be a pre-existing issue in the repository (missing `capsule_esl_file`), not related to our cherry-pick. Let me verify this by checking if the issue exists on ci/master:
+
+Interesting - ci/master builds successfully. Let me go back to our branch and investigate further:
+
+The build is still failing on our branch. Let me check if there's something cached or a file issue:
+
+The only change is our cherry-pick. Let me check if the issue is environment-related or something in the build directory:
+
+Now ci/master also fails. This confirms the build failure is a pre-existing issue with the repository, not something caused by our cherry-picks. The `capsule_esl_file` issue exists in the repository and is unrelated to our changes.
+
+Let me continue with the cherry-picks since the build failure is a pre-existing condition:
+
+Now continuing with the second commit:
+
+Delta matches. Continue with third commit:
+
+Delta matches. Continue with the fourth commit:
+
+Delta matches. Continue with fifth commit:
+
+Delta matches. Continue with sixth commit:
+
+Delta matches. Continue with seventh commit:
+
+Delta matches. Continue with eighth commit:
+
+Delta matches. Continue with ninth commit:
+
+Delta matches. Continue with tenth commit:
+
+Delta matches. Continue with eleventh commit:
+
+Delta matches. Continue with twelfth commit:
+
+Delta matches. Continue with thirteenth commit:
+
+Delta matches. Now for the fourteenth and final commit - this is a merge commit:
+
+The merge commit is empty (expected - all its component commits were already cherry-picked). Let me commit it as an empty commit per the instructions:
+
+The merge commit is now empty in our cherry-pick (expected because all commits were cherry-picked individually), but the original has changes. This is correct - the original is a merge commit showing all changes from the merged branch.
+
+Now let me verify all 14 commits are present:
+
+All 14 commits are present (the top 14 commits in the list). Now let me run the final build test:
+
+The build failure is a **pre-existing issue** in the repository (as confirmed earlier - ci/master also fails with the same error). This is not caused by our cherry-picks.
+
+## Final Status Report
+
+### Cherry-pick Results
+
+All 14 commits were successfully cherry-picked:
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 10322524bb1 | board: phytec: phycore-imx93: Drop unused PMIC define | ✅ OK |
+| 2 | 51b140f9f38 | board: phytec: phycore-imx93: Drop unused include files | ✅ OK |
+| 3 | cada57d5b91 | toradex: tdx-cfg-block: add verdin i.mx8m mini 0216 pid4 | ✅ OK |
+| 4 | 7056aad6962 | imx6dl-sielaff: Convert to OF_UPSTREAM | ✅ OK |
+| 5 | 25140f89086 | configs: imx6dl_sielaff: Set CONFIG_SDP_LOADADDR to fix SDP boot | ✅ OK |
+| 6 | 4a9d6b2e1d9 | imx: power-domain: Fix crash due to uninitialized 'id' field | ✅ OK |
+| 7 | e6e8c601ed7 | board: phytec: migrate imx8mm boards to standard boot | ✅ OK |
+| 8 | 110a23e479d | imx93: adc: local variable ret should not be unsigned | ✅ OK |
+| 9 | eb6d6490656 | imx93_evk: Fix the board name in MAINTAINERS title | ✅ OK |
+| 10 | 98eae17dd34 | imx93_evk: Remove unneeded header files | ✅ OK |
+| 11 | e01fa565dfb | imx93_evk: Remove PMIC and USB header files | ✅ OK |
+| 12 | 10b6d472d2a | spl: spl_imx_container: Delete uninitialized variable | ✅ OK |
+| 13 | b40c9b0c227 | imx93_frdm: Add initial board support | ✅ OK |
+| 14 | 021783860f7 | Merge tag 'u-boot-imx-master-20250724' (empty merge) | ✅ OK |
+
+### Build Result
+- **Status:** FAIL (pre-existing issue)
+- **Error:** `FATAL ERROR: Couldn't open "capsule_esl_file": No such file or directory`
+- **Note:** This error exists on ci/master as well - it's not caused by our cherry-picks
+
+### Fix-ups Made
+None required - all cherry-picks applied cleanly.
+
+### Commits with Concerning Deltas
+None - all deltas matched between cherry-picked and original commits.
+
+### Branch Status
+The branch `cherry-10322524bb1` is ready with all 14 commits and is ahead of `ci/master` by 14 commits.
+
+---
+
+### Pipeline fix: 2026-02-26 (attempt 1)
+
+Branch: cherry-10322524bb1
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+- rockpro64 (sjg-lab)
+- opi_pc (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failures:
+
+1. **efi-aarch64** - `test_distro_arm_app_efi` failed with `console_base.Timeout` - expecting 'Ubuntu 25.04 qarm ttyAMA0'
+2. **rockpro64** - Lab infrastructure failure: `pexpect.exceptions.TIMEOUT: Timeout of 10 seconds exceeded during waiting for login`
+3. **opi_pc** - Lab infrastructure failure: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+
+The **rockpro64** and **opi_pc** failures are clearly infrastructure/lab issues - they failed to connect to the hardware and get a login prompt. These are transient issues not related to the code.
+
+Let me examine the **efi-aarch64** failure more closely:
+
+The test is expecting `Ubuntu 25.04 qarm ttyAMA0`. Let me check if this test failure is related to any of the cherry-picked commits:
+
+None of the cherry-picked commits touched `test_distro.py`. Let me check if the commits touch anything related to EFI boot:
+
+The cherry-picked commits are all IMX/NXP board-specific changes and don't touch anything related to EFI boot or the test framework. The efi-aarch64 test failure (`test_distro_arm_app_efi`) is expecting to see `Ubuntu 25.04 qarm ttyAMA0` but times out.
+
+Let me verify this by checking if the test has passed on the base branch (ci/master) recently:
+
+No differences in test_distro.py. Let me also check if any EFI-related code was changed:
+
+The cherry-picked commits don't touch anything related to EFI, distro boot, or QEMU.
+
+Let me summarize the findings:
+
+**Analysis of all 3 failures:**
+
+1. **rockpro64** (sjg-lab) - `pexpect.exceptions.TIMEOUT: Timeout of 10 seconds exceeded during waiting for login`
+   - This is a **lab infrastructure failure** - the hardware board didn't respond during login
+   - Not related to any code changes
+
+2. **opi_pc** (sjg-lab) - `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+   - This is a **lab infrastructure failure** - the hardware board didn't respond during login
+   - Not related to any code changes
+
+3. **efi-aarch64** (sjg-lab) - `test_distro_arm_app_efi` - `console_base.Timeout` expecting 'Ubuntu 25.04 qarm ttyAMA0'
+   - The test expects to boot into Ubuntu 25.04 via EFI on a QEMU ARM64 emulator
+   - None of the cherry-picked commits touch EFI code, QEMU configs, or test infrastructure
+   - The commits are all IMX/NXP board-specific changes (Phytec, Toradex, Freescale boards)
+   - This appears to be a **flaky test or transient failure** - the boot process timed out waiting for the login prompt
+
+Let me verify the branch builds correctly first:
+
+This confirms the "capsule_esl_file" issue is a **pre-existing issue on ci/master**, not related to the cherry-picked commits.
+
+Let me switch back to the branch and build the affected boards (efi-aarch64 which uses the `efi-arm_app64` config):
+
+These are local environment issues (missing Rust target, missing BMP files). Let me check ci/master to see if the same errors occur there:
+
+The same build errors happen on ci/master. These are local environment issues (missing Rust target, missing BMP files) - not related to the cherry-picked commits.
+
+Let me switch back to the branch and verify the conclusion:
+
+Based on my analysis:
+
+## Summary
+
+**All 3 pipeline failures are infrastructure/transient issues, NOT caused by the cherry-picked commits:**
+
+### 1. rockpro64 (sjg-lab) - **Lab Infrastructure Failure**
+```
+pexpect.exceptions.TIMEOUT: Timeout of 10 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+The hardware board failed to respond during login - this is a physical lab connectivity issue.
+
+### 2. opi_pc (sjg-lab) - **Lab Infrastructure Failure**  
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+Same as rockpro64 - hardware board didn't respond during login.
+
+### 3. efi-aarch64 (sjg-lab) - **Flaky Test / Transient Failure**
+```
+test_distro_arm_app_efi - console_base.Timeout
+Expected: 'Ubuntu 25.04 qarm ttyAMA0'
+```
+The test booting into Ubuntu via EFI on QEMU timed out. This is a flaky test - the cherry-picked commits:
+- Don't touch any EFI code
+- Don't touch QEMU configurations
+- Don't touch test infrastructure
+- Are all IMX/NXP board-specific changes (Phytec, Toradex, Freescale boards)
+
+### Evidence:
+1. `git diff ci/master..cherry-10322524bb1 -- test/py/tests/test_distro.py` shows no changes
+2. The cherry-picked commits only touch files in: `board/phytec/`, `board/freescale/`, `board/toradex/`, `configs/`, `drivers/adc/imx93-adc.c`, `drivers/power/domain/imx8m-power-domain.c`, `common/spl/spl_imx_container.c`, and related arch/arm/dts files
+3. None of these files affect the efi-aarch64 test which runs on QEMU emulation
+
+**No code changes are needed.** The pipeline should be retried - these are transient failures.
+
+---
+
+### Review: 2026-02-26
+
+Branch: cherry-10322524bb1
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, rockpro64, opi_pc.
+
+Now let me analyze th...
+
+### Conversation log
+Now let me understand the review comment. The comment says the pipeline failed with 3 jobs: efi-aarch64, rockpro64, and opi_pc. Based on the context from the MR description, these failures were analyzed and determined to be:
+
+1. **rockpro64** and **opi_pc** - Lab infrastructure failures (hardware boards didn't respond)
+2. **efi-aarch64** - Flaky test / transient failure (the cherry-picked commits don't touch EFI code)
+
+The comment format "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, rockpro64, opi_pc" indicates this is requesting a fix attempt. However, based on the analysis in the context, all 3 failures are infrastructure/transient issues NOT caused by the cherry-picked commits.
+
+Let me verify the current state of the branch and what changes are present:
+
+Let me check if there are any EFI-related changes:
+
+The results show no EFI-related changes in the diff. The changes are all IMX board-specific. Let me verify the test infrastructure hasn't changed:
+
+No test changes. The analysis in the context is correct - these are infrastructure/transient failures. Let me run the build to verify the code is correct:
+
+The build fails on ci/master with the same error, confirming this is a pre-existing local environment issue, not caused by the cherry-picked commits. Let me return to the branch:
+
+Based on my analysis:
+
+1. The review comment "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, rockpro64, opi_pc" is asking about 3 pipeline failures
+2. **rockpro64** and **opi_pc** are clearly lab infrastructure failures (hardware boards timing out on login)
+3. **efi-aarch64** is a flaky/transient test failure - the cherry-picked commits don't touch any EFI code, test infrastructure, or QEMU-related files
+4. The sandbox build failure is a pre-existing local environment issue (same error on ci/master)
+
+Since all 3 failures are infrastructure/transient issues and NOT caused by the code changes:
+- **No code changes are needed**
+- The appropriate response is to **request a pipeline retry**
+
+Let me check if there's a standard way to record this analysis:
+
+There's already a pipeline fix record. The branch is ready - the failures are transient/infrastructure issues. Looking at the context more closely:
+
+The comment says "Pipeline fix (attempt 1): fixed failed job(s)..." - this appears to be an automated comment from the pipeline system noting which jobs failed. The analysis in the MR description clearly shows these are infrastructure issues.
+
+Since:
+1. No code changes are needed (all failures are infrastructure/transient)
+2. The branch already contains all the necessary changes
+3. The appropriate action is to retry the pipeline
+
+I should report that no code changes were necessary and suggest retrying the pipeline.
+
+## Report
+
+### Review Comment Analysis
+
+**Comment:** "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, rockpro64, opi_pc"
+
+### Findings
+
+All 3 pipeline failures are **infrastructure/transient issues**, NOT caused by the cherry-picked commits:
+
+1. **rockpro64** (sjg-lab) - Lab infrastructure failure
+   - `pexpect.exceptions.TIMEOUT: Timeout of 10 seconds exceeded during waiting for login`
+   - Hardware board didn't respond during login
+
+2. **opi_pc** (sjg-lab) - Lab infrastructure failure
+   - `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+   - Hardware board didn't respond during login
+
+3. **efi-aarch64** (sjg-lab) - Flaky test / transient failure
+   - `test_distro_arm_app_efi` - `console_base.Timeout` expecting 'Ubuntu 25.04 qarm ttyAMA0'
+   - The cherry-picked commits don't touch EFI code, test infrastructure, or QEMU configuration
+   - All changes are IMX/NXP board-specific (Phytec, Toradex, Freescale boards)
+
+### Evidence
+- `git diff ci/master..HEAD -- "test/*"` shows no test changes
+- `git diff ci/master..HEAD -- "*efi*"` shows only board Makefile entries (no EFI functionality)
+- The sandbox build failure (`capsule_esl_file` missing) occurs on both the branch and ci/master - it's a pre-existing local environment issue
+
+### Actions Taken
+**No code changes were made** - none are needed since the failures are infrastructure/transient issues.
+
+### Recommended Reply for MR
+
+```
+All 3 pipeline failures are infrastructure/transient issues unrelated to the cherry-picked commits:
+
+1. **rockpro64** and **opi_pc** - Lab infrastructure failures (hardware boards timed out during login)
+2. **efi-aarch64** - Flaky test (the cherry-picked commits don't touch any EFI code, test infrastructure, or QEMU configuration - all changes are IMX/NXP board-specific)
+
+No code changes are needed. Please retry the pipeline.
+```
+
+---
+
+### Pipeline fix: 2026-02-26 (attempt 2)
+
+Branch: cherry-10322524bb1
+
+Failed jobs:
+- opi_pc (sjg-lab)
+
+### Conversation log
+Now let me analyze the job failure. Looking at the log:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is clearly a **lab infrastructure failure** - the hardware board (Orange Pi PC) didn't respond during login. The labgrid framework tried to connect to the physical board and timed out waiting for the U-Boot prompt.
+
+Let me verify this is indeed an infrastructure issue by checking what changes are on the branch:
+
+None of the cherry-picked commits touch the Orange Pi PC board (sunxi platform). Let me verify:
+
+The diff is empty - no changes to Orange Pi PC related files. Let me also check if any common/core code was modified that could affect all boards:
+
+All the changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards) and don't touch anything related to the Orange Pi PC (sunxi platform). The only non-board-specific changes are:
+- `common/spl/spl_imx_container.c` - IMX container specific
+- `drivers/adc/imx93-adc.c` - IMX93 specific
+- `drivers/power/domain/imx8m-power-domain.c` - IMX8M specific
+
+None of these affect the Orange Pi PC board.
+
+Based on my analysis:
+
+## Conclusion
+
+The **opi_pc** job failure is a **lab infrastructure failure**, NOT caused by any code changes.
+
+**Evidence:**
+1. The error message clearly states: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login` followed by `Lab failure: Marking connection bad - no other tests will run`
+2. This is the labgrid framework timing out trying to connect to the physical Orange Pi PC hardware board
+3. The cherry-picked commits don't touch any sunxi/Orange Pi related code:
+   - No changes to `board/sunxi/`
+   - No changes to `configs/orangepi_pc_defconfig`
+   - No changes to `arch/arm/dts/sun8i-h3-orangepi*`
+4. All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+5. The only common code changes (`common/spl/spl_imx_container.c`, `drivers/adc/imx93-adc.c`, `drivers/power/domain/imx8m-power-domain.c`) are all IMX-specific and don't affect sunxi boards
+
+**No code changes are needed.** This is a transient lab infrastructure issue where the physical hardware board failed to respond.
+
+## Report
+
+### Pipeline Failure Analysis: opi_pc job
+
+**Root Cause:** Lab infrastructure failure - the Orange Pi PC hardware board timed out during login
+
+**Error:**
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+**Verification:**
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes to Orange Pi PC related files
+- All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+- No common code paths that would affect sunxi boards were modified
+
+**Actions Taken:** None - this is a transient infrastructure issue unrelated to the code changes.
+
+**Recommendation:** Retry the pipeline.
+
+---
+
+### Review: 2026-02-26
+
+Branch: cherry-10322524bb1
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) opi_pc.
+
+Now let me analyze the job failure. Looking a...
+
+### Conversation log
+Now I understand the situation. Looking at the review comment:
+
+**Comment:** "Pipeline fix (attempt 2): fixed failed job(s) opi_pc"
+
+Based on the context from the MR description, this opi_pc failure is a **lab infrastructure failure**, not a code issue:
+- Error: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- `Lab failure: Marking connection bad - no other tests will run`
+
+The cherry-picked commits don't touch any Orange Pi PC (sunxi) related code - they're all IMX/NXP board-specific changes.
+
+Let me verify this:
+
+No Orange Pi PC (sunxi) related files were changed. The only changes are IMX/NXP board-specific (Phytec, Freescale, Toradex).
+
+Since this is a lab infrastructure failure (hardware board timing out during login) and NOT caused by any code changes, **no code changes are needed**. The appropriate action is to document this and suggest retrying the pipeline.
+
+Let me verify the build works:
+
+The sandbox build failure is a pre-existing issue in the repository (as noted in the MR description - it also fails on ci/master). This is a local environment issue, not related to the cherry-picked commits.
+
+Since this is the second pipeline fix attempt for the same opi_pc infrastructure failure, let me document what happened and provide the appropriate response:
+
+## Summary
+
+The review comment "Pipeline fix (attempt 2): fixed failed job(s) opi_pc" is indicating the second attempt to fix the pipeline still has opi_pc failing.
+
+**Analysis:**
+- The opi_pc failure is a **lab infrastructure failure** - the Orange Pi PC hardware board timed out during login
+- Error: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- The cherry-picked commits don't touch ANY sunxi/Orange Pi related code
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+**No code changes are needed** because this is a transient lab infrastructure issue, not a code problem.
+
+**Recommended Reply for MR:**
+
+```
+The opi_pc job failure is a lab infrastructure issue - the Orange Pi PC hardware board timed out during login:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+None of the cherry-picked commits touch sunxi/Orange Pi PC related code:
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+This is a transient lab connectivity issue. Please retry the pipeline or mark this failure as infrastructure-related.
+```
+
+---
+
+## Report
+
+### Review Comment Analysis
+
+**Comment:** "Pipeline fix (attempt 2): fixed failed job(s) opi_pc"
+
+### Findings
+
+The **opi_pc** pipeline failure is a **lab infrastructure failure**, NOT caused by any code changes:
+
+- **Error:** `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login` followed by `Lab failure: Marking connection bad - no other tests will run`
+- **Root Cause:** The Orange Pi PC hardware board in the sjg-lab did not respond during login - this is a physical connectivity/hardware issue
+- **Verification:** `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes to Orange Pi PC related files
+- All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+### Actions Taken
+
+**No code changes were made** - none are needed since the failure is a transient lab infrastructure issue unrelated to the code changes.
+
+### Suggested Reply to Post on MR
+
+```
+The opi_pc job failure is a lab infrastructure issue - the Orange Pi PC hardware board timed out during login:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+None of the cherry-picked commits touch sunxi/Orange Pi PC related code:
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+This is a transient lab connectivity issue. Please retry the pipeline or mark this failure as infrastructure-related.
+```
+
+---
+
+### Review: 2026-02-26
+
+Branch: cherry-10322524bb1
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 3): fixed failed job(s) pine64, opi_pc.
+
+Now let me analyze the failures from ...
+
+### Conversation log
+Now let me understand the review comment. The comment "Pipeline fix (attempt 3): fixed failed job(s) pine64, opi_pc" is asking about 2 pipeline failures:
+
+1. **pine64** - `test_env_import_whitelist` failed with `f��4=bar4` vs `foo4=bar4` - serial communication corruption
+2. **opi_pc** - Lab infrastructure timeout
+
+Based on the context from the MR description, the previous analysis concluded these are all infrastructure/transient issues, not code issues. Let me verify the current state and check if the code changes could have affected these:
+
+This is the one common code change. Let me verify that pine64 doesn't use IMX containers:
+
+Pine64 doesn't use IMX containers, so the `spl_imx_container.c` change doesn't affect it.
+
+Based on my analysis:
+
+1. **pine64** - The `test_env_import_whitelist` failure shows `f��4=bar4` instead of `foo4=bar4`. This is **serial communication corruption** - the "oo" characters got garbled. The cherry-picked commits don't touch:
+   - Environment code
+   - Serial drivers  
+   - Pine64/sunxi board code
+   - Test infrastructure
+
+2. **opi_pc** - Lab infrastructure timeout (hardware board didn't respond during login)
+
+Both failures are **infrastructure/transient issues**, NOT caused by the code changes. The cherry-picked commits are all IMX/NXP board-specific and don't affect sunxi boards (pine64, opi_pc).
+
+Since no code changes are needed, I should document this and provide the response. However, let me first verify the build works:
+
+The sandbox build failure is a **pre-existing issue** in the repository (as documented in the MR description - it also fails on ci/master with the same `capsule_esl_file` error). This is a local environment issue, not related to our cherry-picked commits.
+
+Let me verify this is a pre-existing issue:
+
+Confirmed - the sandbox build failure is a pre-existing issue on ci/master as well. Let me go back to the branch:
+
+Now let me summarize my analysis and provide the report:
+
+## Summary
+
+### Review Comment Analysis
+
+**Comment:** "Pipeline fix (attempt 3): fixed failed job(s) pine64, opi_pc"
+
+### Findings
+
+Both pipeline failures are **infrastructure/transient issues**, NOT caused by the cherry-picked commits:
+
+#### 1. pine64 job - `test_env_import_whitelist` test failure
+**Error:** `AssertionError: assert 'f��4=bar4' == 'foo4=bar4'`
+
+**Root Cause:** Serial communication corruption on the pine64 hardware in the sjg-lab. The characters "oo" in "foo4" were corrupted to garbled bytes "��" during transmission over the serial console.
+
+**Evidence that this is NOT a code issue:**
+- `git diff ci/master..HEAD -- board/sunxi/ configs/pine64*` shows no sunxi/pine64 related changes
+- `git diff ci/master..HEAD -- env/ cmd/nvedit*` shows no environment code changes  
+- `git diff ci/master..HEAD -- drivers/serial/` shows no serial driver changes
+- `git diff ci/master..HEAD -- test/py/tests/test_env.py` shows no test changes
+- The only common code change (`common/spl/spl_imx_container.c`) doesn't affect pine64 - it has no `SPL_IMX_CONTAINER` config
+- All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex)
+- The corruption pattern (`f��4` instead of `foo4`) is characteristic of serial/communication errors
+
+#### 2. opi_pc job - Lab infrastructure timeout
+**Error:** `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+
+**Root Cause:** The Orange Pi PC hardware board in the sjg-lab did not respond during the login sequence - this is a hardware connectivity issue.
+
+### Actions Taken
+
+**No code changes were made** - both failures are infrastructure/transient issues unrelated to the cherry-picked commits.
+
+### Build Status
+
+The sandbox build failure (`capsule_esl_file` missing) is a **pre-existing issue** in the repository - it fails identically on both `ci/master` and the cherry-pick branch. This is a local environment issue, not related to any code changes.
+
+### Recommendation
+
+Retry the pipeline. Both failures are lab hardware issues in the sjg-lab:
+1. **pine64:** Serial communication corruption (garbled characters in test output)
+2. **opi_pc:** Hardware board timeout during login
+
+---
+
+## Reply to Post on MR
+
+```
+Both pipeline failures are infrastructure/transient issues unrelated to the cherry-picked commits:
+
+**1. pine64 - Serial communication corruption**
+```
+AssertionError: assert 'f��4=bar4' == 'foo4=bar4'
+```
+The "oo" in "foo4" was garbled during serial transmission. None of the cherry-picked commits touch:
+- Sunxi/pine64 board code
+- Environment code
+- Serial drivers
+- Test infrastructure
+
+**2. opi_pc - Lab infrastructure timeout**
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad
+```
+Hardware board didn't respond during login.
+
+All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex) and don't affect sunxi boards.
+
+**No code changes are needed.** Please retry the pipeline or mark these as infrastructure failures.
+```
 
 ---
 
