@@ -32060,3 +32060,104 @@ Lab failure: Marking connection bad - no other tests will run
 
 ---
 
+### Review: 2026-02-26
+
+Branch: cherry-10322524bb1
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) opi_pc.
+
+Now let me analyze the job failure. Looking a...
+
+### Conversation log
+Now I understand the situation. Looking at the review comment:
+
+**Comment:** "Pipeline fix (attempt 2): fixed failed job(s) opi_pc"
+
+Based on the context from the MR description, this opi_pc failure is a **lab infrastructure failure**, not a code issue:
+- Error: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- `Lab failure: Marking connection bad - no other tests will run`
+
+The cherry-picked commits don't touch any Orange Pi PC (sunxi) related code - they're all IMX/NXP board-specific changes.
+
+Let me verify this:
+
+No Orange Pi PC (sunxi) related files were changed. The only changes are IMX/NXP board-specific (Phytec, Freescale, Toradex).
+
+Since this is a lab infrastructure failure (hardware board timing out during login) and NOT caused by any code changes, **no code changes are needed**. The appropriate action is to document this and suggest retrying the pipeline.
+
+Let me verify the build works:
+
+The sandbox build failure is a pre-existing issue in the repository (as noted in the MR description - it also fails on ci/master). This is a local environment issue, not related to the cherry-picked commits.
+
+Since this is the second pipeline fix attempt for the same opi_pc infrastructure failure, let me document what happened and provide the appropriate response:
+
+## Summary
+
+The review comment "Pipeline fix (attempt 2): fixed failed job(s) opi_pc" is indicating the second attempt to fix the pipeline still has opi_pc failing.
+
+**Analysis:**
+- The opi_pc failure is a **lab infrastructure failure** - the Orange Pi PC hardware board timed out during login
+- Error: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- The cherry-picked commits don't touch ANY sunxi/Orange Pi related code
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+**No code changes are needed** because this is a transient lab infrastructure issue, not a code problem.
+
+**Recommended Reply for MR:**
+
+```
+The opi_pc job failure is a lab infrastructure issue - the Orange Pi PC hardware board timed out during login:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+None of the cherry-picked commits touch sunxi/Orange Pi PC related code:
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+This is a transient lab connectivity issue. Please retry the pipeline or mark this failure as infrastructure-related.
+```
+
+---
+
+## Report
+
+### Review Comment Analysis
+
+**Comment:** "Pipeline fix (attempt 2): fixed failed job(s) opi_pc"
+
+### Findings
+
+The **opi_pc** pipeline failure is a **lab infrastructure failure**, NOT caused by any code changes:
+
+- **Error:** `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login` followed by `Lab failure: Marking connection bad - no other tests will run`
+- **Root Cause:** The Orange Pi PC hardware board in the sjg-lab did not respond during login - this is a physical connectivity/hardware issue
+- **Verification:** `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes to Orange Pi PC related files
+- All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+### Actions Taken
+
+**No code changes were made** - none are needed since the failure is a transient lab infrastructure issue unrelated to the code changes.
+
+### Suggested Reply to Post on MR
+
+```
+The opi_pc job failure is a lab infrastructure issue - the Orange Pi PC hardware board timed out during login:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+None of the cherry-picked commits touch sunxi/Orange Pi PC related code:
+- `git diff ci/master..HEAD -- board/sunxi/ configs/orangepi* arch/arm/dts/sun8i*` shows no changes
+- All changes are IMX/NXP board-specific (Phytec, Freescale, Toradex boards)
+
+This is a transient lab connectivity issue. Please retry the pipeline or mark this failure as infrastructure-related.
+```
+
+---
+
