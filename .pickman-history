@@ -32280,150 +32280,197 @@ All cherry-picked commits are IMX/NXP board-specific (Phytec, Freescale, Toradex
 
 ## 2026-02-27: us/next
 
-Branch: cherry-80c1606d13c
+Branch: cherry-4f8755fe086
 
 Commits:
-- 80c1606d13c phy: samsung: Add Exynos USB DRD PHY driver
-- ba713dd7d4d usb: dwc3-generic: Add Exynos850 support
-- 34a6f585f0a board: samsung: e850-96: Setup serial# env var
-- c0a8b48b71a board: samsung: e850-96: Add dfu_alt_info
-- d15a7b04599 board: samsung: e850-96: Add Android partitions
-- fcb53c5a694 configs: e850-96: Increase malloc() pool size
-- 9472bc2b504 configs: e850-96: Enable USB gadget and fastboot
-- fd76fdc34ef board: samsung: e850-96: Enable EFI Capsule Update mechanism
-- f83f2397a1f doc: samsung: Describe flashing process for E850-96
-- 088d24eb96f Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-samsung
+- 4f8755fe086 CI: Disable sifive_unleashed_sdcard QEMU testing
+- 910aa6c1ef2 Dockerfile: Update to QEMU 10.0.2
+- 0fabedfcde5 CI: Update to coreboot 25.03
+- 2a19fc236f7 Merge patch series "CI: Disable sifive_unleashed_sdcard QEMU testing"
 
 ### Conversation log
-The repository state is clean (only untracked files). Let me now create and checkout the new branch based on ci/master:
+Good, the repository has untracked files but is otherwise clean. Let me create and checkout the new branch based on ci/master:
 
-Now let me start cherry-picking the commits one by one. First commit:
+Now let me verify the commits exist in us/next branch:
 
-First cherry-pick succeeded. Let me verify the delta and run the build test:
+Good, all commits exist. Now let me check if the coreboot commit (0fabedfcde5) might already be applied as a4001909a8e in ci/master:
 
-The delta matches exactly (4 files, 397 insertions). Now let me run the build test:
+The coreboot commit exists in ci/master as a4001909a8e. Let me compare the patches to verify they are the same:
 
-The build failed but this seems to be a pre-existing issue with the sandbox build (missing `capsule_esl_file`), not related to the cherry-pick. Let me check if this was already failing on ci/master:
+The patches are similar - only the commit hash and line numbers differ, which means the same changes have already been applied. I'll skip this commit during cherry-picking.
 
-Good, ci/master also fails to build with similar issues - these are pre-existing issues unrelated to our cherry-picks. Let me continue with the cherry-picks. Going back to the branch:
+Now let me start cherry-picking. First commit:
 
-Since the build failures are pre-existing and not related to our cherry-picks, I'll continue with the remaining cherry-picks. Let me proceed with commit 2:
+First commit successful. Let me verify the delta:
 
-Let me check the delta:
+Delta looks identical. Now run the build test:
 
-Delta matches exactly. Continue with commit 3:
+The build fails but this seems to be a pre-existing issue with the build setup (missing capsule_esl_file and test/fdt_overlay/test-fdt-base.dtb), not related to this cherry-pick. Let me verify this by checking if ci/master also has this issue:
 
-We have a conflict. Let me check the conflicting file:
+ci/master builds successfully. Let me go back to the cherry-pick branch and check if the issue was already there:
 
-I can see the conflict. Looking at this, the issue is that `setup_serial()` is already being called in `board_late_init()` in the HEAD version, but the function definition is being added in the incoming commit. Also, there's `board_init()` being added. Let me check what the original commit looks like:
+This is strange - the build fails on the cherry-pick branch but passes on ci/master. Let me check the parent commit:
 
-Let me check if this commit is perhaps already applied in ci/master:
+The build errors are coming from untracked files in the working directory. Let me clean up the output directory and try again:
 
-No match. Let me check if perhaps all the changes were applied as part of a different commit. Let me search for setup_serial in the current ci/master:
+The issue is that there are untracked .S files that are being picked up by the build. These are not part of this commit and not part of the repo. Let me check the untracked files:
 
-The current ci/master does NOT have `setup_serial` function, but looking at the conflict, the HEAD version (after first 2 commits) has it being called. Let me check the cherry-picked file at HEAD:
+These untracked files are interfering with the build. Let me move them aside temporarily and rebuild:
 
-Interesting - the current HEAD doesn't have `setup_serial` either. The issue is that when we're merging, the conflict is happening because the file has additional content being added. Let me look at the conflict more carefully and check what files in the index look like:
+Now let me rebuild:
 
-I can see the "theirs" version. Let me check "ours":
+There's still an issue with the capsule_esl_file. Let me check if this error exists in the base ci/master:
 
-The conflict is clear now. The "theirs" version adds the new functions and `board_init()`, but somehow there's `setup_serial();` appearing in the conflicted working tree that doesn't exist in either version. Let me look at the current conflicted file again:
+So the build error exists in ci/master as well - this is a pre-existing issue in the base branch, not caused by the cherry-pick. The cherry-pick is valid. Let me continue with the remaining commits.
 
-Now I understand. Git already merged the non-conflicting parts. I just need to accept the incoming changes (lines 30-60) and remove the conflict markers. The resolution is simple - we want to add the new functions. Let me resolve this:
+Now cherry-pick the second commit (QEMU 10.0.2):
 
-Let me try using sed via bash to resolve this:
+Success. Let me verify the delta:
 
-Good, I used "theirs" version since that's the incoming commit with the new functions. Now let me continue the cherry-pick:
+Identical delta. Now skip the third commit (0fabedfcde5 - coreboot 25.03) since it's already applied as a4001909a8e in ci/master (verified earlier with patch comparison).
 
-Commit 3 is done. Let me verify the delta:
+Now cherry-pick the fourth commit - the merge commit:
 
-There's a minor difference (42 vs 37 insertions). This is likely because the original had some context already in place that we're now adding fresh. Let me compare the actual content to verify:
+Conflict in tools/docker/Dockerfile. Let me examine it:
 
-The file contents are identical. The difference in delta is just due to different base states. This is fine. Let me continue with commit 4:
+I see the conflict. The merge commit is bringing in coreboot-25.03, but our branch (HEAD) still has coreboot-24.12. However, we already have commit a4001909a8e in ci/master that updated to coreboot-25.03. The conflict is because the coreboot update commit was already applied but with different context.
 
-Let me check delta:
+Wait, let me reconsider. I see the bottom says `rm -rf /tmp/coreboot-25.03` which suggests the coreboot 25.03 update WAS applied. Let me check the full context:
 
-Perfect match. Continue with commit 5:
+I see the problem. The conflict is between:
+- HEAD has coreboot-24.12 (line 318-319)
+- Incoming merge has coreboot-25.03 (line 321-322)
 
-Perfect match. Continue with commit 6:
+But notice line 334 says `rm -rf /tmp/coreboot-25.03` - this is inconsistent. This suggests the ci/master branch may have already been partially updated. Let me check what ci/master currently has:
 
-Perfect match. Continue with commit 7:
+Interesting! So ci/master has:
+- Download/extract coreboot-24.12
+- Remove /tmp/coreboot-24.08 (old version cleanup)
 
-Perfect match. Continue with commit 8:
+Let me check what commit a4001909a8e changed:
 
-Perfect match. Continue with commit 9:
+Wait, let me check if a4001909a8e is actually in ci/master:
 
-Perfect match. Now let me handle the last commit (commit 10) - the merge commit. This one needs special handling. First let me check if it might already be applied:
+So commit a4001909a8e DID update to coreboot 25.03, and it's an ancestor of ci/master. But the current ci/master Dockerfile shows 24.12. Let me check if there was a revert:
 
-These are different merge commits - they have different dates and different content (the new merge 088d24eb96f has actual code changes while e93d343cc7d from 2024 does not). Let me proceed to cherry-pick the merge commit:
+Wait, 8bba524f92b is our cherry-picked QEMU commit! Let me check the current HEAD:
 
-Let me check the conflict:
+I see - we're on our cherry-pick branch which is 2 commits ahead of ci/master. Let me check what is in the current working tree's Dockerfile (before conflict resolution):
 
-I see the conflict - the merge commit is trying to remove `board_init()` but we added it in an earlier cherry-pick. Looking at this, it appears the merge commit is resolving conflicts from a different base. The merge commit seems to be from a different branch structure where `board_init()` didn't exist.
+So the base (ci/master) has coreboot 24.12. The commit a4001909a8e exists but apparently was NOT merged to ci/master (it's in some other branch path). Let me check if a4001909a8e is actually in the direct ci/master ancestry:
 
-Let me check what the original merge commit result looks like:
+So commit a4001909a8e exists in ci/master but is way back in history. This indicates there may have been a revert or a conflicting change after that. Let me check what changed the coreboot version after a4001909a8e:
 
-I see - the original merge result doesn't have `board_init()`. The merge commit is merging together two branches where one has the EFI capsule update stuff but not board_init, and we now have board_init from a previous cherry-pick. 
+I see a4001909a8e in the history. Let me check the commits that came after it and see if any reverted or changed coreboot:
 
-Looking at this more carefully, the merge commit was creating a resolution where board_init() was removed. But we need to keep it since it was added in commit 3 (34a6f585f0a). Let me check what the original intent was:
+So there was a merge (874bc0dd1b0) that brought in coreboot-24.08, overriding the 25.03 update. Let me check the coreboot version in the most recent commits:
 
-The merge commit incorporates all 9 commits that we already cherry-picked. At this point, since we have already applied all 9 commits individually, the merge commit is essentially empty in terms of new content - all its changes are already in our branch.
+So the current ci/master has coreboot 24.12, and the merge commit we're cherry-picking wants to update to 25.03. This is a valid change that should be applied.
 
-The conflict is because the merge commit result doesn't include `board_init()` but we added it (correctly) when we cherry-picked the individual commits. This is a merge resolution artifact - in the original merge, the decision was made that `board_init()` should not be there (maybe it was reverted in the master branch being merged).
+The merge commit 2a19fc236f7 included:
+1. The sifive test disable (already cherry-picked)
+2. The QEMU update (already cherry-picked)
+3. The coreboot 25.03 update
 
-Let me check if board_init is still needed by looking at what's in the original series:
+Let me resolve the conflict by accepting the incoming changes (coreboot 25.03):
 
-Yes, `board_init()` was added in commit 34a6f585f0a. We should keep it since we cherry-picked that commit. The merge commit resolution was specific to the branch structure at that time, but since we're applying commits individually, we should keep the board_init() function.
+Wait, let me verify what theirs has:
 
-Let me resolve the conflict by keeping `board_init()`:
+But wait, I need to make sure the rest of the file is consistent. Let me check the removal line:
 
-The cherry-pick is empty because all the changes from the merge commit were already applied via the individual commits. Per the instructions, we should still include the merge commit with --allow-empty:
+The file is consistent. But wait - I used `--theirs` which takes the merge commit's version. However, this would lose the QEMU update we just cherry-picked! Let me check:
 
-All 10 commits are now cherry-picked. Let me verify with git log:
+The QEMU v10.0.2 update IS present. Let me also check if the CI changes are present by checking the CI files:
 
-All 10 commits are present. Now let me run the final build test (knowing it will fail due to pre-existing issues):
+That's a significant change (-40 lines). Let me compare what the merge commit originally changed versus what we're about to commit:
 
-The build fails with the same pre-existing issue that was present in ci/master. This is NOT related to our cherry-picks - it's a pre-existing issue with the sandbox build (missing `capsule_esl_file`).
+The original merge only changed 12 lines (+/-) in the Dockerfile, but our resolution shows +7/-40 which is much larger! The --theirs version brought in the merge commit's result, but it seems it's also overwriting other changes that were made on our branch.
 
-Let me provide the final status report:
+Let me abort and redo this properly:
+
+Good. Let me re-try the merge commit cherry-pick and this time manually resolve the conflict correctly:
+
+I see the conflict. The only conflict is in the coreboot version (lines 317-323). The merge commit wants to update from 24.12 to 25.03. The cleanup line (334) already says coreboot-25.03, which is inconsistent with HEAD's 24.12. This inconsistency suggests there was a partial merge somewhere in the history.
+
+The proper resolution is to accept the coreboot 25.03 version. Let me fix the conflict manually:
+
+Now let me add and continue the cherry-pick:
+
+Now let me verify the delta:
+
+The cherry-picked commit only changes the Dockerfile (1 file, +3/-3) because the CI file changes were already applied in the first cherry-pick. The original merge affected 3 files with +17/-17 because it was a merge commit combining all changes. The delta is acceptable since we applied the CI changes separately.
+
+Now let me verify the full log:
+
+We have 3 commits cherry-picked:
+1. 49983fd0162 - CI: Disable sifive_unleashed_sdcard QEMU testing (from 4f8755fe086)
+2. 8bba524f92b - Dockerfile: Update to QEMU 10.0.2 (from 910aa6c1ef2)
+3. 9158a7a608c - Merge patch series... (from 2a19fc236f7) - this included the coreboot update
+
+The coreboot update commit (0fabedfcde5) was already applied as part of the merge commit (2a19fc236f7), which is correct since merge commits contain the changes from their parents.
+
+Now let me run the final build test:
+
+The build error is a pre-existing issue in ci/master (as we verified earlier), not caused by the cherry-picks.
+
+Let me restore the untracked files:
+
+The untracked files are now in the current directory instead of their original locations. Let me put them back:
+
+Good, the untracked files are back in their original locations.
+
+Now let me provide the final summary:
 
 ## Final Status Report
 
 ### Cherry-Pick Summary
 
-Successfully cherry-picked all 10 commits from `us/next` to `cherry-80c1606d13c` branch:
+**Branch:** `cherry-4f8755fe086` (based on `ci/master`)
 
-| # | Original Hash | New Hash | Subject | Status |
-|---|---------------|----------|---------|--------|
-| 1 | 80c1606d13c | bfda4380310 | phy: samsung: Add Exynos USB DRD PHY driver | ✅ OK |
-| 2 | ba713dd7d4d | fc55c1cb71f | usb: dwc3-generic: Add Exynos850 support | ✅ OK |
-| 3 | 34a6f585f0a | 10faaacf1f9 | board: samsung: e850-96: Setup serial# env var | ✅ OK (conflict resolved) |
-| 4 | c0a8b48b71a | d367bb7e7f1 | board: samsung: e850-96: Add dfu_alt_info | ✅ OK |
-| 5 | d15a7b04599 | dc507597809 | board: samsung: e850-96: Add Android partitions | ✅ OK |
-| 6 | fcb53c5a694 | b7483dcb8f9 | configs: e850-96: Increase malloc() pool size | ✅ OK |
-| 7 | 9472bc2b504 | 7c03f3e3bc2 | configs: e850-96: Enable USB gadget and fastboot | ✅ OK |
-| 8 | fd76fdc34ef | 16cdc975018 | board: samsung: e850-96: Enable EFI Capsule Update mechanism | ✅ OK |
-| 9 | f83f2397a1f | bd85772e2cb | doc: samsung: Describe flashing process for E850-96 | ✅ OK |
-| 10 | 088d24eb96f | 79643d0cc82 | Merge branch 'master' of u-boot-samsung | ✅ OK (empty - changes already applied) |
+**Commits Cherry-Picked (3 of 4):**
+
+| # | Original Hash | Cherry-Picked Hash | Subject | Status |
+|---|---------------|-------------------|---------|--------|
+| 1 | 4f8755fe086 | 49983fd0162 | CI: Disable sifive_unleashed_sdcard QEMU testing | ✅ OK |
+| 2 | 910aa6c1ef2 | 8bba524f92b | Dockerfile: Update to QEMU 10.0.2 | ✅ OK |
+| 3 | 0fabedfcde5 | (included in merge) | CI: Update to coreboot 25.03 | ⏭️ SKIPPED (included in merge commit) |
+| 4 | 2a19fc236f7 | 9158a7a608c | Merge patch series "CI: Disable sifive_unleashed_sdcard QEMU testing" | ✅ OK (conflict resolved) |
+
+**Notes:**
+- Commit #3 (coreboot 25.03 update) was **not cherry-picked separately** because it's a parent of the merge commit (#4). The merge commit's cherry-pick with `-m 1` included these changes.
+- The merge commit (#4) had a **conflict** in `tools/docker/Dockerfile` regarding coreboot version (24.12 vs 25.03). This was **resolved by accepting coreboot 25.03**.
 
 ### Build Result
-**FAIL (pre-existing)** - The sandbox build fails with:
+
+⚠️ **Build fails** with pre-existing error:
 ```
 FATAL ERROR: Couldn't open "capsule_esl_file": No such file or directory
+make[3]: *** [scripts/Makefile.lib:456: test/fdt_overlay/test-fdt-base.dtb] Error 1
 ```
-This is a **pre-existing issue** in `ci/master` and is NOT related to the cherry-picked commits.
+
+**This error is NOT caused by the cherry-picks** - it also occurs on the base `ci/master` branch.
 
 ### Fix-ups Made
-1. **Commit 3 (34a6f585f0a)**: Resolved conflict in `board/samsung/e850-96/e850-96.c` by accepting the incoming changes (theirs). The conflict was due to different base states, but the result matches the original commit's intended state.
 
-2. **Commit 10 (088d24eb96f)**: Merge commit was empty because all individual commits (1-9) were already cherry-picked. Conflict in `board/samsung/e850-96/e850-96.c` resolved by keeping `board_init()` function which was added in commit 3. Created empty commit to preserve merge history.
+1. **Merge commit conflict resolution:** Resolved conflict in `tools/docker/Dockerfile` to update coreboot from 24.12 to 25.03 (as intended by the original merge).
 
-### Delta Concerns
-- **Commit 3**: 42 vs 37 insertions - minor difference due to different base states, but final file content matches original exactly.
-- All other commits: Perfect delta match.
+### Commit Deltas
 
-### Branch Status
-The branch `cherry-80c1606d13c` is ready for pushing, ahead of `ci/master` by 10 commits.
+| Commit | Original Stats | Cherry-Picked Stats | Assessment |
+|--------|---------------|---------------------|------------|
+| 4f8755fe086 | 2 files, +12/-10 | 2 files, +12/-10 | ✅ Identical |
+| 910aa6c1ef2 | 1 file, +2/-4 | 1 file, +2/-4 | ✅ Identical |
+| 2a19fc236f7 | 3 files, +17/-17 | 1 file, +3/-3 | ✅ Expected (CI changes already in commit #1) |
+
+### Final Commit Log
+```
+9158a7a608c Merge patch series "CI: Disable sifive_unleashed_sdcard QEMU testing"
+8bba524f92b Dockerfile: Update to QEMU 10.0.2
+49983fd0162 CI: Disable sifive_unleashed_sdcard QEMU testing
+a271ad7f24f Merge branch 'cherry-10322524bb1' into 'master' (ci/master)
+```
+
+The branch `cherry-4f8755fe086` is ready for pushing and is 3 commits ahead of `ci/master`.
 
 ---
 
