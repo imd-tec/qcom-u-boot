@@ -33821,3 +33821,67 @@ All 6 commits are present. Let me run the final build test:
 
 ---
 
+## 2026-02-28: us/next
+
+Branch: cherry-ae409a84e7b
+
+Commits:
+- ae409a84e7b spl: NULL check variable before dereference
+- 4b8aba93bdb bios_emulator: Fix buffer overflow
+- 0fdcca86d87 bios_emulator: Add parens to xorl macro
+- a8f20bb6650 Merge patch series "bios_emulator: Fix two issues found by Smatch"
+
+### Conversation log
+The repository has untracked files but is otherwise clean. Let me proceed with creating and checking out the new branch based on ci/master.
+
+Now let me cherry-pick the first commit:
+
+The first cherry-pick succeeded. Let me check the commit delta and then run the build test:
+
+The delta looks identical (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build succeeded. Let me proceed with the second commit:
+
+Second cherry-pick succeeded. Let me check the delta:
+
+Delta looks identical. Now run the build test:
+
+Build succeeded. Now let me cherry-pick the third commit:
+
+Third cherry-pick succeeded. Let me check the delta:
+
+Delta looks identical. Now run the build test:
+
+Build succeeded. Now let me cherry-pick the fourth commit, which is a merge commit:
+
+The merge commit is empty (expected since we already cherry-picked the individual commits). Let me create the empty commit as instructed:
+
+The merge commit was created. Let me check the delta:
+
+The cherry-picked merge commit is empty as expected (since we already applied the individual patches). The original merge commit shows changes from the merged branch. This is fine because merge commits often become empty when cherry-picked after the individual commits have already been applied. Now run the build test:
+
+Build succeeded. Now let me verify the log and run the final build:
+
+All 4 commits are present. Let me run the final build test:
+
+## Final Status
+
+**All 4 commits successfully cherry-picked to branch `cherry-ae409a84e7b`:**
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | ae409a84e7b | 0e50fb544a5 | spl: NULL check variable before dereference |
+| 2 | 4b8aba93bdb | 4be8b34005d | bios_emulator: Fix buffer overflow |
+| 3 | 0fdcca86d87 | 828253e976a | bios_emulator: Add parens to xorl macro |
+| 4 | a8f20bb6650 | 3a502ff5373 | Merge patch series "bios_emulator: Fix two issues found by Smatch" |
+
+**Build result:** ✅ OK (no warnings or errors)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None. The merge commit (commit #4) is empty in the cherry-picked version, which is expected since the individual commits were already applied before the merge commit.
+
+**Branch status:** The branch `cherry-ae409a84e7b` is ready for pushing, based on `ci/master` with 4 additional commits.
+
+---
+
