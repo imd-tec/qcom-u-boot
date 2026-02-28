@@ -33733,3 +33733,91 @@ Given the current state, there's nothing additional to fix in the code. The revi
 
 ---
 
+## 2026-02-28: us/next
+
+Branch: cherry-dedef8f6f9f
+
+Commits:
+- dedef8f6f9f cmd: tlv_eeprom: fix typo errors in comments and error msg
+- ee6d8ba15ea cmd: tlv_eeprom: improve mac_read_from_eeprom() log messages
+- 53f328663da arm: kirkwood: Enable bootstd and other modernization for ib62x0 board
+- c8114a01ad6 spi: mvebu: Correct dependencies on MVEBU_A3700_SPI
+- b35ddfc57a4 ddr: marvell: a38x: Fix unsigned issues
+- 808d4bc2bdc Merge tag 'u-boot-marvell-20250729' of https://source.denx.de/u-boot/custodians/u-boot-marvell
+
+### Conversation log
+The repository is mostly clean (just untracked files). Let me create the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me check the delta and run build:
+
+The delta looks identical (1 file, 5+/5-). Now let me run the build test:
+
+Build passed. Moving to the second commit:
+
+Second cherry-pick succeeded. Checking delta:
+
+Delta is identical. Build test:
+
+Build passed. Third commit:
+
+Third cherry-pick succeeded. Checking delta:
+
+Delta is identical. Build test:
+
+Build passed. Fourth commit:
+
+Fourth cherry-pick succeeded. Checking delta:
+
+Delta is identical. Build test:
+
+Build passed. Fifth commit:
+
+Fifth cherry-pick succeeded. Checking delta:
+
+Delta is identical. Build test:
+
+Build passed. Now the sixth commit - this is a MERGE commit (identified by "Merge" in subject), so I need to use -m 1 --allow-empty:
+
+The merge commit is empty (which is expected - all the commits from the merge are already included). As per the instructions, I need to preserve the merge commit even if it's empty. Let me commit it:
+
+Merge commit preserved. Let me check the delta:
+
+The merge commit is empty in the cherry-pick (as expected - all changes are already applied by the individual commits). The original merge commit shows 5 files/43+/34- because those were the combined changes from all the commits being merged. This is correct behavior - the individual commits have already applied those changes, so the merge itself is empty.
+
+Build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 6 commits are present. Let me run the final build test:
+
+## Final Status Summary
+
+**Cherry-pick completed successfully!**
+
+### Build Result
+✅ **OK** - sandbox builds without warnings or errors
+
+### Commits Cherry-picked (6/6)
+| # | Original Hash | Subject | Delta Check |
+|---|---------------|---------|-------------|
+| 1 | dedef8f6f9f | cmd: tlv_eeprom: fix typo errors in comments and error msg | ✅ Identical |
+| 2 | ee6d8ba15ea | cmd: tlv_eeprom: improve mac_read_from_eeprom() log messages | ✅ Identical |
+| 3 | 53f328663da | arm: kirkwood: Enable bootstd and other modernization for ib62x0 board | ✅ Identical |
+| 4 | c8114a01ad6 | spi: mvebu: Correct dependencies on MVEBU_A3700_SPI | ✅ Identical |
+| 5 | b35ddfc57a4 | ddr: marvell: a38x: Fix unsigned issues | ✅ Identical |
+| 6 | 808d4bc2bdc | Merge tag 'u-boot-marvell-20250729' ... | ✅ Empty (expected) |
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - the merge commit (808d4bc2bdc) resulted in an empty commit as expected, since all 5 preceding commits were already cherry-picked individually
+
+### Branch Status
+- Branch `cherry-dedef8f6f9f` is ready for pushing
+- 6 commits ahead of `ci/master`
+
+---
+
