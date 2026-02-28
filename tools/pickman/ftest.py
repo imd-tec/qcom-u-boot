@@ -10,6 +10,7 @@ import asyncio
 import argparse
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -396,6 +397,39 @@ class TestDatabase(unittest.TestCase):
             self.assertEqual(len(sources), 2)
             self.assertEqual(sources[0], ('branch-a', 'abc123'))
             self.assertEqual(sources[1], ('branch-b', 'def456'))
+            dbs.close()
+
+    def test_schema_version_readonly_raises(self):
+        """Test that a read-only database raises instead of returning 0.
+
+        Previously get_schema_version() caught all OperationalError and
+        returned 0, which caused migrate_to() to re-create all tables on
+        top of an existing (read-only) database, wiping the data.
+        """
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'abc123')
+            dbs.commit()
+
+            # Simulate a read-only error by replacing the cursor
+            real_cur = dbs.cur
+            mock_cur = mock.MagicMock()
+            mock_cur.execute.side_effect = sqlite3.OperationalError(
+                'attempt to write a readonly database')
+            dbs.cur = mock_cur
+            with self.assertRaises(sqlite3.OperationalError):
+                dbs.get_schema_version()
+            dbs.cur = real_cur
+            dbs.close()
+
+    def test_schema_version_missing_table_returns_zero(self):
+        """Test that a missing schema_version table returns 0."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.open_it()
+            # Fresh database has no tables, should return 0
+            self.assertEqual(dbs.get_schema_version(), 0)
             dbs.close()
 
 
