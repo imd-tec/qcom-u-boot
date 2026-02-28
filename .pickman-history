@@ -33885,3 +33885,75 @@ All 4 commits are present. Let me run the final build test:
 
 ---
 
+## 2026-02-28: us/next
+
+Branch: cherry-bb04b7bcf66
+
+Commits:
+- bb04b7bcf66 tools: mips-relocs: replace format string introducers
+- 2babd34eacf binman: bintool: use apt-get instead of apt
+- 252a2b2750e binman: bintool: run 'apt-get update -y' on first invocation of apt_install()
+- 09974c7a647 Merge patch series "bintool fixes"
+
+### Conversation log
+The repository is clean (only untracked files present, which is fine). Let me create the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The delta matches exactly (1 file changed, 4 insertions, 3 deletions). Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now run build test:
+
+Build passed. Cherry-pick the third commit:
+
+Third cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now run build test:
+
+Build passed. Now cherry-pick the fourth commit (merge commit - need to use -m 1 --allow-empty):
+
+The merge commit is empty (which is expected - the changes were already in the parent commits). Let me commit it as an empty commit to preserve the merge history:
+
+Merge commit successfully applied. Now let me verify the delta and run the build test:
+
+The cherry-picked merge commit is empty (as expected, since we already cherry-picked the constituent commits individually). The original merge shows the combined changes. This is expected behavior. Now run build test:
+
+Build passed. Now let me verify all 4 commits are present:
+
+All 4 commits are present. Now run the final build test:
+
+## Final Status Report
+
+### Cherry-pick completed successfully! ✅
+
+**Branch:** `cherry-bb04b7bcf66` (based on `ci/master`)
+
+**Commits cherry-picked (4 total):**
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | bb04b7bcf66 | e432b26cedd | tools: mips-relocs: replace format string introducers |
+| 2 | 2babd34eacf | 53622f37d66 | binman: bintool: use apt-get instead of apt |
+| 3 | 252a2b2750e | 412da0beee5 | binman: bintool: run 'apt-get update -y' on first invocation of apt_install() |
+| 4 | 09974c7a647 | 3c949337e31 | Merge patch series "bintool fixes" |
+
+**Build result:** ✅ OK - sandbox build passed with no warnings or errors
+
+**Fix-ups made:** None required
+
+**Delta concerns:** None - all commits matched their original stats exactly:
+- Commit 1: 1 file, +4/-3 lines ✓
+- Commit 2: 1 file, +1/-1 lines ✓
+- Commit 3: 1 file, +8 lines ✓
+- Commit 4: Empty merge commit (expected, as constituent commits already applied) ✓
+
+The branch `cherry-bb04b7bcf66` is ready for pushing.
+
+---
+
