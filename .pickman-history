@@ -32768,3 +32768,265 @@ The branch `cherry-eff0e49d1c6` is ready with 13 commits ahead of ci/master.
 
 ---
 
+### Pipeline fix: 2026-02-27 (attempt 1)
+
+Branch: cherry-eff0e49d1c6
+
+Failed jobs:
+- pine64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. The error is:
+
+```
+FAILED test/py/tests/test_dm.py::test_dm_compat - AssertionError: assert not {'gpi߾sunxi'}
+```
+
+This is a test that checks for drivers without proper compat strings. The strange characters `߾` suggest corruption - it looks like `gpio_sunxi` is the actual driver name. Let me investigate:
+
+I see - the `gpio_sunxi` driver has no `.of_match` field, which means it has no compatible strings. The test `test_dm_compat` checks that all drivers have proper compatible strings for device tree binding.
+
+Let me check what the test is actually checking:
+
+So the test checks that every driver in `dm tree` is also present in `dm compat`. The `dm compat` command lists drivers with their compatible strings. If `gpio_sunxi` doesn't have a compatible string, it won't be listed in `dm compat`.
+
+Let me check what commits touched sunxi gpio code:
+
+Let me check if this is a pre-existing issue or if something in our cherry-picks introduced it:
+
+Let me check if this test was passing on ci/master:
+
+No difference - the sunxi GPIO code is the same between ci/master and our branch. So this is a pre-existing issue that wasn't introduced by our cherry-picks.
+
+Let me check if there's something wrong with the pine64 defconfig or if this is a known issue:
+
+Let me check if the qconfig resync touched pine64:
+
+No changes to pine64. Let me look more closely at the test failure. The odd characters `gpi߾sunxi` suggest a possible test parsing issue or corruption. Let me see if the test was passing on ci/master recently:
+
+No changes. Let me check if this is a real issue by looking at whether gpio_sunxi driver is meant to have a compatible string or not:
+
+I see - the `gpio_sunxi` driver at line 332-337 does NOT have a `.of_match` field. This is intentional - the driver is bound programmatically by the pinctrl driver (`pinctrl-sunxi.c` at lines 200 and 215 using `device_bind_driver_to_node` and `device_bind`).
+
+The test failure seems to be a pre-existing issue. Let me check if this test was passing on previous pipeline runs by looking at ci/master status:
+
+The `0408af78a5c` merge and `4fadab778ba` commit are part of the sunxi merge that added the A523 pinctrl. Let me check if the issue was introduced there:
+
+Looking at this more carefully - this is sunxi A523 support which was merged recently to ci/master. The sunxi GPIO driver (`gpio_sunxi`) doesn't have a compatible string because it's bound programmatically by the pinctrl driver.
+
+The test failure indicates this has been a latent issue that's now been exposed. The test `test_dm_compat` expects all drivers to be in the `dm compat` output, but `gpio_sunxi` has no `.of_match` so it won't appear there.
+
+Let me check how the fix should be made. Since this is a pre-existing issue in ci/master (not introduced by this cherry-pick branch), we need to fix it. The proper fix is to either:
+1. Add an `.of_match` to the driver
+2. Or exclude this driver from the test
+
+Let me check if there's a compatible string for sunxi GPIO in the device tree bindings:
+
+The GPIO functionality for sunxi is part of the pinctrl subsystem. Let me check how similar drivers handle this:
+
+I see - the `gpio_sunxi` driver is bound programmatically via `device_bind_driver_to_node` and `device_bind` from the pinctrl driver. This is a special case where the GPIO driver is instantiated by the pinctrl driver rather than matched via device tree.
+
+The fix should be to add a DM_FLAG_DEFAULT_COMPAT flag or similar to the driver. But let me first check how other drivers with no compatible strings handle this:
+
+Let me look at the `dm compat` command to understand how it lists drivers:
+
+Now I understand the issue. Looking at `dm_dump_driver_compat()` at line 211-233:
+- It iterates through all drivers
+- If a driver has an `of_match`, it prints its name and compatible string(s)
+- If a driver has NO `of_match`, it still prints the driver name but no compatible string (line 223-227)
+
+So `gpio_sunxi` SHOULD be listed in `dm compat` output since it's printed even without a compatible string. Let me re-read the test:
+
+Looking at the test again:
+```python
+response = ubman.run_command('dm compat')
+bad_drivers = set()
+for driver in drivers:
+    if not driver in response:
+        bad_drivers.add(driver)
+```
+
+The test checks if the driver name appears **anywhere** in the `dm compat` output. Since `gpio_sunxi` has name `"gpio_sunxi"` (line 333), and `dm_dump_driver_compat` prints the driver name (line 223), the driver should appear in the output.
+
+Wait - the error shows `gpi߾sunxi` which has strange characters. Let me check if there's a character encoding or truncation issue. Looking at line 223: `printf("%-20.20s", entry->name);` - this truncates to 20 characters, and `gpio_sunxi` is only 10 characters, so it should be fine.
+
+The odd characters `߾` could be a display/log encoding issue. Let me check if this test was passing before:
+
+OK, so the test used to fail immediately on the first bad driver, but now it collects them. The strange characters in the error output `gpi߾sunxi` might be a parsing issue in how the driver names are extracted from `dm tree`.
+
+Let me check if there's an issue with the parsing in the test. The test extracts drivers from `dm tree` output by:
+```python
+driver_index = response.find('Driver')
+drivers = (line[driver_index:].split()[0]
+           for line in response[:-1].split('\n')[2:])
+```
+
+This assumes the driver column is at a fixed position. The output format from `show_devices` shows:
+```
+printf(" %-10.10s  %3d  [ %c ]   %-20.20s  ", dev->uclass->uc_drv->name,
+       dev->seq_,
+       flags & DM_FLAG_ACTIVATED ? '+' : ' ', dev->driver->name);
+```
+
+So the driver name is printed with `%-20.20s`, meaning it can be up to 20 characters but is printed after the sequence number and activation flag.
+
+Let me see what `dm tree` output looks like:
+
+OK, so this is the pre-existing build error mentioned in the context. Let me search for that file:
+
+This is a known pre-existing issue in the local build environment. Let me focus on the actual pine64 test failure which is a runtime test issue, not a build issue.
+
+Let me analyze the test failure more carefully. The error shows `{'gpi߾sunxi'}` which has garbled characters. This could be:
+1. A parsing issue with multi-byte characters in the output
+2. An issue with how the driver name is being extracted
+
+Looking at the job log output, this is a test running on real hardware (pine64), not sandbox. The `dm compat` output should list all drivers including `gpio_sunxi`.
+
+Let me check if there's something special about how gpio_sunxi is being used or if it's the correct name:
+
+The driver name is `gpio_sunxi` at line 333. Now let me think about this differently. The error shows `gpi߾sunxi` - the 'o' is replaced by a strange unicode character. This could be:
+
+1. A console encoding issue
+2. Memory corruption
+3. A parsing issue in the test
+
+Looking at the error more carefully: `assert not {'gpi߾sunxi'}` - this is a Python set, and the name inside has corrupted character(s).
+
+Let me check what recent changes were made to the pine64 or sunxi code that could have caused this:
+
+None of these commits touch sunxi or pine64 code. Let me check if this test was passing before on ci/master or if this is a known issue:
+
+Let me see what ci/master looks like:
+
+The cherry-picks are mostly AT91/sama7d65, K3, and elf changes. None of them touch sunxi/pine64 code.
+
+Let me look at the specific error more carefully. The character `߾` is Unicode U+07FE (NKO SYMBOL DOROME SIGN). This is suspicious - it's a very unusual character that wouldn't be in driver names.
+
+Looking at the test output parsing, the issue might be in how the driver name column is being extracted from `dm tree` output. The format is:
+```
+ %-10.10s  %3d  [ %c ]   %-20.20s  
+```
+
+This means:
+- 10-character uclass name (padded/truncated)
+- 3-digit sequence number
+- activation flag in brackets
+- 20-character driver name (padded/truncated)
+- Device tree structure
+
+The test extracts drivers with:
+```python
+driver_index = response.find('Driver')
+drivers = (line[driver_index:].split()[0]
+           for line in response[:-1].split('\n')[2:])
+```
+
+This finds the "Driver" column header position and extracts the first whitespace-separated word at that position in each subsequent line.
+
+I suspect there might be some binary output or ANSI escape codes being misinterpreted. The character `߾` is 0x07FE which could come from a byte sequence being misinterpreted.
+
+Let me check if this is a transient issue or a real code problem. Since the test is about device tree/dm compatibility, let me verify the gpio_sunxi driver is properly defined:
+
+The driver is properly defined. The problem is that it doesn't have an `.of_match` (compatible strings list), so `dm compat` won't show compatible strings for it.
+
+Wait - let me re-read the `dm_dump_driver_compat` function. At line 223, it prints the driver name regardless of whether it has an of_match:
+
+```c
+printf("%-20.20s", entry->name);
+if (match) {
+    printf("  %s", match->compatible);
+    match++;
+}
+printf("\n");
+```
+
+So `gpio_sunxi` SHOULD be in the `dm compat` output, just without a compatible string.
+
+Let me look at the test logic again:
+```python
+for driver in drivers:
+    if not driver in response:
+        bad_drivers.add(driver)
+```
+
+It's checking if the driver name is **anywhere** in the `dm compat` response string. If `gpio_sunxi` is printed in `dm compat` output, it should be found.
+
+The only way this fails is if:
+1. The driver name in `dm tree` output doesn't match what's in `dm compat`
+2. There's a parsing issue extracting the driver name
+
+Looking at the corrupted character `gpi߾sunxi` - this is NOT the same as `gpio_sunxi`. The `o` is missing and replaced with a weird unicode character. This suggests console output corruption, not a code issue.
+
+Let me check if there have been any recent changes to console output handling:
+
+No console changes. This suggests the issue might be:
+1. A hardware/serial port issue (transient)
+2. A character encoding issue in the test framework
+3. Memory corruption on the device
+
+Given that this is a test running on real hardware (pine64 board), and the error shows corrupted characters, this could be a transient hardware issue.
+
+However, looking at this from a different angle - let me check if the `dm compat` command was properly listing drivers without of_match before:
+
+No changes to dm dump code either.
+
+Let me look at the issue differently. The test failure is:
+```
+AssertionError: assert not {'gpi߾sunxi'}
+```
+
+The driver name extracted from `dm tree` is `gpi߾sunxi` (corrupted), and this corrupted name is not found in `dm compat` output (because the real driver is `gpio_sunxi`).
+
+This is almost certainly a transient issue - either serial line noise, memory corruption, or some other hardware issue on the pine64 board. The character corruption (missing 'o', strange unicode character inserted) is not something that would be caused by code changes.
+
+However, let me verify there's nothing in our commits that could cause memory issues:
+
+This is a bug fix preventing buffer overflow - it shouldn't cause any issues with pine64 tests.
+
+Given all my analysis, this appears to be a **transient hardware issue** - the serial output from the pine64 board got corrupted, causing the test to fail with garbled driver names. This is not caused by any of the cherry-picked commits.
+
+However, let me verify this by checking if there's anything systematically wrong. Let me check if the test is designed to handle such issues:
+
+Looking at the test - it's extracting driver names from `dm tree` and checking if they exist in `dm compat`. The corrupted character in `gpi߾sunxi` suggests serial line corruption.
+
+Based on my analysis:
+
+1. **The cherry-picked commits do not modify any sunxi/pine64 code**
+2. **The gpio_sunxi driver is properly defined and should appear in both dm tree and dm compat**
+3. **The test failure shows corrupted character data (`gpi߾sunxi` instead of `gpio_sunxi`)**
+4. **This type of character corruption (unicode replacement character pattern) is characteristic of serial line noise or encoding issues**
+
+This is a **transient/infrastructure issue**, not a code bug introduced by the cherry-picks.
+
+Let me report this finding:
+
+## Analysis Summary
+
+**Job:** pine64 (stage: sjg-lab)
+
+**Failure:** `test_dm_compat` assertion failure:
+```
+AssertionError: assert not {'gpi߾sunxi'}
+```
+
+**Root Cause Analysis:**
+
+1. The test extracts driver names from `dm tree` output and verifies they exist in `dm compat` output
+2. The driver name `gpio_sunxi` was corrupted during serial transmission, appearing as `gpi߾sunxi`
+3. The corrupted name (with Unicode character U+07FE instead of the letter 'o') doesn't match the actual driver name in `dm compat`
+
+**Evidence this is transient/infrastructure:**
+
+1. **No code changes to sunxi/pine64:** The cherry-picked commits (AT91 sama7d65, K3 typo fix, elf buffer overflow fix, etc.) don't touch any sunxi or GPIO driver code
+2. **Driver is properly defined:** `drivers/gpio/sunxi_gpio.c` line 333 correctly defines `U_BOOT_DRIVER(gpio_sunxi)` with name `"gpio_sunxi"`  
+3. **Character corruption pattern:** The Unicode character `߾` (U+07FE) replacing 'o' is characteristic of serial line noise or character encoding issues during test communication with hardware
+4. **`dm compat` implementation is correct:** `drivers/core/dump.c` `dm_dump_driver_compat()` properly prints all driver names regardless of whether they have compatible strings
+
+**Conclusion:**
+
+This is a **transient infrastructure/hardware issue** - serial line corruption between the test runner and the pine64 hardware board. The test framework received corrupted character data from the serial console, causing the driver name comparison to fail.
+
+**Recommendation:** Retry the pipeline without making any code changes. If the issue persists, it may indicate a hardware problem with the pine64 board's serial connection in the test lab.
+
+---
+
