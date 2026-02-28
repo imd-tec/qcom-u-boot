@@ -576,7 +576,14 @@ void *efi_alloc_aligned_pages(u64 len, enum efi_memory_type memory_type,
 	if (r != EFI_SUCCESS)
 		return NULL;
 
-	aligned_mem = ALIGN(mem, align);
+	/*
+	 * Align based on the mapped pointer rather than the physical address,
+	 * since on sandbox these differ by the RAM-buffer base address. This
+	 * ensures callers get a pointer with the requested alignment.
+	 */
+	aligned_mem = mem + ALIGN((ulong)map_sysmem(mem, 0), align) -
+		(ulong)map_sysmem(mem, 0);
+
 	/* Free pages before alignment */
 	free_pages = efi_size_in_pages(aligned_mem - mem);
 	if (free_pages)
