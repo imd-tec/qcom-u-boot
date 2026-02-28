@@ -6005,6 +6005,16 @@ class TestGetFailedJobs(unittest.TestCase):
 class TestBuildPipelineFixPrompt(unittest.TestCase):
     """Tests for build_pipeline_fix_prompt function."""
 
+    def setUp(self):
+        """Set up temp directory for log files."""
+        self.tmp_dir = tempfile.mkdtemp(prefix='pickman-test-')
+
+    def tearDown(self):
+        """Remove temp directory."""
+        import shutil
+
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
     def test_single_job(self):
         """Test prompt with a single failed job"""
         failed_jobs = [
@@ -6015,15 +6025,21 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
         ]
         prompt, task_desc = agent.build_pipeline_fix_prompt(
             42, 'cherry-abc123', failed_jobs, 'ci', 'master',
-            'Test MR desc', 1)
+            'Test MR desc', 1, tempdir=self.tmp_dir)
 
         self.assertIn('!42', prompt)
         self.assertIn('cherry-abc123', prompt)
         self.assertIn('build:sandbox', prompt)
-        self.assertIn('error: undefined reference', prompt)
         self.assertIn('attempt 1', prompt)
         self.assertIn('cherry-abc123-fix1', prompt)
         self.assertIn('1 failed', task_desc)
+
+        # Log tail should be in the temp file, not in the prompt
+        log_path = os.path.join(self.tmp_dir, 'job-1-build_sandbox.log')
+        self.assertTrue(os.path.exists(log_path))
+        with open(log_path, encoding='utf-8') as inf:
+            self.assertEqual(inf.read(), 'error: undefined reference')
+        self.assertIn(log_path, prompt)
 
     def test_multiple_jobs(self):
         """Test prompt with multiple failed jobs"""
@@ -6038,13 +6054,18 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
                 log_tail='test failure'),
         ]
         prompt, task_desc = agent.build_pipeline_fix_prompt(
-            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1,
+            tempdir=self.tmp_dir)
 
         self.assertIn('build:sandbox', prompt)
         self.assertIn('test:dm', prompt)
-        self.assertIn('build error', prompt)
-        self.assertIn('test failure', prompt)
         self.assertIn('2 failed', task_desc)
+
+        # Both log files should exist
+        self.assertTrue(os.path.exists(
+            os.path.join(self.tmp_dir, 'job-1-build_sandbox.log')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.tmp_dir, 'job-2-test_dm.log')))
 
     def test_attempt_number(self):
         """Test that attempt number is reflected in prompt"""
@@ -6055,7 +6076,8 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
                 log_tail='error'),
         ]
         prompt, task_desc = agent.build_pipeline_fix_prompt(
-            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 3)
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 3,
+            tempdir=self.tmp_dir)
 
         self.assertIn('attempt 3', prompt)
         self.assertIn('cherry-abc123-fix3', prompt)
@@ -6070,7 +6092,8 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
                 log_tail='error'),
         ]
         prompt, _ = agent.build_pipeline_fix_prompt(
-            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1,
+            tempdir=self.tmp_dir)
 
         self.assertIn('um build sandbox', prompt)
 
@@ -6087,7 +6110,8 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
                 log_tail='error'),
         ]
         prompt, _ = agent.build_pipeline_fix_prompt(
-            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1,
+            tempdir=self.tmp_dir)
 
         # Should include both boards plus sandbox in the buildman command
         self.assertIn('buildman', prompt)
@@ -6104,10 +6128,68 @@ class TestBuildPipelineFixPrompt(unittest.TestCase):
                 log_tail='error'),
         ]
         prompt, _ = agent.build_pipeline_fix_prompt(
-            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1)
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master', '', 1,
+            tempdir=self.tmp_dir)
 
         self.assertIn('buildman -o /tmp/pickman', prompt)
         self.assertIn('coral', prompt)
+
+    def test_large_logs_stay_under_limit(self):
+        """Test that large log tails are written to files, keeping the
+        prompt well under the Linux MAX_ARG_STRLEN limit (128 KB)."""
+        # Create 5 jobs with 200-line logs (~120 bytes per line)
+        big_log = '\n'.join(f'line {i}: ' + 'x' * 100 for i in range(200))
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=i, name=f'build:board{i}', stage='build',
+                web_url=f'https://gitlab.com/job/{i}',
+                log_tail=big_log)
+            for i in range(5)
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master',
+            'x' * 50000, 1, tempdir=self.tmp_dir)
+
+        # Prompt should be well under 128 KB (the logs are in files)
+        self.assertLess(len(prompt), 128 * 1024)
+
+        # All 5 log files plus mr-description should exist
+        log_files = [f for f in os.listdir(self.tmp_dir)
+                     if f.startswith('job-')]
+        self.assertEqual(len(log_files), 5)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.tmp_dir, 'mr-description.txt')))
+
+    def test_no_tempdir_embeds_inline(self):
+        """Test legacy behaviour when tempdir is None"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error: undefined reference'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master',
+            'Test MR desc', 1)
+
+        self.assertIn('error: undefined reference', prompt)
+        self.assertIn('Test MR desc', prompt)
+
+    def test_small_mr_desc_stays_inline(self):
+        """Test that a small MR description is kept inline"""
+        failed_jobs = [
+            gitlab.FailedJob(
+                id=1, name='build:sandbox', stage='build',
+                web_url='https://gitlab.com/job/1',
+                log_tail='error'),
+        ]
+        prompt, _ = agent.build_pipeline_fix_prompt(
+            42, 'cherry-abc123', failed_jobs, 'ci', 'master',
+            'Short desc', 1, tempdir=self.tmp_dir)
+
+        self.assertIn('Short desc', prompt)
+        self.assertFalse(os.path.exists(
+            os.path.join(self.tmp_dir, 'mr-description.txt')))
 
 
 class TestProcessPipelineFailures(unittest.TestCase):

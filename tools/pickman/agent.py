@@ -7,7 +7,9 @@
 
 import asyncio
 import os
+import shutil
 import sys
+import tempfile
 
 # Allow 'from pickman import xxx' to work via symlink
 our_path = os.path.dirname(os.path.realpath(__file__))
@@ -540,8 +542,14 @@ def handle_mr_comments(mr_iid, branch_name, comments, remote, target='master',
 
 # pylint: disable=too-many-arguments
 def build_pipeline_fix_prompt(mr_iid, branch_name, failed_jobs, remote,
-                               target, mr_description, attempt):
+                               target, mr_description, attempt,
+                               tempdir=None):
     """Build prompt and task description for the pipeline fix agent
+
+    The CI job log tails and MR description are written to temporary files
+    instead of being embedded in the prompt, to avoid exceeding the Linux
+    MAX_ARG_STRLEN limit (128 KB) when the Claude Agent SDK passes the
+    prompt as a command-line argument.
 
     Args:
         mr_iid (int): Merge request IID
@@ -551,6 +559,8 @@ def build_pipeline_fix_prompt(mr_iid, branch_name, failed_jobs, remote,
         target (str): Target branch
         mr_description (str): MR description with context
         attempt (int): Fix attempt number
+        tempdir (str): Directory for temporary log files; when None
+            the log tails are embedded in the prompt (legacy behaviour)
 
     Returns:
         tuple: (prompt, task_desc) where prompt is the full agent prompt and
@@ -558,20 +568,42 @@ def build_pipeline_fix_prompt(mr_iid, branch_name, failed_jobs, remote,
     """
     task_desc = f'fix {len(failed_jobs)} failed pipeline job(s) (attempt {attempt})'
 
-    # Format failed jobs
+    # Format failed jobs - write log tails to temp files when tempdir is
+    # provided, to keep the prompt small enough for execve()
     job_sections = []
     for job in failed_jobs:
-        job_sections.append(
-            f'### Job: {job.name} (stage: {job.stage})\n'
-            f'URL: {job.web_url}\n'
-            f'Log tail:\n```\n{job.log_tail}\n```'
-        )
+        if tempdir and job.log_tail:
+            safe_name = job.name.replace('/', '_').replace(':', '_')
+            log_path = os.path.join(tempdir,
+                                    f'job-{job.id}-{safe_name}.log')
+            with open(log_path, 'w', encoding='utf-8') as fout:
+                fout.write(job.log_tail)
+            job_sections.append(
+                f'### Job: {job.name} (stage: {job.stage})\n'
+                f'URL: {job.web_url}\n'
+                f'Log tail: read file {log_path}'
+            )
+        else:
+            job_sections.append(
+                f'### Job: {job.name} (stage: {job.stage})\n'
+                f'URL: {job.web_url}\n'
+                f'Log tail:\n```\n{job.log_tail}\n```'
+            )
     jobs_text = '\n\n'.join(job_sections)
 
-    # Include MR description for context
+    # Include MR description for context - write to file when tempdir
+    # is provided and the description is non-trivial
     context_section = ''
     if mr_description:
-        context_section = f'''
+        if tempdir and len(mr_description) > 1024:
+            desc_path = os.path.join(tempdir, 'mr-description.txt')
+            with open(desc_path, 'w', encoding='utf-8') as fout:
+                fout.write(mr_description)
+            context_section = f'''
+Context from MR description: read file {desc_path}
+'''
+        else:
+            context_section = f'''
 Context from MR description:
 
 {mr_description}
@@ -656,6 +688,10 @@ async def run_pipeline_fix_agent(mr_iid, branch_name, failed_jobs, remote,
                                   attempt=1, repo_path=None):
     """Run the Claude agent to fix pipeline failures
 
+    Job log tails are written to temporary files so that the prompt
+    passed to the agent stays well below the Linux MAX_ARG_STRLEN
+    limit (128 KB).
+
     Args:
         mr_iid (int): Merge request IID
         branch_name (str): Source branch name
@@ -676,20 +712,24 @@ async def run_pipeline_fix_agent(mr_iid, branch_name, failed_jobs, remote,
     if repo_path is None:
         repo_path = os.getcwd()
 
-    prompt, task_desc = build_pipeline_fix_prompt(
-        mr_iid, branch_name, failed_jobs, remote, target,
-        mr_description, attempt)
+    tempdir = tempfile.mkdtemp(prefix='pickman-logs-')
+    try:
+        prompt, task_desc = build_pipeline_fix_prompt(
+            mr_iid, branch_name, failed_jobs, remote, target,
+            mr_description, attempt, tempdir=tempdir)
 
-    options = ClaudeAgentOptions(
-        allowed_tools=['Bash', 'Read', 'Grep', 'Edit', 'Write'],
-        cwd=repo_path,
-        max_buffer_size=MAX_BUFFER_SIZE,
-    )
+        options = ClaudeAgentOptions(
+            allowed_tools=['Bash', 'Read', 'Grep', 'Edit', 'Write'],
+            cwd=repo_path,
+            max_buffer_size=MAX_BUFFER_SIZE,
+        )
 
-    tout.info(f'Starting Claude agent to {task_desc}...')
-    tout.info('')
+        tout.info(f'Starting Claude agent to {task_desc}...')
+        tout.info('')
 
-    return await run_agent_collect(prompt, options)
+        return await run_agent_collect(prompt, options)
+    finally:
+        shutil.rmtree(tempdir, ignore_errors=True)
 
 
 def fix_pipeline(mr_iid, branch_name, failed_jobs, remote, target='master',
