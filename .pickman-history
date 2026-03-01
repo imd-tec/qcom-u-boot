@@ -27308,7 +27308,7 @@ Now the eleventh and final commit - this is a merge commit so I need to use -m 1
 
 Let me check the conflicts:
 
-I see - the merge commit is trying to add the capsule config changes, but we already have them from the earlier commits. The conflict is that HEAD has CONFIG_SPL_MAX_SIZE, and the merge wants to remove it (empty between ======= and >>>>>>>). We should keep CONFIG_SPL_MAX_SIZE. Let me resolve these conflicts:
+I see - the merge commit is trying to add the capsule config changes, but we already have them from the earlier commits. The conflict is that HEAD has CONFIG_SPL_MAX_SIZE, and the merge wants to remove it (empty between  and >>>>>>>). We should keep CONFIG_SPL_MAX_SIZE. Let me resolve these conflicts:
 
 The merge commit is now empty because all the changes were already applied by the individual commits. According to the instructions, I should always include merge commits with --allow-empty:
 
@@ -28489,20 +28489,20 @@ So if binman exits with non-zero, it would increment `failures`. Let me check if
 Actually wait, let me re-read the CI output. The error message shows:
 ```
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ```
 
 The test continues to dtoc! So the binman coverage test didn't raise an exception - it continued. This means the `allow_failures` mechanism worked and the function returned at line 110.
 
 But then why did the overall test fail? Looking further in the CI output:
 ```
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ...
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ...
 100%
-fdt code coverage: ======================= Running test_fdt tests =======================
+fdt code coverage: ================ Running test_fdt tests =======================
 ...
 100%
 Tests FAILED
@@ -28536,7 +28536,7 @@ TOTAL                                                    6067     79    99%
 
 To get a report in 'htmlcov/index.html', type: python3-coverage html
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ```
 
 Hmm, I see "99%" printed, then the coverage report, then the error message. The fact that it continues to "dtoc code coverage" suggests the binman test didn't raise an exception.
@@ -28577,7 +28577,7 @@ Actually, I realize I need to look at this differently. The CI job says "Check m
 
 But looking at the CI output, I see:
 ```
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ...
 Coverage error: 99%, but should be 100%
 dtoc code coverage: ...
@@ -28588,10 +28588,10 @@ This suggests the binman test completed (didn't raise exception) and continued t
 Wait, I think I might be misreading the output. Let me look at the actual test output format again. Looking at the log:
 
 ```
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ```
 
-That `: ` after "binman code coverage" is from the `run_test` function's `echo -n "$1: "`. Then the tests run and output `======================== Running binman tests ========================`.
+That `: ` after "binman code coverage" is from the `run_test` function's `echo -n "$1: "`. Then the tests run and output `================= Running binman tests ========================`.
 
 After all tests complete, we see:
 ```
@@ -28602,7 +28602,7 @@ Name                                                    Stmts   Miss  Cover
 ...
 To get a report in 'htmlcov/index.html', type: python3-coverage html
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ```
 
 The fact that we see "dtoc code coverage:" immediately after "Coverage error" means the binman test exited with 0 (success) and test/run continued to the next test.
@@ -28675,13 +28675,13 @@ hwids_to_dtsi: ...........
 Ran 11 tests in 0.001s
 
 OK
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ...
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ...
 100%
-fdt code coverage: ======================= Running test_fdt tests =======================
+fdt code coverage: ================ Running test_fdt tests =======================
 ...
 100%
 Tests FAILED
@@ -28744,7 +28744,7 @@ Wait, but the CI ALSO failed. Let me re-look at the CI output...
 Actually, looking at the CI output again more carefully, I see something I missed. Looking at the log around the binman code coverage section:
 
 ```
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ...
 Image 'file2' has missing bintools and is non-functional: openssl
 
@@ -28772,7 +28772,7 @@ But then why did "Tests FAILED" appear at the end?
 
 Let me look at the job log more carefully. Looking at the very end:
 ```
-fdt code coverage: ======================= Running test_fdt tests =======================
+fdt code coverage: ================ Running test_fdt tests =======================
 ----------------------------------------------------------------------
 Ran 54 tests in 0.325s
 
@@ -28857,7 +28857,7 @@ So looking at this flow, the test failed. But where?
 Wait, I just realized the crucial detail. Looking at the line after "Coverage error":
 ```
 Coverage error: 99%, but should be 100%
-dtoc code coverage: ========================= Running dtoc tests =========================
+dtoc code coverage: ================== Running dtoc tests =========================
 ```
 
 There's NO `ValueError: Test coverage failure` in between! This means the allow_failures mechanism worked and the function returned without raising an exception.
@@ -29004,7 +29004,7 @@ Since I only have the log tail, I can't see what failed earlier. But let me chec
 
 Actually, wait. Let me re-check the CI log output order. Looking at the job log:
 ```
-binman code coverage: ======================== Running binman tests ========================
+binman code coverage: ================= Running binman tests ========================
 ...
 OK
 
@@ -33887,6 +33887,7 @@ All 4 commits are present. Let me run the final build test:
 
 ## 2026-02-28: us/next
 
+
 Branch: cherry-bb04b7bcf66
 
 Commits:
@@ -34035,6 +34036,86 @@ The branch was successfully force-pushed. Let me verify the push and complete th
 ### MR Reply:
 
 No reply needed for the review comment - it was a bot's own analysis documenting that the pipeline failures were infrastructure issues. The branch has been updated and a new pipeline will be triggered automatically.
+
+Branch: cherry-091303c788c
+
+Commits:
+- 091303c788c watchdog: wdt-uclass.c: add wdt_set_force_autostart() helper
+- 6319fabe32e watchdog: arm_smc_wdt: get wdt status through SMCWD_GET_TIMELEFT
+- 4bef031d699 watchdog: stm32mp: check the watchdog status
+- 7e1e22c70d5 watchdog: don't autostart watchdog on STM32MP architecture
+- bb708e82492 Merge tag 'u-boot-watchdog-20250730' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+### Conversation log
+The repository is clean (only untracked files present). Now let me create and checkout the new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick each commit in order. Starting with the first commit:
+
+First commit cherry-picked successfully. Let me check the delta and run build test:
+
+Both show 2 files changed, 18 insertions. The delta is identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me check the delta:
+
+Delta is identical: 1 file changed, 17 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked. Let me check the delta:
+
+Delta is identical: 1 file changed, 33 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Fourth commit cherry-picked. Let me check the delta:
+
+Delta is identical: 7 files changed, 7 insertions. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fifth commit (the merge commit). Since this is a merge commit, I need to use `-m 1 --allow-empty`:
+
+The merge commit results in an empty commit (which is expected since we already have all the changes from the individual commits). Let me commit it using the `--allow-empty` option as instructed:
+
+The merge commit was created successfully (as an empty commit). Let me verify the delta:
+
+The cherry-picked merge commit is empty (which is expected since all changes were already applied in the previous commits), while the original shows all the combined changes. This is the expected behavior for cherry-picking a merge commit when the individual commits have already been applied. Let me run the build test:
+
+Build passed. Now let me verify all commits are present with `git log --oneline -n 7`:
+
+All 5 commits are present:
+1. `2915fcd2ac0` - watchdog: wdt-uclass.c: add wdt_set_force_autostart() helper
+2. `42d3429547d` - watchdog: arm_smc_wdt: get wdt status through SMCWD_GET_TIMELEFT
+3. `f93648b4046` - watchdog: stm32mp: check the watchdog status
+4. `b85fdc7fc86` - watchdog: don't autostart watchdog on STM32MP architecture
+5. `e870aa49ffe` - Merge tag 'u-boot-watchdog-20250730' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+Now let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick completed successfully
+
+**Branch:** `cherry-091303c788c` (based on `ci/master`)
+
+**Commits cherry-picked (5 total):**
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 091303c788c | 2915fcd2ac0 | watchdog: wdt-uclass.c: add wdt_set_force_autostart() helper |
+| 2 | 6319fabe32e | 42d3429547d | watchdog: arm_smc_wdt: get wdt status through SMCWD_GET_TIMELEFT |
+| 3 | 4bef031d699 | f93648b4046 | watchdog: stm32mp: check the watchdog status |
+| 4 | 7e1e22c70d5 | b85fdc7fc86 | watchdog: don't autostart watchdog on STM32MP architecture |
+| 5 | bb708e82492 | e870aa49ffe | Merge tag 'u-boot-watchdog-20250730' (empty merge commit) |
+
+**Build result:** ✅ OK - All 5 builds passed (sandbox board)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** 
+- Commit #5 (merge commit): Cherry-picked as empty commit - this is expected behavior since all changes from the merge were already applied via the individual commits
+
+The cherry-pick branch `cherry-091303c788c` is ready for pushing.
+
 
 ---
 
