@@ -34319,3 +34319,71 @@ All 6 commits are present and in the correct order.
 
 ---
 
+## 2026-02-28: us/next
+
+Branch: cherry-b279bd72820
+
+Commits:
+- b279bd72820 arm64: dts: rockchip: add basic mdio node to px30
+- 8279df493c7 arm64: dts: rockchip: move reset to dedicated eth-phy node on ringneck
+- 21c3a37f074 configs: ringneck-px30: fix Ethernet
+- 300b49a07d5 Merge patch series "rockchip: ringneck-px30: anticipate breakage with v6.16-rc1 DT"
+
+### Conversation log
+The repository state is clean (only untracked files present, which don't affect cherry-picks). Let me proceed to create the new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The deltas match: 1 file changed, 6 insertions(+). Now let me run the build test:
+
+Build passed. Let me proceed to the second commit:
+
+Second commit cherry-picked successfully (auto-merged). Let me verify the delta:
+
+Deltas match (1 file, 19 insertions, 3 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked successfully. Let me verify the delta:
+
+Deltas match (1 file, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit. This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit results in an empty commit (as expected since all changes were already cherry-picked individually). I need to commit it with `--allow-empty` to preserve the merge commit message:
+
+Merge commit completed. Let me verify the delta and run the final build test:
+
+The original merge commit shows 3 files changed (27 insertions, 3 deletions) but our cherry-picked version is empty. This is expected since we cherry-picked all the individual commits that the merge commit consolidated - the merge is now empty because all changes are already applied. Let me run the build test:
+
+Build passed. Now let me verify all 4 commits are present:
+
+All 4 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Build result:** ✅ OK - No errors or warnings
+
+**All 4 commits successfully cherry-picked:**
+
+| # | Original Hash | New Hash | Subject |
+|---|--------------|----------|---------|
+| 1 | b279bd72820 | a5eb74d1181 | arm64: dts: rockchip: add basic mdio node to px30 |
+| 2 | 8279df493c7 | 1406d3edbae | arm64: dts: rockchip: move reset to dedicated eth-phy node on ringneck |
+| 3 | 21c3a37f074 | abeceae9848 | configs: ringneck-px30: fix Ethernet |
+| 4 | 300b49a07d5 | 877cbcdf344 | Merge patch series "rockchip: ringneck-px30: anticipate breakage with v6.16-rc1 DT" |
+
+**Fix-ups made:** None required
+
+**Concerning deltas:** 
+- Commit 4 (merge commit) is empty in the cherry-picked version because all changes were already applied by the individual commits. This is expected behavior when cherry-picking a merge commit along with all its constituent commits.
+
+**Branch status:**
+- Branch `cherry-b279bd72820` is ready for pushing
+- Based on `ci/master`
+- 4 commits ahead of `ci/master`
+
+---
+
