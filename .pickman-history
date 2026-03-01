@@ -34377,13 +34377,103 @@ All 4 commits are present. Let me run the final build test:
 
 **Fix-ups made:** None required
 
-**Concerning deltas:** 
+**Concerning deltas:**
 - Commit 4 (merge commit) is empty in the cherry-picked version because all changes were already applied by the individual commits. This is expected behavior when cherry-picking a merge commit along with all its constituent commits.
 
 **Branch status:**
 - Branch `cherry-b279bd72820` is ready for pushing
 - Based on `ci/master`
 - 4 commits ahead of `ci/master`
+
+---
+
+## 2026-03-01: us/next
+
+Branch: cherry-7810d079adf
+
+Commits:
+- 7810d079adf configs: puma-rk3399: enable onboard USB hub support
+- 7c0491ccc6a dt-bindings: usb: usb-device: relax compatible pattern to a contains
+- c419fd81349 dt-bindings: usb: cypress,hx3: Add support for all variants
+- 6dd61725a22 arm64: dts: rockchip: fix internal USB hub instability on RK3399 Puma
+- d0681cf0c8c arm64: dts: rockchip: disable unrouted USB controllers and PHY on RK3399 Puma
+- e12e9320a39 arm64: dts: rockchip: disable unrouted USB controllers and PHY on RK3399 Puma with Haikou
+- 9773b27e127 Merge patch series "rockchip: puma-rk3399: anticipate breakage with v6.16 DT"
+
+### Conversation log
+The repository state is clean (only untracked files). Let me proceed to create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+First commit succeeded. Let me verify the delta and run the build test:
+
+The delta matches (1 file changed, 1 insertion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit succeeded. Let me verify the delta:
+
+Delta matches (1 file, 2 insertions, 1 deletion). Build test:
+
+Build passed. Third commit:
+
+Third commit succeeded. Verify delta:
+
+Delta matches (1 file, 16 insertions, 3 deletions). Build test:
+
+Build passed. Fourth commit:
+
+Fourth commit succeeded. Verify delta:
+
+Delta matches (1 file, 26 insertions, 14 deletions). Build test:
+
+Build passed. Fifth commit:
+
+Fifth commit succeeded. Verify delta:
+
+Delta matches (1 file, 12 deletions). Build test:
+
+Build passed. Sixth commit:
+
+Sixth commit succeeded. Verify delta:
+
+Delta matches (1 file, 8 deletions). Build test:
+
+Build passed. Now the seventh and final commit - this is a merge commit, so I'll use the special flags:
+
+The merge commit is empty as expected (all the changes were already cherry-picked individually). Let me commit it as an empty commit to preserve the history:
+
+The merge commit was created. Let me verify the delta and run the build test:
+
+The merge commit is empty in the cherry-pick (expected since all the individual commits were already cherry-picked), while the original shows the summary of all changes. This is normal for a merge commit that's cherry-picked as an empty commit. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 7 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+All 7 commits have been successfully cherry-picked to branch `cherry-7810d079adf`.
+
+### Summary
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 7810d079adf | configs: puma-rk3399: enable onboard USB hub support | ✅ OK |
+| 2 | 7c0491ccc6a | dt-bindings: usb: usb-device: relax compatible pattern to a contains | ✅ OK |
+| 3 | c419fd81349 | dt-bindings: usb: cypress,hx3: Add support for all variants | ✅ OK |
+| 4 | 6dd61725a22 | arm64: dts: rockchip: fix internal USB hub instability on RK3399 Puma | ✅ OK |
+| 5 | d0681cf0c8c | arm64: dts: rockchip: disable unrouted USB controllers and PHY on RK3399 Puma | ✅ OK |
+| 6 | e12e9320a39 | arm64: dts: rockchip: disable unrouted USB controllers and PHY on RK3399 Puma with Haikou | ✅ OK |
+| 7 | 9773b27e127 | Merge patch series "rockchip: puma-rk3399: anticipate breakage with v6.16 DT" | ✅ OK (empty commit) |
+
+### Results:
+- **Build result**: OK - all builds passed with no warnings/errors
+- **Fix-ups**: None required
+- **Concerning deltas**: None - all commits matched their original deltas exactly
+- **Merge commit (7)**: Applied as an empty commit (expected, since all content was already applied by individual commits 1-6)
+
+The branch `cherry-7810d079adf` is ready for pushing.
 
 ---
 
