@@ -34228,3 +34228,94 @@ The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` was an 
 
 ---
 
+## 2026-02-28: us/next
+
+Branch: cherry-a4446e13dba
+
+Commits:
+- a4446e13dba usb: onboard-hub: Use the ofnode to check if the peer-hub was probed
+- 480753ca923 usb: onboard-hub: Use devm API do automatically free the reset GPIO
+- 42a025412d7 usb: onboard-hub: Set the reset gpio pin before freeing
+- 3eb6b0f504f usb: onboard-hub: Add support for multiple power supplies
+- a1f8103bbee usb: onboard-hub: Add support for Cypress HX3 family
+- 6549dbfd269 Merge patch series "Extend usb_onboard_hub driver to support Cypress HX3 hub family"
+
+### Conversation log
+Good, the repository is clean (untracked files don't matter). Now let me create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the first commit. Let me first verify the commits exist in us/next:
+
+Now let's cherry-pick the first commit:
+
+First commit cherry-picked successfully. Now let me check the delta and run build test:
+
+The delta looks identical (1 file changed, 10 insertions, 5 deletions). Now let me run the build test:
+
+Build passed. Now let's cherry-pick the second commit:
+
+Second commit cherry-picked. Let me check the delta and run build test:
+
+Delta is identical. Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third commit cherry-picked. Let me check delta and build:
+
+Delta is identical. Build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth commit cherry-picked. Check delta and build:
+
+Delta is identical. Build test:
+
+Build passed. Now cherry-pick the fifth commit:
+
+Fifth commit cherry-picked. Check delta and build:
+
+Delta is identical. Build test:
+
+Build passed. Now cherry-pick the sixth commit (a merge commit):
+
+The merge commit is empty (as expected since all the changes were already included in the individual commits). Let me commit it with --allow-empty:
+
+The merge commit was added. Let me verify the log and check the delta:
+
+The cherry-picked merge is empty (as expected since all changes were already included in individual commits), while the original shows the cumulative changes. This is correct behavior for cherry-picking a merge commit when the individual patches were already applied.
+
+Now let me run the final build test:
+
+Final build passed. Now let me verify the log with all 6 commits:
+
+All 6 commits are present and in the correct order.
+
+## Final Status Summary
+
+**Cherry-pick completed successfully!**
+
+### Build Result: ✅ OK
+- All 6 builds passed (after each cherry-pick and final build)
+- No warnings or errors
+
+### Commits Cherry-picked:
+| # | Original Hash | New Hash | Subject | Delta |
+|---|---------------|----------|---------|-------|
+| 1 | a4446e13dba | 9e9ad620e96 | usb: onboard-hub: Use the ofnode to check if the peer-hub was probed | ✅ Identical |
+| 2 | 480753ca923 | b6987a91af3 | usb: onboard-hub: Use devm API do automatically free the reset GPIO | ✅ Identical |
+| 3 | 42a025412d7 | 705aea70981 | usb: onboard-hub: Set the reset gpio pin before freeing | ✅ Identical |
+| 4 | 3eb6b0f504f | 560878635f3 | usb: onboard-hub: Add support for multiple power supplies | ✅ Identical |
+| 5 | a1f8103bbee | 58934e8177a | usb: onboard-hub: Add support for Cypress HX3 family | ✅ Identical |
+| 6 | 6549dbfd269 | d6080ff0ee7 | Merge patch series "Extend usb_onboard_hub driver..." | ✅ Empty (expected) |
+
+### Fix-ups: None required
+- All commits applied cleanly without conflicts
+
+### Concerning Deltas: None
+- All regular commits had identical file changes and line counts
+
+### Branch Status:
+- Branch `cherry-a4446e13dba` is ready for pushing
+- Based on `ci/master` with 6 new commits ahead
+
+---
+
