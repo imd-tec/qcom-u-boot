@@ -4022,7 +4022,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',
@@ -4070,7 +4070,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     with mock.patch.object(
                             control.gitlab_api, 'push_branch',
@@ -4098,7 +4098,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
                 if 'rev-parse' in git_args:
                     return 'first_parent\nsquash_hash'
                 if 'checkout' in git_args:
-                    raise Exception('checkout failed')
+                    raise command.CommandExc('checkout failed', None)
                 return ''
 
             with mock.patch.object(control, 'run_git',
@@ -4110,6 +4110,48 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             self.assertEqual(ret, 1)
             # Source should not be advanced
             self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_checkout_fallback(self):
+        """Test apply_subtree_update falls back to -b when checkout fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            checkout_calls = []
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    checkout_calls.append(list(git_args))
+                    if '-b' not in git_args:
+                        raise command.CommandExc(
+                            'ambiguous checkout', None)
+                    return ''
+                if 'log' in git_args:
+                    return 'subject|author'
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(control, '_subtree_run_update',
+                                       return_value=0):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', args)
+
+            self.assertEqual(ret, 0)
+            # Should have tried bare checkout, then fallback
+            self.assertEqual(len(checkout_calls), 2)
+            self.assertEqual(checkout_calls[0], ['checkout', 'master'])
+            self.assertEqual(checkout_calls[1],
+                             ['checkout', '-b', 'master', 'ci/master'])
             dbs.close()
 
     def test_apply_no_second_parent(self):
@@ -4154,7 +4196,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         side_effect=Exception('script failed')):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',
@@ -4193,7 +4235,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',

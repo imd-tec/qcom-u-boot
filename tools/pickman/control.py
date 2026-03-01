@@ -1524,7 +1524,7 @@ def _subtree_run_update(name, tag):
         int: 0 on success, 1 on failure
     """
     try:
-        result = command.run(
+        result = command.run_one(
             './tools/update-subtree.sh', 'pull', name, tag,
             capture=True, raise_on_error=False)
         if result.stdout:
@@ -1595,9 +1595,14 @@ def apply_subtree_update(dbs, source, name, tag, merge_hash, args):  # pylint: d
 
     try:
         run_git(['checkout', target])
-    except Exception:  # pylint: disable=broad-except
-        tout.error(f'Could not checkout {target}')
-        return 1
+    except command.CommandExc:
+        # Bare name may be ambiguous when multiple remotes have it
+        try:
+            run_git(['checkout', '-b', target,
+                     f'{args.remote}/{target}'])
+        except command.CommandExc:
+            tout.error(f'Could not checkout {target}')
+            return 1
 
     ret = _subtree_run_update(name, tag)
     if ret:
