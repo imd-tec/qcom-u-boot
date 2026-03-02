@@ -2080,9 +2080,12 @@ def do_push_branch(args, dbs):  # pylint: disable=unused-argument
         int: 0 on success, 1 on failure
     """
     skip_ci = not args.run_ci
-    success = gitlab_api.push_branch(args.remote, args.branch, args.force,
-                                     skip_ci=skip_ci)
-    return 0 if success else 1
+    try:
+        gitlab_api.push_branch(args.remote, args.branch, args.force,
+                               skip_ci=skip_ci)
+    except command.CommandExc:
+        return 1
+    return 0
 
 
 def do_commit_source(args, dbs):

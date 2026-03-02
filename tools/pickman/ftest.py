@@ -4956,8 +4956,10 @@ class TestDoPushBranch(unittest.TestCase):
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
                                   remote='ci', force=False, run_ci=False)
-        with mock.patch.object(gitlab, 'push_branch',
-                               return_value=False):
+        with mock.patch.object(
+                gitlab, 'push_branch',
+                side_effect=command.CommandExc(
+                    'push failed', command.CommandResult())):
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 1)
