@@ -713,3 +713,96 @@ def fix_pipeline(mr_iid, branch_name, failed_jobs, remote, target='master',
     return asyncio.run(run_pipeline_fix_agent(
         mr_iid, branch_name, failed_jobs, remote, target,
         mr_description, attempt, repo_path))
+
+
+def build_subtree_conflict_prompt(name, tag, subtree_path):
+    """Build a prompt for resolving subtree merge conflicts
+
+    Args:
+        name (str): Subtree name ('dts', 'mbedtls', 'lwip')
+        tag (str): Tag being pulled (e.g. 'v6.15-dts')
+        subtree_path (str): Path to the subtree (e.g. 'dts/upstream')
+
+    Returns:
+        str: The prompt for the agent
+    """
+    return f"""Resolve merge conflicts from a subtree pull.
+
+Context: A 'git subtree pull --prefix {subtree_path}' for the '{name}' \
+subtree (tag {tag}) has produced merge conflicts. Git is currently in a \
+merge state with MERGE_HEAD set.
+
+Resolution strategy - prefer the upstream version:
+1. Run 'git status' to see conflicted files
+2. For each conflicted file:
+   - If the file exists in MERGE_HEAD (content conflict or add/add):
+     git checkout MERGE_HEAD -- <file>
+   - If the file is a modify/delete conflict (deleted upstream):
+     git rm <file>
+3. After resolving all conflicts, stage everything:
+   git add -A
+4. Complete the merge:
+   git commit --no-edit
+5. Verify with 'git status' that the working tree is clean
+
+If you cannot resolve the conflicts, abort with:
+   git merge --abort
+
+Important:
+- Always prefer the upstream (MERGE_HEAD) version of conflicted files
+- The subtree path is '{subtree_path}' - most conflicts will be there
+- Do NOT modify files outside the subtree path
+- Do NOT use 'git merge --continue'; use 'git commit --no-edit'
+"""
+
+
+async def run_subtree_conflict_agent(name, tag, subtree_path,
+                                     repo_path=None):
+    """Run the Claude agent to resolve subtree merge conflicts
+
+    Args:
+        name (str): Subtree name ('dts', 'mbedtls', 'lwip')
+        tag (str): Tag being pulled (e.g. 'v6.15-dts')
+        subtree_path (str): Path to the subtree (e.g. 'dts/upstream')
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    if not check_available():
+        return False, ''
+
+    if repo_path is None:
+        repo_path = os.getcwd()
+
+    prompt = build_subtree_conflict_prompt(name, tag, subtree_path)
+
+    options = ClaudeAgentOptions(
+        allowed_tools=['Bash', 'Read', 'Grep'],
+        cwd=repo_path,
+        max_buffer_size=MAX_BUFFER_SIZE,
+    )
+
+    tout.info(f'Starting Claude agent to resolve {name} subtree '
+              f'conflicts...')
+    tout.info('')
+
+    return await run_agent_collect(prompt, options)
+
+
+def resolve_subtree_conflicts(name, tag, subtree_path, repo_path=None):
+    """Synchronous wrapper for running the subtree conflict agent
+
+    Args:
+        name (str): Subtree name ('dts', 'mbedtls', 'lwip')
+        tag (str): Tag being pulled (e.g. 'v6.15-dts')
+        subtree_path (str): Path to the subtree (e.g. 'dts/upstream')
+        repo_path (str): Path to repository (defaults to current directory)
+
+    Returns:
+        tuple: (success, conversation_log) where success is bool and
+            conversation_log is the agent's output text
+    """
+    return asyncio.run(
+        run_subtree_conflict_agent(name, tag, subtree_path, repo_path))
