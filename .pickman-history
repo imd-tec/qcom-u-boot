@@ -34477,3 +34477,279 @@ The branch `cherry-7810d079adf` is ready for pushing.
 
 ---
 
+## 2026-03-02: us/next
+
+Branch: cherry-e88024b34b5
+
+Commits:
+- e88024b34b5 arch: arm: dts: agilex5: Set spi-max-freq to 50Mhz
+- 05e97d0ef83 arch: arm: socfpga: Fix header file includes
+- 46d5cf3847a arch: arm: socfpga: Include BSD-3-Clause as license identifier
+- f4aa24af692 arm: socfpga: Remove unnecessary for loop
+- b9767ad357e arm: socfpga: n5x: Remove invalid configuration for N5X
+- dff25bb4abd clk: n5x: Fix misplaced paren
+- 5a13fa7c66d ddr: altera: n5x: size_t cannot be less than 0
+- 344d785aba6 dts: agilex5: Enabled nand boot in SPL
+- 6e1cc5d861d socfpga_dtreg: Ensure reg is initialised before use
+- 8eb3812c589 arm: socfpga: agilex5: Coverity issue cleanup in jtag_usercode check
+- 5119cffaf4d arm: socfpga: agilex5: Sub-device check enabled for runtime workaround
+- 9f689086863 arch: arm: agilex5: Enable power manager for Agilex5
+- 169039f4f1d configs: socfpga: soc64: agilex5: Enable NAND boot with UBI / UBIFS
+- 4064e7c9fc4 socfpga_agilex5: config: Relocate malloc and bss address
+- eef444c3899 Merge tag 'u-boot-socfpga-next-20250731' of https://source.denx.de/u-boot/custodians/u-boot-socfpga
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. Starting with the first commit:
+
+First commit succeeded. Let me verify the delta and run the build:
+
+Delta matches (1 file, 2 insertions). Now run the build test:
+
+Build passed. Now cherry-pick commit 2:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick commit 3:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 4:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 5:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 6:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 7:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 8:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 9:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 10:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 11:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 12:
+
+There was auto-merging but it succeeded. Let me verify the delta:
+
+Delta matches perfectly (9 files, 176 insertions). Build test:
+
+Build passed. Cherry-pick commit 13:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 14:
+
+Auto-merged. Let me verify the delta:
+
+Delta matches. Build test:
+
+Build passed. Now the last commit (15) - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (as expected since all changes were already cherry-picked individually). Let me commit it as an empty commit to preserve the history:
+
+Merge commit was preserved. Now let me verify the commit count and run the final build:
+
+All 15 commits are present. Now run the final build test:
+
+## Final Status Report
+
+### Summary: SUCCESS ✅
+
+All 15 commits were cherry-picked successfully onto branch `cherry-e88024b34b5` based on `ci/master`.
+
+### Build Result: **OK**
+- Final build passed with no warnings or errors
+- All intermediate builds passed
+
+### Commits Applied (in order):
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | a05780c85a9 | arch: arm: dts: agilex5: Set spi-max-freq to 50Mhz |
+| 2 | a116ffdc28e | arch: arm: socfpga: Fix header file includes |
+| 3 | 661329b4b97 | arch: arm: socfpga: Include BSD-3-Clause as license identifier |
+| 4 | 9285e1f0c5a | arm: socfpga: Remove unnecessary for loop |
+| 5 | 000980c1ac0 | arm: socfpga: n5x: Remove invalid configuration for N5X |
+| 6 | 8abb1e95155 | clk: n5x: Fix misplaced paren |
+| 7 | 69b6707b89e | ddr: altera: n5x: size_t cannot be less than 0 |
+| 8 | 8c5cf96a348 | dts: agilex5: Enabled nand boot in SPL |
+| 9 | 594142528d9 | socfpga_dtreg: Ensure reg is initialised before use |
+| 10 | d55e2895698 | arm: socfpga: agilex5: Coverity issue cleanup in jtag_usercode check |
+| 11 | b8a7210094b | arm: socfpga: agilex5: Sub-device check enabled for runtime workaround |
+| 12 | d5e010c4d0b | arch: arm: agilex5: Enable power manager for Agilex5 |
+| 13 | caf6d154b89 | configs: socfpga: soc64: agilex5: Enable NAND boot with UBI / UBIFS |
+| 14 | 805c9c051d9 | socfpga_agilex5: config: Relocate malloc and bss address |
+| 15 | 7e14b0575b6 | Merge tag 'u-boot-socfpga-next-20250731' (empty - all changes included above) |
+
+### Fix-ups Made:
+- None required
+
+### Commits with Concerning Deltas:
+- None - all deltas matched exactly between original and cherry-picked commits
+
+### Notes:
+- Commits 12 and 14 had auto-merges in `MAINTAINERS` and `configs/socfpga_agilex5_defconfig` which were resolved automatically by git
+- Commit 15 (merge commit) resulted in an empty commit as expected since all individual commits were already applied, preserved using `--allow-empty`
+
+The branch `cherry-e88024b34b5` is ready for pushing.
+
+---
+
+### Review: 2026-03-03
+
+Branch: cherry-e88024b34b5
+
+Comments addressed:
+
+
+### Conversation log
+I can see that ci/master has advanced with some new commits (dts v6.16 changes). Let me check what the current base is and perform the rebase:
+
+There are 6 new commits in ci/master. Now let me save the current commit stats before rebase to compare deltas later:
+
+Let me record the stats of each commit before rebasing so we can compare:
+
+Good. Now let me perform the rebase:
+
+Rebase completed successfully! Now let me verify the commits and deltas:
+
+Now let me verify the deltas of each rebased commit:
+
+All deltas match exactly with the pre-rebase stats. Now let me run the build test:
+
+Build passed. Now let me create the local branch with -v2 suffix:
+
+Now let me force push to the remote branch:
+
+## Summary: Rebase Completed Successfully ✅
+
+### What was done:
+
+1. **Rebased** branch `cherry-e88024b34b5` onto latest `ci/master`
+   - 6 new commits from ci/master were incorporated (dts v6.16 changes)
+   - All 16 commits rebased successfully without conflicts
+
+2. **Verified deltas** - All commit deltas match exactly before and after rebase:
+   | # | Subject | Delta |
+   |---|---------|-------|
+   | 1 | arch: arm: dts: agilex5: Set spi-max-freq to 50Mhz | 1 file, +2 |
+   | 2 | arch: arm: socfpga: Fix header file includes | 1 file, +4/-3 |
+   | 3 | arch: arm: socfpga: Include BSD-3-Clause as license identifier | 2 files, +3/-3 |
+   | 4 | arm: socfpga: Remove unnecessary for loop | 1 file, +6/-19 |
+   | 5 | arm: socfpga: n5x: Remove invalid configuration for N5X | 1 file, -1 |
+   | 6 | clk: n5x: Fix misplaced paren | 1 file, +2/-2 |
+   | 7 | ddr: altera: n5x: size_t cannot be less than 0 | 1 file, +4/-4 |
+   | 8 | dts: agilex5: Enabled nand boot in SPL | 1 file, +1/-1 |
+   | 9 | socfpga_dtreg: Ensure reg is initialised before use | 1 file, +2/-3 |
+   | 10 | arm: socfpga: agilex5: Coverity issue cleanup | 1 file, +1/-1 |
+   | 11 | arm: socfpga: agilex5: Sub-device check enabled | 1 file, +32 |
+   | 12 | arch: arm: agilex5: Enable power manager | 9 files, +176 |
+   | 13 | configs: socfpga: soc64: agilex5: Enable NAND boot | 1 file, +23/-1 |
+   | 14 | socfpga_agilex5: config: Relocate malloc and bss | 1 file, +2/-2 |
+   | 15 | Merge tag 'u-boot-socfpga-next-20250731' | (empty) |
+   | 16 | pickman: Record cherry-pick | 1 file, +138 |
+
+3. **Build test passed** ✅
+
+4. **Created local backup branch** `cherry-e88024b34b5-v2`
+
+5. **Force pushed** to remote branch `cherry-e88024b34b5`
+
+### Reply to post on MR:
+
+```
+Rebased onto latest ci/master (95b88afa93e). All 16 commits rebased without conflicts, deltas verified unchanged, build passes.
+```
+
+---
+
+### Pipeline fix: 2026-03-03 (attempt 2)
+
+Branch: cherry-e88024b34b5
+
+Failed jobs:
+- build all 64bit ARM platforms (world_build)
+- bpi (sjg-lab)
+- jerry (sjg-lab)
+- link (sjg-lab)
+- opi_pc (sjg-lab)
+- rpi3 (sjg-lab)
+
+### Conversation log
+Now let me look at the build error more closely. The key error from the job log is:
+
+```
+arch/arm/mach-socfpga/secure_vab.c: In function 'socfpga_vendor_authentication':
+arch/arm/mach-socfpga/secure_vab.c:95:13: error: implicit declaration of function 'memcmp' [-Wimplicit-function-declaration]
+arch/arm/mach-socfpga/secure_vab.c:118:9: error: implicit declaration of function 'memcpy' [-Wimplicit-function-declaration]
+```
+
+This means `secure_vab.c` is missing `#include <string.h>`. Let me find which commit touched this file:
+
+Let me look at commit `4b6a858deea` which "Fix header file includes" - this is likely the culprit:
+
+I see the problem! The commit removed `#include <exports.h>` but that header was likely providing `memcmp` and `memcpy` declarations. The commit should have added `#include <string.h>` to get those function declarations.
+
+Let me verify this is needed:
+
+I can see the file uses `memcmp` on line 95 and `memcpy` on line 118, but there's no `#include <string.h>`. This is the root cause of the build failure.
+
+Now I need to amend commit `4b6a858deea` to add the missing include. Let me count how many commits back it is:
+
+So the problem commit is 16 commits back (including itself). Let me start an interactive rebase:
+
+Good, I'm now at the commit that needs fixing. Let me add the missing include:
+
+Rebase completed successfully. Now let me verify the fix with a quick build:
+
+Sandbox built successfully. Now let me build the relevant boards to ensure the fix works for the socfpga boards mentioned in the build error:
+
+All socfpga boards built successfully (no errors, just warnings about missing external blobs which is expected). Let me also verify the specific issue is resolved by checking the include is in place:
+
+The `#include <string.h>` is now in place. Now let me create the local branch:
+
+Let me also verify the amended commit has the fix note:
+
+Now let me note the other failed jobs. Looking at them:
+
+1. **bpi, jerry, link, opi_pc, rpi3** - These are all `sjg-lab` stage failures with errors like `Lab failure: Marking connection bad - no other tests will run` and serial port connection issues (`rfc2217://kea:None`). These are **infrastructure/lab hardware issues**, not code problems.
+
+2. **build all 64bit ARM platforms** - This was the actual code failure with the `memcmp`/`memcpy` implicit declaration errors that we just fixed.
+
+## Summary
+
+**Root Cause:** Commit `4b6a858deea` ("arch: arm: socfpga: Fix header file includes") removed `#include <exports.h>` but failed to add `#include <string.h>`, which is needed for `memcmp()` and `memcpy()` declarations used in `arch/arm/mach-socfpga/secure_vab.c`.
+
+**Fix Applied:** Added `#include <string.h>` to `arch/arm/mach-socfpga/secure_vab.c` by amending commit `02ee47a1ec7` (rebased version of `4b6a858deea`).
+
+**Verification:** 
+- Sandbox build: PASSED
+- All 27 socfpga boards: PASSED (0 errors, only expected external blob warnings)
+
+**Other Failures (Infrastructure/Lab issues - no code fix needed):**
+- bpi, jerry, link, opi_pc, rpi3 jobs all failed due to lab hardware connectivity issues (serial port timeouts, RFC2217 connection failures to `kea:None`). These are transient infrastructure problems, not code issues.
+
+**Local branch created:** `cherry-e88024b34b5-fix2`
+
+---
+
