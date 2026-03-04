@@ -35801,3 +35801,88 @@ The branch `cherry-12a94b894de` is ready for pushing.
 
 ---
 
+## 2026-03-04: us/next
+
+Branch: cherry-4ef864f1ae3
+
+Commits:
+- 4ef864f1ae3 clk: renesas: Do not test unsigned variable to be less than 0
+- 78b2d408fbf i2c: rcar_iic: Do not use unitialised variable
+- 393ace55be5 mtd: spi-nor-ids: Add support for Winbond W77Q51NW
+- 6c49b082f05 net: rswitch: Fix error detection
+- ef15585a741 arm64: renesas: r8a779g3: Enable Winbond SPI NOR support on Retronix R-Car V4H Sparrow Hawk board
+- 3526f990b77 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is clean (just has an untracked file, which is fine). Now let me create the new branch based on ci/master and start cherry-picking.
+
+Good, now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks identical. Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta looks identical. Build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Delta identical. Build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Delta identical. Build test:
+
+Build passed. Now cherry-pick the fifth commit:
+
+Delta identical. Build test:
+
+Build passed. Now the sixth commit which is a merge commit. It may already be applied as f8c85686c24, so let me first verify:
+
+The patches differ significantly - they are different merge commits entirely (different parents, different messages). However, let me check if the actual content they merge is the same by looking at what commits are included:
+
+The content is different. The found merge (f8c85686c24) includes many more commits (39 commits total), while the original merge (3526f990b77) only includes the 5 commits we just cherry-picked.
+
+Since we've already individually cherry-picked all 5 commits that were part of the original merge, the merge commit itself would result in an empty commit. Let me proceed with cherry-picking it with --allow-empty to preserve the merge history:
+
+As expected, the merge commit is empty since we already cherry-picked all its content. Let me commit it as an empty commit to preserve the history:
+
+The merge commit is empty as expected (all changes were already applied individually). Now let me run the build test:
+
+Build passed. Now let me verify all 6 commits are present:
+
+All 6 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| # | Original Hash | Cherry-picked Hash | Subject | Status |
+|---|---------------|-------------------|---------|--------|
+| 1 | 4ef864f1ae3 | 21508fa99df | clk: renesas: Do not test unsigned variable to be less than 0 | ✅ OK |
+| 2 | 78b2d408fbf | 418f7c80700 | i2c: rcar_iic: Do not use unitialised variable | ✅ OK |
+| 3 | 393ace55be5 | 7c04769cfe4 | mtd: spi-nor-ids: Add support for Winbond W77Q51NW | ✅ OK |
+| 4 | 6c49b082f05 | f7912b16aac | net: rswitch: Fix error detection | ✅ OK |
+| 5 | ef15585a741 | 2c498a1b3f2 | arm64: renesas: r8a779g3: Enable Winbond SPI NOR support on Retronix R-Car V4H Sparrow Hawk board | ✅ OK |
+| 6 | 3526f990b77 | a06934a6585 | Merge branch 'master' of ... u-boot-sh | ✅ OK (empty commit - all changes already applied) |
+
+### Build Result
+- **Status:** OK (no warnings or errors)
+- All 6 commits built successfully
+
+### Fix-ups Made
+- None required
+
+### Delta Concerns
+- None - all commits had identical deltas
+
+### Notes
+- The merge commit (3526f990b77) was cherry-picked as an empty commit because all 5 individual commits it contained were already cherry-picked individually
+- The commit f8c85686c24 (mentioned as "maybe already applied") is a different merge that includes 39 commits, not just the 5 from the original merge
+
+### Branch Status
+The branch `cherry-4ef864f1ae3` is ready for pushing with 6 new commits on top of `ci/master`.
+
+---
+
