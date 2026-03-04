@@ -34753,3 +34753,76 @@ Now let me note the other failed jobs. Looking at them:
 
 ---
 
+## 2026-03-04: us/next
+
+Branch: cherry-d0075e2d730
+
+Commits:
+- d0075e2d730 Makefile: add dependency from lib to arch/$(ARCH)/lib
+- 39ae954b04e env: mtd: add the missing put_mtd_device()
+- 7e842bd3315 env: mtd: initialize saved_buf pointer
+- ae5711f8811 Merge patch series "env: mtd: add the missing put_mtd_device()"
+
+### Conversation log
+The repository state is clean (just an untracked file which is fine). Let me proceed to create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the commits. First, let me cherry-pick the first commit (regular commit):
+
+First commit successful. Let me check the delta and run the build test:
+
+The delta looks identical (1 file changed, 5 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit successful. Let me check the delta:
+
+Delta matches (1 file changed, 6 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit successful. Let me check the delta:
+
+Delta matches (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit, which is a merge commit (identified by "Merge" in the subject):
+
+The merge commit is empty (as expected since we already cherry-picked the individual commits). Let me commit it with `--allow-empty`:
+
+Now let me verify the commit delta for the merge commit:
+
+The cherry-picked merge commit is empty (which is expected since we already picked the individual commits). The original merge commit had 7 insertions, 1 deletion which were the combined changes from the two commits we already cherry-picked. This is correct behavior.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits are present with `git log`:
+
+All 4 commits are present. Now let me run the final build test to confirm everything works together:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Commits cherry-picked:
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | d0075e2d730 | fd5da91a70d | Makefile: add dependency from lib to arch/$(ARCH)/lib |
+| 2 | 39ae954b04e | 906b13e9c14 | env: mtd: add the missing put_mtd_device() |
+| 3 | 7e842bd3315 | 2c1f1eea97a | env: mtd: initialize saved_buf pointer |
+| 4 | ae5711f8811 | bad96e96416 | Merge patch series "env: mtd: add the missing put_mtd_device()" |
+
+### Build result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Fix-ups made: None
+- All cherry-picks applied cleanly
+
+### Delta concerns: None
+- All commit deltas matched exactly between original and cherry-picked versions
+- The merge commit (commit #4) was intentionally empty since the individual commits were already cherry-picked
+
+### Branch status:
+- Branch `cherry-d0075e2d730` is ready for pushing
+- It is 4 commits ahead of `ci/master`
+
+---
+
