@@ -46,6 +46,7 @@ Board-specific doc
    nxp/index
    openpiton/index
    ouya/index
+   pegatron/index
    phytec/index
    purism/index
    qualcomm/index

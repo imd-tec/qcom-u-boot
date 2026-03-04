@@ -34959,3 +34959,113 @@ Retry the CI job. No code changes are needed. This is a transient failure due to
 
 ---
 
+## 2026-03-04: us/next
+
+Branch: cherry-aaf4c261879
+
+Commits:
+- aaf4c261879 ARM: tegra: Relocate fuse code from warmboot file
+- b01f0a7c1d9 crypto: tegra: Add Tegra AES engine driver
+- f230bc6cf7b ARM: tegra: Add LP0 support for ODM production
+- bbfdb1ea9a5 ARM: tegra: Add BSE bindings
+- f0fc95e1a50 ARM: tegra: Enable BSEV for devices that use CMD_EBTUPDATE
+- 0106f051d7e ARM: tegra: Use AES engine for crypto functions
+- d564f395bcf board: chagall: add Pegatron Chagall support
+- aa291c5f8bf video: tegra: parametrize PCLK and DE polarity
+- 649d9c38a8d video: panel: add Sony L4F00430T01 panel driver
+- c6ec48a2ba0 video: panel: add Samsung S6E63M0 panel driver
+- c2bcd685ec6 video: bridge: add Samsung CMC623 image converter driver
+- 018d3c99b47 video: backlight: add Samsung CMC623 backlight PWM driver
+- c55cbaf133b board: samsung: add Samsung Galaxy R (GT-I9103) and Captivate Glide (SGH-i927) support
+- 488ae65f393 Merge branch 'staging' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+The repository state is clean (only untracked files, no staged or modified changes). Let me proceed with creating the new branch based on ci/master:
+
+Good. Now let me cherry-pick the first commit:
+
+Let me verify the delta and run build test:
+
+The commit stats match (7 files, 98 insertions, 83 deletions). Now let me run the build test:
+
+Build passed. Let me cherry-pick the second commit:
+
+Stats match. Let me run the build test:
+
+Build passed. Let me continue with the third commit:
+
+Let me continue with the fourth commit:
+
+Build passed. Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+Eleventh commit:
+
+Twelfth commit:
+
+Thirteenth commit:
+
+Now the fourteenth and final commit (a merge commit). This one is marked as "maybe already applied as 172fa3fb7db". Let me verify if it's already applied first:
+
+The merge commits are quite different - different merge parents, different authors, different messages. Let me look at what these merges actually contain to see if they're equivalent:
+
+Let me see if 172fa3fb7db is already in ci/master and if it contains the same content we're cherry-picking:
+
+Interesting - there's already a merge `cc284c58122` in ci/master that has the same subject. Looking at `172fa3fb7db`, this is a different merge entirely (it's a pickman merge for a cherry-pick branch). The original merge we want (488ae65f393) appears to have content that has already been applied via cc284c58122. Let me check if the commit we want to cherry-pick is related to what's already in ci/master:
+
+These are exactly the commits we've already cherry-picked. The merge 488ae65f393 is simply the merge that originally brought these commits in. Since we've already cherry-picked all 13 individual commits successfully, we should still include the merge commit for history tracking purposes as instructed (NEVER skip merge commits). Let me cherry-pick it with --allow-empty since it will be empty (all changes already applied):
+
+As expected, the merge results in an empty commit since all changes were already cherry-picked. Let me commit it as an empty commit to preserve the merge history:
+
+Now let me verify with git log and run the final build:
+
+All 14 commits are present. Now let me run the final build:
+
+All done. Here is the final status summary:
+
+## Cherry-Pick Summary
+
+**Branch created:** `cherry-aaf4c261879` (based on `ci/master`)
+
+**Build result:** ✅ OK - sandbox builds successfully
+
+**All 14 commits cherry-picked successfully:**
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | aaf4c261879 | ARM: tegra: Relocate fuse code from warmboot file | ✅ Applied |
+| 2 | b01f0a7c1d9 | crypto: tegra: Add Tegra AES engine driver | ✅ Applied |
+| 3 | f230bc6cf7b | ARM: tegra: Add LP0 support for ODM production | ✅ Applied |
+| 4 | bbfdb1ea9a5 | ARM: tegra: Add BSE bindings | ✅ Applied |
+| 5 | f0fc95e1a50 | ARM: tegra: Enable BSEV for devices that use CMD_EBTUPDATE | ✅ Applied |
+| 6 | 0106f051d7e | ARM: tegra: Use AES engine for crypto functions | ✅ Applied |
+| 7 | d564f395bcf | board: chagall: add Pegatron Chagall support | ✅ Applied (auto-merge) |
+| 8 | aa291c5f8bf | video: tegra: parametrize PCLK and DE polarity | ✅ Applied |
+| 9 | 649d9c38a8d | video: panel: add Sony L4F00430T01 panel driver | ✅ Applied (auto-merge) |
+| 10 | c6ec48a2ba0 | video: panel: add Samsung S6E63M0 panel driver | ✅ Applied (auto-merge) |
+| 11 | c2bcd685ec6 | video: bridge: add Samsung CMC623 image converter driver | ✅ Applied |
+| 12 | 018d3c99b47 | video: backlight: add Samsung CMC623 backlight PWM driver | ✅ Applied (auto-merge) |
+| 13 | c55cbaf133b | board: samsung: add Samsung Galaxy R (GT-I9103) and Captivate Glide (SGH-i927) support | ✅ Applied (auto-merge) |
+| 14 | 488ae65f393 | Merge branch 'staging' of u-boot-tegra | ✅ Applied (empty - content already in previous commits) |
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None - all deltas matched original commits
+
+**Notes:**
+- Several commits had auto-merging on `arch/arm/dts/Makefile`, `doc/board/index.rst`, `drivers/video/Kconfig`, and `drivers/video/Makefile` due to context conflicts - all resolved automatically
+- The final merge commit (488ae65f393) was applied as an empty commit because all its changes were already cherry-picked in the previous 13 commits. This is expected behavior and preserves the merge history.
+
+The branch `cherry-aaf4c261879` is now ready for pushing.
+
+---
+
