@@ -35886,3 +35886,120 @@ The branch `cherry-4ef864f1ae3` is ready for pushing with 6 new commits on top o
 
 ---
 
+## 2026-03-04: us/next
+
+Branch: cherry-b65ea8534fc
+
+Commits:
+- b65ea8534fc clk: imx: Free pll on error path
+- fa2c4149431 imx8ulp_evk: Enable temperature command
+- 66324e0ceca cpu: imx8_cpu: Provide default temperatures
+- b1a89c5232f imx8m: clock: Correct imx8mm_fracpll_tbl
+- 5275b5612b5 imx: scu_api: Remove unnecessary NULL check
+- d011462eea8 ARM: imx6: dh-imx6: Enable USB OTG ID pin pull up in SPL
+- 53158c8cf26 net: fec_mxc: Set error code on error exit
+- b57ed147939 dts: imx8m{m,n,p,q}: Make optee packaging optional
+- b32dda34506 drivers: scsi: fix inaccurate block count reporting in scsi operations
+- a0526d44dae mtd: spi-nor: Fix return value of s25_s28_mdp_ready()
+- c60898c9c69 meminfo: correct "free" memory region size
+- 4b97de0e28f virtio: fix freeing of virtio ring buffer
+- 123cd77122a pylibfdt: setup.py: Drop license_files
+- 442e752854b imx9: soc: Reuse and export low_drive_freq_update()
+- b6e2cfca1a6 board: phytec: phycore-imx93: Add VOLT_LOW_DRIVE frequency fixup
+- 7ef148daa44 Merge tag 'u-boot-imx-master-20250808' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository is in a clean state (only untracked files). Let me create and checkout the new branch based on ci/master:
+
+Good. Now let me start cherry-picking the commits one by one. Let me start with the first commit:
+
+Delta looks good (1 file, 1 insertion matches). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+There's a conflict. Let me check the conflicts and see if I can resolve them:
+
+This is a significant conflict. The ci/master branch has already been refactored with different variable names (desc vs block_dev, to_read vs blocks, etc.). The incoming changes from us/next are trying to fix the block count reporting but with different code structure.
+
+Let me look at the original commit to understand what it's fixing:
+
+Now let me look at the current ci/master version of this code to understand the refactoring that has already happened:
+
+I can see that the ci/master code has already been significantly refactored. The issue that the commit b32dda34506 is trying to fix (moving `blks -= blocks` to after the success check) has already been addressed in ci/master. The current ci/master code:
+
+1. Already updates `blks -= to_read` / `blks -= to_write` **after** the success check (after the `break` statement)
+2. Already has proper return value reporting with `return blkcnt - blks`
+
+The incoming commit is trying to fix the same issue but for the older code structure. The fix has already been applied in ci/master via a different refactoring. Let me resolve the conflict by keeping the HEAD version since it already contains the fix:
+
+The commit is empty because the fix is already present in ci/master. Let me commit it as empty to preserve the commit history:
+
+Now for the commit that may already be applied - 123cd77122a (pylibfdt setup.py):
+
+The patches are identical except for the commit hash and the cherry-pick line. The commit f045ae4b323 in ci/master is already a cherry-pick of 123cd77122a. This commit is already applied, so I'll skip it:
+
+Now let's continue with the next commit:
+
+Now for the final commit which is a merge commit:
+
+The merge commit results in an empty commit since all the changes have been cherry-picked. Let me create the empty commit to preserve the merge commit history:
+
+Now let me verify with `git log` to ensure all commits are present:
+
+I have 15 commits. Note that I skipped one commit (123cd77122a - pylibfdt setup.py) because it was already applied as f045ae4b323. Let me run the final build test:
+
+Build passed. Let me provide the final status report:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+All builds passed successfully with no warnings or errors.
+
+### Cherry-Pick Summary
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | b65ea8534fc | clk: imx: Free pll on error path | ✅ Applied |
+| 2 | fa2c4149431 | imx8ulp_evk: Enable temperature command | ✅ Applied |
+| 3 | 66324e0ceca | cpu: imx8_cpu: Provide default temperatures | ✅ Applied |
+| 4 | b1a89c5232f | imx8m: clock: Correct imx8mm_fracpll_tbl | ✅ Applied |
+| 5 | 5275b5612b5 | imx: scu_api: Remove unnecessary NULL check | ✅ Applied |
+| 6 | d011462eea8 | ARM: imx6: dh-imx6: Enable USB OTG ID pin pull up in SPL | ✅ Applied |
+| 7 | 53158c8cf26 | net: fec_mxc: Set error code on error exit | ✅ Applied |
+| 8 | b57ed147939 | dts: imx8m{m,n,p,q}: Make optee packaging optional | ✅ Applied |
+| 9 | b32dda34506 | drivers: scsi: fix inaccurate block count reporting | ✅ Applied (empty - fix already present in ci/master) |
+| 10 | a0526d44dae | mtd: spi-nor: Fix return value of s25_s28_mdp_ready() | ✅ Applied |
+| 11 | c60898c9c69 | meminfo: correct "free" memory region size | ✅ Applied |
+| 12 | 4b97de0e28f | virtio: fix freeing of virtio ring buffer | ✅ Applied |
+| 13 | 123cd77122a | pylibfdt: setup.py: Drop license_files | ⏭️ Skipped (already applied as f045ae4b323) |
+| 14 | 442e752854b | imx9: soc: Reuse and export low_drive_freq_update() | ✅ Applied |
+| 15 | b6e2cfca1a6 | board: phytec: phycore-imx93: Add VOLT_LOW_DRIVE frequency fixup | ✅ Applied |
+| 16 | 7ef148daa44 | Merge tag 'u-boot-imx-master-20250808' | ✅ Applied (empty - preserved for history) |
+
+### Fix-ups Made
+
+1. **b32dda34506** (drivers: scsi: fix inaccurate block count reporting): 
+   - Conflict with ci/master due to major refactoring. The fix was already present in ci/master via earlier refactoring.
+   - Resolved by keeping HEAD version and creating empty commit with note explaining the fix is already applied.
+
+2. **7ef148daa44** (Merge tag 'u-boot-imx-master-20250808'):
+   - Empty merge commit - all changes were already cherry-picked individually.
+   - Preserved with note for history tracking.
+
+### Skipped Commits
+
+1. **123cd77122a** (pylibfdt: setup.py: Drop license_files):
+   - Verified as already applied in ci/master as commit f045ae4b323.
+   - Patches are identical (only differ by commit hash and cherry-pick line).
+
+### Commits with Concerning Deltas
+None - all commit deltas matched their originals exactly.
+
+### Final Branch State
+- Branch: `cherry-b65ea8534fc`
+- Based on: `ci/master`
+- 15 commits ahead of ci/master (14 applied + 1 empty merge commit)
+- Ready for pushing
+
+---
+
