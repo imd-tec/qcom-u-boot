@@ -35066,6 +35066,103 @@ All done. Here is the final status summary:
 - The final merge commit (488ae65f393) was applied as an empty commit because all its changes were already cherry-picked in the previous 13 commits. This is expected behavior and preserves the merge history.
 
 The branch `cherry-aaf4c261879` is now ready for pushing.
+Branch: cherry-42ef9a0b7f2
+
+Commits:
+- 42ef9a0b7f2 mtd: nand: pxa3xx: Free memory on error
+- 4003ed1c1ec mtd: rawnand: stm32_fmc2: Ensure to return error code
+- 56372f834c7 mtd: nand: sunxi: Free allocated memory on errors
+- ebf8aaf7afd mtd: rawnand: cortina_nand: Fix -ENOMEM detection
+- 2756de5213a mtd: rawnand: denali: Remove always true test
+- 27242462167 mtd: rawnand: mxs_nand: Ensure err is set for error path
+- 2412f00fc95 mtd: nand: raw: Remove unused lpc32xx_nand_slc driver
+- cb34f23bdb6 mtd: nand: raw: Remove unused mxic_nand driver
+- 8877bbe67a9 mtd: nand: raw: Remove unused octeontx_nand driver
+- 851c3f28d00 Merge branch 'u-boot-nand-03082025' of https://source.denx.de/u-boot/custodians/u-boot-nand-flash
+
+### Conversation log
+The repository state is clean (no staged or modified files, just an untracked file which is fine). Let me proceed with creating the new branch from ci/master.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Cherry-pick succeeded. Let me check the delta and then build:
+
+Delta matches (1 file, 1 insertion). Now run the build test:
+
+Build passed. Now the second commit:
+
+Delta matches. Build test:
+
+Build passed. Third commit:
+
+Delta matches. Build test:
+
+Build passed. Fourth commit:
+
+Delta matches. Build test:
+
+Build passed. Fifth commit:
+
+Delta matches. Build test:
+
+Build passed. Sixth commit:
+
+Delta matches. Build test:
+
+Build passed. Seventh commit:
+
+Delta matches. Build test:
+
+Build passed. Eighth commit:
+
+Delta matches. Build test:
+
+Build passed. Ninth commit:
+
+Delta matches. Build test:
+
+Build passed. Now the last commit which is a merge commit:
+
+The merge commit is empty as expected since all changes were already cherry-picked. Let me commit it with --allow-empty as instructed:
+
+The merge commit is empty as expected since all changes were applied in the individual commits. Build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 10 commits are present. Now final build verification:
+
+## Final Status
+
+### Cherry-Pick Complete ✅
+
+All 10 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-42ef9a0b7f2`:
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 42ef9a0b7f2 | cb62bec7653 | mtd: nand: pxa3xx: Free memory on error |
+| 2 | 4003ed1c1ec | 5a5458ea8e4 | mtd: rawnand: stm32_fmc2: Ensure to return error code |
+| 3 | 56372f834c7 | 948e5d6de40 | mtd: nand: sunxi: Free allocated memory on errors |
+| 4 | ebf8aaf7afd | 0811739c1c2 | mtd: rawnand: cortina_nand: Fix -ENOMEM detection |
+| 5 | 2756de5213a | 14eba0fc01c | mtd: rawnand: denali: Remove always true test |
+| 6 | 27242462167 | 335e00d99a7 | mtd: rawnand: mxs_nand: Ensure err is set for error path |
+| 7 | 2412f00fc95 | 2affbcd4a17 | mtd: nand: raw: Remove unused lpc32xx_nand_slc driver |
+| 8 | cb34f23bdb6 | 80158e71e01 | mtd: nand: raw: Remove unused mxic_nand driver |
+| 9 | 8877bbe67a9 | 8a61d886f68 | mtd: nand: raw: Remove unused octeontx_nand driver |
+| 10 | 851c3f28d00 | 3b84941f5b3 | Merge branch 'u-boot-nand-03082025' (empty - preserved for history) |
+
+### Build Result: **OK** ✅
+- No warnings or errors
+
+### Fix-ups Made: **None**
+- All commits applied cleanly
+
+### Delta Concerns: **None**
+- All commits matched their original deltas exactly
+- The merge commit (851c3f28d00) resulted in an empty commit as expected (all changes were already applied in individual commits 1-9)
+
+### Branch Status
+- Branch `cherry-42ef9a0b7f2` is ready for pushing
+- It is 10 commits ahead of `ci/master`
 
 ---
 
