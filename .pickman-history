@@ -34753,3 +34753,209 @@ Now let me note the other failed jobs. Looking at them:
 
 ---
 
+## 2026-03-04: us/next
+
+Branch: cherry-d0075e2d730
+
+Commits:
+- d0075e2d730 Makefile: add dependency from lib to arch/$(ARCH)/lib
+- 39ae954b04e env: mtd: add the missing put_mtd_device()
+- 7e842bd3315 env: mtd: initialize saved_buf pointer
+- ae5711f8811 Merge patch series "env: mtd: add the missing put_mtd_device()"
+
+### Conversation log
+The repository state is clean (just an untracked file which is fine). Let me proceed to create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the commits. First, let me cherry-pick the first commit (regular commit):
+
+First commit successful. Let me check the delta and run the build test:
+
+The delta looks identical (1 file changed, 5 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit successful. Let me check the delta:
+
+Delta matches (1 file changed, 6 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit successful. Let me check the delta:
+
+Delta matches (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit, which is a merge commit (identified by "Merge" in the subject):
+
+The merge commit is empty (as expected since we already cherry-picked the individual commits). Let me commit it with `--allow-empty`:
+
+Now let me verify the commit delta for the merge commit:
+
+The cherry-picked merge commit is empty (which is expected since we already picked the individual commits). The original merge commit had 7 insertions, 1 deletion which were the combined changes from the two commits we already cherry-picked. This is correct behavior.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits are present with `git log`:
+
+All 4 commits are present. Now let me run the final build test to confirm everything works together:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Commits cherry-picked:
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | d0075e2d730 | fd5da91a70d | Makefile: add dependency from lib to arch/$(ARCH)/lib |
+| 2 | 39ae954b04e | 906b13e9c14 | env: mtd: add the missing put_mtd_device() |
+| 3 | 7e842bd3315 | 2c1f1eea97a | env: mtd: initialize saved_buf pointer |
+| 4 | ae5711f8811 | bad96e96416 | Merge patch series "env: mtd: add the missing put_mtd_device()" |
+
+### Build result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Fix-ups made: None
+- All cherry-picks applied cleanly
+
+### Delta concerns: None
+- All commit deltas matched exactly between original and cherry-picked versions
+- The merge commit (commit #4) was intentionally empty since the individual commits were already cherry-picked
+
+### Branch status:
+- Branch `cherry-d0075e2d730` is ready for pushing
+- It is 4 commits ahead of `ci/master`
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 1)
+
+Branch: cherry-d0075e2d730
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. The test failure is:
+```
+test/py/tests/test_distro.py::test_distro_arm_app_efi - console_base.Timeout
+ubman.expect(['Ubuntu 25.04 qarm ttyAMA0'])
+```
+
+This is a test_distro test that's timing out while expecting a specific console message. Let me look at this test file and see what it does:
+
+Looking at the test, it's testing EFI boot on aarch64. The test expects to see `Ubuntu 25.04 qarm ttyAMA0` after booting. This is a timeout, meaning the test couldn't boot properly.
+
+Looking at the commits that were cherry-picked:
+1. `fd5da91a70d Makefile: add dependency from lib to arch/$(ARCH)/lib`
+2. `906b13e9c14 env: mtd: add the missing put_mtd_device()`
+3. `2c1f1eea97a env: mtd: initialize saved_buf pointer`
+4. `bad96e96416 Merge patch series "env: mtd: add the missing put_mtd_device()"`
+
+The MTD changes are about environment storage on MTD devices - this shouldn't affect EFI boot tests at all. The Makefile change about lib dependencies could potentially affect builds.
+
+Let me check what the Makefile change does:
+
+The Makefile change is about build dependencies and shouldn't affect runtime behavior.
+
+Let me look more carefully at the CI failure. This test is timing out waiting for `Ubuntu 25.04 qarm ttyAMA0`. The key is the job is for `efi-aarch64` (efi-arm_app64).
+
+Let me check what commits might be related. The failing test is about booting Linux via EFI. Let me check if this is a transient/infrastructure issue by looking at the pattern:
+
+Looking at this carefully:
+1. The cherry-picked commits are about MTD env (environment stored on MTD flash) and a Makefile build race fix
+2. None of these should impact EFI boot on aarch64
+3. The test `test_distro_arm_app_efi` is testing booting Ubuntu 25.04 via EFI on a QEMU aarch64 system
+
+Let me check if this is a known flaky test or infrastructure issue. I'll also check the test logs more carefully to see what happened:
+
+Let me analyze the log tail more carefully. Looking at the logs from the job:
+
+From the log, I can see:
+1. It shows SMBIOS/DMI information output - this is the `smbios -s` command output
+2. The test is running test_distro.py::test_distro_arm_app_efi
+3. It times out waiting for `Ubuntu 25.04 qarm ttyAMA0`
+
+The fact that we see SMBIOS output suggests U-Boot is working. The test fails after attempting to boot but before seeing the expected Linux login prompt.
+
+Let me check if the MTD/env changes could cause issues:
+
+These MTD changes shouldn't affect EFI boot at all - the efi-aarch64 board doesn't use MTD for environment storage.
+
+Looking at the log more carefully, I notice the test output shows lots of SMBIOS data being dumped. This happens in the test before the actual boot. The test is timing out waiting for `Ubuntu 25.04 qarm ttyAMA0` - which is the login prompt.
+
+This looks like a transient/infrastructure issue rather than a code problem. The changes in this cherry-pick are:
+1. Makefile build dependency fix - runtime neutral
+2. MTD env fixes - efi-aarch64 doesn't use MTD
+
+Let me verify by checking if the efi-aarch64 config uses MTD environment:
+
+As I suspected - this board does NOT use MTD for environment storage. There's no `CONFIG_ENV_IS_IN_MTD` or any MTD config options.
+
+Let me run a build of this board to verify the code at least compiles correctly:
+
+The build error is about missing Rust target - this is an infrastructure issue not related to the changes. Let me try building without Rust examples:
+
+Sandbox builds successfully. Now let me analyze the situation more:
+
+The test that failed (`test_distro_arm_app_efi`) is a runtime test that boots U-Boot on QEMU, then boots into an Ubuntu system via EFI. The failure is a **timeout** - meaning the test didn't see the expected output within the timeout period.
+
+Looking at the changes in the cherry-picked commits:
+1. **Makefile change** - purely build-time, no runtime impact
+2. **MTD env changes** - affects boards with MTD-based environment storage (efi-arm_app64 doesn't use MTD)
+
+This is almost certainly an **infrastructure/transient issue**:
+- The test is timing out waiting for Linux to boot to userspace
+- This could be QEMU performance issues, network issues loading the disk image, or similar
+- The changes in this MR cannot affect EFI boot behavior for this board
+
+Let me check if there have been any recent changes to test_distro.py on master that might be relevant:
+
+I can see there have been previous fixes for timeout issues (`b7f318e484f` and `bd2f3f2867a`). Let me check if these are on our branch:
+
+The timeout fixes are already on our branch. Looking at the test code, I see the timeout is 200 seconds (line 112-113). The test expects to see `Ubuntu 25.04 qarm ttyAMA0` which is the login prompt.
+
+Let me check if there's a known issue with the EFI test timing:
+
+This confirms that timeout issues with these EFI boot tests are a known problem - they depend on host load and can be intermittent.
+
+Based on my analysis, this is a **transient/infrastructure issue**:
+
+1. The changes in the cherry-pick MR (Makefile dependency fix and MTD env fixes) have **no functional impact** on the efi-arm_app64 board:
+   - The Makefile change is build-time only
+   - The MTD changes only affect boards with `CONFIG_ENV_IS_IN_MTD`, which efi-arm_app64 doesn't have
+
+2. The test failure is a **timeout** waiting for Ubuntu to boot in QEMU, not a U-Boot crash or build error
+
+3. These EFI boot tests have a **history of intermittent failures** due to host load (commits `bd2f3f2867a` and `b7f318e484f` were timeout fixes for exactly these tests)
+
+4. The sandbox build passes successfully
+
+This is not a code bug that can be fixed. The proper action is to report this as an infrastructure/transient issue and suggest retrying the CI job.
+
+**Summary Report:**
+
+## Pipeline Failure Analysis for MR !656
+
+### Failed Job: efi-aarch64 (test_distro_arm_app_efi)
+
+**Root Cause: Infrastructure/Transient Issue**
+
+The test `test_distro_arm_app_efi` timed out waiting for `Ubuntu 25.04 qarm ttyAMA0` - the login prompt after booting Linux via EFI in QEMU aarch64.
+
+**Why this is NOT caused by the cherry-picked commits:**
+
+1. **Makefile change (fd5da91a70d)**: Adds a build-time dependency to fix race conditions when building EFI apps. This is purely a build ordering fix and has zero runtime impact.
+
+2. **MTD env changes (906b13e9c14, 2c1f1eea97a)**: Fix memory leaks and uninitialized pointers in `env/mtd.c`. However, the `efi-arm_app64` board does NOT use MTD-based environment storage (no `CONFIG_ENV_IS_IN_MTD` in its defconfig), so these changes have no effect on this board whatsoever.
+
+3. **Merge commit (bad96e96416)**: Empty merge commit, no code changes.
+
+**Evidence this is a known intermittent issue:**
+- Commits `bd2f3f2867a` and `b7f318e484f` on master are previous fixes for timeout issues in these exact tests
+- The test uses a 200-second timeout which can still be exceeded under host load
+- The test output shows U-Boot ran successfully (SMBIOS output visible); it's the Linux boot in QEMU that timed out
+
+**Recommendation:** 
+Retry the CI job. No code changes are needed. This is a transient failure due to CI infrastructure load affecting QEMU performance.
+
+---
+
