@@ -36003,3 +36003,423 @@ None - all commit deltas matched their originals exactly.
 
 ---
 
+Branch: cherry-e16646c0ade
+
+Commits:
+- e16646c0ade tools: mkeficapsule: resource leak in read_bin_file()
+- 8e5d34a3a26 doc: qemu-riscv: describe running as flash image
+- 47e9b739542 efi_loader: Support loading a ramdisk with bootefi
+- 598df59f758 doc: spl: fix typo 'TPL' to 'VPL'
+- 9fd31937dd2 MAINTAINERS: update email address of Heiko Schocher
+- e51e139cdf8 Merge tag 'efi-2025-10-rc2' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+Let me find the correct repository path:
+
+The repository has untracked files but is otherwise clean for our purposes. Let me create the new branch from ci/master:
+
+Branch created. Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run build test:
+
+Delta matches (1 file, 1 insertion). Now run the build test:
+
+Build passes. Let me cherry-pick the second commit:
+
+Second commit applied. Check delta:
+
+Delta matches (1 file, 26 insertions). Run build test:
+
+Build passes. Cherry-pick the third commit:
+
+Third commit applied. Check delta:
+
+Delta matches (2 files, 55 insertions, 15 deletions). Run build test:
+
+Build passes. Cherry-pick the fourth commit:
+
+Fourth commit applied. Check delta:
+
+Delta matches (1 file, 1 insertion, 1 deletion). Run build test:
+
+Build passes. Cherry-pick the fifth commit:
+
+Fifth commit applied. Check delta:
+
+Delta matches exactly (11 files, 17 insertions, 12 deletions). Run build test:
+
+Build passes. Now cherry-pick the sixth commit. This is a merge commit (has "Merge" in subject), so I need to use `-m 1 --allow-empty`:
+
+The merge commit results in an empty commit (which is expected since the actual changes were pulled in via individual commits already). I need to commit it as an empty commit to preserve the merge commit message:
+
+Merge commit applied (as expected, it's empty since the changes came in via individual commits). Let me verify the commit message and check the delta:
+
+The cherry-picked merge commit is empty as expected (the actual file changes were brought in by the earlier individual commits). The original was a merge with file changes. This is correct behavior - when cherry-picking a merge commit, the individual commits contain the actual changes.
+
+Run build test:
+
+Build passes. Now verify all 6 commits are present:
+
+All 6 commits are present. Run the final build test:
+
+## Final Status Report
+
+**Cherry-pick operation completed successfully!**
+
+### Branch Created
+- `cherry-e16646c0ade` based on `ci/master`
+
+### Commits Applied (6 of 6)
+| # | Hash (original) | Subject | Delta | Status |
+|---|-----------------|---------|-------|--------|
+| 1 | e16646c0ade | tools: mkeficapsule: resource leak in read_bin_file() | 1 file, +1 | ✅ OK |
+| 2 | 8e5d34a3a26 | doc: qemu-riscv: describe running as flash image | 1 file, +26 | ✅ OK |
+| 3 | 47e9b739542 | efi_loader: Support loading a ramdisk with bootefi | 2 files, +55/-15 | ✅ OK |
+| 4 | 598df59f758 | doc: spl: fix typo 'TPL' to 'VPL' | 1 file, +1/-1 | ✅ OK |
+| 5 | 9fd31937dd2 | MAINTAINERS: update email address of Heiko Schocher | 11 files, +17/-12 | ✅ OK |
+| 6 | e51e139cdf8 | Merge tag 'efi-2025-10-rc2' (merge commit) | empty (expected) | ✅ OK |
+
+### Build Result
+- **Status**: ✅ OK (no warnings or errors)
+- All incremental builds passed
+- Final build verified
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all deltas matched exactly
+
+### Notes
+- The merge commit (e51e139cdf8) resulted in an empty commit, which is expected behavior since the actual file changes were already applied through the individual commits that were cherry-picked before it.
+- The branch `cherry-e16646c0ade` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 1)
+
+Branch: cherry-e16646c0ade
+
+Failed jobs:
+- rockpro64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. Looking at the job log, the key error is:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+mmc_load_image_raw_sector: mmc block read error
+Error: -38
+...
+SPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+This is an SPL boot failure on the rockpro64 board. The error `-5` is `EIO` and `-38` is `ENOSYS`. The key message is `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)`.
+
+Let me look at the commits on this branch and see what might have caused this:
+
+Now let me look at what commit 167a0a2af3d "efi_loader: Support loading a ramdisk with bootefi" actually changes - this is the most likely culprit since it touches the EFI loader:
+
+This commit changes the bootefi command to support loading a ramdisk. Let me also look at the error more carefully. The error `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` is an SPL error - it happens very early in the boot before EFI.
+
+Let me check if there's anything in the commits that would affect SPL loading:
+
+None of these files should affect SPL loading on rockpro64. The SPL failure happens before U-Boot proper even loads - it's a hardware test failure.
+
+Let me look at the error message more carefully. The key is:
+- `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` - this is EIO (-5)
+- The board goes into an infinite loop "### ERROR ### Please RESET the board ###"
+
+This is a **hardware lab test failure**, not a code issue. The error `-5` (EIO) and `-38` (ENOSYS) indicate I/O errors reading from the MMC device, which are typically hardware issues (bad connection, corrupted media, etc.).
+
+Looking at the log more carefully:
+1. TPL runs successfully - "Returning to boot ROM..."
+2. SPL starts and begins to boot from MMC2
+3. It loads the FIT configuration and ATF image successfully
+4. It fails on `loadables index 0` with EIO
+
+This is a hardware/infrastructure issue on the lab runner, not a bug in the cherry-picked code. Let me verify that none of the commits touch SPL or MMC code:
+
+That's just a documentation typo fix - it doesn't affect any actual code.
+
+This is clearly an **infrastructure/transient issue**:
+1. The error is I/O related (EIO = -5, ENOSYS = -38)
+2. The failure happens in SPL trying to read from MMC 
+3. None of the cherry-picked commits modify SPL, MMC drivers, or anything related to rockpro64 boot
+4. The commits are:
+   - `mkeficapsule` tool fix (resource leak)
+   - QEMU-RISCV documentation
+   - `bootefi` command enhancement (user-space command, not SPL)
+   - SPL documentation typo fix
+   - MAINTAINERS email update
+   - Empty merge commit
+
+Let me also confirm the rockpro64 config doesn't get touched:
+
+No rockpro64-specific changes either.
+
+## Summary
+
+**This is an infrastructure/transient failure, not a code issue.**
+
+The failure is in the sjg-lab hardware test runner:
+- The rockpro64 board's SPL fails to read from MMC during boot with I/O errors
+- Error `-5` (EIO) indicates a hardware I/O failure
+- Error `-38` (ENOSYS) indicates the operation is not supported (fallback failure)
+- The `labgrid` test framework times out waiting for the U-Boot prompt
+
+**None of the cherry-picked commits affect:**
+- SPL code
+- MMC drivers  
+- rockpro64 board configuration
+- Boot sequence
+
+The commits only touch:
+1. `tools/mkeficapsule.c` - host tool, not target firmware
+2. `doc/board/emulation/qemu-riscv.rst` - documentation only
+3. `cmd/bootefi.c` and `doc/usage/cmd/bootefi.rst` - EFI command (runs after full U-Boot boots)
+4. `doc/develop/spl.rst` - documentation typo fix only
+5. `MAINTAINERS` and `.mailmap` - metadata only
+6. Empty merge commit
+
+**Recommendation:** Retry the pipeline. If it continues to fail, the physical rockpro64 board or its SD card/eMMC may need maintenance.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-e16646c0ade
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) rockpro64.
+
+Now let me analyze the failure. Looking at...
+
+### Conversation log
+Now let me understand the review comment. The comment says:
+- `Pipeline fix (attempt 1): fixed failed job(s) rockpro64.`
+
+Looking at the context from the MR description, the analysis concluded that this was an **infrastructure/transient failure**, not a code issue. The rockpro64 board had I/O errors (EIO = -5) when trying to read from MMC during SPL boot. The recommendation was to **retry the pipeline**.
+
+Since the review comment says "Pipeline fix (attempt 1): fixed failed job(s) rockpro64" - this appears to be a note indicating that a pipeline retry was done to fix the failed rockpro64 job, which was an infrastructure issue.
+
+Let me check if there's any actual code comment to address:
+
+The review comment is actually a note about a pipeline fix attempt for an infrastructure issue (rockpro64 hardware test failure), not a request for code changes. Looking at the context:
+
+1. The rockpro64 failure was determined to be a **hardware/infrastructure issue** - I/O errors reading from MMC
+2. None of the cherry-picked commits affect SPL, MMC drivers, or rockpro64 board configuration
+3. The recommendation was to retry the pipeline
+
+The comment `Pipeline fix (attempt 1): fixed failed job(s) rockpro64` indicates that a retry was performed, and there's already a commit `cdbee7a61b1 pickman: Record pipeline fix for cherry-e16646c0ade` recording this.
+
+Since this is an infrastructure issue that was fixed by a pipeline retry (not a code change), and there are no actual code review comments to address, let me verify the current state of the branch and the build:
+
+The build passes. Now let me analyze what needs to be done for this review comment. 
+
+Looking at the review comment more carefully:
+- The comment is from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` (an automated bot)
+- It says "Pipeline fix (attempt 1): fixed failed job(s) rockpro64"
+- This indicates the bot recorded a pipeline fix attempt
+
+This is NOT an actionable code review comment - it's a status note about a pipeline retry that was already performed. The rockpro64 failure was an infrastructure/transient issue (hardware I/O errors), not a code bug.
+
+Since:
+1. The review comment is a status note from the bot about a pipeline retry, not a request for code changes
+2. The underlying issue was diagnosed as an infrastructure problem (hardware I/O failure), not a code issue
+3. No code changes are needed
+4. The build passes
+
+There are no code changes to make. The appropriate action is to acknowledge that the pipeline fix was a retry for an infrastructure issue, and the MR is ready for further review pending the next pipeline run.
+
+Let me check if the pipeline retry was already done by looking at the pickman commit:
+
+The commit `cdbee7a61b1 pickman: Record pipeline fix for cherry-e16646c0ade` records that a pipeline fix (retry) was already performed. This is a metadata commit tracking the fix attempt.
+
+## Summary
+
+The review comment `Pipeline fix (attempt 1): fixed failed job(s) rockpro64` is an automated status note from the bot, not an actionable code review comment. 
+
+**Analysis:**
+- The rockpro64 failure was an **infrastructure/transient issue** - hardware I/O errors during SPL boot
+- Error codes `-5` (EIO) and `-38` (ENOSYS) indicate hardware I/O failures
+- None of the cherry-picked commits modify SPL, MMC drivers, or rockpro64-related code
+- A pipeline retry was the correct fix (already recorded in commit `cdbee7a61b1`)
+
+**No code changes are required.** The MR is ready for the next pipeline run.
+
+**Suggested reply to post on the MR:**
+
+---
+
+The rockpro64 failure in the previous pipeline run was diagnosed as an **infrastructure/transient issue**, not a code problem:
+
+- The error occurred during SPL boot (before U-Boot proper loads)
+- Error `-5` (EIO) indicates hardware I/O failure reading from MMC
+- None of the cherry-picked commits affect SPL, MMC drivers, or rockpro64 board configuration
+
+The commits in this MR only modify:
+1. `tools/mkeficapsule.c` - host tool resource leak fix
+2. `doc/board/emulation/qemu-riscv.rst` - documentation
+3. `cmd/bootefi.c` and related docs - EFI command (runs after full U-Boot boot)
+4. `doc/develop/spl.rst` - documentation typo fix
+5. `MAINTAINERS` and `.mailmap` - metadata only
+6. Empty merge commit
+
+The pipeline retry was the appropriate fix for this transient hardware issue. Waiting for the new pipeline to complete.
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 2)
+
+Branch: cherry-e16646c0ade
+
+Failed jobs:
+- tk1 (sjg-lab)
+
+### Conversation log
+Looking at the job log, I can see this is another infrastructure/transient failure, not a code issue. Let me analyze:
+
+**Key error from the log:**
+```
+USB resource not available; retrying reset with longer delays
+labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader(target=Target(name='tk1', env=Environment(config_file='/vid/software/devel/ubtest/lab/cfg/kea_env.cfg'), var_dict=None), name='TegraUSBLoader', state=<BindingState.bound: 1>, avail=False, host='kea', timeout=10.0, busnum=None, devnum=None, path=None, vendor_id=None, model_id=None)}
+This may be caused by disconnected exporter or wrong match entries.
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is clearly a **hardware lab infrastructure failure**:
+1. The `TegraUSBLoader` resource is not available (`avail=False`)
+2. The error message explicitly says "This may be caused by disconnected exporter or wrong match entries"
+3. The lab framework marked the connection as bad before any tests could run
+4. This is the `tk1` (Jetson TK1) board which requires USB boot loading
+
+Let me verify that none of the commits in this branch affect the tk1 board or labgrid infrastructure:
+
+The files changed on this branch are:
+- `.mailmap`, `MAINTAINERS`, various `board/*/MAINTAINERS` - metadata only
+- `cmd/bootefi.c`, `doc/usage/cmd/bootefi.rst` - EFI command (runs after full U-Boot boots)
+- `doc/board/emulation/qemu-riscv.rst`, `doc/develop/spl.rst` - documentation
+- `tools/mkeficapsule.c` - host tool
+- `.pickman-history` - pickman tracking
+
+Let me check if any of these files affect tk1:
+
+None of the changes affect tk1/tegra/jetson. This is clearly an **infrastructure failure**:
+
+**Analysis of the tk1 job failure:**
+
+1. **Error Type**: Hardware lab infrastructure failure
+   - The `TegraUSBLoader` resource is unavailable (`avail=False`)
+   - Error message: "This may be caused by disconnected exporter or wrong match entries"
+   - The labgrid framework couldn't connect to the physical tk1 (Jetson TK1) board
+
+2. **What happened**:
+   - The test framework tried to reset the board via USB boot loading
+   - The USB resource was not available (likely disconnected or USB hub issue)
+   - The lab marked the connection as bad: "Lab failure: Marking connection bad - no other tests will run"
+   - No actual tests ran (0 tests executed, 1 deselected)
+
+3. **None of the cherry-picked commits affect**:
+   - Tegra/TK1/Jetson board code
+   - USB boot loading infrastructure
+   - SPL or early boot code
+   - Any tk1-specific configuration
+
+4. **The commits only modify**:
+   - `tools/mkeficapsule.c` - host tool resource leak fix
+   - `cmd/bootefi.c` - EFI command (runs after full U-Boot boots, not during SPL/USB boot)
+   - Documentation files
+   - MAINTAINERS/metadata
+
+**Conclusion**: This is an **infrastructure/transient failure** caused by hardware connectivity issues with the Jetson TK1 board in the lab (USB loader not available). This is NOT a code issue - the appropriate fix is to retry the pipeline.
+
+---
+
+**Summary Report:**
+
+**Failed Job**: `tk1` (sjg-lab stage)
+
+**Root Cause**: Infrastructure/transient failure - The Jetson TK1 board's USB boot loader resource was unavailable in the hardware lab. The labgrid test framework reported "Not all resources are available" with `TegraUSBLoader` showing `avail=False`. This indicates a physical connectivity issue (disconnected USB, USB hub problem, or exporter issue), not a code problem.
+
+**Evidence**:
+- Error: "USB resource not available; retrying reset with longer delays"
+- Error: "labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader... avail=False}"
+- No tests actually ran - the framework exited immediately due to resource unavailability
+- None of the commits in this MR touch Tegra/TK1/USB boot code
+
+**Recommendation**: Retry the pipeline. No code changes are required.
+
+**No code changes made** - this is an infrastructure issue, not a code bug.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-e16646c0ade
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) tk1.
+
+Looking at the job log, I can see this is anothe...
+
+### Conversation log
+Now let me understand the review comment. The comment says "Pipeline fix (attempt 2): fixed failed job(s) tk1." This is an automated bot comment indicating that a pipeline retry was performed for the tk1 job failure. Looking at the context from the MR description, this was determined to be an **infrastructure/transient failure** - the Jetson TK1 board's USB boot loader resource was unavailable in the hardware lab.
+
+This is NOT an actionable code review comment - it's a status note about a pipeline retry that was already performed (as evidenced by the `d4d620f755e pickman: Record pipeline fix for cherry-e16646c0ade` commit). The underlying issue was a hardware lab connectivity problem, not a code bug.
+
+Let me verify the current state:
+
+The build passes. 
+
+## Summary
+
+The review comment `Pipeline fix (attempt 2): fixed failed job(s) tk1` is an **automated status note** from the bot indicating that a pipeline retry was performed for an infrastructure failure. This is not an actionable code review comment requiring changes.
+
+**Analysis:**
+- The tk1 failure was an **infrastructure/transient issue** - the Jetson TK1 board's USB boot loader resource (`TegraUSBLoader`) was unavailable in the hardware lab
+- The error message explicitly stated: "This may be caused by disconnected exporter or wrong match entries"
+- None of the cherry-picked commits affect Tegra/TK1/USB boot code
+- A pipeline retry was the correct fix and has already been recorded in commit `d4d620f755e`
+
+**No code changes are required.** The branch is already up-to-date with the pipeline retry recorded.
+
+---
+
+## Report
+
+**Review Comment Addressed:** `Pipeline fix (attempt 2): fixed failed job(s) tk1`
+
+**Action Taken:** None - this is an automated status note indicating a pipeline retry was performed for an infrastructure failure, not an actionable code review request.
+
+**Analysis:**
+- The tk1 job failure was a hardware lab infrastructure issue (USB boot loader resource unavailable)
+- Error: "labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader... avail=False}"
+- This indicates physical connectivity issues with the Jetson TK1 board in the lab
+- None of the commits in this MR touch Tegra/TK1/USB boot code
+- The pipeline retry was already recorded in commit `d4d620f755e`
+
+**Build Status:** ✅ Passes (verified with `buildman -L --board sandbox -w -o /tmp/pickman`)
+
+**No push needed** - the branch already has the pipeline fix recorded and no code changes are required.
+
+---
+
+**Suggested reply to post on the MR:**
+
+> The tk1 failure in pipeline attempt 2 was an **infrastructure/transient issue**, not a code problem:
+> 
+> - The error occurred because the `TegraUSBLoader` resource was unavailable (`avail=False`)
+> - Error message: "This may be caused by disconnected exporter or wrong match entries"
+> - This indicates physical connectivity issues with the Jetson TK1 board in the hardware lab
+> 
+> None of the cherry-picked commits affect Tegra/TK1/USB boot code. The commits only modify:
+> - `tools/mkeficapsule.c` - host tool resource leak fix
+> - `cmd/bootefi.c` - EFI command (runs after full U-Boot boots)
+> - Documentation files
+> - MAINTAINERS/metadata
+> 
+> Pipeline retry was the appropriate fix for this transient hardware issue. Waiting for the new pipeline to complete.
+
+---
+
