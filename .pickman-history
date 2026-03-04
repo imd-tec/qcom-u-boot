@@ -34683,3 +34683,73 @@ Rebased onto latest ci/master (95b88afa93e). All 16 commits rebased without conf
 
 ---
 
+### Pipeline fix: 2026-03-03 (attempt 2)
+
+Branch: cherry-e88024b34b5
+
+Failed jobs:
+- build all 64bit ARM platforms (world_build)
+- bpi (sjg-lab)
+- jerry (sjg-lab)
+- link (sjg-lab)
+- opi_pc (sjg-lab)
+- rpi3 (sjg-lab)
+
+### Conversation log
+Now let me look at the build error more closely. The key error from the job log is:
+
+```
+arch/arm/mach-socfpga/secure_vab.c: In function 'socfpga_vendor_authentication':
+arch/arm/mach-socfpga/secure_vab.c:95:13: error: implicit declaration of function 'memcmp' [-Wimplicit-function-declaration]
+arch/arm/mach-socfpga/secure_vab.c:118:9: error: implicit declaration of function 'memcpy' [-Wimplicit-function-declaration]
+```
+
+This means `secure_vab.c` is missing `#include <string.h>`. Let me find which commit touched this file:
+
+Let me look at commit `4b6a858deea` which "Fix header file includes" - this is likely the culprit:
+
+I see the problem! The commit removed `#include <exports.h>` but that header was likely providing `memcmp` and `memcpy` declarations. The commit should have added `#include <string.h>` to get those function declarations.
+
+Let me verify this is needed:
+
+I can see the file uses `memcmp` on line 95 and `memcpy` on line 118, but there's no `#include <string.h>`. This is the root cause of the build failure.
+
+Now I need to amend commit `4b6a858deea` to add the missing include. Let me count how many commits back it is:
+
+So the problem commit is 16 commits back (including itself). Let me start an interactive rebase:
+
+Good, I'm now at the commit that needs fixing. Let me add the missing include:
+
+Rebase completed successfully. Now let me verify the fix with a quick build:
+
+Sandbox built successfully. Now let me build the relevant boards to ensure the fix works for the socfpga boards mentioned in the build error:
+
+All socfpga boards built successfully (no errors, just warnings about missing external blobs which is expected). Let me also verify the specific issue is resolved by checking the include is in place:
+
+The `#include <string.h>` is now in place. Now let me create the local branch:
+
+Let me also verify the amended commit has the fix note:
+
+Now let me note the other failed jobs. Looking at them:
+
+1. **bpi, jerry, link, opi_pc, rpi3** - These are all `sjg-lab` stage failures with errors like `Lab failure: Marking connection bad - no other tests will run` and serial port connection issues (`rfc2217://kea:None`). These are **infrastructure/lab hardware issues**, not code problems.
+
+2. **build all 64bit ARM platforms** - This was the actual code failure with the `memcmp`/`memcpy` implicit declaration errors that we just fixed.
+
+## Summary
+
+**Root Cause:** Commit `4b6a858deea` ("arch: arm: socfpga: Fix header file includes") removed `#include <exports.h>` but failed to add `#include <string.h>`, which is needed for `memcmp()` and `memcpy()` declarations used in `arch/arm/mach-socfpga/secure_vab.c`.
+
+**Fix Applied:** Added `#include <string.h>` to `arch/arm/mach-socfpga/secure_vab.c` by amending commit `02ee47a1ec7` (rebased version of `4b6a858deea`).
+
+**Verification:** 
+- Sandbox build: PASSED
+- All 27 socfpga boards: PASSED (0 errors, only expected external blob warnings)
+
+**Other Failures (Infrastructure/Lab issues - no code fix needed):**
+- bpi, jerry, link, opi_pc, rpi3 jobs all failed due to lab hardware connectivity issues (serial port timeouts, RFC2217 connection failures to `kea:None`). These are transient infrastructure problems, not code issues.
+
+**Local branch created:** `cherry-e88024b34b5-fix2`
+
+---
+
