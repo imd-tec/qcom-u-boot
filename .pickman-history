@@ -36270,3 +36270,87 @@ The pipeline retry was the appropriate fix for this transient hardware issue. Wa
 
 ---
 
+### Pipeline fix: 2026-03-04 (attempt 2)
+
+Branch: cherry-e16646c0ade
+
+Failed jobs:
+- tk1 (sjg-lab)
+
+### Conversation log
+Looking at the job log, I can see this is another infrastructure/transient failure, not a code issue. Let me analyze:
+
+**Key error from the log:**
+```
+USB resource not available; retrying reset with longer delays
+labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader(target=Target(name='tk1', env=Environment(config_file='/vid/software/devel/ubtest/lab/cfg/kea_env.cfg'), var_dict=None), name='TegraUSBLoader', state=<BindingState.bound: 1>, avail=False, host='kea', timeout=10.0, busnum=None, devnum=None, path=None, vendor_id=None, model_id=None)}
+This may be caused by disconnected exporter or wrong match entries.
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is clearly a **hardware lab infrastructure failure**:
+1. The `TegraUSBLoader` resource is not available (`avail=False`)
+2. The error message explicitly says "This may be caused by disconnected exporter or wrong match entries"
+3. The lab framework marked the connection as bad before any tests could run
+4. This is the `tk1` (Jetson TK1) board which requires USB boot loading
+
+Let me verify that none of the commits in this branch affect the tk1 board or labgrid infrastructure:
+
+The files changed on this branch are:
+- `.mailmap`, `MAINTAINERS`, various `board/*/MAINTAINERS` - metadata only
+- `cmd/bootefi.c`, `doc/usage/cmd/bootefi.rst` - EFI command (runs after full U-Boot boots)
+- `doc/board/emulation/qemu-riscv.rst`, `doc/develop/spl.rst` - documentation
+- `tools/mkeficapsule.c` - host tool
+- `.pickman-history` - pickman tracking
+
+Let me check if any of these files affect tk1:
+
+None of the changes affect tk1/tegra/jetson. This is clearly an **infrastructure failure**:
+
+**Analysis of the tk1 job failure:**
+
+1. **Error Type**: Hardware lab infrastructure failure
+   - The `TegraUSBLoader` resource is unavailable (`avail=False`)
+   - Error message: "This may be caused by disconnected exporter or wrong match entries"
+   - The labgrid framework couldn't connect to the physical tk1 (Jetson TK1) board
+
+2. **What happened**:
+   - The test framework tried to reset the board via USB boot loading
+   - The USB resource was not available (likely disconnected or USB hub issue)
+   - The lab marked the connection as bad: "Lab failure: Marking connection bad - no other tests will run"
+   - No actual tests ran (0 tests executed, 1 deselected)
+
+3. **None of the cherry-picked commits affect**:
+   - Tegra/TK1/Jetson board code
+   - USB boot loading infrastructure
+   - SPL or early boot code
+   - Any tk1-specific configuration
+
+4. **The commits only modify**:
+   - `tools/mkeficapsule.c` - host tool resource leak fix
+   - `cmd/bootefi.c` - EFI command (runs after full U-Boot boots, not during SPL/USB boot)
+   - Documentation files
+   - MAINTAINERS/metadata
+
+**Conclusion**: This is an **infrastructure/transient failure** caused by hardware connectivity issues with the Jetson TK1 board in the lab (USB loader not available). This is NOT a code issue - the appropriate fix is to retry the pipeline.
+
+---
+
+**Summary Report:**
+
+**Failed Job**: `tk1` (sjg-lab stage)
+
+**Root Cause**: Infrastructure/transient failure - The Jetson TK1 board's USB boot loader resource was unavailable in the hardware lab. The labgrid test framework reported "Not all resources are available" with `TegraUSBLoader` showing `avail=False`. This indicates a physical connectivity issue (disconnected USB, USB hub problem, or exporter issue), not a code problem.
+
+**Evidence**:
+- Error: "USB resource not available; retrying reset with longer delays"
+- Error: "labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader... avail=False}"
+- No tests actually ran - the framework exited immediately due to resource unavailability
+- None of the commits in this MR touch Tegra/TK1/USB boot code
+
+**Recommendation**: Retry the pipeline. No code changes are required.
+
+**No code changes made** - this is an infrastructure issue, not a code bug.
+
+---
+
