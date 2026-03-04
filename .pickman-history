@@ -36096,3 +36096,93 @@ All 6 commits are present. Run the final build test:
 
 ---
 
+### Pipeline fix: 2026-03-04 (attempt 1)
+
+Branch: cherry-e16646c0ade
+
+Failed jobs:
+- rockpro64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. Looking at the job log, the key error is:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+mmc_load_image_raw_sector: mmc block read error
+Error: -38
+...
+SPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+This is an SPL boot failure on the rockpro64 board. The error `-5` is `EIO` and `-38` is `ENOSYS`. The key message is `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)`.
+
+Let me look at the commits on this branch and see what might have caused this:
+
+Now let me look at what commit 167a0a2af3d "efi_loader: Support loading a ramdisk with bootefi" actually changes - this is the most likely culprit since it touches the EFI loader:
+
+This commit changes the bootefi command to support loading a ramdisk. Let me also look at the error more carefully. The error `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` is an SPL error - it happens very early in the boot before EFI.
+
+Let me check if there's anything in the commits that would affect SPL loading:
+
+None of these files should affect SPL loading on rockpro64. The SPL failure happens before U-Boot proper even loads - it's a hardware test failure.
+
+Let me look at the error message more carefully. The key is:
+- `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` - this is EIO (-5)
+- The board goes into an infinite loop "### ERROR ### Please RESET the board ###"
+
+This is a **hardware lab test failure**, not a code issue. The error `-5` (EIO) and `-38` (ENOSYS) indicate I/O errors reading from the MMC device, which are typically hardware issues (bad connection, corrupted media, etc.).
+
+Looking at the log more carefully:
+1. TPL runs successfully - "Returning to boot ROM..."
+2. SPL starts and begins to boot from MMC2
+3. It loads the FIT configuration and ATF image successfully
+4. It fails on `loadables index 0` with EIO
+
+This is a hardware/infrastructure issue on the lab runner, not a bug in the cherry-picked code. Let me verify that none of the commits touch SPL or MMC code:
+
+That's just a documentation typo fix - it doesn't affect any actual code.
+
+This is clearly an **infrastructure/transient issue**:
+1. The error is I/O related (EIO = -5, ENOSYS = -38)
+2. The failure happens in SPL trying to read from MMC 
+3. None of the cherry-picked commits modify SPL, MMC drivers, or anything related to rockpro64 boot
+4. The commits are:
+   - `mkeficapsule` tool fix (resource leak)
+   - QEMU-RISCV documentation
+   - `bootefi` command enhancement (user-space command, not SPL)
+   - SPL documentation typo fix
+   - MAINTAINERS email update
+   - Empty merge commit
+
+Let me also confirm the rockpro64 config doesn't get touched:
+
+No rockpro64-specific changes either.
+
+## Summary
+
+**This is an infrastructure/transient failure, not a code issue.**
+
+The failure is in the sjg-lab hardware test runner:
+- The rockpro64 board's SPL fails to read from MMC during boot with I/O errors
+- Error `-5` (EIO) indicates a hardware I/O failure
+- Error `-38` (ENOSYS) indicates the operation is not supported (fallback failure)
+- The `labgrid` test framework times out waiting for the U-Boot prompt
+
+**None of the cherry-picked commits affect:**
+- SPL code
+- MMC drivers  
+- rockpro64 board configuration
+- Boot sequence
+
+The commits only touch:
+1. `tools/mkeficapsule.c` - host tool, not target firmware
+2. `doc/board/emulation/qemu-riscv.rst` - documentation only
+3. `cmd/bootefi.c` and `doc/usage/cmd/bootefi.rst` - EFI command (runs after full U-Boot boots)
+4. `doc/develop/spl.rst` - documentation typo fix only
+5. `MAINTAINERS` and `.mailmap` - metadata only
+6. Empty merge commit
+
+**Recommendation:** Retry the pipeline. If it continues to fail, the physical rockpro64 board or its SD card/eMMC may need maintenance.
+
+---
+
