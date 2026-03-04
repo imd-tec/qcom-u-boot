@@ -35066,6 +35066,580 @@ All done. Here is the final status summary:
 - The final merge commit (488ae65f393) was applied as an empty commit because all its changes were already cherry-picked in the previous 13 commits. This is expected behavior and preserves the merge history.
 
 The branch `cherry-aaf4c261879` is now ready for pushing.
+Branch: cherry-42ef9a0b7f2
+
+Commits:
+- 42ef9a0b7f2 mtd: nand: pxa3xx: Free memory on error
+- 4003ed1c1ec mtd: rawnand: stm32_fmc2: Ensure to return error code
+- 56372f834c7 mtd: nand: sunxi: Free allocated memory on errors
+- ebf8aaf7afd mtd: rawnand: cortina_nand: Fix -ENOMEM detection
+- 2756de5213a mtd: rawnand: denali: Remove always true test
+- 27242462167 mtd: rawnand: mxs_nand: Ensure err is set for error path
+- 2412f00fc95 mtd: nand: raw: Remove unused lpc32xx_nand_slc driver
+- cb34f23bdb6 mtd: nand: raw: Remove unused mxic_nand driver
+- 8877bbe67a9 mtd: nand: raw: Remove unused octeontx_nand driver
+- 851c3f28d00 Merge branch 'u-boot-nand-03082025' of https://source.denx.de/u-boot/custodians/u-boot-nand-flash
+
+### Conversation log
+The repository state is clean (no staged or modified files, just an untracked file which is fine). Let me proceed with creating the new branch from ci/master.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Cherry-pick succeeded. Let me check the delta and then build:
+
+Delta matches (1 file, 1 insertion). Now run the build test:
+
+Build passed. Now the second commit:
+
+Delta matches. Build test:
+
+Build passed. Third commit:
+
+Delta matches. Build test:
+
+Build passed. Fourth commit:
+
+Delta matches. Build test:
+
+Build passed. Fifth commit:
+
+Delta matches. Build test:
+
+Build passed. Sixth commit:
+
+Delta matches. Build test:
+
+Build passed. Seventh commit:
+
+Delta matches. Build test:
+
+Build passed. Eighth commit:
+
+Delta matches. Build test:
+
+Build passed. Ninth commit:
+
+Delta matches. Build test:
+
+Build passed. Now the last commit which is a merge commit:
+
+The merge commit is empty as expected since all changes were already cherry-picked. Let me commit it with --allow-empty as instructed:
+
+The merge commit is empty as expected since all changes were applied in the individual commits. Build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 10 commits are present. Now final build verification:
+
+## Final Status
+
+### Cherry-Pick Complete ✅
+
+All 10 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-42ef9a0b7f2`:
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 42ef9a0b7f2 | cb62bec7653 | mtd: nand: pxa3xx: Free memory on error |
+| 2 | 4003ed1c1ec | 5a5458ea8e4 | mtd: rawnand: stm32_fmc2: Ensure to return error code |
+| 3 | 56372f834c7 | 948e5d6de40 | mtd: nand: sunxi: Free allocated memory on errors |
+| 4 | ebf8aaf7afd | 0811739c1c2 | mtd: rawnand: cortina_nand: Fix -ENOMEM detection |
+| 5 | 2756de5213a | 14eba0fc01c | mtd: rawnand: denali: Remove always true test |
+| 6 | 27242462167 | 335e00d99a7 | mtd: rawnand: mxs_nand: Ensure err is set for error path |
+| 7 | 2412f00fc95 | 2affbcd4a17 | mtd: nand: raw: Remove unused lpc32xx_nand_slc driver |
+| 8 | cb34f23bdb6 | 80158e71e01 | mtd: nand: raw: Remove unused mxic_nand driver |
+| 9 | 8877bbe67a9 | 8a61d886f68 | mtd: nand: raw: Remove unused octeontx_nand driver |
+| 10 | 851c3f28d00 | 3b84941f5b3 | Merge branch 'u-boot-nand-03082025' (empty - preserved for history) |
+
+### Build Result: **OK** ✅
+- No warnings or errors
+
+### Fix-ups Made: **None**
+- All commits applied cleanly
+
+### Delta Concerns: **None**
+- All commits matched their original deltas exactly
+- The merge commit (851c3f28d00) resulted in an empty commit as expected (all changes were already applied in individual commits 1-9)
+
+### Branch Status
+- Branch `cherry-42ef9a0b7f2` is ready for pushing
+- It is 10 commits ahead of `ci/master`
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 1)
+
+Branch: cherry-42ef9a0b7f2
+
+Failed jobs:
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Looking at the job log, I can see this is a **transient infrastructure/lab failure**, not a code issue. Let me analyze the key details:
+
+```
+2026-03-04T12:52:43.277666Z 01O test/py/tests/test_sleep.py => sleep 3
+2026-03-04T12:53:14.150554Z 01O Lab failure: Timeout executing 'sleep 3
+2026-03-04T12:53:14.150585Z 01O ': Marking connection bad - no other tests will run
+```
+
+The test `test_sleep.py` ran a `sleep 3` command on the board, but it timed out after ~31 seconds (from 12:52:43 to 12:53:14). This is clearly a **hardware lab timeout** - the board stopped responding during a simple sleep test. The test itself is unrelated to any of the MTD/NAND changes in the cherry-picked commits.
+
+Let me verify by checking the commits in this MR:
+
+Now let me confirm none of these commits touch anything related to `test_sleep.py` or the pcduino3_nano board:
+
+The failure is **100% confirmed as a transient infrastructure issue**:
+
+1. **The failure is a lab hardware timeout**: The test `test_sleep.py` simply runs `sleep 3` on the board, but the board stopped responding (timed out after ~31 seconds). The message "Marking connection bad - no other tests will run" indicates the lab hardware became unreachable.
+
+2. **None of the cherry-picked commits touch test code or pcduino3_nano**: All commits are in `drivers/mtd/nand/raw/` directory and deal with MTD/NAND flash driver fixes. They don't touch:
+   - `test_sleep.py` (last modified in unrelated commits)
+   - Any pcduino3_nano board configuration
+   - Any timing-related code
+
+3. **The test itself passed 37 tests before failing**: The log shows `37 passed, 523 skipped, 1 deselected in 96.03s` - this was a late-stage timeout failure in the test suite, not a build or functional regression.
+
+## Summary
+
+**This is a transient infrastructure/lab failure, not a code issue.**
+
+- **Root cause**: Hardware lab timeout - the pcduino3_nano board stopped responding during `test_sleep.py` when executing a simple `sleep 3` command
+- **Evidence**: "Lab failure: Timeout executing 'sleep 3': Marking connection bad - no other tests will run"
+- **Relationship to MR changes**: None - the MTD/NAND driver changes have no impact on the sleep command or board connectivity
+- **Action required**: No code changes needed. The pipeline should be **retried** to get a fresh run on the lab hardware.
+
+No fix branch has been created since no code changes are warranted.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-42ef9a0b7f2
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) pcduino3_nano.
+
+Looking at the job log, I can see this...
+
+### Conversation log
+Now I need to understand the review comment. Looking at it, the comment is from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` about "Pipeline fix (attempt 1): fixed failed job(s) pcduino3_nano."
+
+The comment text shows my previous analysis that this was a **transient infrastructure/lab failure** - the pcduino3_nano board timed out during `test_sleep.py` which has nothing to do with the MTD/NAND driver changes in this MR.
+
+This is not an actionable code review comment - it's a record of the pipeline fix attempt which concluded that no code changes are needed. The proper response is to acknowledge that this was identified as a transient infrastructure issue and that retrying the pipeline is the correct action.
+
+Let me verify the current state and check if there's anything to do:
+
+I see the branch is already ahead with the pickman record commits. Looking at the review comment more carefully:
+
+The review comment is essentially documenting the infrastructure failure analysis. This is **not an actionable code review comment** - it's a bot comment that recorded the pipeline fix analysis. The analysis concluded that:
+
+1. The failure was a transient lab hardware timeout
+2. No code changes are needed
+3. The pipeline should be retried
+
+Since there are no code changes required, the proper response is to:
+1. Confirm that this was identified as infrastructure issue
+2. Note that a pipeline retry was requested/needed
+
+Let me verify the build still passes:
+
+Build passes. 
+
+## Summary
+
+After reviewing the comment, I can see that:
+
+1. **The comment is NOT an actionable code review** - it's a bot-generated record of a pipeline fix attempt
+2. **The content of the comment** is the analysis I performed previously, which concluded the failure was a **transient infrastructure/lab issue** (pcduino3_nano board timing out during `test_sleep.py`)
+3. **No code changes are needed** - the MTD/NAND driver changes are completely unrelated to the board timeout
+4. **The correct action** is to retry the pipeline
+
+Since there are no code changes to make:
+- No new branch version (-v2) is needed
+- No force push is needed
+- The pipeline should simply be retried
+
+## Report
+
+**Review Comment Analysis:**
+
+| Comment | Author | Action |
+|---------|--------|--------|
+| "Pipeline fix (attempt 1): fixed failed job(s) pcduino3_nano" | project_1_bot | No code changes needed |
+
+**What was done:**
+- Verified the branch is at the expected state
+- Confirmed the build still passes
+- Analyzed the review comment
+
+**Finding:**
+The review comment is a record of the previous pipeline fix attempt, which correctly identified the failure as a **transient infrastructure issue** (lab hardware timeout on pcduino3_nano during `test_sleep.py`). The MTD/NAND driver changes in this MR are completely unrelated to board timeouts.
+
+**Action Required:**
+- **No code changes needed** - this is an infrastructure issue, not a code problem
+- **Retry the pipeline** to get a fresh run on working lab hardware
+
+**Suggested Reply to MR:**
+
+> This was correctly identified as a transient infrastructure/lab failure. The pcduino3_nano board timed out during `test_sleep.py` (a simple `sleep 3` command), which is unrelated to the MTD/NAND driver changes in this MR. Retrying the pipeline to get a fresh test run.
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 2)
+
+Branch: cherry-42ef9a0b7f2
+
+Failed jobs:
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Now let me analyze the job log. Looking at the failure:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is again a **transient infrastructure/lab failure**. The board failed to reach the U-Boot prompt within 15 seconds during the initial setup phase. Key observations:
+
+1. The failure occurred during `_await_prompt()` in `ubootdriver.py` - this is the labgrid infrastructure trying to connect to the board
+2. The error says "Timeout of 15 seconds exceeded during waiting for login" - the board didn't boot to U-Boot prompt
+3. "Lab failure: Marking connection bad - no other tests will run" - the lab infrastructure flagged the connection as bad
+
+Let me verify this is not related to the MR changes by checking what the commits modify:
+
+This confirms the pcduino3_nano board doesn't even use NAND/MTD features. The failure is 100% an infrastructure issue:
+
+**Analysis of the failure:**
+
+1. **Failure point**: The test framework (labgrid) couldn't get the board to boot to a U-Boot prompt within 15 seconds
+2. **Error message**: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+3. **Result**: `Lab failure: Marking connection bad - no other tests will run`
+4. **Stage**: This happened at the very beginning - during `test_000_version.py` bootstrap, before any actual tests ran
+5. **MR changes**: All changes are to `drivers/mtd/nand/raw/` - the pcduino3_nano board doesn't even have NAND/MTD configured
+
+**This is clearly a transient infrastructure/lab failure:**
+- The board hardware failed to boot or respond
+- No tests were run (only 1 deselected, 0 passed/failed)
+- The changes in this MR have zero relation to board boot or connectivity
+- This is a hardware lab timeout, not a code issue
+
+**Comparison to attempt 1:**
+- Attempt 1: Board timed out during `test_sleep.py` after 37 tests passed
+- Attempt 2: Board timed out during initial bootstrap, 0 tests ran
+
+Both are lab hardware issues - the board is either flaky or the lab infrastructure is having problems.
+
+Since this is a transient infrastructure issue, no code changes are needed. I'll report this finding:
+
+## Summary
+
+**This is a transient infrastructure/lab failure, not a code issue.**
+
+### Root Cause Analysis
+- **Failure type**: Lab hardware timeout - the pcduino3_nano board failed to boot to U-Boot prompt
+- **Error**: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- **Stage**: Initial test bootstrap (before any tests ran)
+- **Tests completed**: 0 passed, 0 failed, 1 deselected (complete failure to connect)
+
+### Why This Is Not a Code Issue
+1. **The pcduino3_nano board doesn't use NAND/MTD**: The board's defconfig has no NAND or MTD configuration
+2. **All MR changes are in `drivers/mtd/nand/raw/`**: These drivers are not compiled or used by this board
+3. **The failure is at the hardware connection level**: The labgrid test framework couldn't even establish communication with the board
+4. **No tests actually ran**: The failure occurred during the initial board bootstrap, not during any test execution
+
+### Comparison to Previous Attempt
+| Aspect | Attempt 1 | Attempt 2 |
+|--------|-----------|-----------|
+| Failure point | During `test_sleep.py` | During initial bootstrap |
+| Tests passed | 37 | 0 |
+| Error type | Board timeout mid-test | Board boot timeout |
+| Root cause | Hardware connectivity lost | Hardware failed to boot |
+
+Both attempts show the same underlying issue: the pcduino3_nano lab hardware is experiencing connectivity/reliability problems.
+
+### Action Required
+- **No code changes needed** - this is an infrastructure issue
+- **Pipeline should be retried** with a fresh run on the lab hardware
+- If failures persist, the lab hardware may need investigation
+
+**No fix branch created** since no code changes are warranted.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-42ef9a0b7f2
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) pcduino3_nano.
+
+Now let me analyze the job log. Lookin...
+
+### Conversation log
+Now let me analyze the review comment. Looking at the task context, the review comment is:
+
+> [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) pcduino3_nano.
+
+This is followed by the analysis text showing:
+- `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- Lab hardware timeout, board failed to boot to U-Boot prompt
+- The MR changes are all in `drivers/mtd/nand/raw/` and the pcduino3_nano board doesn't use NAND/MTD
+
+This is **NOT an actionable code review comment** - it's a bot-generated record of a pipeline fix attempt for a transient infrastructure failure. The analysis already concluded that:
+
+1. This is a lab hardware issue (board boot timeout)
+2. No tests ran (0 passed, 0 failed)
+3. The MTD/NAND changes have zero relationship to board connectivity
+4. No code changes are needed
+5. The pipeline should be retried
+
+Since there are no code changes to make, let me verify the current build passes and report the findings:
+
+Build passes. Now let me verify what the actual status is:
+
+## Summary Report
+
+**Review Comment Analysis:**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` about "Pipeline fix (attempt 2): fixed failed job(s) pcduino3_nano" is **NOT an actionable code review comment**. It is a bot-generated record documenting a pipeline fix attempt for a transient infrastructure failure.
+
+**What the comment documents:**
+- Pipeline attempt 2 failed on `pcduino3_nano` job
+- Error: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- Root cause: Lab hardware timeout - the board failed to boot to U-Boot prompt
+- No tests ran (0 passed, 0 failed, 1 deselected)
+- The MTD/NAND driver changes in this MR have no relationship to board boot/connectivity
+
+**Why no code changes are needed:**
+1. All MR commits are in `drivers/mtd/nand/raw/` - NAND flash driver fixes
+2. The pcduino3_nano board doesn't use NAND/MTD features
+3. The failure is at the hardware connection level (labgrid infrastructure)
+4. This is the second consecutive infrastructure timeout on the same board
+
+**What was done:**
+- Verified branch checkout: `cherry-42ef9a0b7f2`
+- Verified build passes: `buildman -L --board sandbox -w -o /tmp/pickman` ✅
+- Analyzed the review comment
+
+**Action Required:**
+- **No code changes needed** - this is a transient infrastructure issue
+- **No new branch version (-v2) needed**
+- **No force push needed**
+- **Pipeline should be retried** to get a fresh run on working lab hardware
+
+**Suggested Reply to MR:**
+
+> This is confirmed as a transient infrastructure/lab failure for the second time. The pcduino3_nano board timed out during initial bootstrap (before any tests ran) with error "Timeout of 15 seconds exceeded during waiting for login". The MTD/NAND driver changes in this MR are completely unrelated to board boot or connectivity - the pcduino3_nano board doesn't even use NAND/MTD features. No code changes are warranted. Retrying the pipeline.
+
+---
+
+### Pipeline fix: 2026-03-04 (attempt 3)
+
+Branch: cherry-42ef9a0b7f2
+
+Failed jobs:
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Now let me analyze the job log. The failure is:
+
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+This is the third consecutive transient infrastructure/lab failure on the `pcduino3_nano` board. Let me verify that this is indeed an infrastructure issue and not related to the MR changes:
+
+The pcduino3_nano board doesn't use NAND/MTD - it has no MTD or NAND configuration. The failure is clearly a lab infrastructure issue.
+
+Let me verify the build still passes:
+
+There's a build error! But this looks like a local environment issue with dtc. Let me check if this is a pre-existing issue:
+
+The build passes with buildman. The `um build` issue is a local environment problem, not related to the MR. Let me verify the actual pcduino3_nano board builds too:
+
+Both boards build successfully. The pipeline failure is confirmed as a transient infrastructure issue.
+
+## Summary
+
+**This is a transient infrastructure/lab failure, not a code issue.**
+
+### Analysis of Attempt 3 Failure
+
+The job log shows:
+```
+pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login
+Lab failure: Marking connection bad - no other tests will run
+```
+
+**Root Cause**: Lab hardware timeout - the pcduino3_nano board failed to boot to U-Boot prompt during test framework initialization
+
+**Evidence**:
+1. The failure occurred in labgrid's `_await_prompt()` function before any tests ran
+2. Error: "Timeout of 15 seconds exceeded during waiting for login"  
+3. Result: "Lab failure: Marking connection bad - no other tests will run"
+4. Only 1 test deselected, 0 tests passed/failed - complete failure to connect
+
+**Why This Is Not a Code Issue**:
+1. All MR commits modify files in `drivers/mtd/nand/raw/` - NAND flash driver fixes
+2. The pcduino3_nano board has **no NAND/MTD configuration** (verified by checking its defconfig)
+3. Both boards (sandbox and Linksprite_pcDuino3_Nano) build successfully ✅
+4. The failure is at the hardware connection level (labgrid test infrastructure)
+5. This is the **third consecutive** infrastructure timeout on this board
+
+**Comparison Across Attempts**:
+| Attempt | Failure Point | Tests Ran | Error Type |
+|---------|---------------|-----------|------------|
+| 1 | During `test_sleep.py` | 37 passed | Board stopped responding mid-test |
+| 2 | During initial bootstrap | 0 | Board boot timeout |
+| 3 | During initial bootstrap | 0 | Board boot timeout |
+
+**No Code Changes Needed** - The pipeline should be retried, and if failures persist, the lab hardware may need investigation.
+
+**No fix branch created** since no code changes are warranted.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-42ef9a0b7f2
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 3): fixed failed job(s) pcduino3_nano.
+
+Now let me analyze the job log. The fa...
+
+### Conversation log
+Now let me analyze the review comment. Looking at the task context, this is the **third consecutive** pipeline failure on `pcduino3_nano` due to transient infrastructure/lab issues. The review comment is:
+
+> [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 3): fixed failed job(s) pcduino3_nano.
+
+This is a **bot-generated record** of a pipeline fix attempt, not an actionable code review comment. The comment documents the same transient infrastructure failure pattern we've seen three times:
+
+1. **Attempt 1**: Board timed out during `test_sleep.py` after 37 tests passed
+2. **Attempt 2**: Board timed out during initial bootstrap, 0 tests ran  
+3. **Attempt 3**: Board timed out during initial bootstrap, 0 tests ran
+
+All three failures are lab hardware timeouts - the pcduino3_nano board failed to respond. The MR contains MTD/NAND driver changes that have **no relationship** to board boot or connectivity, and the pcduino3_nano board doesn't even use NAND/MTD features.
+
+Let me verify the build still passes:
+
+Build passes. Let me also verify what the actual code changes are and confirm this is truly an infrastructure issue:
+
+All the changes are in `drivers/mtd/nand/raw/` - NAND flash driver fixes and removals. The pcduino3_nano board doesn't use any NAND/MTD functionality.
+
+## Summary Report
+
+**Review Comment Analysis:**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` about "Pipeline fix (attempt 3): fixed failed job(s) pcduino3_nano" is **NOT an actionable code review comment**. It is a bot-generated record documenting the third consecutive transient infrastructure failure on the pcduino3_nano board.
+
+**Pattern of Failures:**
+| Attempt | Failure Point | Tests Ran | Error Type |
+|---------|---------------|-----------|------------|
+| 1 | During `test_sleep.py` | 37 passed | Board stopped responding mid-test |
+| 2 | During initial bootstrap | 0 | Board boot timeout |
+| 3 | During initial bootstrap | 0 | Board boot timeout |
+
+**Why No Code Changes Are Needed:**
+1. All MR commits modify files in `drivers/mtd/nand/raw/` - NAND flash driver fixes
+2. The pcduino3_nano board has **no NAND/MTD configuration**
+3. The failure is at the hardware connection level (labgrid test infrastructure timeout)
+4. The build passes successfully ✅
+5. This is the **third consecutive** infrastructure timeout on the same board
+
+**What Was Done:**
+- Verified branch checkout: `cherry-42ef9a0b7f2`
+- Verified build passes: `buildman -L --board sandbox -w -o /tmp/pickman` ✅
+- Analyzed the review comment - confirmed it's a bot record, not an actionable code review
+
+**Action Required:**
+- **No code changes needed** - this is a transient infrastructure issue
+- **No new branch version (-v2) needed**
+- **No force push needed**
+- **Pipeline should be retried** to get a fresh run on working lab hardware
+- If failures persist after multiple retries, the lab hardware (pcduino3_nano) may need investigation or the job may need to be temporarily disabled
+
+**Suggested Reply to MR:**
+
+> This is the third consecutive transient infrastructure/lab failure on the pcduino3_nano board. The error "Timeout of 15 seconds exceeded during waiting for login" indicates the board failed to boot to the U-Boot prompt during test framework initialization. 
+>
+> The MTD/NAND driver changes in this MR are completely unrelated to board boot or connectivity - all changes are in `drivers/mtd/nand/raw/` and the pcduino3_nano board doesn't even use NAND/MTD features.
+>
+> No code changes are warranted. Given the persistent lab hardware issues, this job may need to be skipped or the hardware needs investigation. Retrying the pipeline one more time.
+
+---
+
+### Review: 2026-03-04
+
+Branch: cherry-42ef9a0b7f2
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix: reached retry limit (3 attempts). Manual intervention required....
+
+### Conversation log
+Now let me understand the review comment. The comment is:
+
+> [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix: reached retry limit (3 attempts). Manual intervention required.
+
+This is a bot notification indicating that the pipeline has failed 3 times on the `pcduino3_nano` job and has reached the retry limit. Based on the conversation log, all three failures were **transient infrastructure/lab failures** - the pcduino3_nano board failed to boot or respond during testing.
+
+Let me verify the build passes and assess what action is needed:
+
+Build passes. Let me also verify what files are changed in this MR to confirm it's unrelated to the pcduino3_nano failures:
+
+All changes are in `drivers/mtd/nand/raw/` - NAND flash driver files. The pcduino3_nano board is completely unrelated to these changes.
+
+Let me check if there's a pcduino3_nano defconfig to confirm it doesn't use NAND:
+
+Confirmed - the pcduino3_nano board has no NAND/MTD configuration.
+
+## Summary Report
+
+**Review Comment Analysis:**
+
+The review comment `"Pipeline fix: reached retry limit (3 attempts). Manual intervention required."` is a **bot notification** indicating that the pipeline has exhausted its automatic retry attempts for the `pcduino3_nano` job.
+
+**History of Failures (from conversation log):**
+| Attempt | Failure | Root Cause |
+|---------|---------|------------|
+| 1 | `test_sleep.py` timeout | Board stopped responding after 37 tests |
+| 2 | Boot timeout | Board failed to reach U-Boot prompt (0 tests ran) |
+| 3 | Boot timeout | Board failed to reach U-Boot prompt (0 tests ran) |
+
+**Why This Is Not a Code Issue:**
+1. All MR changes are in `drivers/mtd/nand/raw/` - NAND flash driver fixes
+2. The pcduino3_nano board has **no NAND/MTD configuration** (verified)
+3. All failures are lab hardware timeouts (labgrid infrastructure unable to connect to board)
+4. Build passes successfully ✅
+5. The failures occurred at different stages (mid-test, then boot), showing flaky hardware
+
+**Action Required:**
+This is an **infrastructure issue requiring manual intervention** from the pipeline/lab maintainers. The code is correct and no changes are needed. Options include:
+1. Skip the `pcduino3_nano` job for this MR (if permitted)
+2. Investigate the lab hardware
+3. Wait for lab maintenance and retry later
+
+**No code changes needed** - there is nothing to fix in the code. The review comment is a notification about infrastructure limitations, not a code review request.
+
+**Suggested Reply to MR:**
+
+> The pipeline has reached the retry limit (3 attempts) for the `pcduino3_nano` job. All three failures were transient infrastructure/lab issues:
+> 
+> - **Attempt 1**: Board timed out during `test_sleep.py` after 37 tests passed
+> - **Attempt 2**: Board boot timeout during initial bootstrap (0 tests ran)
+> - **Attempt 3**: Board boot timeout during initial bootstrap (0 tests ran)
+> 
+> This MR contains MTD/NAND driver changes (`drivers/mtd/nand/raw/`) which are completely unrelated to the pcduino3_nano board - that board doesn't even have NAND/MTD configured. The build passes successfully.
+> 
+> **Manual intervention required**: The lab hardware for pcduino3_nano appears to be experiencing connectivity issues. Options:
+> 1. Skip the `pcduino3_nano` job for this MR if the lab is known to be unstable
+> 2. Investigate the lab hardware
+> 3. Retry the pipeline after lab maintenance
+> 
+> No code changes are warranted - this is purely an infrastructure issue.
 
 ---
 
