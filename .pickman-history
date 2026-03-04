@@ -34615,3 +34615,71 @@ The branch `cherry-e88024b34b5` is ready for pushing.
 
 ---
 
+### Review: 2026-03-03
+
+Branch: cherry-e88024b34b5
+
+Comments addressed:
+
+
+### Conversation log
+I can see that ci/master has advanced with some new commits (dts v6.16 changes). Let me check what the current base is and perform the rebase:
+
+There are 6 new commits in ci/master. Now let me save the current commit stats before rebase to compare deltas later:
+
+Let me record the stats of each commit before rebasing so we can compare:
+
+Good. Now let me perform the rebase:
+
+Rebase completed successfully! Now let me verify the commits and deltas:
+
+Now let me verify the deltas of each rebased commit:
+
+All deltas match exactly with the pre-rebase stats. Now let me run the build test:
+
+Build passed. Now let me create the local branch with -v2 suffix:
+
+Now let me force push to the remote branch:
+
+## Summary: Rebase Completed Successfully ✅
+
+### What was done:
+
+1. **Rebased** branch `cherry-e88024b34b5` onto latest `ci/master`
+   - 6 new commits from ci/master were incorporated (dts v6.16 changes)
+   - All 16 commits rebased successfully without conflicts
+
+2. **Verified deltas** - All commit deltas match exactly before and after rebase:
+   | # | Subject | Delta |
+   |---|---------|-------|
+   | 1 | arch: arm: dts: agilex5: Set spi-max-freq to 50Mhz | 1 file, +2 |
+   | 2 | arch: arm: socfpga: Fix header file includes | 1 file, +4/-3 |
+   | 3 | arch: arm: socfpga: Include BSD-3-Clause as license identifier | 2 files, +3/-3 |
+   | 4 | arm: socfpga: Remove unnecessary for loop | 1 file, +6/-19 |
+   | 5 | arm: socfpga: n5x: Remove invalid configuration for N5X | 1 file, -1 |
+   | 6 | clk: n5x: Fix misplaced paren | 1 file, +2/-2 |
+   | 7 | ddr: altera: n5x: size_t cannot be less than 0 | 1 file, +4/-4 |
+   | 8 | dts: agilex5: Enabled nand boot in SPL | 1 file, +1/-1 |
+   | 9 | socfpga_dtreg: Ensure reg is initialised before use | 1 file, +2/-3 |
+   | 10 | arm: socfpga: agilex5: Coverity issue cleanup | 1 file, +1/-1 |
+   | 11 | arm: socfpga: agilex5: Sub-device check enabled | 1 file, +32 |
+   | 12 | arch: arm: agilex5: Enable power manager | 9 files, +176 |
+   | 13 | configs: socfpga: soc64: agilex5: Enable NAND boot | 1 file, +23/-1 |
+   | 14 | socfpga_agilex5: config: Relocate malloc and bss | 1 file, +2/-2 |
+   | 15 | Merge tag 'u-boot-socfpga-next-20250731' | (empty) |
+   | 16 | pickman: Record cherry-pick | 1 file, +138 |
+
+3. **Build test passed** ✅
+
+4. **Created local backup branch** `cherry-e88024b34b5-v2`
+
+5. **Force pushed** to remote branch `cherry-e88024b34b5`
+
+### Reply to post on MR:
+
+```
+Rebased onto latest ci/master (95b88afa93e). All 16 commits rebased without conflicts, deltas verified unchanged, build passes.
+```
+
+---
+
