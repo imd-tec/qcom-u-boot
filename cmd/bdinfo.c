@@ -27,6 +27,7 @@ DECLARE_GLOBAL_DATA_PTR;
 static void print_eth(void)
 {
 	const int idx = eth_get_dev_index();
+	char ipstr[] = "ipaddr\0\0";
 	uchar enetaddr[6];
 	char name[10];
 	int ret;
@@ -43,7 +44,11 @@ static void print_eth(void)
 		printf("%-12s= (not set)\n", name);
 	else
 		printf("%-12s= %pM\n", name, enetaddr);
-	printf("IP addr     = %s\n", env_get("ipaddr"));
+
+	if (idx > 0)
+		sprintf(ipstr, "ipaddr%d", idx);
+
+	printf("IP addr     = %s\n", env_get(ipstr));
 }
 
 void lprint_mhz(const char *name, unsigned long hz)
