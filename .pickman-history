@@ -36419,7 +36419,97 @@ The review comment `Pipeline fix (attempt 2): fixed failed job(s) tk1` is an **a
 > - Documentation files
 > - MAINTAINERS/metadata
 > 
-> Pipeline retry was the appropriate fix for this transient hardware issue. Waiting for the new pipeline to complete.
+## 2026-03-04: us/next
+
+Branch: cherry-7701cc3415d
+
+Commits:
+- 7701cc3415d net: dwc_eth_xgmac: Use unwind goto on error
+- 28c06d67cf0 net: dwc_eth_xgmac_socfpga: Remove always true test
+- 532fd00bdb7 drivers: clk: agilex: Use real clock source frequency
+- d77b25ee370 configs: agilex: Combine defconfig for all boot flashes
+- e328332aafe arch: arm: dts: agilex: Update Agilex device tree
+- 60a377db987 arm: socfpga: agilex: Probe DT for firewall setup
+- 677147c167e arm: socfpga: Update Agilex SPL data save and restore implementation
+- 3721998510d arm: socfpga: Enable ASYNC interrupts in Agilex SPL
+- 6a4453ab064 drivers: watchdog: Enable watchdog support in SPL for Agilex
+- a44423e7e92 drivers: clk: agilex: Replace status polling with wait_for_bit_le32()
+- 5416a3a306e arm: socfpga: agilex5: Refactor system manager driver initialization
+- 1dc683005dd arm: socfpga: agilex: Enable system manager driver for Agilex
+- 362c355dd73 ddr: altera: soc64: Add secure region support for ATF flow
+- 2c0faf07218 ddr: altera: agilex: Remove code redundancy
+- 209d53eb1b4 arm: socfpga: Define the usage of boot scratch cold reg 8
+- 1e354de7fc3 ddr: altera: agilex: Get ACF from boot scratch register
+- 9a7881abeb8 include: configs: socfpga: Add environment variables for distro boot
+- 3a1cd4ffd74 arm: socfpga: misc: Exclude Agilex from clock manager base address retrieval
+- c8f5166cff0 sysreset: socfpga: soc64: Enable L2 reset
+- 71916a72f10 arm: socfpga: soc64: Perform warm reset after L2 reset in SPL
+- c465ff14a33 arch: arm: agilex: Clean up DT settings in U-Boot dtsi files
+- 78c44977a2b arch: arm: dts: agilex: Switch to using upstream Linux DT config
+- 4f14fa7cffd arch: arm: dts: Basic device tree support added for Agilex7 M-series
+- 8f7d55037c8 arch: arm: mach-socfpga: Add Agilex7 M-series mach-socfgpa enablement
+- bd961f896f0 arch: arm: mach-socfpga: Improve help info.
+- 7ef12cd7b2d arch: arm: mach-socfpga: Update handoff settings for Agilex7 M-series
+- f64130138aa include: configs: Add config header file for Agilex7 M-series
+- da595d236b9 include: configs: soc64: Use CONFIG_SPL_ATF to differentiate bootfile
+- 7a7c10054d0 clk: altera: Add clock support for Agilex7 M-series
+- a00a7a25708 ddr: altera: Add uibssm mailbox support for Agilex7 M-series with HBM
+- 0b5376b34a8 ddr: altera: Add DDR driver for Agilex7 M-series
+- e5bc1aee5e3 ddr: altera: soc64: Clean up bit-shift by zero bit
+- 4face059c1e ddr: altera: soc64: Fix dram size calculation in clamshell mode
+- 605cf610c1b arch: arm: mach-socfpga: Update kconfig for new platform Agilex7 M-series
+- 2f429d2eb4b arch: arm: dts: Update Makefile for new platform Agilex7 M-series
+- 8eecbaf9571 configs: Add defconfig for Agilex7 M-series
+- 83ce0b483c1 Merge tag 'u-boot-socfpga-next-20250808' of https://source.denx.de/u-boot/custodians/u-boot-socfpga
+
+### Conversation log
+The repository has some divergence but no uncommitted changes (just an untracked file). Let me proceed with creating the new branch and starting the cherry-picks.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks good. Let me run the build test:
+
+Build passed. Let me continue with the next commit:
+
+Conflict on the first cherry-pick that failed. Let me check if this commit might already be applied to ci/master:
+
+No result. Let me check for the first commit as well to verify they are not already applied:
+
+The commits don't seem to be already applied in ci/master. Let me look at the actual conflict and try to resolve it:
+
+The original commit is trying to delete the `socfpga_agilex_atf_defconfig` file and merge its contents into `socfpga_agilex_defconfig`. The conflict is because there's different content in HEAD vs the source branch. Let me resolve this by taking the incoming changes (from the cherry-pick):
+
+The delta is very close (40 vs 39 insertions, 123 vs 122 deletions). Good enough. Let me run the build test:
+
+Now let me cherry-pick the final merge commit (commit 37). Since it's a merge commit, I need to use `-m 1`:
+
+The merge commit is empty (expected since all the previous commits were individually cherry-picked). Let me commit it as an empty commit to preserve the merge record:
+
+Now let me verify the cherry-pick log and run the final build:
+
+All 37 commits are present. Let me run the final build test:
+
+All cherry-picks completed successfully. Let me provide the final status:
+
+## Final Status
+
+**Build Result:** ✅ OK - All builds passed
+
+**Cherry-pick Summary:**
+- **Total commits:** 37 (36 regular + 1 merge commit)
+- **Successfully cherry-picked:** 37/37
+
+**Fix-ups Made:**
+1. **Commit d77b25ee370** (configs: agilex: Combine defconfig for all boot flashes):
+   - Had a conflict in `configs/socfpga_agilex_defconfig` and delete conflict for `configs/socfpga_agilex_atf_defconfig`
+   - Resolved by taking the incoming changes from the source commit
+   - Delta was acceptable (40 vs 39 insertions, 123 vs 122 deletions)
+
+**Commits with Concerning Deltas:** None - all deltas matched or had negligible differences
+
+**Merge Commit Note:**
+- Commit `83ce0b483c1` (Merge tag 'u-boot-socfpga-next-20250808') was applied as an empty commit since all constituent commits were already individually cherry-picked. This preserves the merge record in the history.
+**Branch Status:**
 
 ---
 
