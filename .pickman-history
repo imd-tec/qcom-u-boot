@@ -37105,3 +37105,79 @@ The branch `cherry-b34b18a2c93` is ready for pushing.
 
 ---
 
+## 2026-03-05: us/next
+
+Branch: cherry-074066790c7
+
+Commits:
+- 074066790c7 bootstd: rauc: Fix segfault when cleaning up slots
+- b389967f9a6 bootstd: rauc: Don't null bootflow->bootmeth_priv
+- 302830499d9 bootstd: rauc: Move freeing private struct to its own function
+- 498e423457a bootstd: rauc: Free private data when booting
+- 94e690c44a0 Merge patch series "bootstd: rauc: Fix segfault when scanning device with unsupported layout"
+
+### Conversation log
+The repository is clean (only untracked files, no staged/modified files). Now let me create and checkout the new branch based on ci/master:
+
+Branch created successfully. Now let me start cherry-picking the commits one by one. First commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The deltas match perfectly (1 file, 2+/-, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify delta and build:
+
+Delta matches perfectly. Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third commit cherry-picked. Verify delta and build:
+
+Delta matches perfectly. Build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth commit cherry-picked. Verify delta and build:
+
+Delta matches perfectly. Build test:
+
+Build passed. Now cherry-pick the fifth and final commit. This is a merge commit (identified by "Merge" in the subject), so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (expected since all the changes were already applied via the individual commits in the series), but we need to include it to preserve history. Let me commit it with --allow-empty:
+
+All 5 commits have been cherry-picked. Let me verify the delta for the merge commit and run the build:
+
+The cherry-picked merge commit is empty (no file changes shown in stats), while the original shows the combined changes. This is expected since we cherry-picked the individual commits in the series first, and the merge commit when cherry-picked with `-m 1` becomes empty. Let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 5 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**All 5 commits cherry-picked successfully!**
+
+### Build Result: ✅ OK (no warnings/errors)
+
+### Commits Cherry-Picked:
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 074066790c7 | 5164d14906f | bootstd: rauc: Fix segfault when cleaning up slots |
+| 2 | b389967f9a6 | 907e2b0ab3c | bootstd: rauc: Don't null bootflow->bootmeth_priv |
+| 3 | 302830499d9 | 9daf092c91b | bootstd: rauc: Move freeing private struct to its own function |
+| 4 | 498e423457a | 1c040f9fc63 | bootstd: rauc: Free private data when booting |
+| 5 | 94e690c44a0 | 7e3b1aab681 | Merge patch series "bootstd: rauc: Fix segfault when scanning device with unsupported layout" |
+
+### Fix-ups Made: None
+
+### Commits with Concerning Deltas: 
+- Commit 5 (merge commit): The cherry-picked merge commit is empty while the original shows +15/-6 lines. This is expected because the individual commits in the series were already cherry-picked first, so the merge commit content is already applied.
+
+### Branch Status:
+- Branch `cherry-074066790c7` is ready for pushing
+- Branch is ahead of `ci/master` by 5 commits
+
+---
+
