@@ -1442,7 +1442,8 @@ class TestApply(unittest.TestCase):
 
         database.Database.instances.clear()
 
-        args = argparse.Namespace(cmd='apply', source='unknown', branch=None)
+        args = argparse.Namespace(cmd='apply', source='unknown', branch=None,
+                                  remote='ci', target='master')
         with terminal.capture() as (_, stderr):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 1)
@@ -1460,7 +1461,8 @@ class TestApply(unittest.TestCase):
         database.Database.instances.clear()
         command.TEST_RESULT = command.CommandResult(stdout='')
 
-        args = argparse.Namespace(cmd='apply', source='us/next', branch=None)
+        args = argparse.Namespace(cmd='apply', source='us/next', branch=None,
+                                  remote='ci', target='master')
         with terminal.capture() as (stdout, _):
             ret = control.do_pickman(args)
         self.assertEqual(ret, 0)
@@ -4022,11 +4024,12 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',
-                        'merge_hash', args)
+                        'merge_hash', 'ci', 'master',
+                        push=args.push)
 
             self.assertEqual(ret, 0)
 
@@ -4070,14 +4073,55 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     with mock.patch.object(
                             control.gitlab_api, 'push_branch',
                             side_effect=mock_push):
                         ret = control.apply_subtree_update(
                             dbs, 'us/next', 'dts', 'v6.15-dts',
-                            'merge_hash', args)
+                            'merge_hash', 'ci', 'master',
+                            push=args.push)
+
+            self.assertEqual(ret, 0)
+            self.assertTrue(pushed[0])
+            dbs.close()
+
+    def test_apply_push_defaults_to_true(self):
+        """Test apply_subtree_update pushes when push is not specified."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    return 'Commit subject|Author'
+                return ''
+
+            pushed = [False]
+
+            def mock_push(remote, branch, skip_ci=False):
+                pushed[0] = True
+                return True
+
+            mock_result = command.CommandResult('ok', '', '', 0)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run_one',
+                        return_value=mock_result):
+                    with mock.patch.object(
+                            control.gitlab_api, 'push_branch',
+                            side_effect=mock_push):
+                        ret = control.apply_subtree_update(
+                            dbs, 'us/next', 'dts', 'v6.15-dts',
+                            'merge_hash', 'ci', 'master')
 
             self.assertEqual(ret, 0)
             self.assertTrue(pushed[0])
@@ -4098,18 +4142,62 @@ class TestApplySubtreeUpdate(unittest.TestCase):
                 if 'rev-parse' in git_args:
                     return 'first_parent\nsquash_hash'
                 if 'checkout' in git_args:
-                    raise Exception('checkout failed')
+                    raise command.CommandExc('checkout failed', None)
                 return ''
 
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 ret = control.apply_subtree_update(
                     dbs, 'us/next', 'dts', 'v6.15-dts',
-                    'merge_hash', args)
+                    'merge_hash', 'ci', 'master',
+                    push=args.push)
 
             self.assertEqual(ret, 1)
             # Source should not be advanced
             self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_checkout_fallback(self):
+        """Test apply_subtree_update falls back to -b when checkout fails."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            checkout_calls = []
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    checkout_calls.append(list(git_args))
+                    if '-b' not in git_args:
+                        raise command.CommandExc(
+                            'ambiguous checkout', None)
+                    return ''
+                if 'log' in git_args:
+                    return 'subject|author'
+                return ''
+
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(control, '_subtree_run_update',
+                                       return_value=0):
+                    ret = control.apply_subtree_update(
+                        dbs, 'us/next', 'dts', 'v6.15-dts',
+                        'merge_hash', 'ci', 'master',
+                        push=args.push)
+
+            self.assertEqual(ret, 0)
+            # Should have tried bare checkout, then fallback
+            self.assertEqual(len(checkout_calls), 2)
+            self.assertEqual(checkout_calls[0], ['checkout', 'master'])
+            self.assertEqual(checkout_calls[1],
+                             ['checkout', '-b', 'master', 'ci/master'])
             dbs.close()
 
     def test_apply_no_second_parent(self):
@@ -4128,7 +4216,8 @@ class TestApplySubtreeUpdate(unittest.TestCase):
                                    return_value='single_parent'):
                 ret = control.apply_subtree_update(
                     dbs, 'us/next', 'dts', 'v6.15-dts',
-                    'merge_hash', args)
+                    'merge_hash', 'ci', 'master',
+                    push=args.push)
 
             self.assertEqual(ret, 1)
             dbs.close()
@@ -4154,11 +4243,12 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         side_effect=Exception('script failed')):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',
-                        'merge_hash', args)
+                        'merge_hash', 'ci', 'master',
+                        push=args.push)
 
             self.assertEqual(ret, 1)
             # Source should not be advanced
@@ -4166,7 +4256,7 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             dbs.close()
 
     def test_apply_merge_conflict(self):
-        """Test apply_subtree_update aborts merge on non-zero exit."""
+        """Test apply_subtree_update aborts merge on non-conflict failure."""
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
@@ -4180,6 +4270,8 @@ class TestApplySubtreeUpdate(unittest.TestCase):
 
             def run_git_handler(git_args):
                 if 'rev-parse' in git_args:
+                    if '--verify' in git_args:
+                        raise Exception('no MERGE_HEAD')
                     return 'first_parent\nsquash_hash'
                 if 'checkout' in git_args:
                     return ''
@@ -4193,11 +4285,100 @@ class TestApplySubtreeUpdate(unittest.TestCase):
             with mock.patch.object(control, 'run_git',
                                    side_effect=run_git_handler):
                 with mock.patch.object(
-                        control.command, 'run',
+                        control.command, 'run_one',
                         return_value=mock_result):
                     ret = control.apply_subtree_update(
                         dbs, 'us/next', 'dts', 'v6.15-dts',
-                        'merge_hash', args)
+                        'merge_hash', 'ci', 'master',
+                        push=args.push)
+
+            self.assertEqual(ret, 1)
+            self.assertTrue(merge_aborted[0])
+            # Source should not be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'base')
+            dbs.close()
+
+    def test_apply_merge_conflict_agent_resolves(self):
+        """Test apply_subtree_update invokes agent on conflict and succeeds."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    if '--verify' in git_args:
+                        return 'abc123'
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if '--format=%s|%an' in git_args:
+                    return 'subject|author'
+                return ''
+
+            mock_result = command.CommandResult(
+                '', 'CONFLICT (content): Merge conflict', '', 1)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run_one',
+                        return_value=mock_result):
+                    with mock.patch.object(
+                            agent, 'resolve_subtree_conflicts',
+                            return_value=(True, 'resolved ok')):
+                        ret = control.apply_subtree_update(
+                            dbs, 'us/next', 'dts', 'v6.15-dts',
+                            'merge_hash', 'ci', 'master',
+                            push=args.push)
+
+            self.assertEqual(ret, 0)
+            # Source should be advanced
+            self.assertEqual(dbs.source_get('us/next'), 'merge_hash')
+            dbs.close()
+
+    def test_apply_merge_conflict_agent_fails(self):
+        """Test apply_subtree_update aborts when agent fails to resolve."""
+        with terminal.capture():
+            dbs = database.Database(self.db_path)
+            dbs.start()
+            dbs.source_set('us/next', 'base')
+            dbs.commit()
+
+            args = argparse.Namespace(push=False, remote='ci',
+                                      target='master')
+
+            merge_aborted = [False]
+
+            def run_git_handler(git_args):
+                if 'rev-parse' in git_args:
+                    if '--verify' in git_args:
+                        return 'abc123'
+                    return 'first_parent\nsquash_hash'
+                if 'checkout' in git_args:
+                    return ''
+                if 'merge' in git_args and '--abort' in git_args:
+                    merge_aborted[0] = True
+                    return ''
+                return ''
+
+            mock_result = command.CommandResult(
+                '', 'CONFLICT (content): Merge conflict', '', 1)
+            with mock.patch.object(control, 'run_git',
+                                   side_effect=run_git_handler):
+                with mock.patch.object(
+                        control.command, 'run_one',
+                        return_value=mock_result):
+                    with mock.patch.object(
+                            agent, 'resolve_subtree_conflicts',
+                            return_value=(False, 'failed')):
+                        ret = control.apply_subtree_update(
+                            dbs, 'us/next', 'dts', 'v6.15-dts',
+                            'merge_hash', 'ci', 'master',
+                            push=args.push)
 
             self.assertEqual(ret, 1)
             self.assertTrue(merge_aborted[0])
@@ -4234,8 +4415,6 @@ class TestPrepareApplySubtreeUpdate(unittest.TestCase):
             dbs.source_set('us/next', 'base')
             dbs.commit()
 
-            args = argparse.Namespace(push=False, remote='ci',
-                                      target='master')
             subtree_info = control.NextCommitsInfo(
                 [], True, 'merge1', ('dts', 'v6.15-dts'))
             normal_info = control.NextCommitsInfo([], False, None)
@@ -4254,11 +4433,12 @@ class TestPrepareApplySubtreeUpdate(unittest.TestCase):
                         control, 'apply_subtree_update',
                         return_value=0) as mock_apply:
                     info, ret = control.prepare_apply(
-                        dbs, 'us/next', None, args)
+                        dbs, 'us/next', None, 'ci', 'master')
 
             # Should have called apply_subtree_update
             mock_apply.assert_called_once_with(
-                dbs, 'us/next', 'dts', 'v6.15-dts', 'merge1', args)
+                dbs, 'us/next', 'dts', 'v6.15-dts', 'merge1',
+                'ci', 'master')
             # No commits after retry, so returns None/0
             self.assertIsNone(info)
             self.assertEqual(ret, 0)
@@ -4272,8 +4452,6 @@ class TestPrepareApplySubtreeUpdate(unittest.TestCase):
             dbs.source_set('us/next', 'base')
             dbs.commit()
 
-            args = argparse.Namespace(push=False, remote='ci',
-                                      target='master')
             subtree_info = control.NextCommitsInfo(
                 [], True, 'merge1', ('dts', 'v6.15-dts'))
 
@@ -4283,14 +4461,14 @@ class TestPrepareApplySubtreeUpdate(unittest.TestCase):
                         control, 'apply_subtree_update',
                         return_value=1):
                     info, ret = control.prepare_apply(
-                        dbs, 'us/next', None, args)
+                        dbs, 'us/next', None, 'ci', 'master')
 
             self.assertIsNone(info)
             self.assertEqual(ret, 1)
             dbs.close()
 
-    def test_prepare_apply_subtree_without_args(self):
-        """Test prepare_apply returns error when subtree needs args=None."""
+    def test_prepare_apply_subtree_without_remote(self):
+        """Test prepare_apply returns error when subtree needs remote=None."""
         with terminal.capture():
             dbs = database.Database(self.db_path)
             dbs.start()
@@ -4778,8 +4956,10 @@ class TestDoPushBranch(unittest.TestCase):
         tout.init(tout.INFO)
         args = argparse.Namespace(cmd='push-branch', branch='test-branch',
                                   remote='ci', force=False, run_ci=False)
-        with mock.patch.object(gitlab, 'push_branch',
-                               return_value=False):
+        with mock.patch.object(
+                gitlab, 'push_branch',
+                side_effect=command.CommandExc(
+                    'push failed', command.CommandResult())):
             with terminal.capture():
                 ret = control.do_push_branch(args, None)
         self.assertEqual(ret, 1)
@@ -6221,6 +6401,132 @@ class TestStepFixRetries(unittest.TestCase):
         """Test custom fix-retries value for poll"""
         args = pickman.parse_args(['poll', 'us/next', '--fix-retries', '1'])
         self.assertEqual(args.fix_retries, 1)
+
+
+class TestIsMergeInProgress(unittest.TestCase):
+    """Tests for _is_merge_in_progress helper."""
+
+    def test_merge_in_progress(self):
+        """Test returns True when MERGE_HEAD exists."""
+        with mock.patch.object(control, 'run_git', return_value='abc123'):
+            self.assertTrue(control._is_merge_in_progress())
+
+    def test_no_merge_in_progress(self):
+        """Test returns False when MERGE_HEAD does not exist."""
+        with mock.patch.object(control, 'run_git',
+                               side_effect=Exception('not found')):
+            self.assertFalse(control._is_merge_in_progress())
+
+
+class TestSubtreeRunUpdateReturnValues(unittest.TestCase):
+    """Tests for _subtree_run_update return values."""
+
+    def test_returns_ok_on_success(self):
+        """Test returns SUBTREE_OK on successful update."""
+        mock_result = command.CommandResult('done', '', '', 0)
+        with terminal.capture():
+            with mock.patch.object(control.command, 'run_one',
+                                   return_value=mock_result):
+                ret = control._subtree_run_update('dts', 'v6.15-dts')
+        self.assertEqual(ret, control.SUBTREE_OK)
+
+    def test_returns_conflict_when_merge_in_progress(self):
+        """Test returns SUBTREE_CONFLICT when merge state exists."""
+        mock_result = command.CommandResult(
+            '', 'CONFLICT', '', 1)
+        with terminal.capture():
+            with mock.patch.object(control.command, 'run_one',
+                                   return_value=mock_result):
+                with mock.patch.object(control, '_is_merge_in_progress',
+                                       return_value=True):
+                    ret = control._subtree_run_update('dts', 'v6.15-dts')
+        self.assertEqual(ret, control.SUBTREE_CONFLICT)
+
+    def test_returns_fail_when_no_merge(self):
+        """Test returns SUBTREE_FAIL when script fails without merge."""
+        mock_result = command.CommandResult(
+            '', 'error', '', 1)
+        with terminal.capture():
+            with mock.patch.object(control.command, 'run_one',
+                                   return_value=mock_result):
+                with mock.patch.object(control, '_is_merge_in_progress',
+                                       return_value=False):
+                    with mock.patch.object(control, 'run_git'):
+                        ret = control._subtree_run_update(
+                            'dts', 'v6.15-dts')
+        self.assertEqual(ret, control.SUBTREE_FAIL)
+
+    def test_returns_fail_on_exception(self):
+        """Test returns SUBTREE_FAIL when script raises exception."""
+        with terminal.capture():
+            with mock.patch.object(control.command, 'run_one',
+                                   side_effect=Exception('boom')):
+                ret = control._subtree_run_update('dts', 'v6.15-dts')
+        self.assertEqual(ret, control.SUBTREE_FAIL)
+
+
+class TestSubtreeConflictPrompt(unittest.TestCase):
+    """Tests for build_subtree_conflict_prompt."""
+
+    def test_dts_prompt_content(self):
+        """Test prompt contains correct details for dts subtree."""
+        prompt = agent.build_subtree_conflict_prompt(
+            'dts', 'v6.15-dts', 'dts/upstream')
+        self.assertIn('dts/upstream', prompt)
+        self.assertIn('v6.15-dts', prompt)
+        self.assertIn('MERGE_HEAD', prompt)
+        self.assertIn('git commit --no-edit', prompt)
+        self.assertIn('git merge --abort', prompt)
+
+    def test_mbedtls_prompt_content(self):
+        """Test prompt contains correct details for mbedtls subtree."""
+        prompt = agent.build_subtree_conflict_prompt(
+            'mbedtls', 'v3.6.0', 'lib/mbedtls/external/mbedtls')
+        self.assertIn('lib/mbedtls/external/mbedtls', prompt)
+        self.assertIn('v3.6.0', prompt)
+        self.assertIn("'mbedtls'", prompt)
+
+
+class TestResolveSubtreeConflicts(unittest.TestCase):
+    """Tests for resolve_subtree_conflicts."""
+
+    def test_success(self):
+        """Test successful conflict resolution."""
+        mock_collect = mock.AsyncMock(return_value=(True, 'resolved'))
+        with terminal.capture():
+            with mock.patch.object(agent, 'AGENT_AVAILABLE', True):
+                with mock.patch.object(agent, 'run_agent_collect',
+                                       mock_collect):
+                    with mock.patch.object(agent, 'ClaudeAgentOptions',
+                                           create=True):
+                        success, log = agent.resolve_subtree_conflicts(
+                            'dts', 'v6.15-dts', 'dts/upstream',
+                            '/tmp/test')
+        self.assertTrue(success)
+        self.assertEqual(log, 'resolved')
+
+    def test_failure(self):
+        """Test failed conflict resolution."""
+        mock_collect = mock.AsyncMock(return_value=(False, 'failed'))
+        with terminal.capture():
+            with mock.patch.object(agent, 'AGENT_AVAILABLE', True):
+                with mock.patch.object(agent, 'run_agent_collect',
+                                       mock_collect):
+                    with mock.patch.object(agent, 'ClaudeAgentOptions',
+                                           create=True):
+                        success, log = agent.resolve_subtree_conflicts(
+                            'dts', 'v6.15-dts', 'dts/upstream',
+                            '/tmp/test')
+        self.assertFalse(success)
+
+    def test_sdk_unavailable(self):
+        """Test returns failure when SDK is not available."""
+        with terminal.capture():
+            with mock.patch.object(agent, 'AGENT_AVAILABLE', False):
+                success, log = agent.resolve_subtree_conflicts(
+                    'dts', 'v6.15-dts', 'dts/upstream', '/tmp/test')
+        self.assertFalse(success)
+        self.assertEqual(log, '')
 
 
 if __name__ == '__main__':

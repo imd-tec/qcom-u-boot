@@ -196,6 +196,9 @@ def push_branch(remote, branch, force=False, skip_ci=True):
 
     Returns:
         bool: True on success
+
+    Raises:
+        command.CommandExc: If the push fails
     """
     try:
         # Use token-authenticated URL if available
@@ -232,7 +235,7 @@ def push_branch(remote, branch, force=False, skip_ci=True):
         return True
     except command.CommandExc as exc:
         tout.error(f'Failed to push branch: {exc}')
-        return False
+        raise
 
 
 # pylint: disable=too-many-arguments
@@ -630,7 +633,9 @@ def push_and_create_mr(remote, branch, target, title, desc=''):
         return None
 
     tout.info(f'Pushing {branch} to {remote}...')
-    if not push_branch(remote, branch, force=True):
+    try:
+        push_branch(remote, branch, force=True)
+    except command.CommandExc:
         return None
 
     tout.info(f'Creating merge request to {target}...')
