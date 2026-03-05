@@ -36782,3 +36782,107 @@ The branch has been pushed. Now let me summarize what happened:
 
 ---
 
+## 2026-03-05: us/next
+
+Branch: cherry-6531aeed374
+
+Commits:
+- 6531aeed374 env: Correct Kconfig type for ENV_MMC_SW_PARTITION
+- 0c558bbad9e bootstd: rauc: Change global method to check any partition
+- 93297f1f9bb pci: pcie-rcar-gen4: Fix PHY initialization
+- e394ef09bc7 arm64: renesas: r8a779g3: Disable MicroSD UHS modes on Retronix R-Car V4H Sparrow Hawk EVTA1
+- 47148dfd8f7 arm64: renesas: r8a779g3: Disable dual-rank DRAM on Retronix R-Car V4H ES2 Sparrow Hawk
+- c818fd05948 arm64: renesas: r8a779g3: Enable xHCI USB on Retronix R-Car V4H Sparrow Hawk board
+- 74bc80190c4 arm64: dts: renesas: r8a779g3: Invert microSD voltage selector on Retronix R-Car V4H Sparrow Hawk EVTB1
+- 1df2880e951 arm64: dts: renesas: r8a779g3: Set VDDQ18_25_AVB voltage on Retronix R-Car V4H Sparrow Hawk EVTB1
+- 797255d897d arm64: dts: renesas: r8a779g3: Describe generic SPI NOR support on Retronix R-Car V4H Sparrow Hawk board
+- c797d8bac99 configs: Remove redundant CONFIG_TEXT_BASE assignments for Renesas defconfigs
+- 6dee9a5b749 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+The repository is clean (only untracked files present). Let me create the cherry-pick branch and start the process.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+First commit succeeded. Let me verify the delta and run a build test:
+
+Delta is identical (1 file, 2+/-, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Delta identical. Build test:
+
+Build passed. Third commit:
+
+Delta identical. Build test:
+
+Build passed. Fourth commit:
+
+Delta identical. Build test:
+
+Build passed. Fifth commit:
+
+Delta identical. Build test:
+
+Build passed. Sixth commit:
+
+Delta identical. Build test:
+
+Build passed. Seventh commit:
+
+Delta identical. Build test:
+
+Build passed. Eighth commit:
+
+Delta identical. Build test:
+
+Build passed. Ninth commit:
+
+Delta identical. Build test:
+
+Build passed. Tenth commit:
+
+Delta identical. Build test:
+
+Build passed. Now for the eleventh commit (merge commit). This one is marked as "maybe already applied as a89cc24c90b". Let me first verify if this is already present in the branch before cherry-picking:
+
+The patches differ significantly - they are different merge commits with different parent commits and different commit messages. The a89cc24c90b is a GitLab merge request merge, while 6dee9a5b749 is the actual u-boot-sh merge. Let me check if the actual content commits from this merge are already present in ci/master by checking if the commits mentioned in the original merge are in our branch:
+
+The commits that were merged by 6dee9a5b749 (the merge commit) have already been cherry-picked as individual commits in this branch. The merge commit itself is a record of when the branch was merged. Let me cherry-pick the merge commit with --allow-empty since its contents are already included:
+
+The cherry-pick resulted in an empty commit because all the changes from the merge are already present. Let me commit it as an empty commit to preserve the history:
+
+All 11 commits have been cherry-picked. Let me verify the log and run the final build test:
+
+All 11 commits are present. Now running the final build test:
+
+## Summary
+
+All 11 commits were successfully cherry-picked onto the branch `cherry-6531aeed374`.
+
+### Final Status:
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 6531aeed374 → 95c6272f8d5 | env: Correct Kconfig type for ENV_MMC_SW_PARTITION | ✅ OK |
+| 2 | 0c558bbad9e → 15999fe7570 | bootstd: rauc: Change global method to check any partition | ✅ OK |
+| 3 | 93297f1f9bb → 9149dd13df7 | pci: pcie-rcar-gen4: Fix PHY initialization | ✅ OK |
+| 4 | e394ef09bc7 → 9061ee252c2 | arm64: renesas: r8a779g3: Disable MicroSD UHS modes on Retronix R-Car V4H Sparrow Hawk EVTA1 | ✅ OK |
+| 5 | 47148dfd8f7 → c6a9b2c9abb | arm64: renesas: r8a779g3: Disable dual-rank DRAM on Retronix R-Car V4H ES2 Sparrow Hawk | ✅ OK |
+| 6 | c818fd05948 → f9a77db5f79 | arm64: renesas: r8a779g3: Enable xHCI USB on Retronix R-Car V4H Sparrow Hawk board | ✅ OK |
+| 7 | 74bc80190c4 → f49af6b5efe | arm64: dts: renesas: r8a779g3: Invert microSD voltage selector on Retronix R-Car V4H Sparrow Hawk EVTB1 | ✅ OK |
+| 8 | 1df2880e951 → 4d6be619972 | arm64: dts: renesas: r8a779g3: Set VDDQ18_25_AVB voltage on Retronix R-Car V4H Sparrow Hawk EVTB1 | ✅ OK |
+| 9 | 797255d897d → cc80e1fc0fc | arm64: dts: renesas: r8a779g3: Describe generic SPI NOR support on Retronix R-Car V4H Sparrow Hawk board | ✅ OK |
+| 10 | c797d8bac99 → de13732b919 | configs: Remove redundant CONFIG_TEXT_BASE assignments for Renesas defconfigs | ✅ OK |
+| 11 | 6dee9a5b749 → 82e8854170b | Merge branch 'master' of u-boot-sh | ✅ OK (empty - changes already applied via individual commits) |
+
+### Results:
+- **Build result**: ✅ OK (sandbox builds successfully)
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None (all deltas matched exactly)
+- **Note**: The merge commit (6dee9a5b749) resulted in an empty commit because all the individual commits from the merged branch were already applied. The merge commit was preserved with `--allow-empty` to maintain the commit history record.
+
+The branch `cherry-6531aeed374` is ready for pushing.
+
+---
+
