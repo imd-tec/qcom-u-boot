@@ -15,6 +15,8 @@ import tempfile
 import time
 import unittest
 
+import requests
+
 # Allow 'from pickman import xxx' to work via symlink
 our_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(our_path, '..'))
@@ -2872,6 +2874,15 @@ def do_step(args, dbs):
     Returns:
         int: 0 on success, 1 on failure
     """
+    try:
+        return _do_step(args, dbs)
+    except requests.exceptions.ConnectionError as exc:
+        tout.error(f'step failed with connection error: {exc}')
+        return 1
+
+
+def _do_step(args, dbs):
+    """Internal implementation of do_step"""
     remote = args.remote
     source = args.source
 
