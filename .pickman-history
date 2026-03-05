@@ -36647,3 +36647,69 @@ The branch `cherry-fda7bee6468` is ready for pushing. It is based on `ci/master`
 
 ---
 
+### Pipeline fix: 2026-03-04 (attempt 1)
+
+Branch: cherry-fda7bee6468
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+
+### Conversation log
+Looking at the job log, I can see this is an infrastructure/transient failure, not a code issue. Let me analyze the key error messages:
+
+1. **EXT4 filesystem error**: `EXT4-fs error (device vdb2): ext4_journal_check_start:84: comm systemd: Detected aborted journal`
+
+2. **Stale file handle errors**: Multiple `OSError: [Errno 116] Stale file handle: '/vid/software/devel/ubtest/lab/cfg/kea_env.cfg'`
+
+3. **Lab failure message**: `Lab failure: Marking connection bad - no other tests will run`
+
+4. **The actual test failure**: `test_distro_arm_app_efi` failed with `console_base.Timeout` - the test was waiting for `Ubuntu 25.04 qarm ttyAMA0` but timed out.
+
+This is clearly a **lab infrastructure issue** - the test environment (QEMU-based lab setup) experienced:
+1. A corrupted/aborted EXT4 journal on the virtual disk
+2. NFS or network filesystem issues causing stale file handles to the labgrid configuration files
+3. The lab connection went bad, preventing any further tests from running
+
+Let me verify by checking if the code changes could have affected this:
+
+Now let me check what files the commits touched - none of these should affect the `efi-aarch64` test infrastructure:
+
+These commits only touch Qualcomm-specific drivers:
+- `drivers/pinctrl/qcom/` - Qualcomm pinctrl drivers
+- `drivers/button/button-qcom-pmic.c` - Qualcomm PMIC button driver  
+- `drivers/serial/serial_msm_geni.c` - Qualcomm serial driver
+- `drivers/phy/qcom/` - Qualcomm PHY driver
+
+The failing test `efi-aarch64` runs on a QEMU ARM64 system testing EFI functionality. The Qualcomm-specific driver changes cannot affect this test.
+
+Let me verify by checking if any of these drivers are even compiled for efi-aarch64:
+
+As expected, the `efi-arm_app64` config doesn't include any Qualcomm drivers. The changes in this MR cannot cause the test failure.
+
+Looking at the error log again, the key indicators of infrastructure failure:
+
+1. **`EXT4-fs error ... Detected aborted journal`** - The virtual disk in the QEMU VM had filesystem corruption
+2. **`OSError: [Errno 116] Stale file handle`** - NFS or network filesystem issues accessing labgrid config files
+3. **`Lab failure: Marking connection bad`** - The labgrid framework detected a bad connection and aborted
+
+This is a **transient infrastructure failure** in the sjg-lab test runner environment, not a code issue.
+
+## Summary
+
+**This is an infrastructure/transient failure, not a code issue.**
+
+**Root Cause:** The `efi-aarch64` job in the `sjg-lab` stage failed due to lab infrastructure problems:
+1. EXT4 filesystem corruption (`Detected aborted journal`) in the QEMU test VM
+2. Stale NFS file handles to `/vid/software/devel/ubtest/lab/cfg/kea_env.cfg`
+3. The labgrid test framework marked the connection as bad and stopped all tests
+
+**Evidence that this is not code-related:**
+1. The commits in this MR only modify Qualcomm-specific drivers (`pinctrl/qcom`, `serial/serial_msm_geni`, `button/button-qcom-pmic`, `phy/qcom`)
+2. The `efi-arm_app64_defconfig` does not enable any Qualcomm drivers
+3. The error messages (`Stale file handle`, `aborted journal`) indicate infrastructure problems, not code bugs
+4. The test that failed (`test_distro_arm_app_efi`) timed out waiting for the system to boot - the VM couldn't boot properly due to the filesystem errors
+
+**Recommendation:** Retry the pipeline. No code changes are needed.
+
+---
+
