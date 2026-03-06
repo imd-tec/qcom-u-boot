@@ -37237,6 +37237,63 @@ The merge commit is empty as expected (since all changes were already applied vi
 All 8 commits are present. Now let me run the final build test:
 
 All cherry-picks completed successfully. Here's the final status:
+Branch: cherry-0d1c4fd514c
+
+Commits:
+- 0d1c4fd514c mailbox: zynqmp: Fix off by 1 errors
+- 7aac8439445 pinctrl: zynqmp: Ensure ret is initialised
+- 6ce599f5131 pinctrl: zynqmp: Avoid using uninitialised variable
+- 3b765ae0500 soc: xilinx: zynqmp: Fix zu1cg device detection
+- 818f6002e14 fpga: cyclon2: Remove message never printed
+- 7fc04c9a82e fpga: xilinx: Check valid desc structure
+- 0870281a415 fpga: Remove ancient ACEX1K support
+- 34762f6c007 fpga: lattice: Remove unused support
+- cb579912508 arm64: zynqmp: Add missing ethernet alias for kr260-revB
+- 0109a7de96c arm64: versal2: Define BOOTENV_DEV_SHARED_XSPI when distro is disabled
+- 88e3524393f net: axi_emac: Fix timeout test
+- 37aee09d838 configs: versal2: Add usb_pgood_delay for versal2 boards
+- 4a7ae028f86 Merge tag 'xilinx-for-v2025.10-rc3' of https://source.denx.de/u-boot/custodians/u-boot-microblaze
+
+### Conversation log
+The repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me check the commit delta and run the build test:
+
+The delta looks identical (1 file changed, 4 insertions, 4 deletions). Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta is identical. Now build test:
+
+Build passed. Cherry-pick third commit:
+
+Third commit successful - delta identical, build passed. Now the fourth commit:
+
+Fourth commit successful. Now the fifth commit:
+
+Fifth commit successful. Now the sixth commit:
+
+Sixth commit successful. Now the seventh commit:
+
+Seventh commit successful. Now the eighth commit:
+
+Eighth commit successful. Now the ninth commit:
+
+Ninth commit successful. Now the tenth commit:
+
+Tenth commit successful. Now the eleventh commit:
+
+Eleventh commit successful. Now the twelfth commit:
+
+Twelfth commit successful. Now the thirteenth commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (which is expected since all the content was already cherry-picked individually). Let me commit it with --allow-empty as instructed:
+
+All 13 commits cherry-picked. Now let me verify the commit log and run the final build:
+
+All 13 commits are present and the final build passed.
 
 ## Final Status Report
 
@@ -37264,6 +37321,37 @@ All commits had matching file changes and line counts between original and cherr
 ### Branch Status:
 - Branch `cherry-5d542302230` is ready for pushing
 - 8 commits ahead of `ci/master`
+All builds passed successfully (sandbox board).
+
+### Cherry-Pick Summary
+All 13 commits were successfully cherry-picked from `us/next` branch onto `ci/master`:
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 0d1c4fd514c → 73f5028acef | mailbox: zynqmp: Fix off by 1 errors | ✅ |
+| 2 | 7aac8439445 → 309c10f2b06 | pinctrl: zynqmp: Ensure ret is initialised | ✅ |
+| 3 | 6ce599f5131 → b410438edc8 | pinctrl: zynqmp: Avoid using uninitialised variable | ✅ |
+| 4 | 3b765ae0500 → b8d35dda341 | soc: xilinx: zynqmp: Fix zu1cg device detection | ✅ |
+| 5 | 818f6002e14 → 80ab5e9798f | fpga: cyclon2: Remove message never printed | ✅ |
+| 6 | 7fc04c9a82e → 16306fe312c | fpga: xilinx: Check valid desc structure | ✅ |
+| 7 | 0870281a415 → 9f7b32674fd | fpga: Remove ancient ACEX1K support | ✅ (auto-merge) |
+| 8 | 34762f6c007 → 5b1c56c5fcc | fpga: lattice: Remove unused support | ✅ (auto-merge) |
+| 9 | cb579912508 → ec576458fee | arm64: zynqmp: Add missing ethernet alias for kr260-revB | ✅ |
+| 10 | 0109a7de96c → 25e499ac6c2 | arm64: versal2: Define BOOTENV_DEV_SHARED_XSPI when distro is disabled | ✅ |
+| 11 | 88e3524393f → 5a59c7211b6 | net: axi_emac: Fix timeout test | ✅ |
+| 12 | 37aee09d838 → 83eaef84c9e | configs: versal2: Add usb_pgood_delay for versal2 boards | ✅ |
+| 13 | 4a7ae028f86 → 9a355fda8f3 | Merge tag 'xilinx-for-v2025.10-rc3'... | ✅ (empty commit preserved) |
+
+### Fix-ups Made
+- None required
+
+### Notes
+- Commits #7 and #8 required auto-merge for `configs/sandbox_defconfig` which completed successfully
+- Commit #13 (merge commit) was applied as an empty commit with `--allow-empty` since all content was already cherry-picked from the individual commits (this preserves the merge history)
+- All commit deltas matched the originals exactly
+
+### Branch Status
+The `cherry-0d1c4fd514c` branch is now ready for pushing, with 13 commits ahead of `ci/master`.
 
 ---
 
