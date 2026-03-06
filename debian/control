@@ -1,0 +1,45 @@
+Source: u-boot-concept
+Section: admin
+Priority: optional
+Maintainer: Simon Glass <sjg@chromium.org>
+Build-Depends:
+ bc,
+ bison,
+ debhelper-compat (= 13),
+ device-tree-compiler,
+ flex,
+ libgnutls28-dev,
+ libpython3-dev:native [linux-any],
+ libssl-dev,
+ python3:any [linux-any],
+ python3-libfdt:native,
+ python3-pyelftools [linux-any],
+ python3-setuptools [linux-any],
+ swig [linux-any],
+Build-Depends-Indep:
+ gcc-i686-linux-gnu [!i386],
+ gcc-arm-linux-gnueabihf [!armhf],
+ gcc-aarch64-linux-gnu [!arm64],
+ gcc-riscv64-linux-gnu [!riscv64],
+ gcc-x86-64-linux-gnu [!amd64],
+ gcc-powerpc-linux-gnu [!powerpc],
+Rules-Requires-Root: no
+Standards-Version: 4.6.2
+Homepage: https://concept.u-boot.org/
+
+Package: u-boot-concept-qemu
+Architecture: all
+Depends: ${misc:Depends}
+Multi-Arch: foreign
+Description: Concept U-Boot boot loader for qemu
+ Das U-Boot is a cross-platform bootloader for embedded systems,
+ used as the default boot loader by several board vendors.  It is
+ intended to be easy to port and to debug, and runs on many
+ supported architectures, including PPC, ARM, MIPS, x86, m68k,
+ NIOS, and Microblaze.
+ .
+ This package includes boot loaders for qemu/kvm, built from
+ the U-Boot Concept tree.
+ .
+ Included platforms:
+ ${u-boot-concept-qemu:platforms}
