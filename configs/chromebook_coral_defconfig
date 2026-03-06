@@ -1,4 +1,5 @@
 CONFIG_X86=y
+CONFIG_BOOTFILE="bzImage"
 CONFIG_TEXT_BASE=0x1110000
 CONFIG_SYS_MALLOC_LEN=0x2000000
 CONFIG_SYS_MALLOC_F_LEN=0x3d00
@@ -78,7 +79,6 @@ CONFIG_MAC_PARTITION=y
 CONFIG_OF_SPL_REMOVE_PROPS="clocks clock-names interrupt-parent interrupts linux-name acpi,name acpi,path u-boot,acpi-dsdt-order u-boot,acpi-ssdt-order"
 CONFIG_ENV_OVERWRITE=y
 CONFIG_USE_BOOTFILE=y
-CONFIG_BOOTFILE="bzImage"
 CONFIG_TFTP_TSIZE=y
 CONFIG_USE_ROOTPATH=y
 CONFIG_REGMAP=y
