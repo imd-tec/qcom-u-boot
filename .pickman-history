@@ -37646,7 +37646,6 @@ Ready for: push
 
 ## 2026-03-06: us/next
 
-
 Branch: cherry-275978df0df
 
 Commits:
@@ -37718,258 +37717,115 @@ The branch `cherry-275978df0df` is ready for pushing with 3 commits ahead of `ci
 
 ## 2026-03-06: us/next
 
-Branch: cherry-8c981709e03
-- 8c981709e03 configs: Resync with savedefconfig
-- bc52200ebf5 MAINTAINERS: Add entry for DesignWare XGMAC driver
-- 7a4f3c56521 Prepare v2025.10-rc4
-- 77ef938212b configs: Fix crash on coreboot x86
-- 1a7882de8c8 configs: starfive: Add visionfive2 CONFIG_DNS enabled
-- 2083378ff0f spl: SPL_DM_SPI_FLASH depends on SPL_DM_SPI
-- 000fbc7ae5c configs: Resync with savedefconfig
-- fd7510e516b env: fix config dependency for ENV_OFFSET_REDUND_RELATIVE_END
-- e9e55fefb1e dma: ti: k3-udma: fix dma_addr_t typecasts
-- 7bcc604ef80 config: arch: k3: enable DMA_ADDR_T_64BIT
-- c9800dc906a Merge patch series "Fix dma_addr_t for R5 SPL"
+Branch: cherry-210702ae6ce
+
+Commits:
+- 210702ae6ce spl: spi: fix falcon mode for spi boot
+- 2dbde3f9b08 arm: armv8: Fix spl recover data section broken
+- 7b9b34aa6d2 clk: stm32: Pass udevice pointer to clk_register_composite()
+- 483e19b0ad0 net: dwc_eth_qos: Fix support for stm32mp2 platform
+- 0f4bfee3cfe ARM: stm32: Perform node compatible check for KS8851 early
+- b82fa9d752b board: starfive: visionfive2: deprecate mixed-case product ids VF7110a VF7110b
+- f6d5bda0e32 board: ti: am57xx: Remove "ti/omap/" from name_fit_config
+- 097ef53d639 Merge tag 'u-boot-stm32-20250917' of https://source.denx.de/u-boot/custodians/u-boot-stm
 
 ### Conversation log
-Now let me start cherry-picking the commits. First, let me check if the first commit has already been applied. The first commit (8c981709e03) is marked as "maybe already applied as dc1c93bc628", so I need to verify:
+The repository state is mostly clean (just an untracked file). Let me create and checkout the new branch based on ci/master:
 
-The patches are completely different - dc1c93bc628 is a pickman record commit, not the actual original commit. Let me search for the actual commit that might have applied the configs resync:
+Now let me start cherry-picking the commits one at a time. First commit:
 
-The first commit is marked as [QCONFIG RESYNC], so I need to skip it and run qconfig.py instead. Let me proceed with the first qconfig resync:
+Cherry-pick succeeded. Let me verify the commit delta and run the build:
 
-The qconfig.py created a commit. Now let me verify the build and then continue with the next commit:
+Delta matches perfectly. Now let me run the build:
 
-Build passed. Now cherry-pick commit 2 (bc52200ebf5):
+Build passed. Now cherry-pick the second commit:
 
-Build passed. Now cherry-pick commit 3 (7a4f3c56521):
+Delta matches. Now build:
 
-This is a version update commit. The ci/master branch is at 2026.02 while the original commit was for 2025.10-rc4. This doesn't apply as-is. Let me check if this type of commit should be skipped:
+Build passed. Now cherry-pick the third commit:
 
-The "Prepare v2025.10-rc4" is a release preparation commit that updates version numbers. This doesn't make sense for ci/master which is on a different version. Let me create an empty commit to preserve the sequence as instructed:
+Delta matches. Build test:
 
-Now cherry-pick commit 4 (77ef938212b):
+Build passed. Now cherry-pick the fourth commit:
 
-I need to resolve this conflict by keeping both HEAD content and the new configs from the cherry-pick:
+Delta matches. Build test:
 
-The original commit added 1 line but we added 2 lines. Let me check the actual change difference:
+Build passed. Now cherry-pick the fifth commit:
 
-I see - the original commit only added CONFIG_X86_LOAD_FROM_32_BIT=y because CONFIG_SMBIOS_PARSER=y was already there in the original context. In ci/master, CONFIG_SMBIOS_PARSER=y was not present, so we needed to add both. This is expected due to the different branch state. Both lines are needed for the fix, so this is correct. Let me run the build test:
+Delta matches. Build test:
 
-Build passed. Now cherry-pick commit 5 (1a7882de8c8):
+Build passed. Now cherry-pick the sixth commit:
 
-Build passed. Now cherry-pick commit 6 (2083378ff0f):
+Conflict encountered. Let me check if this commit might already be applied in ci/master with a different hash:
 
-Build passed. Now commit 7 (000fbc7ae5c) is also marked [QCONFIG RESYNC], so I need to skip cherry-pick and run qconfig.py instead:
+The commit is not found by subject in ci/master. Let me examine the conflicts to see if I can resolve them:
 
-Build passed. Now cherry-pick commit 8 (fd7510e516b):
+I can see the conflicts. The issue is that the branch base (ci/master) has a different implementation than the source branch (us/next). Looking at the conflicts:
 
-Build passed. Now cherry-pick commit 9 (e9e55fefb1e):
+1. In `spl.c`: ci/master has expanded the VF7110 handling to check the PCB revision with case-insensitive comparison, while the commit being cherry-picked uses "VF7110A" and "VF7110B" strings.
 
-Build passed. Now cherry-pick commit 10 (7bcc604ef80):
+2. In `starfive_visionfive2.c`: ci/master has a cleaner refactored implementation using macros (FDTFILE_*) and switch statements for version handling, while the incoming commit uses inline strings and "VF7110A"/"VF7110B" strings.
 
-Build passed. Now cherry-pick the final commit 11 (c9800dc906a) - this is a merge commit so I need to use -m 1 --allow-empty:
+The conflict shows that ci/master already has a superior implementation - it handles both 'a'/'A' and 'b'/'B' cases which effectively deprecates the mixed-case IDs. The incoming patch appears to be from an earlier version of the code.
 
-The merge commit was cherry-picked as an empty commit (expected since the individual patches were already cherry-picked). Let me run the build test:
+Let me check if there's an equivalent commit already in ci/master that addresses the same issue:
 
-All commits cherry-picked. Now let me verify the final log:
+Let me check if the commit we're trying to cherry-pick is the same content as a5295f29f29 or some other commit already in ci/master:
 
-All 11 commits are present. Let me verify the branch status:
+Looking at this, the conflict is because ci/master has already had significant refactoring of the starfive visionfive2 board code. The commit `a5295f29f29` "Order board detection logic to match config" changed the code to handle PCB revision with case-insensitive logic (checking both 'a'/'A' and 'b'/'B'), which is more comprehensive than the original approach in commit `b82fa9d752b` that uses "VF7110A"/"VF7110B" strings.
+
+The ci/master version is actually superior - it handles the case-insensitivity at the revision character level rather than having separate product ID strings. This means the functionality that commit `b82fa9d752b` tries to provide is effectively already implemented differently in ci/master.
+
+Let me resolve this conflict by keeping the HEAD (ci/master) version since it already handles the issue correctly:
+
+The cherry-pick results in an empty commit because ci/master already has an equivalent (or better) implementation. Per the instructions, we should include the merge commit even if it's empty to preserve history:
+
+Now let me run the build:
+
+Build passed. Now cherry-pick the seventh commit:
+
+Delta matches. Build test:
+
+Build passed. Now cherry-pick the eighth and final commit (this is a merge commit based on "Merge" in the subject):
+
+The merge commit is empty (which is expected since the individual commits have already been cherry-picked). Per instructions, we still need to create the commit to preserve history:
+
+Now let's verify all 8 commits are present:
+
+All 8 commits are present. Let me run the final build test:
+
+Final build passed.
 
 ## Final Status Report
 
-**Cherry-pick completed successfully on branch `cherry-8c981709e03`**
+### Cherry-pick Summary
 
-### Build Result: ✅ OK
-All builds passed (sandbox target).
+All 8 commits have been successfully cherry-picked from `us/next` branch:
 
-### Commits Applied (11 total):
 | # | Hash | Subject | Status |
 |---|------|---------|--------|
-| 1 | 67cf7aef5e7 | configs: Resync with savedefconfig | ✅ Generated via qconfig.py |
-| 2 | 2ad5dfec627 | MAINTAINERS: Add entry for DesignWare XGMAC driver | ✅ Clean cherry-pick |
-| 3 | 19d5d43d2ab | Prepare v2025.10-rc4 | ⚠️ Empty commit (version conflict - skipped) |
-| 4 | ba6957c7173 | configs: Fix crash on coreboot x86 | ✅ Minor conflict resolved |
-| 5 | d0703bc7d58 | configs: starfive: Add visionfive2 CONFIG_DNS enabled | ✅ Auto-merged |
-| 6 | 50077299af9 | spl: SPL_DM_SPI_FLASH depends on SPL_DM_SPI | ✅ Auto-merged |
-| 7 | f10b51bda46 | configs: Resync with savedefconfig | ✅ Generated via qconfig.py |
-| 8 | de014d17be4 | env: fix config dependency for ENV_OFFSET_REDUND_RELATIVE_END | ✅ Auto-merged |
-| 9 | f7694aed10f | dma: ti: k3-udma: fix dma_addr_t typecasts | ✅ Auto-merged |
-| 10 | 780210481d4 | config: arch: k3: enable DMA_ADDR_T_64BIT | ✅ Auto-merged |
-| 11 | c7068abf160 | Merge patch series "Fix dma_addr_t for R5 SPL" | ✅ Empty (patches already applied) |
+| 1 | 210702ae6ce | spl: spi: fix falcon mode for spi boot | ✅ Clean |
+| 2 | 2dbde3f9b08 | arm: armv8: Fix spl recover data section broken | ✅ Clean |
+| 3 | 7b9b34aa6d2 | clk: stm32: Pass udevice pointer to clk_register_composite() | ✅ Clean |
+| 4 | 483e19b0ad0 | net: dwc_eth_qos: Fix support for stm32mp2 platform | ✅ Clean |
+| 5 | 0f4bfee3cfe | ARM: stm32: Perform node compatible check for KS8851 early | ✅ Clean |
+| 6 | b82fa9d752b | board: starfive: visionfive2: deprecate mixed-case product ids | ⚠️ Empty (conflict resolved - equivalent code exists) |
+| 7 | f6d5bda0e32 | board: ti: am57xx: Remove "ti/omap/" from name_fit_config | ✅ Clean |
+| 8 | 097ef53d639 | Merge tag 'u-boot-stm32-20250917' | ✅ Empty (merge commit, constituents already applied) |
 
-### Fix-ups Made:
-1. **Commit 3 (Prepare v2025.10-rc4)**: Created as empty commit with `[SKIPPED - version conflict]` suffix because it updates version numbers that don't apply to ci/master (which is at v2026.02).
+### Build Result
+✅ **Build OK** - sandbox board builds successfully
 
-2. **Commits 1 & 7 (QCONFIG RESYNC)**: As instructed, these commits were regenerated using `./tools/qconfig.py -s -Cy` instead of direct cherry-pick because they depend on the target branch's Kconfig state.
+### Fix-ups Made
+1. **Commit 6 (b82fa9d752b)**: Conflict resolved by keeping ci/master version. The commit resulted in an empty commit because ci/master already contains equivalent functionality via commit `a5295f29f29` which handles case-insensitivity at the PCB revision character level. A note was added to the commit message explaining this.
 
-3. **Commit 4 (configs: Fix crash on coreboot x86)**: Minor conflict resolved - the original added 1 line because CONFIG_SMBIOS_PARSER was already present in source branch, but we added 2 lines since it wasn't present in ci/master. Both configs are part of the fix.
+2. **Commit 8 (097ef53d639)**: Merge commit was created as an empty commit (expected since individual commits were already cherry-picked) to preserve history.
 
-### Commits with Delta Notes:
-- **Commit 4**: Original +1 line, cherry-pick +2 lines - expected due to missing CONFIG_SMBIOS_PARSER in ci/master.
-- **Commit 11**: Empty merge commit - expected since individual patches were already cherry-picked.
+### Concerning Deltas
+None - all non-empty commits had matching deltas between original and cherry-picked versions.
 
-The branch is ready for pushing.
-
----
-
-
----
-
-### Review: 2026-03-06
-
-Branch: cherry-8c981709e03
-
-Comments addressed:
-
-
-### Conversation log
-Let me find the correct u-boot repository:
-
-I'm already in the u-boot directory. Let me proceed with the rebase:
-
-Good, ci/master exists. Let me check the current state and compare with ci/master:
-
-The merge base is 63b9b9888fd. Let me see how many commits are behind ci/master:
-
-The branch is 4 commits behind ci/master. Let me save the current commit info for comparison after rebase, then do the rebase:
-
-Now let me start the rebase with --keep-empty:
-
-There's a conflict in the pickman history file. Let me check and resolve it:
-
-The first 11 commits were rebased successfully. Now I just need to resolve the conflict in .pickman-history (which is an append-only history file). Let me resolve it by keeping both sections:
-
-I can see the conflict - both HEAD (from the other cherry-pick branch) and the current branch's pickman record are being added. I need to keep both sections. Let me resolve this by removing the conflict markers and keeping both entries:
-
-There are still conflict markers. Let me check where they are:
-
-Those are not git conflict markers - they're just text that contains `======` as part of test output formatting. Let me verify the actual conflict markers are not present:
-
-Good, no conflict markers. Let me verify and add the resolved file:
-
-The rebase completed successfully. Now let me verify the commits and check deltas:
-
-All 12 commits are present after rebase. Now let me compare the commit deltas before and after rebase for each of the 11 original commits (excluding the pickman record):
-
-All deltas match exactly before and after the rebase. Now let me run the build test:
-
-Build passed. Now let me check if there's an existing versioned branch and create the new local branch:
-
-No existing version branches. Let me create -v2:
-
-Now let me force push to the original remote branch using pickman:
-
-The push was successful. Let me verify the final state:
-
-## Rebase Summary
-
-**Rebase completed successfully for MR !687 (branch: cherry-8c981709e03)**
-
-### What was done:
-1. **Rebased** onto latest ci/master (4 new commits upstream)
-2. **Resolved conflict** in `.pickman-history` (append-only history file - both entries kept)
-3. **Verified all commit deltas match** before/after rebase
-4. **Build verification passed** (sandbox target)
-5. **Created local branch** `cherry-8c981709e03-v2`
-6. **Force pushed** to remote branch `cherry-8c981709e03`
-
-### Commits after rebase (12 total, 11 cherry-picks + 1 record):
-| # | New Hash | Subject | Delta Match |
-|---|----------|---------|-------------|
-| 1 | 1d6074d4f4a | configs: Resync with savedefconfig | ✅ |
-| 2 | 066071f6acc | MAINTAINERS: Add entry for DesignWare XGMAC driver | ✅ |
-| 3 | 997e13e78a3 | Prepare v2025.10-rc4 [SKIPPED] | ✅ (empty) |
-| 4 | 5709bead041 | configs: Fix crash on coreboot x86 | ✅ |
-| 5 | 78ca4e967a9 | configs: starfive: Add visionfive2 CONFIG_DNS enabled | ✅ |
-| 6 | ff8e2f7be0f | spl: SPL_DM_SPI_FLASH depends on SPL_DM_SPI | ✅ |
-| 7 | c3ebc367fa5 | configs: Resync with savedefconfig | ✅ |
-| 8 | d489f0dce26 | env: fix config dependency for ENV_OFFSET_REDUND_RELATIVE_END | ✅ |
-| 9 | 816b379767c | dma: ti: k3-udma: fix dma_addr_t typecasts | ✅ |
-| 10 | f61d56ee875 | config: arch: k3: enable DMA_ADDR_T_64BIT | ✅ |
-| 11 | f557bf39649 | Merge patch series "Fix dma_addr_t for R5 SPL" | ✅ (empty) |
-| 12 | e4b39412d65 | pickman: Record cherry-pick of 11 commits | ✅ |
-
-### Build Result: ✅ PASSED
-
-### Reply to post on MR:
-```
-Rebased onto latest ci/master.
-
-All 11 cherry-picked commits preserved with matching deltas. Build verified (sandbox target).
-```
-
----
-
-### Review: 2026-03-06
-
-Branch: cherry-8c981709e03
-
-Comments addressed:
-
-
-### Conversation log
-I'm already in the u-boot directory. Let me checkout the branch and fetch the latest:
-
-Good, ci/master exists. Let me check the current branch state and see how far behind ci/master we are:
-
-Good, there are 2 new commits on ci/master since the merge base. Let me save the commit deltas for comparison after rebase:
-
-Now let me save the stats for each commit before rebasing:
-
-Good, I have the commit stats saved. Now let me start the rebase:
-
-The rebase completed successfully without conflicts. Now let me verify the commits after rebase and compare deltas:
-
-Good, all 13 commits are present after the rebase, now sitting on top of the 2 new commits from ci/master. Let me verify the commit deltas match:
-
-All commit deltas match exactly. Now let me run the build test:
-
-Build passed. Now let me check for existing versioned branches and create the new local branch:
-
-There's already a `-v2` branch. Let me create `-v3`:
-
-Now let me force push to the original remote branch:
-
-Push was successful. Let me verify the final state:
-
-## Rebase Summary
-
-**Rebase completed successfully for MR !687 (branch: cherry-8c981709e03)**
-
-### What was done:
-1. **Rebased** onto latest ci/master (2 new commits upstream: `debian-packaging` merge)
-2. **No conflicts** - all 13 commits rebased cleanly
-3. **All commit deltas match** before/after rebase (verified)
-4. **Build verification passed** (sandbox target)
-5. **Created local branch** `cherry-8c981709e03-v3`
-6. **Force pushed** to remote branch `cherry-8c981709e03`
-
-### Commits after rebase (13 total, 11 cherry-picks + 2 records):
-| # | New Hash | Subject | Delta Match |
-|---|----------|---------|-------------|
-| 1 | 6b599bb63ca | configs: Resync with savedefconfig | ✅ (159 files) |
-| 2 | a2b886ec82c | MAINTAINERS: Add entry for DesignWare XGMAC driver | ✅ (1 file) |
-| 3 | 5f1ae09746a | Prepare v2025.10-rc4 [SKIPPED] | ✅ (empty) |
-| 4 | 75e8ff0fa95 | configs: Fix crash on coreboot x86 | ✅ (1 file, +2) |
-| 5 | 806aedc84af | configs: starfive: Add visionfive2 CONFIG_DNS enabled | ✅ (1 file, +1) |
-| 6 | 5e860f83fe0 | spl: SPL_DM_SPI_FLASH depends on SPL_DM_SPI | ✅ (1 file) |
-| 7 | 178ff3f0155 | configs: Resync with savedefconfig | ✅ (1 file) |
-| 8 | b99de14a78d | env: fix config dependency for ENV_OFFSET_REDUND_RELATIVE_END | ✅ (1 file) |
-| 9 | 364508bbfbc | dma: ti: k3-udma: fix dma_addr_t typecasts | ✅ (2 files) |
-| 10 | ba343707631 | config: arch: k3: enable DMA_ADDR_T_64BIT | ✅ (1 file) |
-| 11 | 73965e4b44a | Merge patch series "Fix dma_addr_t for R5 SPL" | ✅ (empty) |
-| 12 | c12046beb70 | pickman: Record cherry-pick of 11 commits | ✅ (101 lines) |
-| 13 | 476ef1b64cc | pickman: Record review handling | ✅ (85 lines) |
-
-### Build Result: ✅ PASSED
-
-### Reply to post on MR:
-```
-Rebased onto latest ci/master (2 new upstream commits).
-
-All 13 commits rebased cleanly with matching deltas. Build verified (sandbox target).
-```
+### Branch Status
+Branch `cherry-210702ae6ce` is ready for pushing. It is ahead of `ci/master` by 8 commits.
 
 ---
 
