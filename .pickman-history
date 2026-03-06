@@ -37973,3 +37973,86 @@ All 13 commits rebased cleanly with matching deltas. Build verified (sandbox tar
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-5b35aa9da1e
+
+Commits:
+- 5b35aa9da1e xilinx: Disable SPL_OS_BOOT for Zynq and ZynqMP
+- dd4039e380d mtd: Kconfig: Add SPL_MUX_MMIO dependency to HBMC driver
+- 96cbe36c0ba configs: j721e_evm_r5: Enable HBMC and MUX_MMIO at SPL
+- 517744041f3 configs: j7200_evm_*_defconfig: Enable HBMC and MUX_MMIO at SPL
+- 6d4320d7612 arm: dts: k3-j721e-r5-common-proc-board: Enable HBMC in R5 SPL stage
+- a3ec093512a Merge patch series "Hyperflash boot fixes for j721e/j7200"
+
+### Conversation log
+Let me find the u-boot repository:
+
+Good, we're in the u-boot repository and it's clean enough (only an untracked file). Let me proceed with creating the branch:
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Now let me verify the delta:
+
+Delta looks identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the fifth commit:
+
+Fifth commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the sixth commit (the merge commit):
+
+The merge commit is empty (as expected, since all changes were already cherry-picked). Let me commit it as an empty commit to preserve the merge commit message:
+
+Merge commit was successfully created. Now let me verify the final log and run the final build:
+
+All cherry-picks completed successfully. Here is the final status:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-5b35aa9da1e` (based on `ci/master`)
+
+### Commits Cherry-Picked (6 of 6):
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 5b35aa9da1e | 939f153b029 | xilinx: Disable SPL_OS_BOOT for Zynq and ZynqMP |
+| 2 | dd4039e380d | a7422fd389a | mtd: Kconfig: Add SPL_MUX_MMIO dependency to HBMC driver |
+| 3 | 96cbe36c0ba | 716493b9317 | configs: j721e_evm_r5: Enable HBMC and MUX_MMIO at SPL |
+| 4 | 517744041f3 | 4e8224690ed | configs: j7200_evm_*_defconfig: Enable HBMC and MUX_MMIO at SPL |
+| 5 | 6d4320d7612 | e36a759b57f | arm: dts: k3-j721e-r5-common-proc-board: Enable HBMC in R5 SPL stage |
+| 6 | a3ec093512a | 9cd96f90c99 | Merge patch series "Hyperflash boot fixes for j721e/j7200" |
+
+### Build Result: **OK** ✓
+- All sandbox builds passed (no warnings or errors)
+
+### Fix-ups Made: **None**
+- All commits applied cleanly
+
+### Commits with Concerning Deltas: **None**
+- All deltas matched the originals exactly
+
+The branch `cherry-5b35aa9da1e` is ready for pushing.
+
+---
+
