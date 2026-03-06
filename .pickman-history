@@ -37496,3 +37496,62 @@ The branch `cherry-ae2cd1b52d4` is ready for pushing with 2 commits ahead of `ci
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-8705ee4b6d3
+
+Commits:
+- 8705ee4b6d3 pinctrl: rzg2l: Variable may not have been assigned to
+- 8d2bde7af1f Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+Now let me verify the commits exist in the us/next branch before cherry-picking:
+
+Good, both commits exist. Now let me check if the second commit (merge commit marked as "maybe already applied as 7de1c82709f") is indeed already applied:
+
+The merge commits are similar in purpose (both are merging the same content from u-boot-sh), but let me verify by checking if the actual commit 8705ee4b6d3 (which is the content of this merge) is already in ci/master:
+
+The first commit (8705ee4b6d3) is NOT yet applied to ci/master - the file still has the old format with `%u:%u`. Let me proceed with cherry-picking:
+
+**Step 1: Cherry-pick the first commit (8705ee4b6d3 - pinctrl: rzg2l)**
+
+Commit delta looks identical (1 file, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let's cherry-pick the second commit (merge commit 8d2bde7af1f). Since we already verified that 7de1c82709f is a similar merge that brought in similar content, let me compare more closely:
+
+The merge commit 8d2bde7af1f only brings in 8705ee4b6d3 (the commit we just cherry-picked). The merge commit 7de1c82709f brought in different commits (a34ddf6ba7c and d5e820a539f). These are NOT the same merge commits - they just have similar names.
+
+Let me proceed with cherry-picking the merge commit 8d2bde7af1f:
+
+The merge commit is empty because its content (8705ee4b6d3) was already cherry-picked in the previous step. This is expected. Let me commit it as an empty commit to preserve the merge history:
+
+The original merge commit has stats (because it's a merge), but our cherry-picked version is empty (as expected since the content was already applied). Now let me run the build test:
+
+Build passed. Now let me verify the final state:
+
+All 2 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 8705ee4b6d3 | pinctrl: rzg2l: Variable may not have been assigned to | ✅ Applied cleanly |
+| 8d2bde7af1f | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh | ✅ Applied as empty commit (content already in first commit) |
+
+**Build Result:** ✅ OK (sandbox build passes)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** 
+- The merge commit 8d2bde7af1f is empty, which is expected since the content (8705ee4b6d3) was already cherry-picked as the first commit. This is normal behavior when cherry-picking a merge commit after its constituent commits.
+
+**Note regarding 7de1c82709f:** The commit 7de1c82709f mentioned as "maybe already applied" was verified to be a different merge commit that brought in different content (a34ddf6ba7c and d5e820a539f). The merge commit 8d2bde7af1f specifically merged only 8705ee4b6d3, so it was correctly cherry-picked.
+
+**Branch state:**
+- Branch `cherry-8705ee4b6d3` is ready for pushing
+- 2 commits ahead of `ci/master`
+
+---
+
