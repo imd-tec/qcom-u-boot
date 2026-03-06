@@ -37973,3 +37973,181 @@ All 13 commits rebased cleanly with matching deltas. Build verified (sandbox tar
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-5b35aa9da1e
+
+Commits:
+- 5b35aa9da1e xilinx: Disable SPL_OS_BOOT for Zynq and ZynqMP
+- dd4039e380d mtd: Kconfig: Add SPL_MUX_MMIO dependency to HBMC driver
+- 96cbe36c0ba configs: j721e_evm_r5: Enable HBMC and MUX_MMIO at SPL
+- 517744041f3 configs: j7200_evm_*_defconfig: Enable HBMC and MUX_MMIO at SPL
+- 6d4320d7612 arm: dts: k3-j721e-r5-common-proc-board: Enable HBMC in R5 SPL stage
+- a3ec093512a Merge patch series "Hyperflash boot fixes for j721e/j7200"
+
+### Conversation log
+Let me find the u-boot repository:
+
+Good, we're in the u-boot repository and it's clean enough (only an untracked file). Let me proceed with creating the branch:
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Now let me verify the delta:
+
+Delta looks identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the fifth commit:
+
+Fifth commit successful. Let me verify the delta:
+
+Delta identical. Now build test:
+
+Build passed. Now cherry-pick the sixth commit (the merge commit):
+
+The merge commit is empty (as expected, since all changes were already cherry-picked). Let me commit it as an empty commit to preserve the merge commit message:
+
+Merge commit was successfully created. Now let me verify the final log and run the final build:
+
+All cherry-picks completed successfully. Here is the final status:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-5b35aa9da1e` (based on `ci/master`)
+
+### Commits Cherry-Picked (6 of 6):
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 5b35aa9da1e | 939f153b029 | xilinx: Disable SPL_OS_BOOT for Zynq and ZynqMP |
+| 2 | dd4039e380d | a7422fd389a | mtd: Kconfig: Add SPL_MUX_MMIO dependency to HBMC driver |
+| 3 | 96cbe36c0ba | 716493b9317 | configs: j721e_evm_r5: Enable HBMC and MUX_MMIO at SPL |
+| 4 | 517744041f3 | 4e8224690ed | configs: j7200_evm_*_defconfig: Enable HBMC and MUX_MMIO at SPL |
+| 5 | 6d4320d7612 | e36a759b57f | arm: dts: k3-j721e-r5-common-proc-board: Enable HBMC in R5 SPL stage |
+| 6 | a3ec093512a | 9cd96f90c99 | Merge patch series "Hyperflash boot fixes for j721e/j7200" |
+
+### Build Result: **OK** ✓
+- All sandbox builds passed (no warnings or errors)
+
+### Fix-ups Made: **None**
+- All commits applied cleanly
+
+### Commits with Concerning Deltas: **None**
+- All deltas matched the originals exactly
+
+The branch `cherry-5b35aa9da1e` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-06 (attempt 1)
+
+Branch: cherry-5b35aa9da1e
+
+Failed jobs:
+- rockpro64 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failure. Looking at the job log, the error is:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+This is happening on rockpro64 board which is a Rockchip RK3399 board. The error happens during SPL boot when trying to load FIT image loadables. Let me look at what commit might have caused this:
+
+The cherry-picked commits don't seem to touch Rockchip files directly. Let me check the first commit which disables SPL_OS_BOOT for Zynq and ZynqMP:
+
+Let me check the second commit about HBMC driver:
+
+This doesn't appear to affect Rockchip. Let me look more closely at the log. The error indicates that the FIT image loadables can't be loaded. The error `-5` is typically `-EIO`. Let me look at the master branch and see if this error also exists there (which would indicate a pre-existing or infrastructure issue).
+
+Let me look at the actual error more closely. The error message:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+Let me search for what can cause this:
+
+The error `-5` is `-EIO` (I/O error). Looking at the full job log:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+mmc_load_image_raw_sector: mmc block read error
+```
+
+This looks like an MMC read error during the SPL loading of the FIT image loadables. This is a hardware I/O issue on the lab board - the MMC is failing to read. 
+
+Let me check if any of the cherry-picked commits could have affected MMC or SPL loading:
+
+The only code change outside of config files is a Kconfig change for HBMC_AM654, which is for TI AM65x SoC - not Rockchip. The commits don't touch anything related to rockpro64 or RK3399.
+
+Let me verify that rockpro64 doesn't use any of the touched code:
+
+The rockpro64 config doesn't use any of the features touched by the cherry-picked commits (HBMC, MUX_MMIO, ZYNQ, SPL_OS_BOOT).
+
+Let me check if this test job failure pattern is a known infrastructure issue by looking at the error more closely:
+
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+mmc_load_image_raw_sector: mmc block read error
+Error: -38
+```
+
+Error -38 is `-ENOSYS` (Function not implemented). The board is failing to boot from MMC. The sequence shows:
+1. TPL runs successfully (RAM init)
+2. SPL starts booting from MMC2
+3. ATF is loaded successfully 
+4. Loadables fail with I/O error
+5. Board falls through to other boot devices which all fail
+
+This is a **hardware/infrastructure issue** - the MMC on the lab rockpro64 board is having read errors. The cherry-picked commits don't touch any code that would affect rockpro64's boot path. The commits are:
+1. xilinx: Disable SPL_OS_BOOT for Zynq and ZynqMP - affects Xilinx boards only
+2. mtd: Kconfig: HBMC changes - affects TI AM65x only  
+3-5. configs for j721e/j7200 - affects TI J7 boards only
+6. Merge commit - empty
+
+Let me verify the build passes for rockpro64:
+
+The build "failure" is just missing ATF blob (bl31.bin) which is normal for a CI build without full firmware. This is not a real failure - the warning message `missing external blobs` is expected.
+
+Let me also check ci/master to see if this same test would pass there:
+
+No changes to rockchip, mmc, spi, or spl code at all.
+
+Based on my analysis, this is clearly an **infrastructure/transient issue** with the lab's rockpro64 hardware:
+
+1. **The error is hardware-related**: The failure message `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` with `mmc_load_image_raw_sector: mmc block read error` indicates an MMC I/O error on the physical hardware.
+
+2. **None of the cherry-picked commits affect rockpro64**: 
+   - Commit 1 (xilinx SPL_OS_BOOT) - only affects Xilinx Zynq/ZynqMP boards
+   - Commit 2 (HBMC Kconfig) - only affects TI AM65x boards
+   - Commits 3-5 (defconfig changes) - only affect TI j721e/j7200 boards
+   - Commit 6 (merge commit) - empty
+
+3. **No code changes affect boot paths**: There are zero changes to rockchip code, MMC drivers, SPL loading code, or any code that rockpro64 uses.
+
+4. **The build compiles successfully**: The rockpro64 board compiles fine (the warning about missing ATF blob is expected).
+
+## Conclusion
+
+This is an **infrastructure/transient failure** - the lab's rockpro64 board is having MMC hardware issues. The cherry-picked commits do not touch any code relevant to rockpro64's boot path. No code changes are needed.
+
+**Recommendation**: Retry the pipeline. If the issue persists, it indicates a hardware problem with the rockpro64 test board (possibly a failing eMMC or SD card).
+
+---
+
