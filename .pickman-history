@@ -37426,3 +37426,73 @@ The branch `cherry-4c28c4d9a3a` is ready for pushing, currently 4 commits ahead 
 
 ---
 
+## 2026-03-05: us/next
+
+Branch: cherry-ae2cd1b52d4
+
+Commits:
+- ae2cd1b52d4 usb: cdns3: Do not access memory after free
+- e4c8b32d03d Merge branch 'master' of git://source.denx.de/u-boot-usb
+
+### Conversation log
+Good, the repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (ae2cd1b52d4: usb: cdns3: Do not access memory after free):
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build test:
+
+The delta is identical (1 file, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Now let me check and cherry-pick the second commit. This is a merge commit with "maybe already applied as 84d71418276", so I need to verify if it's already applied:
+
+The patches show different merge commits. The found commit 84d71418276 appears to be a pickman merge with slightly different context. Let me look more closely at what the original merge commit brings in:
+
+Let me check what commits were brought in by the merge:
+
+Interesting! The merge commits are different:
+- Original e4c8b32d03d: Only contains the cdns3 gadget change (1 file, 4 lines)
+- Found 84d71418276: Contains multiple files including phy changes (4 files, 101 lines)
+
+These are NOT the same commit. The found merge is a different one. Let me verify if the specific change from the original merge is already in ci/master through the first cherry-pick:
+
+The cdns3 commit doesn't appear in ci/master yet. But since we already cherry-picked ae2cd1b52d4 (the same commit the merge was bringing in), cherry-picking the merge should result in an empty commit. Let me proceed with the merge commit cherry-pick:
+
+The merge commit results in an empty commit because the changes were already applied by the first cherry-pick. As instructed, I should still create the empty commit to preserve the merge commit message:
+
+Good, the empty merge commit was created. Let me verify the commit delta:
+
+This is an empty commit (no files changed) as expected since the changes were already applied by the first cherry-pick. Now let me run the build test:
+
+Build passed. Now let me verify all cherry-picks are present:
+
+All 2 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary:
+| Commit | Subject | Status |
+|--------|---------|--------|
+| ae2cd1b52d4 | usb: cdns3: Do not access memory after free | ✅ Cherry-picked successfully |
+| e4c8b32d03d | Merge branch 'master' of git://source.denx.de/u-boot-usb | ✅ Cherry-picked as empty commit (content already applied by first commit) |
+
+### Build Result: **OK** ✅
+- All builds passed successfully with no warnings or errors
+
+### Notes:
+- The merge commit (e4c8b32d03d) resulted in an empty commit because the actual changes it merged (ae2cd1b52d4) were already applied by the first cherry-pick
+- The empty commit was preserved with `--allow-empty` to maintain the merge commit message for history tracking
+- Note: The commit 84d71418276 mentioned as "maybe already applied" is actually a **different** merge commit in ci/master (it brings in different files related to phy changes), so the original merge commit was still cherry-picked
+
+### Fix-ups Made:
+- None required
+
+### Commits with Concerning Deltas:
+- None - all deltas matched expected values
+
+### Branch Status:
+The branch `cherry-ae2cd1b52d4` is ready for pushing with 2 commits ahead of `ci/master`.
+
+---
+
