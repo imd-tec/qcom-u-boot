@@ -12,7 +12,7 @@ Build-Depends:
  libpython3-dev:native [linux-any],
  libssl-dev,
  python3:any [linux-any],
- python3-libfdt:native,
+ python3-libfdt:native | device-tree-compiler (<< 1.7.0),
  python3-pyelftools [linux-any],
  python3-setuptools [linux-any],
  swig [linux-any],
