@@ -182,7 +182,7 @@ ifdef CONFIG_ARM64
 EFI_LDS := elf_aarch64_efi.lds
 EFI_CRT0 := crt0_aarch64_efi.o
 EFI_RELOC := reloc_aarch64_efi.o
-EFI_TARGET := --target=efi-app-aarch64
+EFI_TARGET := --output-target=efi-app-aarch64
 else
 EFI_LDS := elf_arm_efi.lds
 EFI_CRT0 := crt0_arm_efi.o
