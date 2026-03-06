@@ -37644,3 +37644,74 @@ Ready for: push
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-275978df0df
+
+Commits:
+- 275978df0df ARM: renesas: Enable CONFIG_ENV_VARS_UBOOT_CONFIG on all boards
+- b5294efd213 arm64: renesas: r8a779g3: Use $loadaddr in bootcmd on Retronix R-Car V4H Sparrow Hawk board
+- 7d5312e162d Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+Good, the repository is clean. Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The deltas match (1 file changed, 1 insertion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+The deltas match. Now let me run the build test:
+
+Build passed. Now let me handle the third commit. This is a merge commit and it's marked as "maybe already applied as b91f2959cbf". I need to verify if they are truly the same commit first:
+
+These are different merge commits. The original (7d5312e162d) is merging the u-boot-sh custodian branch, while b91f2959cbf is a GitLab merge request merge. Let me check what changes are actually in the original merge commit to better understand:
+
+Interesting! The merge commit 7d5312e162d brings in commits b5294efd213 and 275978df0df - which are the first two commits I've already cherry-picked. Let me verify if the merge commit's content is already present in ci/master:
+
+The commits were not in ci/master before (I just added them). Now let me cherry-pick the merge commit. Since it's a merge commit and the individual commits have already been cherry-picked, this will likely result in an empty commit, but we still want to preserve the merge commit message:
+
+The merge commit results in an empty commit because the changes are already applied. Per the instructions, we must preserve merge commits even if empty. Let me commit it:
+
+Now let me verify the cherry-picked commit includes the -x annotation and run the build test:
+
+Good, the cherry-pick annotation is there. Let me run the final build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 3 commits are present. Let me provide the final status summary:
+
+## Final Status Report
+
+### Cherry-Pick Summary
+
+| # | Original Commit | Subject | Status | New Hash |
+|---|-----------------|---------|--------|----------|
+| 1 | 275978df0df | ARM: renesas: Enable CONFIG_ENV_VARS_UBOOT_CONFIG on all boards | ✅ OK | aaf38ff6dc3 |
+| 2 | b5294efd213 | arm64: renesas: r8a779g3: Use $loadaddr in bootcmd on Retronix R-Car V4H Sparrow Hawk board | ✅ OK | 6802e748be3 |
+| 3 | 7d5312e162d | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh | ✅ OK (empty) | 6a37e256139 |
+
+### Build Result
+- **Status**: ✅ OK
+- No warnings or errors
+
+### Notes
+- **Commit #3 (merge commit)**: Resulted in an empty commit as expected because the actual changes (commits #1 and #2) were already cherry-picked individually. The merge commit message was preserved using `--allow-empty`.
+- The commit b91f2959cbf was verified to be a **different** merge commit (GitLab MR merge) and NOT the same as 7d5312e162d, so the cherry-pick was performed.
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all deltas matched expected values
+
+### Branch Status
+The branch `cherry-275978df0df` is ready for pushing with 3 commits ahead of `ci/master`.
+
+---
+
