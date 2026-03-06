@@ -37179,3 +37179,91 @@ The branch `cherry-a20dbbb0711` is ready for pushing.
 
 ---
 
+## 2026-03-05: us/next
+
+Branch: cherry-5d542302230
+
+Commits:
+- 5d542302230 mtd: nand: cadence: Fix device assignment to avoid warm reset issue
+- 590c28b378f cmd: nand: bug fix MTD_OOB_AUTO to MTD_OPS_AUTO_OOB
+- 7ec4e91b2f3 cmd: nand: more descriptive help info
+- b5ce63e1350 cmd: nand: nand dump display update
+- bb5d3a7a1c8 cmd: nand: nand dump with ecc option
+- d246e70cf81 cmd: mtd: Enable speed benchmarking
+- 6b156c62ced mtd: nand: Do not dereference before NULL check
+- 7d879baa6f7 Merge branch 'u-boot-nand-23082025' of https://source.denx.de/u-boot/custodians/u-boot-nand-flash
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Branch created. Now let me cherry-pick the first commit:
+
+First commit cherry-picked. Let me verify the delta and run build test:
+
+Delta matches (1 file, 1 insertion, 1 deletion). Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta matches (2 files, 2 insertions, 2 deletions). Now run build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Delta matches. Now build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Delta matches (1 file, 7 insertions, 18 deletions). Now build test:
+
+Build passed. Now cherry-pick the fifth commit:
+
+Delta matches (1 file, 18 insertions, 7 deletions). Now build test:
+
+Build passed. Now cherry-pick the sixth commit:
+
+Delta matches (1 file, 14 insertions, 1 deletion). Now build test:
+
+Build passed. Now cherry-pick the seventh commit:
+
+Delta matches (1 file, 5 insertions, 2 deletions). Now build test:
+
+Build passed. Now cherry-pick the eighth and final commit (merge commit):
+
+The merge commit resulted in an empty commit (expected since all the changes were already applied via the individual commits). Let me commit it as an empty commit to preserve the history:
+
+Now let me verify the delta for this commit and run the final build test:
+
+The merge commit is empty as expected (since all changes were already applied via the individual cherry-picks). Now let me verify with git log and run the final build:
+
+All 8 commits are present. Now let me run the final build test:
+
+All cherry-picks completed successfully. Here's the final status:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+All builds passed without warnings or errors.
+
+### Cherry-picked Commits (8 total):
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 5d542302230 | 2ef2c64eab9 | mtd: nand: cadence: Fix device assignment to avoid warm reset issue | ✅ OK |
+| 2 | 590c28b378f | 3be1638d7cd | cmd: nand: bug fix MTD_OOB_AUTO to MTD_OPS_AUTO_OOB | ✅ OK |
+| 3 | 7ec4e91b2f3 | ea6dddf99e0 | cmd: nand: more descriptive help info | ✅ OK |
+| 4 | b5ce63e1350 | 8f8fdd31377 | cmd: nand: nand dump display update | ✅ OK |
+| 5 | bb5d3a7a1c8 | d95faf617e2 | cmd: nand: nand dump with ecc option | ✅ OK |
+| 6 | d246e70cf81 | 5133c3e054b | cmd: mtd: Enable speed benchmarking | ✅ OK |
+| 7 | 6b156c62ced | 704fd23b441 | mtd: nand: Do not dereference before NULL check | ✅ OK |
+| 8 | 7d879baa6f7 | 7cc2056ae01 | Merge branch 'u-boot-nand-23082025' (empty merge) | ✅ OK |
+
+### Fix-ups Made: None
+All cherry-picks applied cleanly with no conflicts.
+
+### Delta Checks: All OK
+All commits had matching file changes and line counts between original and cherry-picked versions. The merge commit is empty as expected (individual commits already applied all changes).
+
+### Branch Status:
+- Branch `cherry-5d542302230` is ready for pushing
+- 8 commits ahead of `ci/master`
+
+---
+
