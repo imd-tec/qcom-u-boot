@@ -1,0 +1,110 @@
+#!/usr/bin/make -f
+
+# Use the system dtc from device-tree-compiler
+export DTC=/usr/bin/dtc
+
+# Disable branch hardening to fix build failure of arch:all build
+# https://bugs.debian.org/1052724
+export DEB_BUILD_MAINT_OPTIONS=hardening=-branch
+
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/pkg-info.mk
+
+DEBIAN_REVISION ?= $(shell echo $(DEB_VERSION) | sed -e 's,.*-,-,')
+
+include debian/targets.mk
+
+# Enable verbose build by default, disable when terse is specified.
+ifneq (,$(filter terse,$(DEB_BUILD_OPTIONS)))
+VERBOSE=0
+else
+VERBOSE=1
+endif
+common_make_args += V=$(VERBOSE)
+common_make_args += BINMAN_DEBUG=1
+common_make_args += BINMAN_VERBOSE=3
+
+# the upstream build passes LDFLAGS directly to ld instead of calling gcc for
+# linking; so instead of passing -Wl,foo in LDFLAGS as in automake builds, one
+# should set LDFLAGS to foo directly
+comma := ,
+LDFLAGS := $(patsubst -Wl$(comma)%,%,$(LDFLAGS))
+
+HOSTCFLAGS := $(CFLAGS)
+export HOSTCFLAGS
+
+# Exclude package notes to avoid FTBFS on oracular
+unexport ELF_PACKAGE_METADATA
+
+%:
+	dh $@
+
+override_dh_auto_build-indep: u-boot-concept-qemu
+override_dh_auto_build-arch:
+
+.PHONY: u-boot-concept-qemu
+
+define build_template
+
+  # Tell Make to build the platform as part of the package.
+  $(package): $(platform)
+
+  $(platform):
+	# debian/rules: building platform: $(platform)
+	mkdir -p debian/build/$(platform)
+
+	dh_auto_build -- $(common_make_args) \
+	  O=debian/build/$(platform) \
+	  CROSS_COMPILE=$(or $($(platform)_CROSS_COMPILE),$(CROSS_COMPILE)) \
+	  $($(platform)_assigns) \
+	  $(platform)_defconfig
+
+	sed -i -e 's,^CONFIG_LOCALVERSION=.*,CONFIG_LOCALVERSION="$(DEBIAN_REVISION)",' \
+	  -e 's,^CONFIG_RUST_EXAMPLES=y,# CONFIG_RUST_EXAMPLES is not set,' \
+	  debian/build/$(platform)/.config
+
+	dh_auto_build -- $(common_make_args) \
+	  O=debian/build/$(platform) \
+	  CROSS_COMPILE=$(or $($(platform)_CROSS_COMPILE),$(CROSS_COMPILE)) \
+	  $($(platform)_assigns)
+
+    ifneq (,$(filter uboot.elf,$($(platform)_targets)))
+	cp -u debian/build/$(platform)/u-boot debian/build/$(platform)/uboot.elf
+    endif
+	# Strip the ELF binary
+	$($(platform)_CROSS_COMPILE)strip --remove-section=.comment --remove-section=.note \
+	  debian/build/$(platform)/uboot.elf
+	# Upstream generates executable targets (last checked with 2020-10).
+	chmod -x $(addprefix debian/build/$(platform)/,$($(platform)_targets))
+
+  install-$(platform):
+	dh_install -pu-boot-concept-qemu $(addprefix debian/build/$(platform)/,$($(platform)_targets)) usr/lib/u-boot-concept/$(platform)
+
+endef
+$(foreach package, u-boot-concept-qemu,\
+  $(foreach platform, $($(package)_platforms),\
+    $(eval $(build_template))))
+
+override_dh_auto_test-indep:
+override_dh_auto_test-arch:
+
+# Do not spend time searching for an install target in Makefile.
+override_dh_auto_install:
+
+execute_after_dh_install-indep: $(addprefix install-,$(u-boot-concept-qemu_platforms)) installdocs-u-boot-concept-qemu
+
+installdocs-u-boot-concept-qemu:
+	mkdir -p debian/build/u-boot-concept-qemu/configs
+	for platform in $(u-boot-concept-qemu_platforms); do \
+	  cp -u debian/build/$$platform/.config debian/build/u-boot-concept-qemu/configs/config.$$platform; \
+	done
+	dh_installdocs -pu-boot-concept-qemu debian/build/u-boot-concept-qemu/configs
+
+override_dh_clean:
+	rm -rf debian/build/
+	dh_clean
+	find . -type d -name __pycache__ -delete
+
+override_dh_gencontrol:
+	dh_gencontrol -- \
+	  '-Vu-boot-concept-qemu:platforms=$(subst $() ,$${Newline},$(u-boot-concept-qemu_platforms))'

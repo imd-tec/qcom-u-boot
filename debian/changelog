@@ -1,0 +1,23 @@
+u-boot-concept (2026.02-1~ppa4) noble; urgency=medium
+
+  * Update to latest master (git fbac37e3, 20260306).
+
+ -- Simon Glass <sjg@chromium.org>  Fri, 06 Mar 2026 11:41:54 -0700
+
+u-boot-concept (2026.02-1~ppa3) noble; urgency=medium
+
+  * Update to latest master (git fbac37e3, 20260306).
+
+ -- Simon Glass <sjg@chromium.org>  Fri, 06 Mar 2026 11:41:41 -0700
+
+u-boot-concept (2026.02-1~ppa2) noble; urgency=medium
+
+  * Update to latest master.
+
+ -- Simon Glass <sjg@chromium.org>  Fri, 06 Mar 2026 11:35:07 -0700
+
+u-boot-concept (2026.02-1~ppa1) noble; urgency=medium
+
+  * Initial packaging from U-Boot Concept tree.
+
+ -- Simon Glass <sjg@chromium.org>  Fri, 06 Mar 2026 00:00:00 +0000
