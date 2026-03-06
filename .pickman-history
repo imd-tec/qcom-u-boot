@@ -37355,3 +37355,121 @@ The `cherry-0d1c4fd514c` branch is now ready for pushing, with 13 commits ahead 
 
 ---
 
+## 2026-03-05: us/next
+
+Branch: cherry-709b5be0a48
+
+Commits:
+- 709b5be0a48 spi: atmel_qspi: fix race condition in transfer completion check
+- 29ea990a1c4 clk: at91: Fix testing of unsigned variable to be negative
+- da13ce8a6b1 clk: at91: Fix use of unsigned loop index
+- b824136ab4f mfd: atmel-smc: Ensure match is initialised
+- 4fb189a58ea mmc: gen_atmel_mci: Remove duplicate checks
+- c1168f99387 mmc: gen_atmel_mci: NULL check variable before use
+- 997c0c45c19 bootstd: rauc: Do not select BOOTMETH_GLOBAL
+- 03baafe0623 board: phytec: phycore_am6xx: Add rauc to bootmeths
+- bd5036ddf2f remoteproc: k3: update compatible for am654 syscon
+- dca578a9c9d Prepare v2025.10-rc3
+- 349cf24859b Merge tag 'u-boot-at91-fixes-2025.10-a' of https://source.denx.de/u-boot/custodians/u-boot-at91
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master.
+
+Now I'll cherry-pick each commit one by one, verifying the delta and building after each one.
+
+**Commit 1: 709b5be0a48 - spi: atmel_qspi: fix race condition**
+
+Delta looks identical. Now run build test:
+
+Build passed. **Commit 2: 29ea990a1c4 - clk: at91: Fix testing of unsigned variable to be negative**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 3: da13ce8a6b1 - clk: at91: Fix use of unsigned loop index**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 4: b824136ab4f - mfd: atmel-smc: Ensure match is initialised**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 5: 4fb189a58ea - mmc: gen_atmel_mci: Remove duplicate checks**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 6: c1168f99387 - mmc: gen_atmel_mci: NULL check variable before use**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 7: 997c0c45c19 - bootstd: rauc: Do not select BOOTMETH_GLOBAL**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 8: 03baafe0623 - board: phytec: phycore_am6xx: Add rauc to bootmeths**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 9: bd5036ddf2f - remoteproc: k3: update compatible for am654 syscon**
+
+Delta looks identical. Build test:
+
+Build passed. **Commit 10: dca578a9c9d - Prepare v2025.10-rc3**
+
+We have conflicts. Let me examine them:
+
+This is a version bump conflict. The ci/master branch is at 2026.02 whereas the commit being picked is for 2025.10-rc3. This is expected due to version differences. Let me resolve these conflicts by keeping the current version info (we're on a newer base):
+
+Let me resolve these conflicts. For the Makefile, we keep the current (HEAD) version:
+
+The commit became empty after conflict resolution because all changes are already in the target branch. As per instructions, I need to preserve the commit anyway using --allow-empty:
+
+The cherry-picked commit is empty (as expected - version info is different on ci/master). Build test:
+
+Build passed. **Commit 11 (last): 349cf24859b - Merge tag 'u-boot-at91-fixes-2025.10-a'** - This is a merge commit:
+
+It's a merge commit (has two parents). I'll use -m 1 --allow-empty:
+
+The merge commit is empty because all its changes were already cherry-picked in the earlier commits. As per instructions, I should preserve the merge commit:
+
+The cherry-picked merge commit is empty (expected since all changes were already picked). Now let's run the final build test:
+
+Build passed. Let's verify the final state with git log:
+
+All 11 commits are present. Let me verify the branch status:
+
+All 11 commits are cherry-picked successfully. Let me provide a summary:
+
+---
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-709b5be0a48` (based on `ci/master`)
+
+**Build Result:** ✅ OK (sandbox builds successfully)
+
+**All 11 commits cherry-picked:**
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 2b6eb43e818 | spi: atmel_qspi: fix race condition in transfer completion check | ✅ Clean |
+| 2 | 19dded089ff | clk: at91: Fix testing of unsigned variable to be negative | ✅ Clean |
+| 3 | db782fafbcd | clk: at91: Fix use of unsigned loop index | ✅ Clean |
+| 4 | 2866205a1d9 | mfd: atmel-smc: Ensure match is initialised | ✅ Clean |
+| 5 | 8325d894484 | mmc: gen_atmel_mci: Remove duplicate checks | ✅ Clean |
+| 6 | 4153a76eb09 | mmc: gen_atmel_mci: NULL check variable before use | ✅ Clean |
+| 7 | 792c6fe7686 | bootstd: rauc: Do not select BOOTMETH_GLOBAL | ✅ Clean (auto-merged) |
+| 8 | 19c3d5a59f7 | board: phytec: phycore_am6xx: Add rauc to bootmeths | ✅ Clean |
+| 9 | 837bca76636 | remoteproc: k3: update compatible for am654 syscon | ✅ Clean |
+| 10 | 7d02e7d4854 | Prepare v2025.10-rc3 | ⚠️ Empty (version conflict resolved) |
+| 11 | 05a6ad9f97e | Merge tag 'u-boot-at91-fixes-2025.10-a' | ⚠️ Empty (merge commit) |
+
+**Fix-ups Made:**
+- Commit 10 (Prepare v2025.10-rc3): Resolved version conflicts in Makefile and doc/develop/release_cycle.rst by keeping the ci/master version (2026.02). The commit is empty because the version info is different on ci/master.
+- Commit 11 (Merge tag): Empty as expected since all constituent commits were already cherry-picked individually.
+
+**Commits with Concerning Deltas:** None - all deltas match the original commits.
+
+**Branch ready for pushing.** The branch is ahead of ci/master by 11 commits.
+
+---
+
