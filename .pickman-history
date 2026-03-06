@@ -38021,3 +38021,61 @@ The rebase was completed successfully.
 
 ---
 
+### Review: 2026-03-06
+
+Branch: cherry-210702ae6ce
+
+Comments addressed:
+
+
+### Conversation log
+Good, ci/master is 2 commits ahead. Let me save the pre-rebase stats for all commits:
+
+I have the pre-rebase stats. Now let me perform the rebase:
+
+Rebase completed successfully. Now let me verify the commits and compare deltas:
+
+All deltas match perfectly:
+
+| Commit | Pre-rebase | Post-rebase | Match |
+|--------|------------|-------------|-------|
+| spl: spi: fix falcon mode for spi boot | 1 file, 1+/1- | 1 file, 1+/1- | ✓ |
+| arm: armv8: Fix spl recover data section broken | 3 files, 5+/5- | 3 files, 5+/5- | ✓ |
+| clk: stm32: Pass udevice pointer | 1 file, 1+/1- | 1 file, 1+/1- | ✓ |
+| net: dwc_eth_qos: Fix support for stm32mp2 | 1 file, 35+/9- | 1 file, 35+/9- | ✓ |
+| ARM: stm32: Perform node compatible check | 1 file, 3+/3- | 1 file, 3+/3- | ✓ |
+| deprecate mixed-case product ids | empty | empty | ✓ |
+| board: ti: am57xx | 1 file, 1+/1- | 1 file, 1+/1- | ✓ |
+| Merge tag 'u-boot-stm32' | empty | empty | ✓ |
+| pickman tracking commits | matching | matching | ✓ |
+
+Now let me run the build:
+
+Build passed. Now let me check for existing version branches and push:
+
+Already have v2, v3, v4, so I need to create v5:
+
+Let me verify the final state:
+
+## Summary
+
+The rebase was completed successfully.
+
+### What was done:
+1. **Checked out branch** `cherry-210702ae6ce`
+2. **Fetched latest ci/master** and **rebased onto it** - the branch was 2 commits behind ci/master
+3. **Verified all commit deltas** - all 12 commits have identical file changes as before the rebase:
+   - Commits 1-5, 7: Normal commits with matching deltas ✓
+   - Commit 6 (deprecate mixed-case product ids): Empty commit (expected) ✓
+   - Commit 8 (Merge tag): Empty merge commit (expected) ✓
+   - Commits 9-12: pickman tracking commits ✓
+4. **Build passed** for sandbox board
+5. **Created local branch** `cherry-210702ae6ce-v5` for tracking
+6. **Force pushed** to `ci/cherry-210702ae6ce` - MR !689 updated
+
+### Suggested MR reply:
+
+> Rebased onto latest ci/master. Build passes. Ready for merge.
+
+---
+
