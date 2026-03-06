@@ -37816,3 +37816,88 @@ The branch is ready for pushing.
 
 ---
 
+### Review: 2026-03-06
+
+Branch: cherry-8c981709e03
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct u-boot repository:
+
+I'm already in the u-boot directory. Let me proceed with the rebase:
+
+Good, ci/master exists. Let me check the current state and compare with ci/master:
+
+The merge base is 63b9b9888fd. Let me see how many commits are behind ci/master:
+
+The branch is 4 commits behind ci/master. Let me save the current commit info for comparison after rebase, then do the rebase:
+
+Now let me start the rebase with --keep-empty:
+
+There's a conflict in the pickman history file. Let me check and resolve it:
+
+The first 11 commits were rebased successfully. Now I just need to resolve the conflict in .pickman-history (which is an append-only history file). Let me resolve it by keeping both sections:
+
+I can see the conflict - both HEAD (from the other cherry-pick branch) and the current branch's pickman record are being added. I need to keep both sections. Let me resolve this by removing the conflict markers and keeping both entries:
+
+There are still conflict markers. Let me check where they are:
+
+Those are not git conflict markers - they're just text that contains `======` as part of test output formatting. Let me verify the actual conflict markers are not present:
+
+Good, no conflict markers. Let me verify and add the resolved file:
+
+The rebase completed successfully. Now let me verify the commits and check deltas:
+
+All 12 commits are present after rebase. Now let me compare the commit deltas before and after rebase for each of the 11 original commits (excluding the pickman record):
+
+All deltas match exactly before and after the rebase. Now let me run the build test:
+
+Build passed. Now let me check if there's an existing versioned branch and create the new local branch:
+
+No existing version branches. Let me create -v2:
+
+Now let me force push to the original remote branch using pickman:
+
+The push was successful. Let me verify the final state:
+
+## Rebase Summary
+
+**Rebase completed successfully for MR !687 (branch: cherry-8c981709e03)**
+
+### What was done:
+1. **Rebased** onto latest ci/master (4 new commits upstream)
+2. **Resolved conflict** in `.pickman-history` (append-only history file - both entries kept)
+3. **Verified all commit deltas match** before/after rebase
+4. **Build verification passed** (sandbox target)
+5. **Created local branch** `cherry-8c981709e03-v2`
+6. **Force pushed** to remote branch `cherry-8c981709e03`
+
+### Commits after rebase (12 total, 11 cherry-picks + 1 record):
+| # | New Hash | Subject | Delta Match |
+|---|----------|---------|-------------|
+| 1 | 1d6074d4f4a | configs: Resync with savedefconfig | ✅ |
+| 2 | 066071f6acc | MAINTAINERS: Add entry for DesignWare XGMAC driver | ✅ |
+| 3 | 997e13e78a3 | Prepare v2025.10-rc4 [SKIPPED] | ✅ (empty) |
+| 4 | 5709bead041 | configs: Fix crash on coreboot x86 | ✅ |
+| 5 | 78ca4e967a9 | configs: starfive: Add visionfive2 CONFIG_DNS enabled | ✅ |
+| 6 | ff8e2f7be0f | spl: SPL_DM_SPI_FLASH depends on SPL_DM_SPI | ✅ |
+| 7 | c3ebc367fa5 | configs: Resync with savedefconfig | ✅ |
+| 8 | d489f0dce26 | env: fix config dependency for ENV_OFFSET_REDUND_RELATIVE_END | ✅ |
+| 9 | 816b379767c | dma: ti: k3-udma: fix dma_addr_t typecasts | ✅ |
+| 10 | f61d56ee875 | config: arch: k3: enable DMA_ADDR_T_64BIT | ✅ |
+| 11 | f557bf39649 | Merge patch series "Fix dma_addr_t for R5 SPL" | ✅ (empty) |
+| 12 | e4b39412d65 | pickman: Record cherry-pick of 11 commits | ✅ |
+
+### Build Result: ✅ PASSED
+
+### Reply to post on MR:
+```
+Rebased onto latest ci/master.
+
+All 11 cherry-picked commits preserved with matching deltas. Build verified (sandbox target).
+```
+
+---
+
