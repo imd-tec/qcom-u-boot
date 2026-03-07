@@ -39108,3 +39108,66 @@ The branch `cherry-e416d165723` is ready for pushing.
 
 ---
 
+### Review: 2026-03-07
+
+Branch: cherry-e416d165723
+
+Comments addressed:
+
+
+### Conversation log
+Now I can see the situation:
+- Current branch has commits up to e6a5093733e (the pickman record commit)
+- ci/master is at 37ca18b8da7 (has 2 new commits: debian-packaging merge and related commit)
+- The merge base is d2c113482bd
+
+Let me see the commits that need to be rebased and perform the rebase:
+
+Now I need to save the original commit stats before rebasing so I can compare them afterwards:
+
+Good, I have the original stats. Now let me perform the rebase:
+
+The rebase completed successfully. Now let me verify the commits and their stats:
+
+Good, the rebase completed. Now let me verify the deltas of each rebased commit:
+
+All deltas match perfectly! Now let me run the build test:
+
+Build passed! Now let me create the versioned local branch and push:
+
+## Summary
+
+**Rebase completed successfully!**
+
+### What was done:
+1. **Rebased** branch `cherry-e416d165723` onto latest `ci/master` (37ca18b8da7)
+2. **Verified** all 10 commits have identical deltas before and after rebase
+3. **Build test** passed for sandbox target
+4. **Created** local branch `cherry-e416d165723-v2` to preserve history
+5. **Force pushed** to remote `ci/cherry-e416d165723` to update MR !707
+
+### Commit mapping (old → new):
+| # | Old Hash | New Hash | Subject |
+|---|----------|----------|---------|
+| 1 | b021c70b3a9 | 0e27c533eac | pinctrl: nexell: Cannot test unsigned to be negative |
+| 2 | c0622bdb4b8 | d0d986d19b6 | tools: fit_info: Make usage() static |
+| 3 | d96dbd9f757 | 8933c89c39b | tools: aisimage: Make aisimage_check_params() static |
+| 4 | 0443f4910a3 | e6fa0ce169e | sound: rt5677: Cannot test unsigned for being negative |
+| 5 | e3bf5d69220 | 0e975e44bfe | sandbox: Improve dummy local_irq_save implementation (empty) |
+| 6 | bff701db84e | 529767b07f8 | sandbox: Add generic asm/atomic.h |
+| 7 | cc05fbff116 | 6ac4f7db00b | remoteproc: ti_k3_arm64: Cannot set or compare u8 to 16bits |
+| 8 | 36755ccd558 | b42950e74c5 | remoteproc: k3-r5: Ensure ret is initialised |
+| 9 | e94be96ec8a | 0edcfcca8c4 | Merge patch series "remoteproc: k3: Fix two Smatch issue reports" |
+| 10 | e6a5093733e | 6ae18566483 | pickman: Record cherry-pick of 9 commits from us/next |
+
+### Suggested MR comment:
+```
+Rebased onto latest target branch.
+
+- No conflicts encountered
+- Build test: ✅ sandbox passes
+- All commit deltas preserved
+```
+
+---
+
