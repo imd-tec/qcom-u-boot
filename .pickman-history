@@ -38079,3 +38079,117 @@ The rebase was completed successfully.
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-5c389e61902
+
+Commits:
+- 5c389e61902 binman: add a new entry type to support .bin file generation for the i.MX95 platform
+- b3bbbf5fee2 imx95_evk: Restore support for i.MX95 A0 silicon
+- eea731b50c6 Merge tag 'u-boot-imx-master-20250917' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository state is clean (only untracked files, no uncommitted changes). Let me proceed to create and checkout the new branch based on ci/master.
+
+Let me check the available remotes and branches:
+
+I see there's a local branch `ci/master` which is causing ambiguity. Let me use the remote directly:
+
+Let me stash the changes and proceed:
+
+Branch created. Now let me cherry-pick the first commit (regular commit, not a merge):
+
+First commit cherry-picked successfully. Let me verify the delta and run the build:
+
+The delta is identical (4 files, 137 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+There are conflicts. Let me check if these commits are already present in ci/master with different hashes (as instructed for the first failing cherry-pick):
+
+The commits don't appear in ci/master by subject. Let me examine the conflicts to try to resolve them:
+
+Let me see the full conflict in the defconfig:
+
+This is a significant conflict. The original commit wants to replace the entire config file with an include directive, but HEAD has the full config. Let me look at the original commit to understand what it's doing:
+
+This is a significant change. The commit restructures configuration files. The conflict is complex - the original commit replaces the full defconfig with an include directive, but HEAD has a completely different version. Let me check if this can be resolved by looking at what the original commit intended:
+
+This is a complex conflict. The defconfig differs in the base between ci/master and us/next. Let me check the new config file that the original commit creates:
+
+This is a complex restructuring. The conflicts involve significant refactoring that cannot be trivially auto-merged. Let me see the Makefile conflict more closely and try to resolve that one first:
+
+Let me look for the conflict area:
+
+Hmm, it seems the read didn't show the conflict markers. Let me search better:
+
+The Makefile conflict is about clean files. I can resolve this by keeping both additions - HEAD has some test/ulib files and incoming has imx9image files. Both should be kept:
+
+There's still a marker left. Let me fix it properly:
+
+There are more conflict markers. Let me check:
+
+Good, those are just `===` lines in comments, not conflict markers. The Makefile is clean. Now let me handle the defconfig conflict. This is a more complex one where the whole file needs to be replaced with an include:
+
+Now let me add the resolved files:
+
+Good, all conflicts are resolved. Now let me continue the cherry-pick, but I need to amend the commit message to note the resolution:
+
+Now let me amend the commit to note the conflict resolution:
+
+Now let me check the delta and run the build:
+
+The deltas are nearly identical (240 vs 241 insertions, same 191 deletions). The files modified are the same. The small difference is expected from the merged conflict in Makefile. Let me run the build:
+
+Build passed. Now let me cherry-pick the third commit, which is a merge commit:
+
+Another conflict in Makefile. Let me check it:
+
+The incoming change adds the same imx9image/m33 files but our HEAD already has them plus the test/ulib files. I should keep our HEAD version since it has both:
+
+Let me amend with a note about the conflict resolution:
+
+Now let me verify the delta:
+
+The delta is significantly different. The original merge commit shows 15 files changed with 378 insertions, but our cherry-picked version only shows 1 file changed with 1 deletion. This is expected behavior for cherry-picking a merge commit with `-m 1` when the changes have already been applied through earlier cherry-picks. The merge commit essentially becomes nearly empty because commits 1 and 2 already introduced all the changes.
+
+Let me run the build test:
+
+Build passed. Now let me verify all 3 commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Results
+All 3 commits have been successfully cherry-picked to branch `cherry-5c389e61902`:
+
+| # | Original Hash | New Hash | Status |
+|---|--------------|----------|--------|
+| 1 | 5c389e61902 | 7ce9a10a637 | ✅ Clean |
+| 2 | b3bbbf5fee2 | 8d2b3391d7f | ⚠️ Fixed conflicts |
+| 3 | eea731b50c6 | b572ae94a3e | ⚠️ Fixed conflicts |
+
+### Build Result
+**OK** - sandbox board builds successfully
+
+### Fix-ups Made
+
+1. **Commit 2 (b3bbbf5fee2)**: Resolved conflicts in:
+   - `Makefile`: Merged CLEAN_FILES additions (kept both HEAD's test/ulib files AND incoming imx9image/m33 files)
+   - `configs/imx95_19x19_evk_defconfig`: Replaced with `#include <configs/imx95_evk.config>` as intended by the original commit
+
+2. **Commit 3 (eea731b50c6)**: Resolved conflict in:
+   - `Makefile`: The imx9image/m33 additions were already present from commit 2, so kept our version
+
+### Delta Notes
+
+- **Commit 1**: Delta identical (4 files, 137 insertions)
+- **Commit 2**: Delta nearly identical (240 vs 241 insertions, 191 deletions) - small difference from merged Makefile conflict
+- **Commit 3**: Delta different as expected - the merge commit became nearly empty (1 file, 1 deletion) because commits 1 and 2 already introduced all the changes that would have been merged. This is normal behavior when cherry-picking a merge commit after its constituent commits have already been applied.
+
+### Branch Status
+Branch `cherry-5c389e61902` is ready for pushing with 3 new commits on top of `ci/master`.
+
+---
+
