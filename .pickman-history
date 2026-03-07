@@ -38773,3 +38773,153 @@ All 13 commits are present. Now let me run the final build:
 
 ---
 
+## 2026-03-07: us/next
+
+Branch: cherry-72f72fab007
+
+Commits:
+- 72f72fab007 b4-config: Improve b4 config for correct operation
+- eb5014841c2 doc: develop: fix grammar and syntax
+- 5a21f5b4c9f doc: Update coding style to recommend b4 for patch submission
+- a8d451aa146 doc: pytest: Fix inline code and other formatting
+- 5a3c306aaf3 Merge tag 'doc-202510-rc6' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+The repository state is clean (untracked files don't affect cherry-picking). Let me proceed with creating the branch and starting the cherry-pick process.
+
+Let me check what refs are available:
+
+I see there's a local branch `ci/master`. Let me use it directly:
+
+Branch created successfully. Now let me create a todo list to track the cherry-pick process and start with the first commit:
+
+There's a conflict. Let me check if these commits are already applied in ci/master as per the instructions:
+
+None of those exact subject lines were found. Let me search with partial matches to see if they exist under similar names:
+
+Let me check if the doc-202510-rc6 tag content might be in rc1 or somewhere else. Let me also see what the original commits contain:
+
+The commits don't seem to be in ci/master. Let me check if .b4-config exists in ci/master:
+
+I see - the `.b4-config` file doesn't exist in ci/master. This explains the conflict - the commit is modifying a file that was never created in this branch because the original commit (26efc940c86) that created it isn't in ci/master.
+
+Let me check if the original commit that created .b4-config is in ci/master:
+
+The original commit that created .b4-config (26efc940c86) is not in ci/master. This commit (72f72fab007) is a fix to that file. Since the file doesn't exist in ci/master, I need to resolve this conflict by adding the file.
+
+Let me check what state the file is in now and resolve the conflict:
+
+The .b4-config file exists in the working tree from the cherry-pick. Since this is a modification to a file that doesn't exist in ci/master, the proper resolution is to add the file. This is a simple conflict resolution - I'll add the file which represents the current state that the commit wanted to achieve.
+
+Let me verify what the original commit 26efc940c86 contains and what the final expected state is:
+
+I see - the 72f72fab007 commit removed `send-series-to` and changed the commands. The file in the working tree matches the expected state from 72f72fab007. This is good - I'll resolve the conflict by adding the file and continuing, but I should note that this commit is effectively creating the file fresh (since the base commit doesn't exist in ci/master).
+
+Let me resolve this conflict:
+
+The first commit was applied. Now I need to verify the delta and run the build test:
+
+There is a delta difference: the original shows "2 insertions, 3 deletions" while the cherry-pick shows "6 insertions, 0 deletions". This is expected because the original commit modified an existing file, but since the base file (26efc940c86) wasn't in ci/master, we're effectively creating the file new. However, the end result should be the same content. Let me verify the file content is correct:
+
+The file content is identical. The delta difference is acceptable because we're creating the file fresh rather than modifying it. Now let me run the build test:
+
+Build passed. Let me proceed to the second commit:
+
+Perfect - same delta (7 insertions, 7 deletions). Let me run the build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Perfect - same delta. Build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+There's a conflict. Let me examine it:
+
+I can see the conflict. Let me examine it more closely:
+
+There are two conflict regions. Let me look at both conflicts in detail:
+
+I see the conflict in the second read wasn't showing the markers properly. Let me get the actual conflict areas:
+
+I see the two conflicts. Let me check what the original commit was changing to understand the intention:
+
+I now understand the conflicts. The first conflict is about the "sudo" text - in ci/master there's extra content about virt-make-fs that doesn't exist in the original commit's base. The incoming commit just changes formatting (single quotes to double backticks).
+
+The second conflict is about paths - ci/master has different paths (`$UBOOT/test/hooks/...`) while the incoming commit has `$HOME/ubtest/...`.
+
+For both conflicts, I need to choose the best resolution. Let me see what the ci/master version looks like currently without conflict markers:
+
+I see the conflicts now. Let me resolve them properly:
+
+**Conflict 1:** The ci/master version has more detailed content about virt-make-fs, but the format is older (using 'sudo' instead of ``sudo``). The incoming commit has newer formatting but different content about fs_helper.py. I should keep the ci/master content but apply the formatting fixes where applicable (change `'sudo'` to `\`\`sudo\`\``).
+
+**Conflict 2:** The ci/master version uses `$UBOOT/test/hooks/...` paths while incoming uses `$HOME/ubtest/...`. The ci/master paths make more sense since they reference U-Boot's test directory. I should keep ci/master content but fix the formatting (single backticks to double backticks).
+
+Let me apply these resolutions:
+
+I notice the conflict markers were already automatically resolved by git in the read - let me check the full file again for the actual conflict markers:
+
+Good, now I can see the conflict. For the first conflict, I'll keep the ci/master (HEAD) content but update the formatting to use double backticks. The ci/master content is more specific about virt-make-fs usage which is valuable.
+
+The file uses Unix line endings. Let me read the exact content around the conflict markers:
+
+Now let me check if the second conflict still exists and handle it:
+
+For this conflict, the ci/master version references `$UBOOT/test/hooks/` which is a better path as it's relative to the U-Boot source tree. I'll keep the ci/master content but apply the double backtick formatting:
+
+Now let me verify there are no more conflict markers and check the resolved areas:
+
+No more conflict markers and the resolutions look correct. Now let me add the file and continue the cherry-pick:
+
+The commit was applied. Now I need to amend the commit to add a note about the conflict resolution:
+
+Now let me verify the delta and run the build test:
+
+The delta is close - original had 87+/86- and cherry-picked has 90+/89-. The small difference is due to the conflict resolution where we kept the ci/master content with additional formatting fixes. This is acceptable. Now let me run the build test:
+
+Build passed. Now let me proceed to the fifth commit - the merge commit:
+
+These are the same conflicts as before - the merge commit is trying to bring in the same changes that we already have from the previous cherry-pick, but it sees a conflict because our resolved version differs. Since we already have the content with our resolution, we should keep our HEAD version:
+
+The merge commit is now empty because all its changes are already present. As per the instructions, I should commit it anyway using --allow-empty to preserve the merge commit message for tracking history:
+
+Now let me verify the delta for the merge commit:
+
+The cherry-picked merge commit is empty (as expected since all changes were already applied via the individual cherry-picks). The original merge shows the cumulative changes from the tag. This is correct behavior - we cherry-picked the individual commits first, so the merge commit becomes empty.
+
+Now let me run the build test:
+
+Build passed. Now let me verify all commits and run the final build:
+
+All 5 commits are present. Now let me run the final build:
+
+## Final Status Report
+
+**Build Result:** ✅ OK - No warnings or errors
+
+**All 5 commits successfully cherry-picked:**
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | f7d2763d181 | b4-config: Improve b4 config for correct operation | ✅ Applied with conflict resolution |
+| 2 | 6fc43344409 | doc: develop: fix grammar and syntax | ✅ Clean |
+| 3 | 84167b050de | doc: Update coding style to recommend b4 for patch submission | ✅ Clean |
+| 4 | c92b514e83c | doc: pytest: Fix inline code and other formatting | ✅ Applied with conflict resolution |
+| 5 | 9182640f6b8 | Merge tag 'doc-202510-rc6' | ✅ Empty (expected - changes already applied) |
+
+**Fix-ups made:**
+1. **72f72fab007**: The .b4-config file was created fresh instead of modified because the original commit that created it (26efc940c86) is not in ci/master. File content is correct.
+
+2. **a8d451aa146**: Resolved two conflicts in `doc/develop/pytest/usage.rst`:
+   - Conflict 1: Kept ci/master's more detailed virt-make-fs documentation with double-backtick formatting
+   - Conflict 2: Kept ci/master's `$UBOOT/test/hooks/` paths with double-backtick formatting
+
+3. **5a3c306aaf3 (merge)**: The merge commit is empty because all changes were already applied via individual cherry-picks. Used `--allow-empty` to preserve the merge commit message for history tracking.
+
+**Commits with concerning deltas:**
+- **72f72fab007**: Original showed 2+/3- lines, cherry-pick shows 6+/0 lines. This is expected - we're creating the file instead of modifying an existing one. File content is identical.
+
+**Branch Status:**
+The branch `cherry-72f72fab007` is ready for pushing with all 5 commits from us/next branch applied on top of ci/master.
+
+---
+
