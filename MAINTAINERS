@@ -346,7 +346,6 @@ F:	drivers/spi/gxp_spi.c
 
 ARM IPQ40XX
 M:	Robert Marko <robert.marko@sartura.hr>
-M:	Luka Perkov <luka.perkov@sartura.hr>
 S:	Maintained
 F:	arch/arm/mach-ipq40xx/
 F:	include/dt-bindings/clock/qcom,gcc-ipq4019.h
@@ -1350,6 +1349,11 @@ S:	Supported
 T:	git git://github.com/ARM-software/u-boot.git
 F:	drivers/video/mali_dp.c
 F:	drivers/i2c/i2c-versatile.c
+
+MBEDTLS
+M:	Raymond Mao <raymond.mao@linaro.org>
+S:	Maintained
+F:	lib/mbedtls/
 
 MEMBUF
 M:	Simon Glass <sjg@chromium.org>

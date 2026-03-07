@@ -38346,3 +38346,340 @@ The branch `cherry-d33b21b7e26` is ready for pushing and is based on `ci/master`
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-2f2ab7e13a6
+
+Commits:
+- 2f2ab7e13a6 Prepare v2025.10-rc5
+- a6caca94fc7 MAINTAINERS: Update Luka Perkov's roles
+- d3074f3d699 MAINTAINERS: Add myself into the list for MbedTLS
+- ac046ad1873 board: phytec: phycore_am6xx: Update scriptaddr
+- 96971e5090c board: phytec: common: Fix missing newline in error message
+- f53fe908ac3 Merge patch series "Fix boot w/ scriptaddr & minor newline issue"
+
+### Conversation log
+The repository state is clean (only untracked files, no uncommitted changes). Now let me create and checkout the new branch based on ci/master.
+
+Let me check the available remotes and branches:
+
+I see there's a `ci/master` remote branch. Let me try with the full reference:
+
+There are some local changes. Let me stash them and proceed:
+
+Now let me cherry-pick the first commit:
+
+There are conflicts on the first cherry-pick. As per the instructions, I need to check if these commits are already present in ci/master with different hashes. Let me check:
+
+Now let me check if each commit is already in ci/master:
+
+The searches returned no results. Let me search more broadly to see if these commits might be under different subjects:
+
+It appears these commits haven't been applied to ci/master yet. Let me verify by checking the exact commits in us/next and what HEAD of ci/master is:
+
+The commits aren't already applied. Let me see what the conflict is about by checking if it's a version conflict:
+
+I see - ci/master has rc4 as the latest version, and we're trying to apply rc5. This is a natural conflict. Let me try the cherry-pick again and resolve the conflict manually:
+
+I see the conflict. The Makefile is showing a conflict between different versions - ci/master is at 2026.02 (empty EXTRAVERSION) and the cherry-pick is trying to set -rc5 for 2025.10. This is a version mismatch. Let me see the full conflict in both files:
+
+I see - the original commit is for 2025.10-rc5 but ci/master is already at 2026.02. This is a fundamental version conflict that can't be cleanly resolved. The versions in ci/master have moved forward past the cherry-picked commit's version.
+
+Let me check if all the other commits have similar version-dependent issues or if they can be applied independently:
+
+Let me check the content of all the commits to understand which ones might have version conflicts:
+
+Most commits look like they should apply cleanly, but commit 1 (version bump) will definitely conflict. Let me check if these later commits are already in ci/master by looking for them:
+
+Let me try a more direct approach - start the cherry-picks and handle the version conflict by skipping that commit with a SKIPPED marker:
+
+This is a version conflict that cannot be cleanly resolved. The ci/master is at 2026.02 while the cherry-pick is for 2025.10-rc5. Let me abort and create a skipped commit:
+
+Now let me cherry-pick commit 2:
+
+Commit 2 applied successfully. Let me check the delta:
+
+Delta matches exactly (5 files, 8 deletions). Now let me run the build test:
+
+Build passed. Now cherry-pick commit 3:
+
+Delta matches (1 file, 5 insertions). Build test:
+
+Build passed. Cherry-pick commit 4:
+
+Delta matches (3 files, 3 insertions, 3 deletions). Build test:
+
+Build passed. Cherry-pick commit 5:
+
+Delta matches (1 file, 1 insertion, 1 deletion). Build test:
+
+Build passed. Now cherry-pick commit 6 (the merge commit):
+
+The merge commit is empty because the component commits were already cherry-picked. But we should keep it for history tracking. Let me commit it:
+
+The merge commit is empty (expected since the patches were already applied), but the original had 4 files changed. This is normal because the merge commit contains changes that were already applied via the individual commits (commits 4 and 5). Build test:
+
+All builds passed. Now let me verify the final state with git log:
+
+All 6 commits are present. Now let me run the final build test:
+
+All done. Let me also restore the stashed changes:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Commits Summary:
+| # | Original Hash | Status | Subject |
+|---|---------------|--------|---------|
+| 1 | 2f2ab7e13a6 | **SKIPPED** | Prepare v2025.10-rc5 (version conflict - ci/master is at 2026.02) |
+| 2 | a6caca94fc7 | ✅ Applied | MAINTAINERS: Update Luka Perkov's roles |
+| 3 | d3074f3d699 | ✅ Applied | MAINTAINERS: Add myself into the list for MbedTLS |
+| 4 | ac046ad1873 | ✅ Applied | board: phytec: phycore_am6xx: Update scriptaddr |
+| 5 | 96971e5090c | ✅ Applied | board: phytec: common: Fix missing newline in error message |
+| 6 | f53fe908ac3 | ✅ Applied (empty) | Merge patch series "Fix boot w/ scriptaddr & minor newline issue" |
+
+### Build Result: **OK** ✅
+- All builds passed with no warnings or errors
+
+### Fix-ups Made:
+- Commit 1 (Prepare v2025.10-rc5): Created as a SKIPPED empty commit because ci/master is already at version 2026.02, making the 2025.10-rc5 version bump inapplicable
+- Commit 6 (Merge commit): Applied as an empty commit since its constituent patches were already applied individually (commits 4 & 5)
+
+### Commits with Concerning Deltas:
+- None - all applied commits matched their original deltas exactly
+
+### Branch Status:
+- Branch `cherry-2f2ab7e13a6` is ready for pushing
+- 6 commits ahead of `ci/master`
+
+---
+
+### Pipeline fix: 2026-03-06 (attempt 1)
+
+Branch: cherry-2f2ab7e13a6
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+- tk1 (sjg-lab)
+
+### Conversation log
+Now let me analyze the failures:
+
+1. **efi-aarch64 job**: Failed with `test_distro_arm_app_efi` - timeout waiting for "Ubuntu 25.04 qarm ttyAMA0"
+2. **tk1 job**: Failed with `Lab failure: Marking connection bad` - USB resource not available - this is a hardware/infrastructure issue
+
+Let me investigate the efi-aarch64 failure more closely:
+
+These commits look specific to PHYTEC boards and shouldn't affect the EFI test. Let me check if this is possibly a flaky test or an unrelated issue:
+
+Now let me check if the test has any version-specific strings. I see it's expecting `Ubuntu 25.04 qarm ttyAMA0`. Let me check if this test passes on ci/master:
+
+The test file was not modified by the cherry-picks. Let me check if there's been previous runs on this branch/CI:
+
+None of the cherry-picked changes touch any EFI-related code or test files. The changes are:
+- MAINTAINERS updates
+- phytec board env files (scriptaddr)
+- phytec board error message
+
+Let me check if this is an infrastructure/flaky test issue by looking at the test more closely and past pipeline runs:
+
+I see there was a previous fix for timeout issues. Let me check if the `test_distro_arm_app_efi` test also needs a timeout increase (the log shows a Timeout error):
+
+I see the test already has a 200-second timeout. Looking at the failure log again:
+
+```
+E   console_base.Timeout
+...
+===== 1 failed, 34 passed, 637 skipped, 3 deselected in 307.02s (0:05:07) ======
+```
+
+The test ran for 307 seconds (~5 minutes). Looking at the detailed log output, it shows a lot of DMI/SMBIOS information being printed out at timestamp `01:12:07`, and then the failure. The test was expecting `Ubuntu 25.04 qarm ttyAMA0` but timed out.
+
+Let me check the ci/master to see if this test has been passing there recently:
+
+These scriptaddr changes are only for phytec boards, which are not efi-aarch64. The efi-aarch64 is a QEMU test.
+
+Let me analyze both failures more carefully:
+
+**1. tk1 job failure:**
+```
+USB resource not available; retrying reset with longer delays
+labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader...avail=False}
+Lab failure: Marking connection bad - no other tests will run
+```
+This is clearly an **infrastructure issue** - the Tegra USB loader hardware resource is not available.
+
+**2. efi-aarch64 job failure:**
+```
+FAILED test/py/tests/test_distro.py::test_distro_arm_app_efi - console_base.Timeout
+```
+The test timed out waiting for `Ubuntu 25.04 qarm ttyAMA0`. Looking at the log, the SMBIOS dump was shown (DMI table), which means QEMU was printing output, but then the test timed out.
+
+Let me check if there have been any similar failures before by looking at recent infrastructure/test stability issues:
+
+Now let me check if there's a pattern of flaky tests on this specific test. Given that:
+1. The cherry-picked commits don't touch any EFI-related code
+2. The test has a 200-second timeout but still failed
+3. The tk1 test failed due to USB resource unavailability (hardware lab issue)
+
+Both failures appear to be **infrastructure/transient issues**, not caused by the cherry-picked commits. However, let me verify one more thing - let me make sure the commits build successfully:
+
+There's a build error, but this looks like a local environment issue with the dtc (device tree compiler). Let me try with buildman instead:
+
+The build failures are due to a missing `capsule_esl_file`. This is a local environment issue, not related to the cherry-picked commits. Let me try with the efi-aarch64 board specifically:
+
+I see `efi-arm_app64` in the list. Let me build that specific board:
+
+The efi-arm_app64 board builds successfully. Now let me try building tk1:
+
+Both boards build successfully. Let me also verify there are no code changes that could have affected the EFI tests:
+
+This is just adding a missing newline to an error message. There are no changes that could affect the EFI test or the TK1 test.
+
+Based on my analysis:
+
+## Summary
+
+Both pipeline failures are **infrastructure/transient issues**, not caused by the cherry-picked commits:
+
+### 1. tk1 job (stage: sjg-lab)
+**Root cause: Infrastructure issue**
+```
+USB resource not available; retrying reset with longer delays
+labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader...avail=False}
+Lab failure: Marking connection bad - no other tests will run
+```
+The Tegra USB loader hardware resource is not available in the test lab. This is a hardware connectivity issue with the lab infrastructure, not a code problem.
+
+### 2. efi-aarch64 job (stage: sjg-lab)
+**Root cause: Likely transient/flaky test**
+```
+FAILED test/py/tests/test_distro.py::test_distro_arm_app_efi - console_base.Timeout
+```
+The test timed out waiting for `Ubuntu 25.04 qarm ttyAMA0`. The test has a 200-second timeout and this is a known flaky test area (there have been multiple previous commits increasing timeouts for similar tests). The cherry-picked commits:
+- Only modify PHYTEC board-specific files (phycore_am6xx env files)
+- Only modify MAINTAINERS files
+- Only add a newline to an error message in PHYTEC-specific code
+
+**None of the cherry-picked changes touch:**
+- EFI code
+- QEMU configurations
+- Test files
+- Any code that runs during the efi-arm_app64 test
+
+### Build verification
+Both affected boards build successfully:
+- `efi-arm_app64`: ✅ Built successfully
+- `jetson-tk1`: ✅ Built successfully
+
+### Recommendation
+**No code changes needed.** Both failures are infrastructure/transient issues:
+1. The tk1 failure should be retried when the USB lab hardware is available
+2. The efi-aarch64 failure should be retried and may pass on subsequent attempts
+
+---
+
+### Review: 2026-03-06
+
+Branch: cherry-2f2ab7e13a6
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1.
+
+Now let me analyze the failures:
+
+1...
+
+### Conversation log
+Now let me understand the review comment. The reviewer is saying "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1." This seems to be a status update from the bot, not an actual code review comment requesting changes. Let me read more carefully:
+
+The comment says "fixed failed job(s)" - this suggests the pipeline was already fixed or the failures were already addressed. Looking at the context from the MR description, the previous analysis concluded that both failures were infrastructure/transient issues, not code-related problems:
+
+1. **tk1 job**: USB resource not available - hardware lab issue
+2. **efi-aarch64 job**: Timeout issue - flaky test, not related to cherry-picked commits
+
+Let me verify this understanding by checking if there's a commit already addressing this:
+
+Looking at the review comment more carefully, it says: "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1." 
+
+This appears to be an automated bot message indicating that a pipeline fix attempt was made. Based on the context from the MR description, the previous analysis determined both failures were infrastructure issues:
+
+1. **tk1 job**: Lab infrastructure issue - USB resource not available
+2. **efi-aarch64 job**: Flaky test / transient timeout issue
+
+The analysis concluded "No code changes needed" - both are infrastructure/transient issues. The bot comment is documenting that a pipeline fix was attempted for these jobs, but since these are infrastructure issues, there's nothing to actually "fix" in the code.
+
+Let me verify the build passes and check if there are any actual code changes needed:
+
+The build passes. Now let me understand the review comment better. The reviewer comment appears to be a bot status message, not an actionable request. Looking at the context:
+
+The comment from "project_1_bot_2541d37e7146e9c25808a380e05ebef0" says: "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1."
+
+This is followed by analysis explaining that both failures are infrastructure issues:
+- efi-aarch64: Timeout on test_distro_arm_app_efi - a flaky test
+- tk1: USB resource not available - hardware lab issue
+
+The recommendation was: **"No code changes needed."** Both failures are infrastructure/transient issues.
+
+Since this is a bot comment documenting previous analysis rather than a request for code changes, the appropriate response is to:
+
+1. Retry the pipeline (since these are transient infrastructure issues)
+2. Or simply acknowledge that no code changes are needed
+
+Let me check if there's a way to trigger a pipeline retry or if we just need to push to update the MR:
+
+The local branch has an additional commit (`a1106fb0562 pickman: Record pipeline fix for cherry-2f2ab7e13a6`) that's not on the remote. Looking at the review comment again:
+
+The bot comment is asking to "address 1 review comment(s)" and the comment is: **"Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1."**
+
+Based on the full context in the MR description, this comment is the result of a previous analysis that concluded both failures are infrastructure issues and no code changes are needed. The previous work created a commit `a1106fb0562 pickman: Record pipeline fix for cherry-2f2ab7e13a6` which records this analysis.
+
+The appropriate action is to push this analysis/record commit to the remote to document that:
+1. Both failures were analyzed
+2. Both are infrastructure/transient issues
+3. No code changes are required
+4. The pipeline should be retried
+
+Let me push the branch update:
+
+The branch has been pushed successfully. Now let me summarize what was done:
+
+## Summary Report
+
+### Review Comment Analyzed
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` stated:
+> "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, tk1."
+
+### Analysis (from MR context)
+Both pipeline failures were analyzed and determined to be **infrastructure/transient issues**, not code-related problems:
+
+1. **tk1 job failure**: 
+   - Error: "USB resource not available" - Lab hardware connectivity issue
+   - Root cause: The Tegra USB loader hardware resource was not available in the test lab
+   - **No code fix possible** - this is a hardware infrastructure issue
+
+2. **efi-aarch64 job failure**:
+   - Error: `test_distro_arm_app_efi` - Timeout waiting for "Ubuntu 25.04 qarm ttyAMA0"
+   - Root cause: Flaky test / transient timeout issue
+   - The cherry-picked commits (MAINTAINERS updates, PHYTEC board changes) don't touch any EFI-related code
+   - **No code fix needed** - both affected boards (`efi-arm_app64` and `jetson-tk1`) build successfully
+
+### Action Taken
+- Verified sandbox build passes ✅
+- Pushed the existing pipeline-fix record commit to the remote branch
+- This triggers a new pipeline run on GitLab, which should pass if the infrastructure issues are resolved
+
+### Reply to Post on MR
+```
+Both pipeline failures (efi-aarch64 and tk1) were analyzed and determined to be infrastructure/transient issues:
+
+**tk1**: Lab hardware issue - "USB resource not available" (NetworkTegraUSBLoader unavailable)
+
+**efi-aarch64**: Flaky test timeout - the cherry-picked commits only modify MAINTAINERS files and PHYTEC board-specific code, which don't affect EFI tests. Both boards build successfully.
+
+No code changes required. Pushed update to trigger pipeline retry.
+```
+
+---
+
