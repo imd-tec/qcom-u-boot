@@ -38683,3 +38683,93 @@ No code changes required. Pushed update to trigger pipeline retry.
 
 ---
 
+## 2026-03-07: us/next
+
+Branch: cherry-5074fd5f722
+
+Commits:
+- 5074fd5f722 MAINTAINERS: update NETWORK and NETWORK (LWIP)
+- 9a20a4fba58 MAINTAINERS: Update MMC/POWER/FREESCALE QORIQ
+- 9b45d574af1 spl: nand: initialize writesize for am335x
+- fa1922846bf doc: board: ti: am335x_evm: Add documentation
+- 9585c8f45f4 doc: memory: Restore missing diagram
+- e59e10240c6 doc: Remove README.commands.itest
+- 75ef35b5784 doc: environment: clarify env precedence
+- 0e4fad5f419 doc: memory: fix encodings for spl layout diagrams
+- 77493c488ba doc: build: documentation: add description of KDOC_WERROR
+- 7b5e66a2b3a doc: develop: process: Add note about asking for feedback
+- c9aad6dbd97 doc: Update mentions of README.fdt-control
+- a0fe8cedcbe efi_loader: Cleanup UEFI Variables menu selection
+- 07b7259b8b6 Merge tag 'efi-2025-10-rc6' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+The repository state is clean (only untracked file is qconfig.failed). Let me proceed with creating and checking out the new branch based on ci/master.
+
+Let me check what ci/master refers to:
+
+Let me use the full remote reference:
+
+Let me stash these changes first:
+
+Now let me start cherry-picking the commits one by one. Let me first verify the us/next branch exists:
+
+Good. Now let's start with the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run a build test:
+
+Delta is identical (1 file, 2 insertions). Let me run the build test:
+
+Build passed. Let me continue with the next commit:
+
+Delta matches. Let me run the build test:
+
+Now for the merge commit. Let me first verify it is a merge commit:
+
+Yes, it has two parents, so it's a merge commit. Let me cherry-pick it with -m 1 --allow-empty:
+
+The merge commit is empty but we need to keep it for history. Let me commit it with --allow-empty:
+
+The merge commit was applied as an empty commit (which is expected since all the changes were already applied by the previous cherry-picks). Now let me run the build test and verify the final log:
+
+All 13 commits are present. Now let me run the final build:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!** All 13 commits have been cherry-picked from `us/next` branch to the new branch `cherry-5074fd5f722`.
+
+### Summary
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 5074fd5f722 | MAINTAINERS: update NETWORK and NETWORK (LWIP) | ✅ OK |
+| 2 | 9a20a4fba58 | MAINTAINERS: Update MMC/POWER/FREESCALE QORIQ | ✅ OK |
+| 3 | 9b45d574af1 | spl: nand: initialize writesize for am335x | ✅ OK |
+| 4 | fa1922846bf | doc: board: ti: am335x_evm: Add documentation | ✅ OK |
+| 5 | 9585c8f45f4 | doc: memory: Restore missing diagram | ✅ OK |
+| 6 | e59e10240c6 | doc: Remove README.commands.itest | ✅ OK |
+| 7 | 75ef35b5784 | doc: environment: clarify env precedence | ✅ OK |
+| 8 | 0e4fad5f419 | doc: memory: fix encodings for spl layout diagrams | ✅ OK |
+| 9 | 77493c488ba | doc: build: documentation: add description of KDOC_WERROR | ✅ OK |
+| 10 | 7b5e66a2b3a | doc: develop: process: Add note about asking for feedback | ✅ OK |
+| 11 | c9aad6dbd97 | doc: Update mentions of README.fdt-control | ✅ OK |
+| 12 | a0fe8cedcbe | efi_loader: Cleanup UEFI Variables menu selection | ✅ OK |
+| 13 | 07b7259b8b6 | Merge tag 'efi-2025-10-rc6' | ✅ OK (empty, as expected) |
+
+### Build Result
+- **Build: PASSED** (sandbox board)
+- No warnings or errors
+
+### Fix-ups Made
+- None required - all commits applied cleanly
+
+### Delta Concerns
+- All commits matched their original deltas exactly
+- Merge commit 07b7259b8b6 applied as empty commit (expected behavior since all constituent commits were already cherry-picked individually)
+
+### Branch Status
+- Branch: `cherry-5074fd5f722`
+- 13 commits ahead of `ci/master`
+- Ready for pushing
+
+---
+
