@@ -38981,3 +38981,83 @@ The final sandbox build completed successfully with no warnings or errors.
 
 ---
 
+## 2026-03-07: us/next
+
+Branch: cherry-b0465eb88f0
+
+Commits:
+- b0465eb88f0 test/py: Correctly restore the DT after capsule tests
+- 5096f81bda1 test/py: Read from the correct offset when initializing capsules
+- fa2a2e20d0b test/py: Fix race conditions on EFI capsule tests
+- fc2686d2a87 test/py: Fix capsule update tests
+- fedbb7a3382 Merge patch series "test/py: Correctly restore the DT after capsule tests"
+
+### Conversation log
+The repository has untracked files but is otherwise clean (nothing staged, no modified tracked files). This is fine for cherry-picking.
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly (1 file, 2 insertions). Now let me run the build test:
+
+Build succeeded. Now cherry-pick the second commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the third commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the fourth commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the fifth commit, which is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (expected behavior since the changes were already applied in the previous individual commits). Let me commit it as an empty commit to preserve the history:
+
+The cherry-picked merge commit is empty (as expected since all changes were already applied individually), while the original merge commit shows the aggregate changes. This is expected and correct behavior when cherry-picking individual commits from a series followed by its merge commit.
+
+Now let me run the build test:
+
+Build passed. Now let me verify the final result with git log:
+
+All 5 commits are present in the correct order. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| Commit | Subject | Status | Delta |
+|--------|---------|--------|-------|
+| b0465eb88f0 | test/py: Correctly restore the DT after capsule tests | ✓ OK | Match |
+| 5096f81bda1 | test/py: Read from the correct offset when initializing capsules | ✓ OK | Match |
+| fa2a2e20d0b | test/py: Fix race conditions on EFI capsule tests | ✓ OK | Match |
+| fc2686d2a87 | test/py: Fix capsule update tests | ✓ OK | Match |
+| fedbb7a3382 | Merge patch series "test/py: Correctly restore the DT after capsule tests" | ✓ OK (empty) | Expected |
+
+### Build Result: **OK**
+- All 5 builds passed without warnings or errors
+
+### Fix-ups Made: **None**
+- All cherry-picks applied cleanly
+
+### Commits with Concerning Deltas: **None**
+- First 4 commits: Delta matched exactly (same files, same line counts)
+- 5th commit (merge): Empty as expected when cherry-picking individual commits followed by their merge commit
+
+### Branch Status
+The branch `cherry-b0465eb88f0` is ready for pushing with 5 commits ahead of `ci/master`:
+```
+c0cc66c85da Merge patch series "test/py: Correctly restore the DT after capsule tests"
+7b0a17e642b test/py: Fix capsule update tests
+deaebb405b5 test/py: Fix race conditions on EFI capsule tests
+915734db606 test/py: Read from the correct offset when initializing capsules
+559051d8377 test/py: Correctly restore the DT after capsule tests
+```
+
+---
+
