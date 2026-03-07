@@ -38873,95 +38873,111 @@ The "Prepare v2025.10" commit conflicts because:
 
 ## 2026-03-07: us/next
 
-Branch: cherry-b17c594ac49
+Branch: cherry-5bad0bc4f7b
 
 Commits:
-- b17c594ac49 arch: arm: dts: k3-am625-phyboard-lyra: Disable unused watchdogs in U-Boot
-- dfd185939d9 arch: arm: dts: k3-am62a7-phyboard-lyra: Disable unused watchdogs in U-Boot
-- dcc85e9aba4 arch: arm: dts: k3-am642-phyboard-electra: Disable unused watchdogs in U-Boot
-- d27b7a1c777 board: phytec: phycore-am62x: Add watchdog start to bootcmd
-- 9de098a9f85 board: phytec: phycore-am64x: Add watchdog start to bootcmd
-- cc6291e3b4a board: phytec: phycore-am62ax: Add watchdog start to bootcmd
-- e8eab15d14a include: env: phytec: k3: Add deprecation warning to legacy boot flow
-- 92c54936feb Merge patch series "arch: arm: dts: k3-am625-phyboard-lyra: Disable unused watchdogs in U-Boot"
+- 5bad0bc4f7b pci: Add missing <linux/sizes.h> to pcie_iproc.c
+- cb8e5727089 pci: Tighten some PCI controller dependencies
+- f0572603514 nvme: Tighten requirements on NVME_APPLE driver
+- 26f857f1e37 arm: bcm235xx: Remove this SoC
+- 493c3da3ac5 sandbox: Add more dummy functions to mimic other architectures
+- bd644d9613e clk: cdce9xx: Fix use of dev_read_u32_default
+- 916f4337d1d gpio: dwapb_gpio: Using wrong function to free memory
+- d78130ac5a5 arm: dts: mediatek: remove useless SPI property must_tx
+- 814ddd7824d pinctrl: gpio: sx150x: fix compilation warnings.
+- 7807ed92131 pinctrl: sx150x: reformat and fixup Copyright header
+- 28a87c8e9bc rockchip: add /chosen/bootsource to U-Boot proper DT
+- 4266b8a2839 net: e1000: Free temporary buffer on exit
+- d68db76b95b sandbox: Add an additional dummy sync macro
+- e2837ecddc2 sm: Rework the Kconfig logic here
+- e7a95ee2b57 pinctrl: Tighten some pinctrl driver dependencies
+- 678be99d563 pwm: Tighten some pwm driver dependencies
+- 00ad9ed4a77 pwm: pwm-aspeed: Add missing <linux/log2.h> to pwm-aspeed.c
+- 0ae7725e874 reset: Tighten some reset driver dependencies
+- 548ae9d1a53 remoteproc: Tighten some remoteproc driver dependencies
+- 01bc65a0e9b soc: Tighten some soc driver dependencies
+- 8b0eac68e5c sound: Tighten some sound driver dependencies
+- 38931172edd sysreset: Tighten some sysreset driver dependencies
+- b86ace06d37 rtc: Tighten some rtc driver dependencies
+- d7daa9274b1 rtc: mc146818: Fix building on more architectures
+- 91122ea8f03 rtc: pl031: Correct function type of pl031_write_reg
+- 37f0a8b8cb0 serial: Tighten some serial driver dependencies
+- 546be69f058 serial: linflexuart: Remove unused driver
+- c39a8001ca8 ram: Tighten some ram driver dependencies
+- 145a6f447e4 net: phy: cortina: Ensure memory allocated is freed
+- 1edd1fd539f net: ti: am65-cpsw-nuss: Initialise ret
+- 2a61c56dea1 net: ti: icssg: Remove impossible test
+- cb76b208390 timer: fttmr010_timer: Remove unused driver
+- 3f486367bc8 timer: Tighten some timer driver dependencies
+- 26d9bd1ccd6 phy: keystone-usb: Do not negate return code
+- fc96c1de5b7 phy: ti: j721e-wiz: Set error code before goto
+- 460db5b44db ram: k3-ddrss: Use logical and not bitwise
+- 64204ab107b pinctrl: single: Remove unreachable code
+- 4a2f360bd28 pinctrl: stmfx: Remove duplicated code
+- 6e212f32aaf arm: dts: npcm8xx: add pinmux for VCD input
+- ad3a33e5774 pinctrl: npcm8xx: add support for setting VCD input source
+- 3c632fc090d i2c: npcm: fix consecutive dm_i2c_read/write error
+- 59a1c287559 arm: dts: nuvoton: Change timer node
+- 121927e37be misc: npcm_host_intf: Add Arbel eSPI workaround
+- 98788058164 misc: npcm_host_intf: Disable pending KCS/BPC interrupts
+- 58fa3b5159c configs: npcm: remove CONFIG_SYS_SKIP_UART_INIT
+- bb21c0b8d8d Merge patch series "modify npcm7xx/8xx feature and bug fixed"
 
 ### Conversation log
-The repository has some untracked files but no staged or modified tracked files, so it's clean enough to proceed.
+The repository has untracked files but no uncommitted changes, so we can proceed. Let me create and checkout the new branch based on ci/master:
 
-The ambiguity is between the local `ci/master` branch and `remotes/ci/master`. Let me use the remote explicitly:
+There's a local branch called `ci/master`. Let me use the full reference:
 
-Now let me start cherry-picking each commit. First, let me verify the commits exist on us/next:
+Now let me start cherry-picking the first commit:
 
-Let me search for these commits more broadly:
+First commit successful. Let me continue with the remaining commits:
 
-Good, the commit exists. Let me verify all 8 commits:
+Let me continue with the remaining commits more efficiently:
 
-All 8 commits exist. Now let me cherry-pick them one at a time. Starting with commit 1:
+There's a conflict. Let me check the conflict details and try to resolve it:
 
-Deltas match exactly (1 file, 16 insertions). Now run build test:
+I understand the conflict. The incoming commit is changing `CONFIG_SM=y` to `CONFIG_SANDBOX_SM=y` and adding `CONFIG_SMEM=y` and `CONFIG_SANDBOX_SMEM=y`. The base branch already has `CONFIG_SM=y`. Let me see what the original commit intended:
 
-Build passed. Now cherry-pick commit 2:
+I see. The original commit changes `CONFIG_SM=y` to `CONFIG_SANDBOX_SM=y`. The base branch (ci/master) already has `CONFIG_SM=y`. But the conflict shows that the incoming commit expects `CONFIG_SMEM=y` and `CONFIG_SANDBOX_SMEM=y` lines to exist already. Let me check if ci/master has those:
 
-Deltas match. Build test:
+The ci/master branch only has `CONFIG_SM=y` and does not have the SMEM lines. The original commit on us/next was changing from `CONFIG_SM=y` to `CONFIG_SANDBOX_SM=y` and the context had SMEM lines. The key change of this commit is just the `CONFIG_SM=y` -> `CONFIG_SANDBOX_SM=y` rename.
 
-Build passed. Cherry-pick commit 3:
+Let me resolve the conflict by accepting the incoming change (change CONFIG_SM=y to CONFIG_SANDBOX_SM=y) and not adding the SMEM lines which are not in ci/master:
 
-Deltas match. Build test:
+The stats match (3 files, 13 insertions, 4 deletions). Let me run the build test:
 
-Build passed. Cherry-pick commit 4:
+Now for the final commit - the merge commit. I need to use the special flags for merge commits:
 
-Deltas match exactly (3 files, 20 insertions, 1 deletion). Build test:
+The merge commit results in an empty commit since we've already cherry-picked all the individual commits. As per the instructions, I need to preserve the merge commit with --allow-empty:
 
-Build passed. Cherry-pick commit 5:
+The merge commit is empty as expected (since all the individual commits were already cherry-picked), but the commit message is preserved.
 
-Deltas match exactly. Build test:
+Now let me run the final build test:
 
-Build passed. Cherry-pick commit 6:
+Now let me verify all 46 commits are present with git log:
 
-Deltas match. Build test:
+All 46 commits are present. Let me count them to confirm:
 
-The build failed due to a configuration file parsing error, not due to the code changes. Let me retry:
+## Summary
 
-Build passed. Cherry-pick commit 7:
+All 46 commits have been successfully cherry-picked from `us/next` branch onto `ci/master`:
 
-Deltas match exactly. Build test:
+### Build Result: ✅ **OK**
+The final sandbox build completed successfully with no warnings or errors.
 
-Build passed. Now the last commit (8) is a merge commit, so I need to use special options:
+### Fix-ups Made:
+1. **Commit e2837ecddc2 (sm: Rework the Kconfig logic here)**: Resolved a merge conflict in `configs/sandbox_defconfig`. The conflict was due to context differences between ci/master and the source branch regarding SMEM config options. The resolution kept only the actual change from the commit (`CONFIG_SM=y` → `CONFIG_SANDBOX_SM=y`) without adding the SMEM lines that were in the source branch's context but not in ci/master.
 
-The merge commit is empty (which is expected since we already cherry-picked the individual commits that make up the merge). I need to commit it with --allow-empty to preserve the merge commit message:
+### Commits with Concerning Deltas:
+- **None** - All cherry-picked commits had identical or expected delta statistics compared to the original commits.
 
-The merge commit is expected to be empty on our side since we already applied all the changes in the individual commits before. The original was a merge with actual changes because it merged all 7 patches together at once. This is normal behavior. Now let me run the final build test:
+### Special Commits:
+- **Commit bb21c0b8d8d (Merge patch series "modify npcm7xx/8xx feature and bug fixed")**: This merge commit resulted in an empty commit after cherry-picking (since all individual commits from the series were already cherry-picked). The commit was preserved with `--allow-empty` as instructed to maintain the commit history.
 
-Build passed. Now let me verify the final state with git log:
-
-All 8 commits are present. Let me run one final build to confirm everything works together:
-
-## Final Status Report
-
-**Build Result:** ✅ OK - All sandbox builds passed without warnings or errors
-
-**Cherry-pick Summary:**
-All 8 commits successfully cherry-picked to branch `cherry-b17c594ac49`:
-
-| # | Commit | Status | Delta Check |
-|---|--------|--------|-------------|
-| 1 | b17c594ac49 - arch: arm: dts: k3-am625-phyboard-lyra: Disable unused watchdogs in U-Boot | ✅ | Exact match |
-| 2 | dfd185939d9 - arch: arm: dts: k3-am62a7-phyboard-lyra: Disable unused watchdogs in U-Boot | ✅ | Exact match |
-| 3 | dcc85e9aba4 - arch: arm: dts: k3-am642-phyboard-electra: Disable unused watchdogs in U-Boot | ✅ | Exact match |
-| 4 | d27b7a1c777 - board: phytec: phycore-am62x: Add watchdog start to bootcmd | ✅ | Exact match |
-| 5 | 9de098a9f85 - board: phytec: phycore-am64x: Add watchdog start to bootcmd | ✅ | Exact match |
-| 6 | cc6291e3b4a - board: phytec: phycore-am62ax: Add watchdog start to bootcmd | ✅ | Exact match |
-| 7 | e8eab15d14a - include: env: phytec: k3: Add deprecation warning to legacy boot flow | ✅ | Exact match |
-| 8 | 92c54936feb - Merge patch series (merge commit) | ✅ | Empty as expected |
-
-**Fix-ups Made:** None required
-
-**Commits with Concerning Deltas:** None - All commits had exact delta matches
-
-**Notes:**
-- Commits 4, 5, and 6 had auto-merge in `.env` and `defconfig` files but applied cleanly
-- Merge commit (8) resulted in an empty commit as expected (since individual commits were already applied)
-- Branch `cherry-b17c594ac49` is ready for pushing, tracking `remotes/ci/master`
+### Final Branch State:
+- Branch `cherry-5bad0bc4f7b` contains all 46 commits
+- Ready for pushing
+- No uncommitted changes (only untracked files remain)
 
 ---
 
