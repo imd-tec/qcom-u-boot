@@ -38775,378 +38775,99 @@ All 13 commits are present. Now let me run the final build:
 
 ## 2026-03-07: us/next
 
-Branch: cherry-72f72fab007
+Branch: cherry-072264c4b34
 
 Commits:
-- 72f72fab007 b4-config: Improve b4 config for correct operation
-- eb5014841c2 doc: develop: fix grammar and syntax
-- 5a21f5b4c9f doc: Update coding style to recommend b4 for patch submission
-- a8d451aa146 doc: pytest: Fix inline code and other formatting
-- 5a3c306aaf3 Merge tag 'doc-202510-rc6' of https://source.denx.de/u-boot/custodians/u-boot-efi
+- 072264c4b34 Revert "fdt: Make sure there is no stale initrd left"
+- 3bbaa9dca65 env: fix typo in multiple Kconfig descriptions
+- c23688d0533 clk: ti: fix K3 clock driver help texts
+- dc6c80056e2 global: Add expected space between '#include' and directive
+- e50b1e87150 Prepare v2025.10
 
 ### Conversation log
-The repository state is clean (untracked files don't affect cherry-picking). Let me proceed with creating the branch and starting the cherry-pick process.
+The repository has untracked files but is otherwise clean. Let me create the cherry-pick branch.
 
-Let me check what refs are available:
+There's a local branch called `ci/master`. Let me use the remote reference instead:
 
-I see there's a local branch `ci/master`. Let me use it directly:
+Now let me cherry-pick the first commit:
 
-Branch created successfully. Now let me create a todo list to track the cherry-pick process and start with the first commit:
+First cherry-pick succeeded. Let me verify the delta and run the build test:
 
-There's a conflict. Let me check if these commits are already applied in ci/master as per the instructions:
+The delta is the same (1 file changed, 4 insertions, 13 deletions). Now let me run the build test:
 
-None of those exact subject lines were found. Let me search with partial matches to see if they exist under similar names:
+The build has an error in tests. Let me see more detail:
 
-Let me check if the doc-202510-rc6 tag content might be in rc1 or somewhere else. Let me also see what the original commits contain:
+This is a pre-existing build issue in the repo (related to test/fdt_overlay and a missing file), not related to the cherry-pick. Let me check if the main u-boot binary builds:
 
-The commits don't seem to be in ci/master. Let me check if .b4-config exists in ci/master:
+Let me try a simpler test with just the binary:
 
-I see - the `.b4-config` file doesn't exist in ci/master. This explains the conflict - the commit is modifying a file that was never created in this branch because the original commit (26efc940c86) that created it isn't in ci/master.
+There's a pre-existing build issue in the repository (not from the cherry-pick). Let me check if this build issue exists without the cherry-picks:
 
-Let me check if the original commit that created .b4-config is in ci/master:
+The build issue is pre-existing in ci/master. The test/ directory has some missing files. This is a repo issue, not related to the cherry-picks. Let me proceed with cherry-picking and skip the build test (as it fails on the base branch too). Let me restore the cherry-pick branch state:
 
-The original commit that created .b4-config (26efc940c86) is not in ci/master. This commit (72f72fab007) is a fix to that file. Since the file doesn't exist in ci/master, I need to resolve this conflict by adding the file.
+The changes were staged during the `checkout --` command. Let me reset:
 
-Let me check what state the file is in now and resolve the conflict:
+The first cherry-pick is still there (ff7db3c40ea). The delta was verified as correct. Now let me proceed to cherry-pick the second commit:
 
-The .b4-config file exists in the working tree from the cherry-pick. Since this is a modification to a file that doesn't exist in ci/master, the proper resolution is to add the file. This is a simple conflict resolution - I'll add the file which represents the current state that the commit wanted to achieve.
+Delta matches. Let me proceed to the third commit:
 
-Let me verify what the original commit 26efc940c86 contains and what the final expected state is:
+Delta matches. Let me proceed to the fourth commit:
 
-I see - the 72f72fab007 commit removed `send-series-to` and changed the commands. The file in the working tree matches the expected state from 72f72fab007. This is good - I'll resolve the conflict by adding the file and continuing, but I should note that this commit is effectively creating the file fresh (since the base commit doesn't exist in ci/master).
+Delta matches. Now let me check on the fifth commit - this one might already be applied:
 
-Let me resolve this conflict:
+First, let me verify if this commit is already applied (it was marked as maybe already applied as 395e2690430):
 
-The first commit was applied. Now I need to verify the delta and run the build test:
+The patches are completely different. `e50b1e87150` is the official "Prepare v2025.10" release commit, while `395e2690430` is a different pickman record commit. Let me try to cherry-pick the original commit:
 
-There is a delta difference: the original shows "2 insertions, 3 deletions" while the cherry-pick shows "6 insertions, 0 deletions". This is expected because the original commit modified an existing file, but since the base file (26efc940c86) wasn't in ci/master, we're effectively creating the file new. However, the end result should be the same content. Let me verify the file content is correct:
+There's a conflict. Let me check the conflicting file:
 
-The file content is identical. The delta difference is acceptable because we're creating the file fresh rather than modifying it. Now let me run the build test:
+The conflict is in the release cycle document. Let me check what ci/master already has:
 
-Build passed. Let me proceed to the second commit:
+I see - the ci/master branch has been diverging in version, with rc4 and rc5 skipped. Let me check if the actual final release commit is there:
 
-Perfect - same delta (7 insertions, 7 deletions). Let me run the build test:
+The exact "Prepare v2025.10" commit is not in ci/master. The conflict is because ci/master has a different version timeline. Let me look at the specifics of the conflict and try to resolve it:
 
-Build passed. Now cherry-pick the third commit:
+I see! The ci/master is actually at a much older version (v2024.10) compared to us/next which is at v2025.10. This "Prepare v2025.10" commit is a release version bump commit that introduces many conflicts due to the significant version mismatch.
 
-Perfect - same delta. Build test:
+This is a complex conflict to resolve. Given the instructions to "stop immediately if there's a conflict that cannot be auto-resolved", I should abort this cherry-pick and report the conflict:
 
-Build passed. Now cherry-pick the fourth commit:
+Now let me verify the final state of the branch:
 
-There's a conflict. Let me examine it:
-
-I can see the conflict. Let me examine it more closely:
-
-There are two conflict regions. Let me look at both conflicts in detail:
-
-I see the conflict in the second read wasn't showing the markers properly. Let me get the actual conflict areas:
-
-I see the two conflicts. Let me check what the original commit was changing to understand the intention:
-
-I now understand the conflicts. The first conflict is about the "sudo" text - in ci/master there's extra content about virt-make-fs that doesn't exist in the original commit's base. The incoming commit just changes formatting (single quotes to double backticks).
-
-The second conflict is about paths - ci/master has different paths (`$UBOOT/test/hooks/...`) while the incoming commit has `$HOME/ubtest/...`.
-
-For both conflicts, I need to choose the best resolution. Let me see what the ci/master version looks like currently without conflict markers:
-
-I see the conflicts now. Let me resolve them properly:
-
-**Conflict 1:** The ci/master version has more detailed content about virt-make-fs, but the format is older (using 'sudo' instead of ``sudo``). The incoming commit has newer formatting but different content about fs_helper.py. I should keep the ci/master content but apply the formatting fixes where applicable (change `'sudo'` to `\`\`sudo\`\``).
-
-**Conflict 2:** The ci/master version uses `$UBOOT/test/hooks/...` paths while incoming uses `$HOME/ubtest/...`. The ci/master paths make more sense since they reference U-Boot's test directory. I should keep ci/master content but fix the formatting (single backticks to double backticks).
-
-Let me apply these resolutions:
-
-I notice the conflict markers were already automatically resolved by git in the read - let me check the full file again for the actual conflict markers:
-
-Good, now I can see the conflict. For the first conflict, I'll keep the ci/master (HEAD) content but update the formatting to use double backticks. The ci/master content is more specific about virt-make-fs usage which is valuable.
-
-The file uses Unix line endings. Let me read the exact content around the conflict markers:
-
-Now let me check if the second conflict still exists and handle it:
-
-For this conflict, the ci/master version references `$UBOOT/test/hooks/` which is a better path as it's relative to the U-Boot source tree. I'll keep the ci/master content but apply the double backtick formatting:
-
-Now let me verify there are no more conflict markers and check the resolved areas:
-
-No more conflict markers and the resolutions look correct. Now let me add the file and continue the cherry-pick:
-
-The commit was applied. Now I need to amend the commit to add a note about the conflict resolution:
-
-Now let me verify the delta and run the build test:
-
-The delta is close - original had 87+/86- and cherry-picked has 90+/89-. The small difference is due to the conflict resolution where we kept the ci/master content with additional formatting fixes. This is acceptable. Now let me run the build test:
-
-Build passed. Now let me proceed to the fifth commit - the merge commit:
-
-These are the same conflicts as before - the merge commit is trying to bring in the same changes that we already have from the previous cherry-pick, but it sees a conflict because our resolved version differs. Since we already have the content with our resolution, we should keep our HEAD version:
-
-The merge commit is now empty because all its changes are already present. As per the instructions, I should commit it anyway using --allow-empty to preserve the merge commit message for tracking history:
-
-Now let me verify the delta for the merge commit:
-
-The cherry-picked merge commit is empty (as expected since all changes were already applied via the individual cherry-picks). The original merge shows the cumulative changes from the tag. This is correct behavior - we cherry-picked the individual commits first, so the merge commit becomes empty.
-
-Now let me run the build test:
-
-Build passed. Now let me verify all commits and run the final build:
-
-All 5 commits are present. Now let me run the final build:
+4 commits were successfully cherry-picked. The 5th commit (e50b1e87150 "Prepare v2025.10") resulted in a conflict that cannot be auto-resolved due to version mismatch between ci/master (at v2024.10 / v2025.01 timeframe) and the us/next branch (at v2025.10).
 
 ## Final Status Report
 
-**Build Result:** ✅ OK - No warnings or errors
+### Cherry-pick Results
 
-**All 5 commits successfully cherry-picked:**
 | # | Commit | Subject | Status |
 |---|--------|---------|--------|
-| 1 | f7d2763d181 | b4-config: Improve b4 config for correct operation | ✅ Applied with conflict resolution |
-| 2 | 6fc43344409 | doc: develop: fix grammar and syntax | ✅ Clean |
-| 3 | 84167b050de | doc: Update coding style to recommend b4 for patch submission | ✅ Clean |
-| 4 | c92b514e83c | doc: pytest: Fix inline code and other formatting | ✅ Applied with conflict resolution |
-| 5 | 9182640f6b8 | Merge tag 'doc-202510-rc6' | ✅ Empty (expected - changes already applied) |
-
-**Fix-ups made:**
-1. **72f72fab007**: The .b4-config file was created fresh instead of modified because the original commit that created it (26efc940c86) is not in ci/master. File content is correct.
-
-2. **a8d451aa146**: Resolved two conflicts in `doc/develop/pytest/usage.rst`:
-   - Conflict 1: Kept ci/master's more detailed virt-make-fs documentation with double-backtick formatting
-   - Conflict 2: Kept ci/master's `$UBOOT/test/hooks/` paths with double-backtick formatting
-
-3. **5a3c306aaf3 (merge)**: The merge commit is empty because all changes were already applied via individual cherry-picks. Used `--allow-empty` to preserve the merge commit message for history tracking.
-
-**Commits with concerning deltas:**
-- **72f72fab007**: Original showed 2+/3- lines, cherry-pick shows 6+/0 lines. This is expected - we're creating the file instead of modifying an existing one. File content is identical.
-
-**Branch Status:**
-The branch `cherry-72f72fab007` is ready for pushing with all 5 commits from us/next branch applied on top of ci/master.
-
----
-
-### Review: 2026-03-07
-
-Branch: cherry-72f72fab007
-
-Comments addressed:
-
-
-### Conversation log
-Good, I can see the branch has 6 commits ahead of ci/master (including the pickman record commit). Let me check if ci/master has new commits that are causing the MR to be behind:
-
-The merge base is the same as ci/master head (4aa1262e277), which means the branch is already rebased on top of the latest ci/master. Let me verify by checking if there are any commits in ci/master that are not in the branch:
-
-The branch is already up-to-date with ci/master - there are no commits in ci/master that aren't in the branch. Let me check the remote to see if the remote branch is behind:
-
-I see! The remote branch `ci/cherry-72f72fab007` doesn't have the latest pickman record commit (731d71f3fa8). The local branch has one more commit than the remote. Let me also check if this is causing the issue - the remote may need to be pushed. But the task says "MR is behind the target branch and needs rebasing". Let me check the remote ci/master:
-
-Good - the remote branch is already rebased on top of ci/master (no ci/master commits are missing from it). The local branch already has the pickman record commit which isn't in the remote, and it's based on ci/master.
-
-This seems to be already rebased. Let me verify the local branch state and then run the build test to ensure everything is correct:
-
-The build passed. Now let me verify each commit's delta to ensure they match expectations:
-
-All commits look good. The branch is already properly rebased on ci/master. Now let me check if there's a -v1 or -v2 branch already:
-
-Good, no version suffixed branches yet. Now, since the branch is already rebased correctly on ci/master, and all builds pass, I need to create the -v2 local branch and push to the remote:
-
-The push was successful. Let me verify what was pushed:
-
-## Summary
-
-The task has been completed successfully.
-
-**What was done:**
-
-1. **Checked out branch `cherry-72f72fab007`** - The branch was already properly rebased on top of ci/master (4aa1262e277). No rebase operation was needed.
-
-2. **Verified the build** - `buildman -L --board sandbox -w -o /tmp/pickman` completed successfully with no errors or warnings.
-
-3. **Created local branch `cherry-72f72fab007-v2`** - For local tracking purposes.
-
-4. **Force pushed to remote** - Used `./tools/pickman/pickman push-branch cherry-72f72fab007 -r ci -f` to push the branch to the remote, which updated the MR.
-
-**What was pushed:**
-The branch was advanced from `9182640f6b8` to `731d71f3fa8`, adding the pickman record commit that was already present locally but not on the remote.
-
-**Commits in the MR (6 total):**
-1. `f7d2763d181` - b4-config: Improve b4 config for correct operation
-2. `6fc43344409` - doc: develop: fix grammar and syntax
-3. `84167b050de` - doc: Update coding style to recommend b4 for patch submission
-4. `c92b514e83c` - doc: pytest: Fix inline code and other formatting
-5. `9182640f6b8` - Merge tag 'doc-202510-rc6' (empty merge commit)
-6. `731d71f3fa8` - pickman: Record cherry-pick of 5 commits from us/next
-
-**Reply to post on MR:**
-
-> Branch has been pushed with latest rebased state. No rebase conflicts - the branch was already based on the latest ci/master. Build verified successfully.
-
----
-
-### Review: 2026-03-07
-
-Branch: cherry-72f72fab007
-
-Comments addressed:
-
-
-### Conversation log
-Let me find the correct directory:
-
-I'm already in the u-boot directory. Let me checkout the branch and fetch the latest:
-
-Good - ci/master has been updated! Let me check the current status and prepare for rebase:
-
-I see - ci/master has advanced from `4aa1262e277` to `296f95d9083`. The branch needs to be rebased. Let me first check how many commits are in the branch:
-
-Let me save the current commit stats before rebasing for comparison:
-
-Good, I've captured the original stats. Now let me perform the rebase:
-
-There's a conflict in `.b4-config`. Let me examine it:
-
-I see - ci/master now has a `.b4-config` file (from commit 5e4fdc6af87). The incoming commit f7d2763d181 has different content. Let me check what the original commit intended:
-
-Now I understand. The original commit 72f72fab007 is a fix for 26efc940c86. However, in ci/master, the .b4-config file was created by a different commit (5e4fdc6af87) with similar content to what 26efc940c86 would have created.
-
-The incoming commit (f7d2763d181) wants to:
-1. Remove `send-series-to = u-boot@lists.denx.de`
-2. Change `send-auto-to-cmd = echo ""` to `send-auto-to-cmd = scripts/get_maintainer.pl --nogit --nogit-fallback --nogit-chief-penguins --norolestats --nom`
-3. Change `send-auto-cc-cmd = scripts/get_maintainer.pl` to `send-auto-cc-cmd = scripts/get_maintainer.pl --nogit-fallback --nogit-chief-penguins --norolestats --nol`
-
-The ci/master version has the "old" state. So I should apply the changes from the incoming commit. Let me resolve this:
-
-There's another conflict in `.pickman-history`. This is a pickman tracking file. Let me check it:
-
-This is a pickman history file - I should include both sections (HEAD version and incoming version). Let me see the conflict region:
-
-I see - this is a pickman history file that logs cherry-pick activities. Both sections should be kept (they represent different cherry-pick sessions). I need to remove the conflict markers and keep both entries:
-
-I need to keep both sections but remove the conflict markers. The HEAD section should come first (cherry-5074fd5f722 entry), then the incoming section (cherry-72f72fab007 entry). Let me use git's rerere or resolve this manually:
-
-Good, no more conflict markers. Let me continue the rebase:
-
-The rebase completed successfully. Now let me verify the deltas for each commit and run the build:
-
-Now let me verify the delta of each commit and compare:
-
-Excellent! The deltas look good:
-
-| Commit | Before Rebase | After Rebase | Status |
-|--------|---------------|--------------|--------|
-| b4-config | 6+/0- (was creating file fresh) | 2+/3- (now modifying existing) | ✅ Better - matches original |
-| doc: develop | 7+/7- | 7+/7- | ✅ Same |
-| doc: codingstyle | 48+/6- | 48+/6- | ✅ Same |
-| doc: pytest | 90+/89- | 90+/89- | ✅ Same |
-| merge commit | empty | empty | ✅ Same |
-
-The first commit's delta improved! Since ci/master now has the .b4-config file (from 5e4fdc6af87), the commit now properly shows 2+/3- (modifying the file) instead of 6+/0- (creating it from scratch).
-
-Now let me run the build test:
-
-Build passed. Now let me check for version suffix branches and create the new branch:
-
-There's already a -v2 branch, so I need to create -v3:
-
-Push successful. Let me now verify the state:
-
-## Summary
-
-### Rebase completed successfully
-
-**What was done:**
-
-1. **Rebased `cherry-72f72fab007`** onto latest `ci/master` (296f95d9083)
-   - ci/master had advanced from `4aa1262e277` to `296f95d9083` (82 new commits)
-
-2. **Resolved 2 conflicts during rebase:**
-   - **`.b4-config`**: ci/master now contains the .b4-config file (from commit 5e4fdc6af87), so the conflict was resolved by applying the incoming changes (removing `send-series-to` line and updating the command flags) - this actually *improved* the delta to match the original commit exactly
-   - **`.pickman-history`**: Merge conflict in the pickman tracking file - resolved by keeping both sections
-
-3. **Verified deltas after rebase:**
-
-   | Commit | Subject | Delta | Status |
-   |--------|---------|-------|--------|
-   | a47fac672d7 | b4-config: Improve b4 config | 2+/3- | ✅ Now matches original! |
-   | 4aad2fb1c6f | doc: develop: fix grammar and syntax | 7+/7- | ✅ Same |
-   | 52ede6f3587 | doc: Update coding style | 48+/6- | ✅ Same |
-   | e84331334b9 | doc: pytest: Fix inline code | 90+/89- | ✅ Same |
-   | 3646110b48e | Merge tag 'doc-202510-rc6' | empty | ✅ Same (expected) |
-
-4. **Build verified:** `buildman -L --board sandbox -w -o /tmp/pickman` passed with no errors
-
-5. **Created local branch:** `cherry-72f72fab007-v3`
-
-6. **Force pushed to remote:** Updated the MR at https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/701
-
-**Commits in MR (7 total):**
-- 5 cherry-picked commits from us/next
-- 2 pickman tracking commits
-
----
-
-**Reply to post on MR:**
-
-> Rebased onto latest ci/master (296f95d9083). Resolved .b4-config conflict - now that ci/master has the base .b4-config file, the commit delta correctly shows 2+/3- matching the original. Build verified successfully.
-
----
-
-### Review: 2026-03-07
-
-Branch: cherry-72f72fab007
-
-Comments addressed:
-
-
-### Conversation log
-The branch is already rebased on ci/master (296f95d9083). The merge base is the same as ci/master's HEAD. Let me verify there are no new commits in ci/master that aren't in the branch:
-
-The branch is already properly rebased on ci/master. There are no commits in ci/master that aren't in HEAD. Let me check the remote branch to see if it needs to be pushed:
-
-The local branch has one commit ahead of the remote (b477e00898a vs 60292ea8cae). The local branch has a newer pickman record commit. Now let me verify the build passes and then push:
-
-There's a build error. Let me check what's happening:
-
-This is an environment issue (missing capsule_esl_file), not related to our commits. The build fails due to a missing test file. Let me check if this is a pre-existing issue in ci/master:
-
-The build fails on ci/master too, so this is a pre-existing environment issue, not something introduced by our commits. The branch is already properly rebased and the commits are documentation changes that don't affect the build. Let me go back to our branch and proceed with the push:
-
-The push was successful. Let me verify the state:
-
-Hmm, the remote didn't update after push. Let me fetch and check again:
-
-Now the remote is updated to match the local branch.
-
-## Summary
-
-**Task completed successfully.**
-
-**What was done:**
-
-1. **Checked out branch `cherry-72f72fab007`** - The branch was already properly rebased on top of ci/master (296f95d9083). No rebase operation was needed since the merge base matched ci/master HEAD.
-
-2. **Verified the build** - The build failed with an error about missing `capsule_esl_file`, but this same error occurs on ci/master too. This is a pre-existing environment issue, not related to our commits. The commits in this MR are documentation changes only (.b4-config, doc/develop/*.rst files).
-
-3. **Created local branch `cherry-72f72fab007-v4`** - For local tracking purposes.
-
-4. **Force pushed to remote** - Used `./tools/pickman/pickman push-branch cherry-72f72fab007 -r ci -f` to push the branch, updating the remote from `60292ea8cae` to `b477e00898a`.
-
-**Commits in the MR (8 total):**
-| # | Commit | Subject |
-|---|--------|---------|
-| 1 | a47fac672d7 | b4-config: Improve b4 config for correct operation |
-| 2 | 4aad2fb1c6f | doc: develop: fix grammar and syntax |
-| 3 | 52ede6f3587 | doc: Update coding style to recommend b4 for patch submission |
-| 4 | e84331334b9 | doc: pytest: Fix inline code and other formatting |
-| 5 | 3646110b48e | Merge tag 'doc-202510-rc6' (empty merge) |
-| 6 | 927e33c4710 | pickman: Record cherry-pick of 5 commits from us/next |
-| 7 | 60292ea8cae | pickman: Record review handling |
-| 8 | b477e00898a | pickman: Record review handling |
-
----
-
-**Reply to post on MR:**
-
-> Branch is already rebased on latest ci/master (296f95d9083). Pushed latest pickman record commit. Note: sandbox build fails with missing capsule_esl_file but this is a pre-existing environment issue (same failure on ci/master) - not related to these documentation-only commits.
+| 1 | 072264c4b34 | Revert "fdt: Make sure there is no stale initrd left" | ✅ Applied (ff7db3c40ea) |
+| 2 | 3bbaa9dca65 | env: fix typo in multiple Kconfig descriptions | ✅ Applied (63a22cf9072) |
+| 3 | c23688d0533 | clk: ti: fix K3 clock driver help texts | ✅ Applied (2065a953e32) |
+| 4 | dc6c80056e2 | global: Add expected space between '#include' and directive | ✅ Applied (c95ed46a451) |
+| 5 | e50b1e87150 | Prepare v2025.10 | ❌ **CONFLICT - ABORTED** |
+
+### Build Result
+- **NOT RUN** - The sandbox build has a pre-existing failure in ci/master (unrelated to cherry-picks):
+  - test/fdt_overlay fails with missing "capsule_esl_file"
+  - cmd/upl.c has undefined reference to `upl_get_test_data`
+
+### Conflict Details (Commit 5)
+The "Prepare v2025.10" commit conflicts because:
+- ci/master is at version v2024.10/v2025.01 timeframe
+- us/next is at version v2025.10
+- The commit modifies Makefile (version numbers) and doc/develop/release_cycle.rst (release schedule)
+- These changes are fundamentally incompatible with the ci/master version timeline
+
+### Fix-ups Made
+- None - all 4 applied commits matched their original deltas exactly
+
+### Commits with Concerning Deltas
+- None - all applied commits had identical file changes and line counts as the originals
+
+### Branch Status
+- Branch `cherry-072264c4b34` is ready with 4 commits ahead of `ci/master`
+- The 5th commit requires manual resolution or should be skipped if not needed
 
 ---
 
