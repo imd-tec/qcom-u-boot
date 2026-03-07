@@ -38265,3 +38265,84 @@ All 3 commits are present. Now let me run the final build test:
 
 ---
 
+## 2026-03-06: us/next
+
+Branch: cherry-d33b21b7e26
+
+Commits:
+- d33b21b7e26 ARM: Remove mistyped GICV3 definition from ARCH_SYNQUACER
+- 9390876cc82 imx: imx8ulp: Call DM post init function for init_r phase
+- aee23579872 imx8ulp_evk: Fix ELE FW version print bug
+- 2d7a6f19bbb arm: imx9: Fix LPCG number in ccm_reg structure
+- 1f95591cee0 board: phytec: phycore-imx93: Fix i.MX93 voltage modes
+- df4c18067fe Merge tag 'u-boot-imx-master-20250922' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository is clean (only untracked files). Let me create the new branch based on ci/master:
+
+Let me check the available remote references:
+
+Good, I can see `ci/master` exists. Let me try using the full ref:
+
+There are some local changes. Let me stash them and try again:
+
+Now let me start cherry-picking the commits. First commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build:
+
+Delta looks identical (1 file, 1 deletion). Now run build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta identical. Build test:
+
+Build passed. Cherry-pick third commit:
+
+Delta identical. Build test:
+
+Build passed. Cherry-pick fourth commit:
+
+Delta identical. Build test:
+
+Build passed. Cherry-pick fifth commit:
+
+Delta identical. Build test:
+
+Build passed. Now cherry-pick the sixth commit, which is a merge commit:
+
+The merge commit is empty (as expected, since its content was already cherry-picked in the previous commits). Let me commit it anyway with --allow-empty:
+
+The merge commit is empty as expected (the content was introduced via the individual cherry-picks). Build test:
+
+Build passed. Now verify all commits are present with `git log --oneline -n 8`:
+
+All 6 commits are present. Now run the final build test:
+
+## Summary
+
+All 6 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-d33b21b7e26`.
+
+### Final Status:
+
+| # | Commit | Subject | Status | Delta |
+|---|--------|---------|--------|-------|
+| 1 | 58921c6c99e | ARM: Remove mistyped GICV3 definition from ARCH_SYNQUACER | ✅ OK | Identical |
+| 2 | 58ac2260991 | imx: imx8ulp: Call DM post init function for init_r phase | ✅ OK | Identical |
+| 3 | e5f5204ff2f | imx8ulp_evk: Fix ELE FW version print bug | ✅ OK | Identical |
+| 4 | 4af0119845c | arm: imx9: Fix LPCG number in ccm_reg structure | ✅ OK | Identical |
+| 5 | 36413ad2862 | board: phytec: phycore-imx93: Fix i.MX93 voltage modes | ✅ OK | Identical |
+| 6 | 06f84351e2d | Merge tag 'u-boot-imx-master-20250922' (empty - content already in previous commits) | ✅ OK | Empty as expected |
+
+### Build Result:
+- **Final build: ✅ PASS** (sandbox board)
+
+### Fix-ups Made:
+- None required
+
+### Commits with Concerning Deltas:
+- None - all deltas matched the original commits exactly
+
+The branch `cherry-d33b21b7e26` is ready for pushing and is based on `ci/master` with 6 additional commits.
+
+---
+
