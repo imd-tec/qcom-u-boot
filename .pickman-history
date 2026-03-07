@@ -39121,3 +39121,85 @@ deaebb405b5 test/py: Fix race conditions on EFI capsule tests
 
 ---
 
+### Review: 2026-03-07
+
+Branch: cherry-b0465eb88f0
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot repository. Let me checkout the branch and check the status:
+
+The FETCH_HEAD (d2c113482bd) is newer than what we have locally as ci/master (21712793ec9). Let me update ci/master to the latest:
+
+Now ci/master is updated. Let me check how many commits behind we are:
+
+There are 48 new commits on ci/master since this branch was created. Now let me save the original commit hashes and do the rebase:
+
+Let me save the original commit stats for comparison:
+
+Now I have the original commit stats. Let me perform the rebase:
+
+The rebase completed successfully. Let me verify the commits and their stats:
+
+Good - 7 commits rebased. Let me verify each commit's delta matches the original:
+
+All commit deltas match exactly:
+1. **37efebdb1e1** (Correctly restore DT): 1 file, 2 insertions ✓
+2. **f73ec69d353** (Read correct offset): 1 file, 1+, 1- ✓
+3. **dc5ae13968b** (Fix race conditions): 1 file, 1 insertion ✓
+4. **abbf8dde289** (Fix capsule update): 1 file, 2 deletions ✓
+5. **e4a7933e89f** (Merge commit): empty as expected ✓
+6. **7883f56a93f** (pickman record): 80 lines ✓
+7. **21fca47efb4** (pickman review): 60 lines ✓
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the appropriate version:
+
+There's already a `-v2` branch, so I need to create `-v3`:
+
+Now let me push to the remote branch:
+
+The push was successful. Let me verify the final state:
+
+The merge base now matches ci/master (d2c113482bd).
+
+## Rebase Completed Successfully
+
+### Summary
+
+The branch `cherry-b0465eb88f0` has been rebased onto the latest ci/master.
+
+### Actions Taken
+
+1. **Fetched latest ci/master**: Updated from 21712793ec9 to d2c113482bd (48 new commits)
+2. **Rebased 7 commits**: All commits rebased cleanly with no conflicts
+3. **Verified deltas**: All commit deltas match exactly
+4. **Build test**: Passed (sandbox build completed successfully)
+5. **Created local tracking branch**: `cherry-b0465eb88f0-v3`
+6. **Force pushed to remote**: Updated ci/cherry-b0465eb88f0
+
+### Commit Deltas Verification
+
+| Commit | Subject | Delta Before | Delta After | Status |
+|--------|---------|--------------|-------------|--------|
+| 37efebdb1e1 | test/py: Correctly restore the DT after capsule tests | 1 file, +2 | 1 file, +2 | ✓ Match |
+| f73ec69d353 | test/py: Read from the correct offset | 1 file, +1/-1 | 1 file, +1/-1 | ✓ Match |
+| dc5ae13968b | test/py: Fix race conditions on EFI capsule | 1 file, +1 | 1 file, +1 | ✓ Match |
+| abbf8dde289 | test/py: Fix capsule update tests | 1 file, -2 | 1 file, -2 | ✓ Match |
+| e4a7933e89f | Merge patch series | (empty) | (empty) | ✓ Match |
+| 7883f56a93f | pickman: Record cherry-pick | +80 | +80 | ✓ Match |
+| 21fca47efb4 | pickman: Record review handling | +60 | +60 | ✓ Match |
+
+### Build Result: **OK**
+
+### Suggested MR Reply
+
+> Branch has been rebased onto the latest ci/master (d2c113482bd, 48 commits ahead of the previous base). All commits rebased cleanly with no conflicts and deltas verified. Build test passed.
+
+---
+
