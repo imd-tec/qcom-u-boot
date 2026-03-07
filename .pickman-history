@@ -38081,6 +38081,7 @@ The rebase was completed successfully.
 
 ## 2026-03-06: us/next
 
+
 Branch: cherry-5c389e61902
 
 Commits:
@@ -38190,6 +38191,77 @@ All 3 commits have been successfully cherry-picked to branch `cherry-5c389e61902
 
 ### Branch Status
 Branch `cherry-5c389e61902` is ready for pushing with 3 new commits on top of `ci/master`.
+
+---
+
+Branch: cherry-5634cf1afcf
+
+Commits:
+- 5634cf1afcf board: dhelectronics: Check pointer before access in dh_get_value_from_eeprom_buffer()
+- 7cd9d2db262 board: dhelectronics: Use isascii() before isprint() in dh_read_eeprom_id_page()
+- f28891d4446 Merge patch series "board: dhelectronics: Check pointer before access in dh_get_value_from_eeprom_buffer()"
+
+### Conversation log
+The repository state is clean (untracked files don't affect cherry-picking). Let me proceed with creating the new branch based on ci/master:
+
+Let me check what refs are available for ci/master:
+
+There's both a local and remote branch. Let me use the remote one explicitly:
+
+There are some local changes that need to be handled. Let me stash them first:
+
+Branch created. Now let me cherry-pick the first commit (5634cf1afcf):
+
+First commit cherry-picked successfully. Now let me verify the delta:
+
+Delta is identical (1 file, 6 insertions, 3 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (7cd9d2db262):
+
+Second commit cherry-picked. Let me verify the delta:
+
+Delta is identical. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit which is a merge commit (f28891d4446):
+
+The merge commit is empty (as expected since the actual changes are already in the previous commits). Let me commit it with --allow-empty:
+
+Merge commit applied. Let me verify the delta:
+
+The cherry-picked merge commit is empty as expected (the actual changes were already applied via the individual commits). The original merge commit shows file changes because those were the cumulative changes from the merged branch, but since we've already cherry-picked those individual commits, the merge is empty. This is the correct behavior.
+
+Now let me run the build test:
+
+Build passed. Now let me verify the final state with git log:
+
+All 3 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick operation completed successfully!**
+
+### Summary
+
+| Commit | Subject | Status | Delta |
+|--------|---------|--------|-------|
+| 5634cf1afcf | board: dhelectronics: Check pointer before access in dh_get_value_from_eeprom_buffer() | ✅ OK | Identical (1 file, +6/-3) |
+| 7cd9d2db262 | board: dhelectronics: Use isascii() before isprint() in dh_read_eeprom_id_page() | ✅ OK | Identical (1 file, +3/-3) |
+| f28891d4446 | Merge patch series "board: dhelectronics: Check pointer before access..." | ✅ OK | Empty (expected for merge) |
+
+### Build Result
+- **Final build: OK** (sandbox board builds successfully)
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all deltas matched expectations
+
+### Branch State
+- Branch `cherry-5634cf1afcf` is ready for pushing
+- Based on `remotes/ci/master`
+- Contains 3 new commits on top of ci/master
+
 
 ---
 
