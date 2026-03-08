@@ -386,7 +386,7 @@ static void aisimage_set_header(void *ptr, struct stat *sbuf, int ifd,
 {
 }
 
-int aisimage_check_params(struct imgtool *itl)
+static int aisimage_check_params(struct imgtool *itl)
 {
 	if (!itl)
 		return CFG_INVALID;
