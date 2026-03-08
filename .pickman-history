@@ -38981,294 +38981,75 @@ The final sandbox build completed successfully with no warnings or errors.
 
 ---
 
-## 2026-03-07: us/next
+## 2026-03-08: us/next
 
-Branch: cherry-e416d165723
+Branch: cherry-b90927bd0d8
 
 Commits:
-- e416d165723 pinctrl: nexell: Cannot test unsigned to be negative
-- 6139d5f2521 tools: fit_info: Make usage() static
-- 544bf0aa599 tools: aisimage: Make aisimage_check_params() static
-- da938a4254b sound: rt5677: Cannot test unsigned for being negative
-- 58998fed9e6 sandbox: Improve dummy local_irq_save implementation
-- 66ff673a8e9 sandbox: Add generic asm/atomic.h
-- f780ad4be9f remoteproc: ti_k3_arm64: Cannot set or compare u8 to 16bits
-- c9cd480b5c5 remoteproc: k3-r5: Ensure ret is initialised
-- cf11b98f139 Merge patch series "remoteproc: k3: Fix two Smatch issue reports"
+- b90927bd0d8 soc: ti: k3-navss-ringacc: NULL check before dereference
+- 13ca68b104e soc: ti: k3-navss-ringacc: Do not use uninitialised variable
+- 5b2c3a3ea15 Merge patch series "soc: ti: k3-navss-ringacc: Fix Smatch reported issues"
 
 ### Conversation log
-The repository state is clean (only untracked files present). Now let me create and checkout the new branch based on ci/master:
+The repository has untracked files but no uncommitted changes, so it's clean for our purposes. Let me proceed with creating the new branch based on ci/master.
 
-Let me check the remote branches to find the correct reference:
+I see there's a local branch `ci/master`. Let me check if there's also a remote and get more info:
 
-There's both a local branch `ci/master` and a remote `remotes/ci/master`. Let me use the remote one explicitly:
+There are both local and remote refs. Let me use the local one explicitly:
 
-Now let me start cherry-picking the commits. First, let me verify the source commits exist:
+Now let me cherry-pick the first commit:
 
-Delta matches perfectly. Now run build test:
+First cherry-pick succeeded. Let me verify the delta:
 
-Build passed. Now continue with the next commit:
+The delta is identical (1 file, 3 insertions, 1 deletion). Now let me run the build test:
 
-Delta matches. Build test:
+Build passed. Now let me cherry-pick the second commit:
 
-We have a conflict. Let me check the conflict:
+Second cherry-pick succeeded. Let me verify the delta:
 
-I can see the conflict. The incoming change from 544bf0aa599 wants to add `static` to the function, but the base branch has already refactored the parameter from `struct image_tool_params *params` to `struct imgtool *itl`. The resolution is simple - we need to add `static` to the already-refactored function signature:
+The delta is identical. Now let me run the build test:
 
-I need to resolve this conflict by keeping the HEAD's refactored parameter signature but adding the `static` keyword. Let me fix the conflict:
+Build passed. Now let me cherry-pick the third commit (which is a merge commit):
 
-It looks like git already resolved part of the conflict. Let me check the status:
+The merge commit is empty as expected (since we already cherry-picked the individual commits that were merged). I need to commit it with --allow-empty:
 
-Now I can resolve this. The fix is simple - add `static` to the current version:
+Let me verify the commit:
 
-The conflict markers are probably hidden in the lines. Let me check the raw file content:
+Good, the merge commit was applied as an empty commit (since the changes were already applied by the previous two cherry-picks). This is expected behavior. Now let me run the build test:
 
-Good, I can see the conflict markers. Now I need to resolve this by taking the HEAD version's signature and adding `static`:
+Build passed. Now let me verify all 3 commits are present:
 
-It seems like the Read tool doesn't show conflict markers. Let me use a different approach:
-
-Now add `static` to the function:
-
-Good, the function is now static. Now let me add and continue the cherry-pick:
-
-Let me amend the commit message to note the fixup:
-
-Now verify delta and build:
-
-Delta matches (1 file, 1 insertion, 1 deletion). Now build:
-
-The conflict shows that HEAD has more definitions (local_save_flags) and a slightly different style. The incoming change (58998fed9e6) wants to change the pattern to `do { (x) = 0; } while (0)` style for `local_irq_save`.
-
-Let me look at both versions more carefully:
-- HEAD: `#define local_irq_save(x)  ((x) = 0)` - expression style
-- Original commit: `#define local_irq_save(x)  do { (x) = 0; } while (0)` - statement style (safer)
-
-The incoming commit is improving the implementation to use the safer do-while pattern. Let me resolve this by applying the statement style to the HEAD version:
-
-So the original commit:
-1. Changes `local_irq_save(x)` from empty to `do { (x) = 0; } while (0)`
-2. Removes `local_save_flags(x)` 
-3. Keeps the others empty
-
-The HEAD version already has:
-1. `local_irq_save(x)` as `((x) = 0)`
-2. `local_save_flags(x)` as `((x) = 0)` 
-3. `local_irq_restore(x)` as `do { (void)(x); } while (0)`
-
-The commit's intent was to make `local_irq_save` not trigger unused variable warnings. HEAD already does this but with expression style `((x) = 0)` which accomplishes the same goal. HEAD also has `local_save_flags` while the commit wants to remove it.
-
-Since HEAD already has good implementations (using variables to avoid warnings), and the commit is about avoiding unused variable warnings, I think the best resolution is to keep HEAD's version with improved patterns but remove `local_save_flags` as requested (if unused). Let me check if the goal is achieved:
-
-The HEAD version already implements the goal of the commit - making local_irq_save use the variable to avoid warnings. The commit wanted to:
-1. Make `local_irq_save(x)` assign to x → HEAD already does this
-2. Remove `local_save_flags(x)` → HEAD still has it but with a proper implementation
-
-Let me check if `local_save_flags` is used anywhere to decide if we should remove it:
-
-`local_save_flags` is only defined, not used elsewhere in sandbox. However, HEAD's version already addresses the unused variable warning issue which is the main purpose of the original commit. Since HEAD's version is actually more complete (it already has proper implementations), I'll keep HEAD's version as is. The essential change (making local_irq_save assign to x) is already applied in HEAD.
-
-The cherry-pick is now empty because HEAD already contains the improved implementation. Since the commit's purpose (avoiding unused variable warnings) is already achieved in HEAD, I'll commit it as empty to preserve the commit history:
-
-Now for the last one - the merge commit. Since the subject contains "Merge", I need to use `-m 1 --allow-empty`:
-
-The merge commit is empty (as expected since we've already cherry-picked the individual commits). Let me commit it as empty to preserve the history:
-
-Now let me verify all 9 commits are present:
-
-All 9 commits are present. Now run the final build:
+All 3 commits are present in the correct order. Let me run the final build:
 
 ## Final Status Report
 
-**Cherry-pick branch:** `cherry-e416d165723` (based on `remotes/ci/master`)
+**Cherry-pick completed successfully!**
 
-**Build result:** ✅ OK - sandbox build passes
+### Summary
 
-**Commits cherry-picked (9 total):**
+| Commit | Subject | Status |
+|--------|---------|--------|
+| b90927bd0d8 | soc: ti: k3-navss-ringacc: NULL check before dereference | ✅ Applied cleanly |
+| 13ca68b104e | soc: ti: k3-navss-ringacc: Do not use uninitialised variable | ✅ Applied cleanly |
+| 5b2c3a3ea15 | Merge patch series "soc: ti: k3-navss-ringacc: Fix Smatch reported issues" | ✅ Applied (empty commit, as expected) |
 
-| # | Hash | Subject | Status |
-|---|------|---------|--------|
-| 1 | b021c70b3a9 | pinctrl: nexell: Cannot test unsigned to be negative | ✅ Clean |
-| 2 | c0622bdb4b8 | tools: fit_info: Make usage() static | ✅ Clean |
-| 3 | d96dbd9f757 | tools: aisimage: Make aisimage_check_params() static | ⚠️ Resolved conflict |
-| 4 | 0443f4910a3 | sound: rt5677: Cannot test unsigned for being negative | ✅ Clean |
-| 5 | e3bf5d69220 | sandbox: Improve dummy local_irq_save implementation | ⚠️ Empty (already applied) |
-| 6 | bff701db84e | sandbox: Add generic asm/atomic.h | ✅ Clean |
-| 7 | cc05fbff116 | remoteproc: ti_k3_arm64: Cannot set or compare u8 to 16bits | ✅ Clean |
-| 8 | 36755ccd558 | remoteproc: k3-r5: Ensure ret is initialised | ✅ Clean |
-| 9 | e94be96ec8a | Merge patch series "remoteproc: k3: Fix two Smatch issue reports" | ✅ Empty merge (expected) |
+### Build Result
+**OK** - No warnings or errors
 
-**Fix-ups made:**
-1. **544bf0aa599 (tools: aisimage):** Resolved conflict - function parameter was already refactored from `struct image_tool_params *params` to `struct imgtool *itl` in target branch. Added `static` keyword to the already-refactored function signature.
+### Fix-ups Made
+None required - all commits applied cleanly
 
-2. **58998fed9e6 (sandbox: local_irq_save):** Empty commit - the target branch already had an equivalent implementation for avoiding unused variable warnings. Committed as empty to preserve commit sequence.
+### Delta Analysis
+- **Commit 1**: Identical delta (1 file, +3/-1 lines)
+- **Commit 2**: Identical delta (1 file, +1/-1 lines)
+- **Commit 3**: Empty commit (expected - merge commit whose changes were already applied via cherry-picks 1 and 2)
 
-**Commits with concerning deltas:** None - all non-empty commits have identical file/line deltas to originals.
-
-The branch `cherry-e416d165723` is ready for pushing.
-
----
-
-### Review: 2026-03-07
-
-Branch: cherry-e416d165723
-
-Comments addressed:
-
-
-### Conversation log
-Now I can see the situation:
-- Current branch has commits up to e6a5093733e (the pickman record commit)
-- ci/master is at 37ca18b8da7 (has 2 new commits: debian-packaging merge and related commit)
-- The merge base is d2c113482bd
-
-Let me see the commits that need to be rebased and perform the rebase:
-
-Now I need to save the original commit stats before rebasing so I can compare them afterwards:
-
-Good, I have the original stats. Now let me perform the rebase:
-
-The rebase completed successfully. Now let me verify the commits and their stats:
-
-Good, the rebase completed. Now let me verify the deltas of each rebased commit:
-
-All deltas match perfectly! Now let me run the build test:
-
-Build passed! Now let me create the versioned local branch and push:
-
-## Summary
-
-**Rebase completed successfully!**
-
-### What was done:
-1. **Rebased** branch `cherry-e416d165723` onto latest `ci/master` (37ca18b8da7)
-2. **Verified** all 10 commits have identical deltas before and after rebase
-3. **Build test** passed for sandbox target
-4. **Created** local branch `cherry-e416d165723-v2` to preserve history
-5. **Force pushed** to remote `ci/cherry-e416d165723` to update MR !707
-
-### Commit mapping (old → new):
-| # | Old Hash | New Hash | Subject |
-|---|----------|----------|---------|
-| 1 | b021c70b3a9 | 0e27c533eac | pinctrl: nexell: Cannot test unsigned to be negative |
-| 2 | c0622bdb4b8 | d0d986d19b6 | tools: fit_info: Make usage() static |
-| 3 | d96dbd9f757 | 8933c89c39b | tools: aisimage: Make aisimage_check_params() static |
-| 4 | 0443f4910a3 | e6fa0ce169e | sound: rt5677: Cannot test unsigned for being negative |
-| 5 | e3bf5d69220 | 0e975e44bfe | sandbox: Improve dummy local_irq_save implementation (empty) |
-| 6 | bff701db84e | 529767b07f8 | sandbox: Add generic asm/atomic.h |
-| 7 | cc05fbff116 | 6ac4f7db00b | remoteproc: ti_k3_arm64: Cannot set or compare u8 to 16bits |
-| 8 | 36755ccd558 | b42950e74c5 | remoteproc: k3-r5: Ensure ret is initialised |
-| 9 | e94be96ec8a | 0edcfcca8c4 | Merge patch series "remoteproc: k3: Fix two Smatch issue reports" |
-| 10 | e6a5093733e | 6ae18566483 | pickman: Record cherry-pick of 9 commits from us/next |
-
-### Suggested MR comment:
+### Branch Status
+The branch `cherry-b90927bd0d8` is now ready for pushing with all 3 commits:
 ```
-Rebased onto latest target branch.
-
-- No conflicts encountered
-- Build test: ✅ sandbox passes
-- All commit deltas preserved
-```
-
----
-
-### Review: 2026-03-07
-
-Branch: cherry-e416d165723
-
-Comments addressed:
-- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) efi-aarch64, tk1, rockpro64.
-
-Let me analyze the failu...
-
-### Conversation log
-Now let me understand the review comment. Looking at the comment, it's from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` mentioning "Pipeline fix (attempt 2): fixed failed job(s) efi-aarch64, tk1, rockpro64" - but according to the context, the previous analysis determined these were all infrastructure/transient issues, NOT code bugs that need fixing:
-
-1. **efi-aarch64**: QEMU test infrastructure timeout issue
-2. **tk1**: Lab hardware USB connectivity issue
-3. **rockpro64**: Lab hardware/flash corruption issue
-
-Looking at the context more carefully, it says "**No code changes made** - the branch `cherry-e416d165723-fix2` is identical to `cherry-e416d165723` because these are infrastructure failures that require lab/CI maintenance, not code fixes."
-
-The review comment appears to be from the bot indicating a pipeline fix attempt, not an actionable human review comment requiring code changes. Let me verify the current branch state and confirm there are no actual code changes needed:
-
-I see the difference - the `cherry-e416d165723-fix2` branch has additional history about the pipeline fix attempt, while `cherry-e416d165723` does not. However, looking at the review comment, it's from a bot indicating "Pipeline fix (attempt 2): fixed failed job(s) efi-aarch64, tk1, rockpro64."
-
-Let me re-read the context more carefully. The comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` is actually describing a previous pipeline fix attempt and includes the analysis done. This appears to be a summary of what was investigated, not an actionable request.
-
-Looking at "Review comments to address" more carefully:
-- The comment is describing infrastructure failures that were analyzed
-- The analysis concluded these are NOT code bugs
-
-This means there's actually **nothing to fix in the code** - the review comment was documenting the investigation of pipeline failures that were determined to be infrastructure issues.
-
-Let me verify the build passes and then report the status:
-
-Build passes. Now let me understand the review comment better - it seems to be a bot auto-comment describing previous fix attempts rather than a human review request. However, since I'm tasked to "address" this comment, I should acknowledge it.
-
-Looking at the context again:
-- The review comment is from `project_1_bot_...` describing pipeline failures
-- The analysis within the comment itself already concludes these are infrastructure issues
-- No code changes are needed
-
-The appropriate response would be to acknowledge that these pipeline failures are infrastructure-related and not caused by the code changes in this MR.
-
-Let me check if there's a newer version branch already:
-
-There's already a `-v2` branch. Let me check its status compared to current:
-
-The current `cherry-e416d165723` branch has a newer commit `90af7818b29` which records "review handling". Let me check what that contains:
-
-I understand now. The review comment from the bot is about pipeline failures (efi-aarch64, tk1, rockpro64) that were already analyzed and determined to be infrastructure issues, not code bugs. The analysis concluded:
-
-1. **efi-aarch64**: QEMU test infrastructure timeout
-2. **tk1**: Lab hardware USB connectivity issue  
-3. **rockpro64**: Lab hardware/flash corruption issue
-
-Since these are infrastructure issues and not code bugs, **no code changes are required**. The appropriate action is to acknowledge this in a reply to the MR.
-
-Let me verify the remote branch status and provide the report:
-
-The remote is already up to date with the local branch. The remote already has the latest commits including the "pickman: Record review handling" commit.
-
-## Summary Report
-
-### Review Comment Analysis
-
-The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` describes pipeline failures for jobs `efi-aarch64`, `tk1`, and `rockpro64`. However, this comment is actually **documenting a previous investigation**, not requesting code changes.
-
-The investigation concluded that all three failures are **infrastructure/transient issues, NOT code bugs**:
-
-| Job | Failure Type | Root Cause |
-|-----|--------------|------------|
-| efi-aarch64 | Test timeout | QEMU test infrastructure - Ubuntu distro boot timing out |
-| tk1 | Lab failure | Hardware USB connectivity unavailable |
-| rockpro64 | Boot failure | Hardware flash/FIT image corruption |
-
-### What Was Done
-
-1. **Verified** the branch `cherry-e416d165723` is current
-2. **Confirmed** build passes: `buildman -L --board sandbox -w -o /tmp/pickman` ✅
-3. **Analyzed** the review comment - it's a bot-generated summary of infrastructure failures, not an actionable code review request
-4. **Confirmed** no code changes are required since these are infrastructure issues
-
-### No Changes Made
-
-Since the pipeline failures are infrastructure-related (not code bugs), no code changes were needed. The branch is already up to date on the remote.
-
-### Suggested Reply to Post on MR
-
-```
-The pipeline failures (efi-aarch64, tk1, rockpro64) have been analyzed and are confirmed to be infrastructure/transient issues:
-
-- **efi-aarch64**: QEMU test infrastructure timeout waiting for Ubuntu boot
-- **tk1**: Lab hardware USB connectivity unavailable  
-- **rockpro64**: Lab hardware boot failure (SPL FIT loading issue)
-
-None of these failures are related to the code changes in this MR:
-- Cherry-picked commits only affect: sandbox, sound driver, pinctrl, tools, and remoteproc
-- Build test passes: ✅ sandbox builds successfully
-
-No code changes required - please retry the pipeline.
+2a484ed98ea Merge patch series "soc: ti: k3-navss-ringacc: Fix Smatch reported issues"
+33d29785856 soc: ti: k3-navss-ringacc: Do not use uninitialised variable
+efd5b5a2409 soc: ti: k3-navss-ringacc: NULL check before dereference
 ```
 
 ---
