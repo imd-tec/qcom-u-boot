@@ -38981,3 +38981,225 @@ The final sandbox build completed successfully with no warnings or errors.
 
 ---
 
+## 2026-03-07: us/next
+
+Branch: cherry-b0465eb88f0
+
+Commits:
+- b0465eb88f0 test/py: Correctly restore the DT after capsule tests
+- 5096f81bda1 test/py: Read from the correct offset when initializing capsules
+- fa2a2e20d0b test/py: Fix race conditions on EFI capsule tests
+- fc2686d2a87 test/py: Fix capsule update tests
+- fedbb7a3382 Merge patch series "test/py: Correctly restore the DT after capsule tests"
+
+### Conversation log
+The repository has untracked files but is otherwise clean (nothing staged, no modified tracked files). This is fine for cherry-picking.
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly (1 file, 2 insertions). Now let me run the build test:
+
+Build succeeded. Now cherry-pick the second commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the third commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the fourth commit:
+
+Delta matches perfectly. Now build test:
+
+Build succeeded. Now cherry-pick the fifth commit, which is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (expected behavior since the changes were already applied in the previous individual commits). Let me commit it as an empty commit to preserve the history:
+
+The cherry-picked merge commit is empty (as expected since all changes were already applied individually), while the original merge commit shows the aggregate changes. This is expected and correct behavior when cherry-picking individual commits from a series followed by its merge commit.
+
+Now let me run the build test:
+
+Build passed. Now let me verify the final result with git log:
+
+All 5 commits are present in the correct order. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| Commit | Subject | Status | Delta |
+|--------|---------|--------|-------|
+| b0465eb88f0 | test/py: Correctly restore the DT after capsule tests | ✓ OK | Match |
+| 5096f81bda1 | test/py: Read from the correct offset when initializing capsules | ✓ OK | Match |
+| fa2a2e20d0b | test/py: Fix race conditions on EFI capsule tests | ✓ OK | Match |
+| fc2686d2a87 | test/py: Fix capsule update tests | ✓ OK | Match |
+| fedbb7a3382 | Merge patch series "test/py: Correctly restore the DT after capsule tests" | ✓ OK (empty) | Expected |
+
+### Build Result: **OK**
+- All 5 builds passed without warnings or errors
+
+### Fix-ups Made: **None**
+- All cherry-picks applied cleanly
+
+### Commits with Concerning Deltas: **None**
+- First 4 commits: Delta matched exactly (same files, same line counts)
+- 5th commit (merge): Empty as expected when cherry-picking individual commits followed by their merge commit
+
+### Branch Status
+The branch `cherry-b0465eb88f0` is ready for pushing with 5 commits ahead of `ci/master`:
+```
+c0cc66c85da Merge patch series "test/py: Correctly restore the DT after capsule tests"
+7b0a17e642b test/py: Fix capsule update tests
+deaebb405b5 test/py: Fix race conditions on EFI capsule tests
+915734db606 test/py: Read from the correct offset when initializing capsules
+559051d8377 test/py: Correctly restore the DT after capsule tests
+```
+
+---
+
+### Review: 2026-03-07
+
+Branch: cherry-b0465eb88f0
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot repository. Let me checkout the branch and check the status:
+
+I see there's a "pickman" commit on top. Let me check the merge base and save the commit hashes before rebase:
+
+The branch is already based on the latest ci/master (21712793ec9). Let me verify:
+
+The branch is already up-to-date with ci/master (no commits behind). The rebase would be a no-op. But let me check the remote branch to see if that's different:
+
+I see! The remote branch (ci/cherry-b0465eb88f0) is at c0cc66c85da, and the local branch has an additional "pickman" commit (f84b230cfec) on top. Both are already based on the same ci/master (21712793ec9). 
+
+The branch is already rebased onto the latest ci/master. Let me verify the build works and then complete the task:
+
+Build passes. The branch is already based on the latest ci/master - no actual rebase was needed. But since the remote branch and local branch differ (local has the pickman commit), let me check if we need to push:
+
+The local branch has one additional "pickman" commit on top of what's in the remote. This is a metadata commit that was added during the original cherry-pick. Since the branch is already rebased (based on the latest ci/master), I just need to:
+
+1. Create a local -v2 branch (for tracking)
+2. Force push to the remote branch
+
+## Rebase Completed Successfully
+
+### Summary
+
+The branch `cherry-b0465eb88f0` was **already based on the latest ci/master** (21712793ec9). No actual rebase was required since the merge base was already the latest target branch commit.
+
+### Actions Taken
+
+1. **Verified branch status**: Confirmed branch was already up-to-date with ci/master
+2. **Build test**: Passed (sandbox build completed successfully)
+3. **Created local tracking branch**: `cherry-b0465eb88f0-v2`
+4. **Pushed to remote**: Updated ci/cherry-b0465eb88f0 with the pickman metadata commit
+
+### Branch Status
+```
+f84b230cfec pickman: Record cherry-pick of 5 commits from us/next
+c0cc66c85da Merge patch series "test/py: Correctly restore the DT after capsule tests"
+7b0a17e642b test/py: Fix capsule update tests
+deaebb405b5 test/py: Fix race conditions on EFI capsule tests
+915734db606 test/py: Read from the correct offset when initializing capsules
+559051d8377 test/py: Correctly restore the DT after capsule tests
+```
+
+### Build Result: **OK**
+
+### Suggested MR Reply
+
+> Branch has been verified to be already based on the latest target branch (ci/master). Build test passed. GitLab pipeline should now run automatically.
+
+---
+
+### Review: 2026-03-07
+
+Branch: cherry-b0465eb88f0
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot repository. Let me checkout the branch and check the status:
+
+The FETCH_HEAD (d2c113482bd) is newer than what we have locally as ci/master (21712793ec9). Let me update ci/master to the latest:
+
+Now ci/master is updated. Let me check how many commits behind we are:
+
+There are 48 new commits on ci/master since this branch was created. Now let me save the original commit hashes and do the rebase:
+
+Let me save the original commit stats for comparison:
+
+Now I have the original commit stats. Let me perform the rebase:
+
+The rebase completed successfully. Let me verify the commits and their stats:
+
+Good - 7 commits rebased. Let me verify each commit's delta matches the original:
+
+All commit deltas match exactly:
+1. **37efebdb1e1** (Correctly restore DT): 1 file, 2 insertions ✓
+2. **f73ec69d353** (Read correct offset): 1 file, 1+, 1- ✓
+3. **dc5ae13968b** (Fix race conditions): 1 file, 1 insertion ✓
+4. **abbf8dde289** (Fix capsule update): 1 file, 2 deletions ✓
+5. **e4a7933e89f** (Merge commit): empty as expected ✓
+6. **7883f56a93f** (pickman record): 80 lines ✓
+7. **21fca47efb4** (pickman review): 60 lines ✓
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing versioned branches and create the appropriate version:
+
+There's already a `-v2` branch, so I need to create `-v3`:
+
+Now let me push to the remote branch:
+
+The push was successful. Let me verify the final state:
+
+The merge base now matches ci/master (d2c113482bd).
+
+## Rebase Completed Successfully
+
+### Summary
+
+The branch `cherry-b0465eb88f0` has been rebased onto the latest ci/master.
+
+### Actions Taken
+
+1. **Fetched latest ci/master**: Updated from 21712793ec9 to d2c113482bd (48 new commits)
+2. **Rebased 7 commits**: All commits rebased cleanly with no conflicts
+3. **Verified deltas**: All commit deltas match exactly
+4. **Build test**: Passed (sandbox build completed successfully)
+5. **Created local tracking branch**: `cherry-b0465eb88f0-v3`
+6. **Force pushed to remote**: Updated ci/cherry-b0465eb88f0
+
+### Commit Deltas Verification
+
+| Commit | Subject | Delta Before | Delta After | Status |
+|--------|---------|--------------|-------------|--------|
+| 37efebdb1e1 | test/py: Correctly restore the DT after capsule tests | 1 file, +2 | 1 file, +2 | ✓ Match |
+| f73ec69d353 | test/py: Read from the correct offset | 1 file, +1/-1 | 1 file, +1/-1 | ✓ Match |
+| dc5ae13968b | test/py: Fix race conditions on EFI capsule | 1 file, +1 | 1 file, +1 | ✓ Match |
+| abbf8dde289 | test/py: Fix capsule update tests | 1 file, -2 | 1 file, -2 | ✓ Match |
+| e4a7933e89f | Merge patch series | (empty) | (empty) | ✓ Match |
+| 7883f56a93f | pickman: Record cherry-pick | +80 | +80 | ✓ Match |
+| 21fca47efb4 | pickman: Record review handling | +60 | +60 | ✓ Match |
+
+### Build Result: **OK**
+
+### Suggested MR Reply
+
+> Branch has been rebased onto the latest ci/master (d2c113482bd, 48 commits ahead of the previous base). All commits rebased cleanly with no conflicts and deltas verified. Build test passed.
+
+---
+
