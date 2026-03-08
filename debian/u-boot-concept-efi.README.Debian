@@ -1,0 +1,41 @@
+
+U-Boot EFI applications and payloads (Concept tree)
+====================================================
+
+This package provides U-Boot built as EFI applications and EFI payloads.
+These are PE32/PE32+ executables that can be loaded by UEFI firmware.
+
+EFI applications (u-boot-app.efi)
+---------------------------------
+
+U-Boot built as an EFI application runs under an existing UEFI firmware
+implementation. It can be launched from the UEFI shell or registered as
+a boot option. This is useful for testing U-Boot features on systems
+that already have UEFI firmware.
+
+Available EFI application builds:
+
+  /usr/lib/u-boot-concept/efi-x86_app32/u-boot-app.efi    (x86 32-bit)
+  /usr/lib/u-boot-concept/efi-x86_app64/u-boot-app.efi    (x86 64-bit)
+  /usr/lib/u-boot-concept/efi-arm_app64/u-boot-app.efi    (AArch64)
+  /usr/lib/u-boot-concept/efi-riscv_app64/u-boot-app.efi  (RISC-V 64-bit)
+
+To run from a UEFI shell, copy the .efi file to an EFI system partition
+and execute it:
+
+  Shell> fs0:\u-boot-app.efi
+
+EFI payloads (u-boot-payload.efi)
+---------------------------------
+
+U-Boot built as an EFI payload is a self-contained bootloader wrapped
+in a PE32/PE32+ container. It can be loaded by coreboot or other
+firmware that supports EFI payloads.
+
+Available EFI payload builds:
+
+  /usr/lib/u-boot-concept/efi-x86_payload32/u-boot-payload.efi  (x86 32-bit)
+  /usr/lib/u-boot-concept/efi-x86_payload64/u-boot-payload.efi  (x86 64-bit)
+
+This package is built from the U-Boot Concept tree, which may include
+features not yet available in the upstream U-Boot release.

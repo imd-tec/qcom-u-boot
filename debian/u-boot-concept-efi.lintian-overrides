@@ -1,0 +1,4 @@
+u-boot-concept-efi: description-synopsis-starts-with-article
+
+# These are EFI application/payload binaries
+u-boot-concept-efi binary: arch-independent-package-contains-binary-or-object [*usr/lib/u-boot-concept/efi-*]

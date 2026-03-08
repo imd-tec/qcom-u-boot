@@ -42,10 +42,10 @@ unexport ELF_PACKAGE_METADATA
 %:
 	dh $@
 
-override_dh_auto_build-indep: u-boot-concept-qemu
+override_dh_auto_build-indep: u-boot-concept-qemu u-boot-concept-efi
 override_dh_auto_build-arch:
 
-.PHONY: u-boot-concept-qemu
+.PHONY: u-boot-concept-qemu u-boot-concept-efi
 
 define build_template
 
@@ -73,18 +73,18 @@ define build_template
 
     ifneq (,$(filter uboot.elf,$($(platform)_targets)))
 	cp -u debian/build/$(platform)/u-boot debian/build/$(platform)/uboot.elf
-    endif
 	# Strip the ELF binary
 	$($(platform)_CROSS_COMPILE)strip --remove-section=.comment --remove-section=.note \
 	  debian/build/$(platform)/uboot.elf
+    endif
 	# Upstream generates executable targets (last checked with 2020-10).
 	chmod -x $(addprefix debian/build/$(platform)/,$($(platform)_targets))
 
   install-$(platform):
-	dh_install -pu-boot-concept-qemu $(addprefix debian/build/$(platform)/,$($(platform)_targets)) usr/lib/u-boot-concept/$(platform)
+	dh_install -p$(package) $(addprefix debian/build/$(platform)/,$($(platform)_targets)) usr/lib/u-boot-concept/$(platform)
 
 endef
-$(foreach package, u-boot-concept-qemu,\
+$(foreach package, u-boot-concept-qemu u-boot-concept-efi,\
   $(foreach platform, $($(package)_platforms),\
     $(eval $(build_template))))
 
@@ -94,7 +94,9 @@ override_dh_auto_test-arch:
 # Do not spend time searching for an install target in Makefile.
 override_dh_auto_install:
 
-execute_after_dh_install-indep: $(addprefix install-,$(u-boot-concept-qemu_platforms)) installdocs-u-boot-concept-qemu
+execute_after_dh_install-indep: \
+  $(addprefix install-,$(u-boot-concept-qemu_platforms)) installdocs-u-boot-concept-qemu \
+  $(addprefix install-,$(u-boot-concept-efi_platforms)) installdocs-u-boot-concept-efi
 
 installdocs-u-boot-concept-qemu:
 	mkdir -p debian/build/u-boot-concept-qemu/configs
@@ -103,6 +105,13 @@ installdocs-u-boot-concept-qemu:
 	done
 	dh_installdocs -pu-boot-concept-qemu debian/build/u-boot-concept-qemu/configs
 
+installdocs-u-boot-concept-efi:
+	mkdir -p debian/build/u-boot-concept-efi/configs
+	for platform in $(u-boot-concept-efi_platforms); do \
+	  cp -u debian/build/$$platform/.config debian/build/u-boot-concept-efi/configs/config.$$platform; \
+	done
+	dh_installdocs -pu-boot-concept-efi debian/build/u-boot-concept-efi/configs
+
 override_dh_clean:
 	rm -rf debian/build/
 	dh_clean
@@ -110,4 +119,5 @@ override_dh_clean:
 
 override_dh_gencontrol:
 	dh_gencontrol -- \
-	  '-Vu-boot-concept-qemu:platforms=$(subst $() ,$${Newline},$(u-boot-concept-qemu_platforms))'
+	  '-Vu-boot-concept-qemu:platforms=$(subst $() ,$${Newline},$(u-boot-concept-qemu_platforms))' \
+	  '-Vu-boot-concept-efi:platforms=$(subst $() ,$${Newline},$(u-boot-concept-efi_platforms))'
