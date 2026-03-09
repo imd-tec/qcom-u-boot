@@ -1,4 +1,4 @@
-# Target platforms for u-boot-concept-qemu
+# Target platforms for u-boot-concept packages
 # debian/rules includes this Makefile snippet.
 
 # u-boot-concept-qemu (Architecture: all)
@@ -34,3 +34,29 @@
   u-boot-concept-qemu_platforms += qemu_arm64
   qemu_arm64_CROSS_COMPILE := aarch64-linux-gnu-
   qemu_arm64_targets := u-boot.bin uboot.elf
+
+# u-boot-concept-efi (Architecture: all)
+
+  u-boot-concept-efi_platforms += efi-x86_app32
+  efi-x86_app32_CROSS_COMPILE := i686-linux-gnu-
+  efi-x86_app32_targets := u-boot-app.efi
+
+  u-boot-concept-efi_platforms += efi-x86_app64
+  efi-x86_app64_CROSS_COMPILE := x86_64-linux-gnu-
+  efi-x86_app64_targets := u-boot-app.efi
+
+  u-boot-concept-efi_platforms += efi-arm_app64
+  efi-arm_app64_CROSS_COMPILE := aarch64-linux-gnu-
+  efi-arm_app64_targets := u-boot-app.efi
+
+  u-boot-concept-efi_platforms += efi-riscv_app64
+  efi-riscv_app64_CROSS_COMPILE := riscv64-linux-gnu-
+  efi-riscv_app64_targets := u-boot-app.efi
+
+  u-boot-concept-efi_platforms += efi-x86_payload32
+  efi-x86_payload32_CROSS_COMPILE := i686-linux-gnu-
+  efi-x86_payload32_targets := u-boot-payload.efi
+
+  u-boot-concept-efi_platforms += efi-x86_payload64
+  efi-x86_payload64_CROSS_COMPILE := x86_64-linux-gnu-
+  efi-x86_payload64_targets := u-boot-payload.efi
