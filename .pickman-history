@@ -39211,3 +39211,110 @@ The rebase was completed successfully and pushed. Let me verify the final state:
 
 ---
 
+## 2026-03-08: us/next
+
+Branch: cherry-520d9c2521f
+
+Commits:
+- 520d9c2521f ram: k3-ddrss: Use DDR address instead of system address for ecc_regions
+- e511c651f6d ram: k3-ddrss: s/K3_DDRSS_MAX_ECC_REGIONS/K3_DDRSS_MAX_ECC_REG
+- 1c70e33b0ac ram: k3-ddrss: Add comment about ecc_reserved_space
+- f43f7101225 ram: k3-ddrss: Add support for a partial inline ECC region
+- 3a0793fe9be ram: k3-ddrss: Add CONFIG_K3_MULTI_DDR
+- 2310aac8ae0 ram: k3-ddrss: Add support for number of controllers under MSMC
+- c32ac5b3b93 ram: k3-ddrss: Add support for MSMC calculation of DDR inline ECC regions
+- d1efbc8d657 ram: k3-ddrss: Add support for partial inline ECC in multi-DDR systems
+- 0824703fb2b ram: k3-ddrss: Support multiple ECC regions for a single controller
+- 1ad89bfe1a8 Merge patch series "ram: k3-ddrss: Support partial inline ECC"
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master:
+
+Let me check for the ci/master reference:
+
+I see there's both a local `ci/master` branch and a remote `remotes/ci/master`. Let me use the remote reference:
+
+Now let me verify the us/next branch exists and the commits are available:
+
+Good, us/next exists. Let me verify the commits exist:
+
+Now let me start cherry-picking the first commit:
+
+Now let me check the commit delta and run the build test:
+
+The deltas match (1 file, 2 insertions, 2 deletions). Now run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Deltas match. Run build test:
+
+Build passed. Continue with third commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with fourth commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with fifth commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with sixth commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with seventh commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with eighth commit:
+
+Deltas match. Build test:
+
+Build passed. Continue with ninth commit:
+
+Deltas match. Build test:
+
+Build passed. Now the final commit - the merge commit. I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty as expected (since all changes were already applied via the individual commits). I need to use `git commit --allow-empty` to preserve it:
+
+Now let me verify all commits are present and run the final build:
+
+All 10 commits are present (9 regular commits + 1 merge commit). Now run the final build test:
+
+## Summary
+
+All 10 cherry-picks completed successfully. Here is the final status:
+
+### Build Result
+✅ **OK** - Build passed for sandbox board
+
+### Cherry-picked Commits (10 total)
+
+| # | Original Hash | New Hash | Status |
+|---|---------------|----------|--------|
+| 1 | 520d9c2521f | 1c23149564c | ✅ Applied |
+| 2 | e511c651f6d | a6a5110ed6c | ✅ Applied |
+| 3 | 1c70e33b0ac | f6b09a796e8 | ✅ Applied |
+| 4 | f43f7101225 | 1d716bf4694 | ✅ Applied |
+| 5 | 3a0793fe9be | d93d65c942e | ✅ Applied |
+| 6 | 2310aac8ae0 | 2fd01831399 | ✅ Applied |
+| 7 | c32ac5b3b93 | dc0acc884d2 | ✅ Applied |
+| 8 | d1efbc8d657 | 7543c1504b3 | ✅ Applied |
+| 9 | 0824703fb2b | 42370c34b03 | ✅ Applied |
+| 10 | 1ad89bfe1a8 | 88f1eee223e | ✅ Applied (empty merge) |
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all commit deltas matched exactly between original and cherry-picked versions
+
+### Branch Status
+- Branch `cherry-520d9c2521f` is ready for pushing
+- Branch is 10 commits ahead of `remotes/ci/master`
+
+---
+
