@@ -958,8 +958,12 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assertok(env_set("gatewayip", "192.168.1.254"));
 	ut_assertok(env_set("netmask", "255.255.255.0"));
 
-	/* Clear fdtfile to ensure rescue label's fdtdir tries /dtb/.dtb */
+	/*
+	 * Clear fdtfile and board so the rescue label's fdtdir tries
+	 * /dtb/.dtb (the fallback constructs soc-board.dtb from env)
+	 */
 	ut_assertok(env_set("fdtfile", NULL));
+	ut_assertok(env_set("board", NULL));
 
 	/* Override to boot the rescue label which has ipappend=3 */
 	ut_assertok(env_set("pxe_label_override", "rescue"));
@@ -996,6 +1000,7 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Clean up */
+	env_set("board", "sandbox");
 	env_set("ipaddr", NULL);
 	env_set("serverip", NULL);
 	env_set("gatewayip", NULL);
