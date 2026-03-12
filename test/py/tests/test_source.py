@@ -15,6 +15,12 @@ def test_source(ubman):
     its = os.path.join(ubman.config.source_dir, 'test/py/tests/source.its')
     fit = os.path.join(ubman.config.build_dir, 'source.itb')
     utils.run_and_log(ubman, (mkimage, '-f', its, fit))
+
+    # Set loadaddr to match CONFIG_SYS_LOAD_ADDR, in case a previous test
+    # (e.g. PXE) changed image_load_addr. The 'source :' and 'source #'
+    # variants use image_load_addr, which is synchronised via the loadaddr
+    # env-var callback.
+    ubman.run_command('setenv loadaddr 0')
     ubman.run_command(f'host load hostfs - $loadaddr {fit}')
 
     assert '2' in ubman.run_command('source')
@@ -34,3 +40,7 @@ def test_source(ubman):
     ubman.run_command('fdt rm /images default')
     assert 'Fail' in ubman.run_command('source || echo Fail')
     assert 'Fail' in ubman.run_command('source \\# || echo Fail')
+
+    # Restore the control FDT and clean up
+    ubman.run_command('fdt addr $fdtcontroladdr')
+    ubman.run_command('setenv loadaddr')
