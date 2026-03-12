@@ -303,8 +303,17 @@ class PersistentFileHelperCtxMgr(object):
     def __enter__(self):
         frame = inspect.stack()[1]
         module = inspect.getmodule(frame[0])
-        self.module_filename = module.__file__
-        self.module_timestamp = os.path.getmtime(self.module_filename)
+        if module is not None:
+            self.module_filename = module.__file__
+        else:
+            self.module_filename = frame[1]
+
+        if os.path.exists(self.module_filename):
+            self.module_timestamp = os.path.getmtime(self.module_filename)
+        else:
+            # The .pyc was compiled with a different source path
+            # (e.g. inside/outside a container). Skip staleness check.
+            self.module_timestamp = 0
 
         if os.path.exists(self.filename):
             filename_timestamp = os.path.getmtime(self.filename)
