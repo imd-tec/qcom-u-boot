@@ -7,6 +7,7 @@
 import pytest
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.slow
 @pytest.mark.restart
 def test_efi_selftest_base(ubman):
     """Run UEFI unit tests
@@ -64,6 +65,7 @@ def test_efi_selftest_watchdog_reboot(ubman):
     ubman.run_command(cmd='', send_nl=False, wait_for_reboot=True)
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.slow
 @pytest.mark.restart
 def test_efi_selftest_text_input(ubman):
     """Test the EFI_SIMPLE_TEXT_INPUT_PROTOCOL
@@ -120,6 +122,7 @@ def test_efi_selftest_text_input(ubman):
     ubman.restart_uboot()
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.slow
 @pytest.mark.restart
 def test_efi_selftest_text_input_ex(ubman):
     """Test the EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL
