@@ -41,6 +41,7 @@ def setup_reset_env(ubman):
         pytest.skip('skipping reset test due to jtag bootmode')
 
 @pytest.mark.buildconfigspec('hush_parser')
+@pytest.mark.restart
 def test_reset(ubman):
     """Test the reset command in non-JTAG bootmode.
     It does COLD reset, which resets CPU, DDR and peripherals
@@ -52,6 +53,7 @@ def test_reset(ubman):
     test_000_version.test_version(ubman)
 
 @pytest.mark.buildconfigspec('hush_parser')
+@pytest.mark.restart
 def test_reset_w(ubman):
     """Test the reset -w command in non-JTAG bootmode.
     It does WARM reset, which resets CPU but keep DDR/peripherals active.

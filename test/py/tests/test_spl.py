@@ -15,6 +15,7 @@ def test_ut_spl_init(ubman):
         with open(fn, 'wb') as fh:
             fh.write(data)
 
+@pytest.mark.restart
 def test_spl(ubman, ut_spl_subtest):
     """Execute a "ut" subtest.
 

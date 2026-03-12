@@ -97,6 +97,7 @@ expected_usage = 'fpga - loadable FPGA image support'
 
 @pytest.mark.xfail
 @pytest.mark.buildconfigspec('cmd_fpga')
+@pytest.mark.restart
 def test_fpga_fail(ubman):
     # Test non valid fpga subcommand
     expected = 'fpga: non existing command'

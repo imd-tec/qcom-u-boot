@@ -15,6 +15,7 @@ def test_help(ubman):
         assert lines.splitlines()[0] == "?         - alias for 'help'"
 
 @pytest.mark.boardspec('sandbox')
+@pytest.mark.restart
 def test_help_no_devicetree(ubman):
     try:
         ubman.restart_uboot_with_flags([], use_dtb=False)
@@ -26,6 +27,7 @@ def test_help_no_devicetree(ubman):
         ubman.restart_uboot()
 
 @pytest.mark.boardspec('sandbox_vpl')
+@pytest.mark.restart
 def test_vpl_help(ubman):
     try:
         ubman.restart_uboot()

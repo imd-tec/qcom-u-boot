@@ -189,7 +189,7 @@ def erofs_run_all_tests(ubman):
 @pytest.mark.buildconfigspec('fs_erofs')
 @pytest.mark.requiredtool('mkfs.erofs')
 @pytest.mark.requiredtool('md5sum')
-
+@pytest.mark.restart
 def test_erofs(ubman):
     """
     Executes the erofs test suite.

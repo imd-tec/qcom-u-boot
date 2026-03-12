@@ -29,6 +29,7 @@ from capsule_common import (
 @pytest.mark.buildconfigspec('cmd_nvedit_efi')
 @pytest.mark.buildconfigspec('cmd_sf')
 @pytest.mark.slow
+@pytest.mark.restart
 class TestEfiCapsuleFirmwareRaw:
     """ Tests verifying capsule-on-disk firmware update for raw images
     """

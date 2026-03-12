@@ -73,6 +73,7 @@ def set_env(ubman, var_name, var_value):
 
 @pytest.mark.buildconfigspec('cmd_saveenv')
 @pytest.mark.buildconfigspec('hush_parser')
+@pytest.mark.restart
 def test_saveenv(ubman):
     """Test the saveenv command in non-JTAG bootmode.
     It saves the U-Boot environment in persistent storage.

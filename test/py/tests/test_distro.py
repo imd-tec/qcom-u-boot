@@ -10,6 +10,7 @@ CONSOLE = 'earlycon=uart8250,io,0x3f8 console=uart8250,io,0x3f8'
 
 @pytest.mark.boardspec('qemu-x86_64')
 @pytest.mark.role('qemu-x86_64')
+@pytest.mark.restart
 def test_distro(ubman):
     """Test booting into Ubuntu 24.04"""
     with ubman.log.section('boot'):
@@ -64,6 +65,7 @@ def test_distro(ubman):
 
 @pytest.mark.boardspec('colibri-imx8x')
 @pytest.mark.role('colibrimx8')
+@pytest.mark.restart
 def test_distro_script(ubman):
     """Test that a selected board can boot into Llinux using a script"""
     with ubman.log.section('boot'):
@@ -79,6 +81,7 @@ def test_distro_script(ubman):
 
 @pytest.mark.boardspec('efi-arm_app64')
 @pytest.mark.role('efi-aarch64')
+@pytest.mark.restart
 def test_distro_arm_app_extlinux(ubman):
     """Test that the ARM EFI app can boot into Ubuntu 25.04 via extlinux"""
     with ubman.log.section('boot'):
@@ -98,6 +101,7 @@ def test_distro_arm_app_extlinux(ubman):
 
 @pytest.mark.boardspec('efi-arm_app64')
 @pytest.mark.role('efi-aarch64')
+@pytest.mark.restart
 def test_distro_arm_app_efi(ubman):
     """Test that the ARM EFI app can boot into Ubuntu 25.04 via EFI"""
     with ubman.log.section('boot'):

@@ -7,6 +7,7 @@
 import pytest
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.restart
 def test_efi_selftest_base(ubman):
     """Run UEFI unit tests
 
@@ -24,6 +25,7 @@ def test_efi_selftest_base(ubman):
 @pytest.mark.buildconfigspec('hush_parser')
 @pytest.mark.buildconfigspec('of_control')
 @pytest.mark.notbuildconfigspec('generate_acpi_table')
+@pytest.mark.restart
 def test_efi_selftest_device_tree(ubman):
     """Test the device tree support in the UEFI sub-system
 
@@ -44,6 +46,7 @@ def test_efi_selftest_device_tree(ubman):
     ubman.restart_uboot()
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.restart
 def test_efi_selftest_watchdog_reboot(ubman):
     """Test the watchdog timer
 
@@ -61,6 +64,7 @@ def test_efi_selftest_watchdog_reboot(ubman):
     ubman.run_command(cmd='', send_nl=False, wait_for_reboot=True)
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.restart
 def test_efi_selftest_text_input(ubman):
     """Test the EFI_SIMPLE_TEXT_INPUT_PROTOCOL
 
@@ -116,6 +120,7 @@ def test_efi_selftest_text_input(ubman):
     ubman.restart_uboot()
 
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
+@pytest.mark.restart
 def test_efi_selftest_text_input_ex(ubman):
     """Test the EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL
 
@@ -180,6 +185,7 @@ def test_efi_selftest_text_input_ex(ubman):
 @pytest.mark.buildconfigspec('cmd_bootefi_selftest')
 @pytest.mark.buildconfigspec('efi_tcg2_protocol')
 @pytest.mark.notbuildconfigspec('sandbox')
+@pytest.mark.restart
 def test_efi_selftest_tcg2(ubman):
     """Test the EFI_TCG2 PROTOCOL
 

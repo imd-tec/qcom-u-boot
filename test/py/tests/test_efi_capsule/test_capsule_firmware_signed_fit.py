@@ -31,6 +31,7 @@ from capsule_common import (
 @pytest.mark.buildconfigspec('cmd_nvedit_efi')
 @pytest.mark.buildconfigspec('cmd_sf')
 @pytest.mark.slow
+@pytest.mark.restart
 class TestEfiCapsuleFirmwareSignedFit():
     """Capsule-on-disk firmware update test
     """

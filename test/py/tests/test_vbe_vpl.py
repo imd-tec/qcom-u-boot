@@ -10,6 +10,7 @@ import utils
 
 @pytest.mark.boardspec('sandbox_vpl')
 @pytest.mark.requiredtool('dtc')
+@pytest.mark.restart
 def test_vbe_vpl(ubman):
     #cmd = [ubman.config.build_dir + fname, '-v']
     ram = os.path.join(ubman.config.build_dir, 'ram.bin')
