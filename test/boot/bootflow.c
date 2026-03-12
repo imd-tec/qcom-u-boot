@@ -1393,14 +1393,18 @@ BOOTSTD_TEST(bootflow_android_image_v2, UTF_CONSOLE | UTF_DM | UTF_SCAN_FDT);
 /* Test EFI bootmeth */
 static int bootflow_efi(struct unit_test_state *uts)
 {
-	struct efil_hdr *hdr = bloblist_find(BLOBLISTT_EFI_LOG, 0);
 	static const char *order[] = {"mmc1", "usb", NULL};
+	struct efil_hdr *hdr;
 	struct efil_rec_hdr *rec_hdr;
 	struct bootstd_priv *std;
 	struct udevice *bootstd;
 	const char **old_order;
 	struct udevice *usb;
 	int i;
+
+	/* clear stale entries left by previous tests */
+	if (IS_ENABLED(CONFIG_EFI_LOG))
+		efi_log_reset();
 
 	ut_assertok(uclass_first_device_err(UCLASS_BOOTSTD, &bootstd));
 	std = dev_get_priv(bootstd);
@@ -1470,6 +1474,7 @@ static int bootflow_efi(struct unit_test_state *uts)
 	ut_assert(!device_active(usb));
 
 	/* check memory allocations are as expected */
+	hdr = bloblist_find(BLOBLISTT_EFI_LOG, 0);
 	if (!hdr)
 		return 0;
 
