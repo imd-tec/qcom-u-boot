@@ -544,6 +544,9 @@ int state_uninit(void)
 	if (state->jumped_fname)
 		os_unlink(state->jumped_fname);
 
+	if (state->malloc_dump_fname)
+		malloc_dump_to_file(state->malloc_dump_fname);
+
 	/* Disable tracing before unmapping RAM */
 	if (IS_ENABLED(CONFIG_TRACE))
 		trace_set_enabled(0);

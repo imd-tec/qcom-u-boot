@@ -184,6 +184,7 @@ struct sandbox_state {
 	int video_test;			/* ms to wait before next assert */
 	const char *video_frames_dir;	/* Directory to write video frames */
 	int video_frame_count;		/* Number of frames written */
+	const char *malloc_dump_fname;	/* File to write malloc dump on exit */
 
 	/* Pointer to information for each SPI bus/cs */
 	struct sandbox_spi_info spi[CONFIG_SANDBOX_SPI_MAX_BUS]

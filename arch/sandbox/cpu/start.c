@@ -553,6 +553,15 @@ static int sandbox_cmdline_cb_pager_bypass(struct sandbox_state *state,
 SANDBOX_CMDLINE_OPT_SHORT(pager_bypass, 'P', 0,
 			  "Enable pager bypass mode");
 
+static int sandbox_cmdline_cb_malloc_dump(struct sandbox_state *state,
+					  const char *arg)
+{
+	state->malloc_dump_fname = arg;
+
+	return 0;
+}
+SANDBOX_CMDLINE_OPT(malloc_dump, 1, "Write malloc dump to file on exit");
+
 static int sandbox_cmdline_cb_bind(struct sandbox_state *state, const char *arg)
 {
 	if (state->num_binds >= SB_MAX_BINDS) {
