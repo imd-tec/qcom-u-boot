@@ -93,8 +93,8 @@ class ConsoleSandbox(ConsoleBase):
             self.sandbox_flags = []
             self.use_dtb = True
 
-    def close(self):
-        """Terminate the sandbox, using poweroff for a clean shutdown.
+    def _poweroff_if_needed(self):
+        """Send poweroff for a clean shutdown if malloc-dump is active.
 
         When --malloc-dump is active we need state_uninit() to run, so
         send 'poweroff' instead of just closing the PTY.
@@ -108,6 +108,15 @@ class ConsoleSandbox(ConsoleBase):
                     time.sleep(0.1)
             except:
                 pass
+
+    def cleanup_spawn(self):
+        """Shut down sandbox, using poweroff for a clean shutdown."""
+        self._poweroff_if_needed()
+        super().cleanup_spawn()
+
+    def close(self):
+        """Terminate sandbox, using poweroff for a clean shutdown."""
+        self._poweroff_if_needed()
         super().close()
 
     def kill(self, sig):
