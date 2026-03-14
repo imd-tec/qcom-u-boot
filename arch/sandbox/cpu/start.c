@@ -158,7 +158,7 @@ int sandbox_main_loop_init(void)
 							0);
 #endif
 		if (!state->interactive)
-			os_exit(retval);
+			sandbox_exit(retval);
 	}
 
 	return 0;
@@ -583,7 +583,7 @@ void __efi_runtime EFIAPI efi_reset_system(
 		unsigned long data_size, void *reset_data)
 {
 	if (reset_type == EFI_RESET_SHUTDOWN)
-		sandbox_exit();
+		sandbox_exit(0);
 	else
 		sandbox_reset();
 }
