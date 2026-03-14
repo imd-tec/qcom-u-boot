@@ -20,7 +20,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void __noreturn sandbox_exit(void)
+void __noreturn sandbox_exit(int exit_code)
 {
 	/* Do this here while it still has an effect */
 	os_fd_restore();
@@ -28,8 +28,7 @@ void __noreturn sandbox_exit(void)
 	if (state_uninit())
 		os_exit(2);
 
-	/* This is considered normal termination for now */
-	os_exit(0);
+	os_exit(exit_code);
 }
 
 /* delay x useconds */
