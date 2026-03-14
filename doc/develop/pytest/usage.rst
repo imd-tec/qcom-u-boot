@@ -236,9 +236,10 @@ protocol, or any graphical wrapper around gdb.
 
 Some tests deliberately cause the sandbox process to exit, e.g. to test the
 reset command, or sandbox's CTRL-C handling. When this happens, you will need
-to attach the debugger to the new sandbox instance. If these tests are not
-relevant to your debugging session, you can skip them using pytest's ``-k``
-command-line option; see the next section.
+to attach the debugger to the new sandbox instance. These tests are marked
+with the ``restart`` pytest marker, so you can skip them all with::
+
+    test/py/test.py -B sandbox --gdbserver localhost:1234 -m "not restart"
 
 Command-line options
 --------------------
@@ -606,3 +607,16 @@ set), since the locally launched QEMU is not available in that environment:
 .. code-block:: python
 
     @pytest.mark.localqemu
+
+The restart marker indicates that a test restarts the U-Boot process
+during execution, e.g. via ``ubman.restart_uboot()`` or
+``ubman.restart_uboot_with_flags()``. This can be used to skip these tests
+when a restart is not desirable:
+
+.. code-block:: python
+
+    @pytest.mark.restart
+
+To exclude these tests from a test run::
+
+    test/py/test.py -B sandbox -m "not restart"

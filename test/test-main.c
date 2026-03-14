@@ -7,6 +7,7 @@
 #define LOG_CATEGORY	LOGC_TEST
 
 #include <blk.h>
+#include <bootstage.h>
 #include <console.h>
 #include <cyclic.h>
 #include <dm.h>
@@ -560,6 +561,8 @@ static int test_pre_run(struct unit_test_state *uts, struct unit_test *test)
 		gd_set_bloblist(NULL);
 	}
 
+	uts->old_bootstage_count = bootstage_get_rec_count();
+
 	if (!(test->flags & UTF_NO_SILENT))
 		ut_silence_console(uts);
 
@@ -588,6 +591,8 @@ static int test_post_run(struct unit_test_state *uts, struct unit_test *test)
 		gd_set_bloblist(uts->old_bloblist);
 		log_debug("restore bloblist %p\n", gd_bloblist());
 	}
+
+	bootstage_set_rec_count(uts->old_bootstage_count);
 
 	blkcache_free();
 

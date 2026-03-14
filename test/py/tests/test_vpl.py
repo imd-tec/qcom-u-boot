@@ -5,6 +5,7 @@
 import os.path
 import pytest
 
+@pytest.mark.restart
 def test_vpl(ubman, ut_vpl_subtest):
     """Execute a "ut" subtest.
 

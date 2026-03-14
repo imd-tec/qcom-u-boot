@@ -35,6 +35,56 @@
 #define PXE_ARG_FS_IMAGE	0	/* Path to filesystem image */
 #define PXE_ARG_CFG_PATH	1	/* Path to config file within image */
 
+/**
+ * struct pxe_env_save - saved FDT-related environment variables
+ *
+ * @fdt_addr: Saved fdt_addr value (strdup'd, or empty string if unset)
+ * @fdtcontroladdr: Saved fdtcontroladdr value (strdup'd, or empty)
+ */
+struct pxe_env_save {
+	char *fdt_addr;
+	char *fdtcontroladdr;
+};
+
+/**
+ * pxe_save_and_clear_fdt_env() - save and clear FDT env vars
+ *
+ * Saves the current values of fdt_addr and fdtcontroladdr, then clears
+ * them. The values are strdup'd since env_set() frees the old value,
+ * which would leave saved env_get() pointers dangling.
+ *
+ * @save: Struct to save into
+ * Return: 0 on success, -ENOMEM on allocation failure
+ */
+static int pxe_save_and_clear_fdt_env(struct pxe_env_save *save)
+{
+	save->fdt_addr = strdup(env_get("fdt_addr") ?: "");
+	save->fdtcontroladdr = strdup(env_get("fdtcontroladdr") ?: "");
+	if (!save->fdt_addr || !save->fdtcontroladdr) {
+		free(save->fdt_addr);
+		free(save->fdtcontroladdr);
+		return -ENOMEM;
+	}
+	env_set("fdt_addr", NULL);
+	env_set("fdtcontroladdr", NULL);
+
+	return 0;
+}
+
+/**
+ * pxe_restore_fdt_env() - restore FDT env vars from saved state
+ *
+ * @save: Struct with saved values (freed after restore)
+ */
+static void pxe_restore_fdt_env(struct pxe_env_save *save)
+{
+	env_set("fdt_addr", *save->fdt_addr ? save->fdt_addr : NULL);
+	env_set("fdtcontroladdr",
+		*save->fdtcontroladdr ? save->fdtcontroladdr : NULL);
+	free(save->fdt_addr);
+	free(save->fdtcontroladdr);
+}
+
 /* Memory address for loading files */
 #define PXE_LOAD_ADDR		0x01000000
 #define PXE_KERNEL_ADDR		0x02000000
@@ -908,8 +958,12 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assertok(env_set("gatewayip", "192.168.1.254"));
 	ut_assertok(env_set("netmask", "255.255.255.0"));
 
-	/* Clear fdtfile to ensure rescue label's fdtdir tries /dtb/.dtb */
+	/*
+	 * Clear fdtfile and board so the rescue label's fdtdir tries
+	 * /dtb/.dtb (the fallback constructs soc-board.dtb from env)
+	 */
 	ut_assertok(env_set("fdtfile", NULL));
+	ut_assertok(env_set("board", NULL));
 
 	/* Override to boot the rescue label which has ipappend=3 */
 	ut_assertok(env_set("pxe_label_override", "rescue"));
@@ -946,6 +1000,7 @@ static int pxe_test_ipappend_norun(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Clean up */
+	env_set("board", "sandbox");
 	env_set("ipaddr", NULL);
 	env_set("serverip", NULL);
 	env_set("gatewayip", NULL);
@@ -967,8 +1022,8 @@ PXE_TEST_ARGS(pxe_test_ipappend_norun, UTF_CONSOLE | UTF_MANUAL | UTF_ETH_BOOTDE
  */
 static int pxe_test_fdt_fallback(struct unit_test_state *uts)
 {
-	const char *orig_fdt_addr, *orig_fdtcontroladdr;
 	ulong kern_addr = 0x1000000;
+	struct pxe_env_save save;
 	struct pxe_label label;
 	void *kern_buf;
 
@@ -980,10 +1035,7 @@ static int pxe_test_fdt_fallback(struct unit_test_state *uts)
 	memset(&label, '\0', sizeof(label));
 
 	/* Save and clear env vars (fdtcontroladdr is set by U-Boot) */
-	orig_fdt_addr = env_get("fdt_addr");
-	orig_fdtcontroladdr = env_get("fdtcontroladdr");
-	ut_assertok(env_set("fdt_addr", NULL));
-	ut_assertok(env_set("fdtcontroladdr", NULL));
+	ut_assertok(pxe_save_and_clear_fdt_env(&save));
 
 	/* Test 1: No fallback env vars set - should return NULL */
 	ut_assertnull(pxe_get_fdt_fallback(&label, kern_addr));
@@ -1001,8 +1053,7 @@ static int pxe_test_fdt_fallback(struct unit_test_state *uts)
 	ut_asserteq_str("3000000", pxe_get_fdt_fallback(&label, kern_addr));
 
 	/* Restore env vars */
-	ut_assertok(env_set("fdt_addr", orig_fdt_addr));
-	ut_assertok(env_set("fdtcontroladdr", orig_fdtcontroladdr));
+	pxe_restore_fdt_env(&save);
 
 	return 0;
 }
@@ -1144,10 +1195,10 @@ static int pxe_alloc_getfile(struct pxe_context *ctx, const char *file_path,
  */
 static int pxe_test_alloc_norun(struct unit_test_state *uts)
 {
-	const char *orig_fdt_addr, *orig_fdtcontroladdr;
 	const char *fs_image = ut_str(PXE_ARG_FS_IMAGE);
 	const char *cfg_path = ut_str(PXE_ARG_CFG_PATH);
 	struct pxe_alloc_info info;
+	struct pxe_env_save save;
 	struct pxe_context ctx;
 	ulong addr;
 	int ret;
@@ -1162,10 +1213,7 @@ static int pxe_test_alloc_norun(struct unit_test_state *uts)
 	ut_assertok(run_commandf("host bind 0 %s", fs_image));
 
 	/* Save and clear FDT fallback env vars (fdtcontroladdr is set at boot) */
-	orig_fdt_addr = env_get("fdt_addr");
-	orig_fdtcontroladdr = env_get("fdtcontroladdr");
-	ut_assertok(env_set("fdt_addr", NULL));
-	ut_assertok(env_set("fdtcontroladdr", NULL));
+	ut_assertok(pxe_save_and_clear_fdt_env(&save));
 
 	/* Ensure address env vars are NOT set */
 	ut_assertok(env_set("kernel_addr_r", NULL));
@@ -1238,8 +1286,7 @@ static int pxe_test_alloc_norun(struct unit_test_state *uts)
 	pxe_menu_uninit(ctx.cfg);
 	pxe_destroy_ctx(&ctx);
 	ut_assertok(env_set("pxe_timeout", NULL));
-	ut_assertok(env_set("fdt_addr", orig_fdt_addr));
-	ut_assertok(env_set("fdtcontroladdr", orig_fdtcontroladdr));
+	pxe_restore_fdt_env(&save);
 
 	return 0;
 }

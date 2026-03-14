@@ -19,6 +19,7 @@ import pytest
 @pytest.mark.buildconfigspec('cmd_fat')
 @pytest.mark.buildconfigspec('cmd_nvedit_efi')
 @pytest.mark.slow
+@pytest.mark.restart
 class TestEfiSignedImageIntca(object):
     def test_efi_signed_image_intca1(self, ubman, efi_boot_env_intca):
         """

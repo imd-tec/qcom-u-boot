@@ -25,6 +25,7 @@ class ConsoleSandbox(ConsoleBase):
         super().__init__(log, config, max_fifo_fill=1024)
         self.sandbox_flags = []
         self.use_dtb = True
+        self.malloc_dump_seq = 0
 
     def get_spawn(self):
         """Connect to a fresh U-Boot instance.
@@ -57,6 +58,14 @@ class ConsoleSandbox(ConsoleBase):
         if self.config.no_full:
             cmd.append('-F')
 
+        if self.config.malloc_dump:
+            try:
+                fname = self.config.malloc_dump % self.malloc_dump_seq
+            except TypeError:
+                fname = self.config.malloc_dump
+            self.malloc_dump_seq += 1
+            cmd += ['--malloc_dump', fname]
+
         # Always disable the pager
         cmd.append('-P')
 
@@ -83,6 +92,32 @@ class ConsoleSandbox(ConsoleBase):
         finally:
             self.sandbox_flags = []
             self.use_dtb = True
+
+    def _poweroff_if_needed(self):
+        """Send poweroff for a clean shutdown if malloc-dump is active.
+
+        When --malloc-dump is active we need state_uninit() to run, so
+        send 'poweroff' instead of just closing the PTY.
+        """
+        if self.p and self.config.malloc_dump:
+            try:
+                self.p.send('poweroff\n')
+                for _ in range(50):
+                    if not self.p.isalive():
+                        break
+                    time.sleep(0.1)
+            except:
+                pass
+
+    def cleanup_spawn(self):
+        """Shut down sandbox, using poweroff for a clean shutdown."""
+        self._poweroff_if_needed()
+        super().cleanup_spawn()
+
+    def close(self):
+        """Terminate sandbox, using poweroff for a clean shutdown."""
+        self._poweroff_if_needed()
+        super().close()
 
     def kill(self, sig):
         """Send a specific Unix signal to the sandbox process.

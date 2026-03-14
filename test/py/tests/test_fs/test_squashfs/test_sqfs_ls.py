@@ -106,6 +106,7 @@ def sqfs_run_all_ls_tests(ubman):
 @pytest.mark.buildconfigspec('fs_squashfs')
 @pytest.mark.requiredtool('mksquashfs')
 @pytest.mark.singlethread
+@pytest.mark.restart
 def test_sqfs_ls(ubman):
     """ Executes the sqfsls test suite.
 

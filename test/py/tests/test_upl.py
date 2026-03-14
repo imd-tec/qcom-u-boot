@@ -9,6 +9,7 @@ import pytest
 import utils
 
 @pytest.mark.boardspec('sandbox_vpl')
+@pytest.mark.restart
 def test_upl_handoff(ubman):
     """Test of UPL handoff
 

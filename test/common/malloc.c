@@ -616,17 +616,23 @@ static int common_test_malloc_fill_pool(struct unit_test_state *uts)
 	       ptr_table_size);
 
 	/*
-	 * Should have allocated most of the pool - if we can't allocate
-	 * 1MB, then at most 1MB is available, so we must have allocated
-	 * at least (pool_size - 1MB)
+	 * Should have allocated most of the pool - if we can't allocate 1MB,
+	 * then at most 1MB is available, so we must have allocated at least
+	 * (pool_size - 1MB). Save the peak before freeing so an assertion
+	 * failure does not leak the entire pool.
 	 */
 	ut_assert(count > 0);
 	ut_assert(count < ptr_table_size / sizeof(void *));
-	ut_assert(get_alloced_size() >= TOTAL_MALLOC_LEN - SZ_1M);
+	alloc_size = get_alloced_size();
 
-	/* Free all allocations */
+	/*
+	 * Free all allocations before checking the peak, so that a failure does
+	 * not leak the entire pool and break later tests
+	 */
 	for (i = 0; i < count; i++)
 		free(ptrs[i]);
+
+	ut_assert(alloc_size >= TOTAL_MALLOC_LEN - SZ_1M);
 
 	/* Should be back to starting state */
 	ut_asserteq(before, get_alloced_size());

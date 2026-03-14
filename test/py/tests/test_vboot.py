@@ -141,6 +141,7 @@ TESTDATA += [pytest.param(*v, marks=pytest.mark.slow) for v in TESTDATA_IN[1:]]
 @pytest.mark.requiredtool('fdtget')
 @pytest.mark.requiredtool('fdtput')
 @pytest.mark.requiredtool('openssl')
+@pytest.mark.restart
 @pytest.mark.parametrize("name,sha_algo,padding,sign_options,required,full_test,algo_arg,global_sign",
                          TESTDATA)
 def test_vboot_base(ubman, name, sha_algo, padding, sign_options, required,

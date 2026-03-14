@@ -63,13 +63,13 @@ static int sandbox_sysreset_request(struct udevice *dev, enum sysreset_t type)
 		state->last_sysreset = type;
 		if (!state->sysreset_allowed[type])
 			return -EACCES;
-		sandbox_exit();
+		sandbox_exit(0);
 	case SYSRESET_POWER:
 	case SYSRESET_HOT:
 	case SYSRESET_TO_FIRMWARE_UI:
 		if (!state->sysreset_allowed[type])
 			return -EACCES;
-		sandbox_exit();
+		sandbox_exit(0);
 	default:
 		return -EPROTONOSUPPORT;
 	}

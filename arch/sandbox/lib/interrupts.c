@@ -53,6 +53,6 @@ void os_signal_action(int sig, unsigned long pc)
 		printf("resetting ...\n\n");
 		sandbox_reset();
 	} else {
-		sandbox_exit();
+		sandbox_exit(0);
 	}
 }

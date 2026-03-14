@@ -7,6 +7,7 @@ import signal
 
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('sysreset_cmd_poweroff')
+@pytest.mark.restart
 def test_poweroff(ubman):
     """Test that the "poweroff" command exits sandbox process."""
 
@@ -14,6 +15,7 @@ def test_poweroff(ubman):
     assert(ubman.validate_exited())
 
 @pytest.mark.boardspec('sandbox')
+@pytest.mark.restart
 def test_ctrl_c(ubman):
     """Test that sending SIGINT to sandbox causes it to exit."""
 
@@ -23,6 +25,7 @@ def test_ctrl_c(ubman):
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('cmd_exception')
 @pytest.mark.buildconfigspec('sandbox_crash_reset')
+@pytest.mark.restart
 def test_exception_reset(ubman):
     """Test that SIGILL causes a reset."""
 
@@ -38,6 +41,7 @@ def test_exception_reset(ubman):
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('cmd_exception')
 @pytest.mark.notbuildconfigspec('sandbox_crash_reset')
+@pytest.mark.restart
 def test_exception_exit(ubman):
     """Test that SIGILL causes a reset."""
 

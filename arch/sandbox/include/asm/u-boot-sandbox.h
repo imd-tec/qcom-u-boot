@@ -41,7 +41,7 @@ struct udevice;
 void sandbox_reset(void);
 
 /* Exit sandbox (quit U-Boot) */
-void __noreturn sandbox_exit(void);
+void __noreturn sandbox_exit(int exit_code);
 
 /**
  * sandbox_init() - init sandbox

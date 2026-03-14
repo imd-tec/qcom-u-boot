@@ -511,6 +511,24 @@ by checking ``malloc_get_info()`` before and after::
    allocations during the operation
 6. Fix the leak and verify the test passes
 
+**Dumping heap state on exit**
+
+When running sandbox, the ``--malloc_dump`` command-line option writes a heap
+dump to a file when U-Boot exits cleanly (via ``poweroff`` or ``reset``). This
+is useful for capturing heap state at the end of a test session::
+
+    ./u-boot -Tf -c "poweroff" --malloc_dump /tmp/heap.txt
+
+The pytest framework also supports this via ``--malloc-dump``::
+
+    test/py/test.py -B sandbox --malloc-dump /tmp/heap.txt -k test_source
+
+The filename may contain ``%d`` which is replaced with a sequence number
+that increments each time U-Boot restarts during the test session, so each
+instance produces a separate dump::
+
+    test/py/test.py -B sandbox --malloc-dump /tmp/heap%d.txt -k test_vboot
+
 API Reference
 -------------
 

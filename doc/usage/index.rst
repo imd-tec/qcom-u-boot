@@ -49,6 +49,7 @@ Shell commands
    cmd/bootm
    cmd/bootmenu
    cmd/bootmeth
+   cmd/bootstage
    cmd/bootstd
    cmd/bootz
    cmd/button

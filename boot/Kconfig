@@ -1479,6 +1479,17 @@ config BOOTSTAGE_FDT
 
 	  Code in the Linux kernel can find this in /proc/devicetree.
 
+config BOOTSTAGE_SAVE
+	bool "Allow saving and restoring the bootstage record count"
+	depends on BOOTSTAGE
+	default y if UNIT_TEST
+	help
+	  Provide 'bootstage save' and 'bootstage restore' subcommands
+	  which store and retrieve the record count via the bootstage_count
+	  environment variable. These are used by Python tests to prevent
+	  records from accumulating across tests and filling the bootstage
+	  table.
+
 config BOOTSTAGE_STASH
 	bool "Stash the boot timing information in memory before booting OS"
 	depends on BOOTSTAGE

@@ -5,6 +5,7 @@
 
 #include <bootstage.h>
 #include <command.h>
+#include <env.h>
 #include <vsprintf.h>
 #include <linux/string.h>
 
@@ -62,8 +63,31 @@ static int do_bootstage_stash(struct cmd_tbl *cmdtp, int flag, int argc,
 }
 #endif
 
+static int __maybe_unused do_bootstage_save(struct cmd_tbl *cmdtp, int flag,
+					    int argc, char *const argv[])
+{
+	env_set_hex("bootstage_count", bootstage_get_rec_count());
+
+	return 0;
+}
+
+static int __maybe_unused do_bootstage_restore(struct cmd_tbl *cmdtp, int flag,
+					       int argc, char *const argv[])
+{
+	ulong count = env_get_hex("bootstage_count", 0);
+
+	if (count)
+		bootstage_set_rec_count(count);
+
+	return 0;
+}
+
 static struct cmd_tbl cmd_bootstage_sub[] = {
 	U_BOOT_CMD_MKENT(report, 2, 1, do_bootstage_report, "", ""),
+#if IS_ENABLED(CONFIG_BOOTSTAGE_SAVE)
+	U_BOOT_CMD_MKENT(save, 1, 0, do_bootstage_save, "", ""),
+	U_BOOT_CMD_MKENT(restore, 1, 0, do_bootstage_restore, "", ""),
+#endif
 #if IS_ENABLED(CONFIG_BOOTSTAGE_STASH)
 	U_BOOT_CMD_MKENT(stash, 4, 0, do_bootstage_stash, "", ""),
 	U_BOOT_CMD_MKENT(unstash, 4, 0, do_bootstage_stash, "", ""),
@@ -95,6 +119,10 @@ U_BOOT_CMD(bootstage, 4, 1, do_boostage,
 	"Boot stage command",
 	" - check boot progress and timing\n"
 	"report                      - Print a report\n"
+#if IS_ENABLED(CONFIG_BOOTSTAGE_SAVE)
+	"save                        - Save record count to $bootstage_count\n"
+	"restore                     - Restore record count from $bootstage_count\n"
+#endif
 #if IS_ENABLED(CONFIG_BOOTSTAGE_STASH)
 	"stash [<start> [<size>]]    - Stash data into memory\n"
 	"unstash [<start> [<size>]]  - Unstash data from memory\n"

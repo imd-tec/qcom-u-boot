@@ -6,6 +6,7 @@ import signal
 
 @pytest.mark.buildconfigspec('cmd_stackprotector_test')
 @pytest.mark.notbuildconfigspec('asan')
+@pytest.mark.restart
 def test_stackprotector(ubman):
     """Test that the stackprotector function works."""
 

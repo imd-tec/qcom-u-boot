@@ -39,8 +39,11 @@ def test_log_format(ubman):
         run_with_format('lm', 'NOTICE. msg')
         run_with_format('m', 'msg')
 
+        ubman.run_command('log format default')
+
 @pytest.mark.buildconfigspec('debug_uart')
 @pytest.mark.boardspec('sandbox')
+@pytest.mark.restart
 def test_log_dropped(ubman):
     """Test dropped 'log' message when debug_uart is activated"""
 

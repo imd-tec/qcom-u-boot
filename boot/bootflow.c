@@ -660,6 +660,7 @@ int bootflow_scan_first(struct udevice *dev, const char *label,
 				return log_msg_ret("all", ret);
 		}
 		iter->err = ret;
+		bootflow_free(bflow);
 		ret = bootflow_scan_next(iter, bflow);
 		if (ret)
 			return log_msg_ret("get", ret);
@@ -693,6 +694,7 @@ int bootflow_scan_next(struct bootflow_iter *iter, struct bootflow *bflow)
 				if (iter->flags & BOOTFLOWIF_ALL)
 					return log_msg_ret("all", ret);
 			}
+			bootflow_free(bflow);
 		} else {
 			log_debug("incr failed, err=%d\n", ret);
 			iter->err = ret;

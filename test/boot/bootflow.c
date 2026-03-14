@@ -1393,14 +1393,18 @@ BOOTSTD_TEST(bootflow_android_image_v2, UTF_CONSOLE | UTF_DM | UTF_SCAN_FDT);
 /* Test EFI bootmeth */
 static int bootflow_efi(struct unit_test_state *uts)
 {
-	struct efil_hdr *hdr = bloblist_find(BLOBLISTT_EFI_LOG, 0);
 	static const char *order[] = {"mmc1", "usb", NULL};
+	struct efil_hdr *hdr;
 	struct efil_rec_hdr *rec_hdr;
 	struct bootstd_priv *std;
 	struct udevice *bootstd;
 	const char **old_order;
 	struct udevice *usb;
 	int i;
+
+	/* clear stale entries left by previous tests */
+	if (IS_ENABLED(CONFIG_EFI_LOG))
+		efi_log_reset();
 
 	ut_assertok(uclass_first_device_err(UCLASS_BOOTSTD, &bootstd));
 	std = dev_get_priv(bootstd);
@@ -1470,6 +1474,7 @@ static int bootflow_efi(struct unit_test_state *uts)
 	ut_assert(!device_active(usb));
 
 	/* check memory allocations are as expected */
+	hdr = bloblist_find(BLOBLISTT_EFI_LOG, 0);
 	if (!hdr)
 		return 0;
 
@@ -1672,6 +1677,11 @@ static int bootflow_scan_extlinux(struct unit_test_state *uts)
 	const void *fdt;
 	int node;
 
+	/* restore default addresses in case PXE tests changed them */
+	ut_assertok(env_set("kernel_addr_r", "1000000"));
+	ut_assertok(env_set("ramdisk_addr_r", "2000000"));
+	ut_assertok(env_set("fdt_addr_r", "c00000"));
+
 	ut_assertok(run_command("bootflow scan", 0));
 	ut_assert_console_end();
 	ut_assertok(bootstd_get_priv(&std));
@@ -1739,6 +1749,11 @@ static int bootflow_extlinux_localboot(struct unit_test_state *uts)
 	struct bootstd_priv *std;
 	const char **old_order;
 	struct bootflow *bflow;
+
+	/* restore default addresses in case PXE tests changed them */
+	ut_assertok(env_set("kernel_addr_r", "1000000"));
+	ut_assertok(env_set("ramdisk_addr_r", "2000000"));
+	ut_assertok(env_set("fdt_addr_r", "c00000"));
 
 	ut_assertok(prep_mmc_bootdev(uts, "mmc9", false, &old_order));
 

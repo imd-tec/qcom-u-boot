@@ -159,6 +159,7 @@ FDT_DATA = '''
 @pytest.mark.buildconfigspec('fit')
 @pytest.mark.notbuildconfigspec('generate_acpi_table')
 @pytest.mark.requiredtool('dtc')
+@pytest.mark.restart
 def test_efi_fit_launch(ubman):
     """Test handling of UEFI binaries inside FIT images.
 

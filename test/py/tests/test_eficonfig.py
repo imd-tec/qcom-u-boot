@@ -12,6 +12,7 @@ from tests import fs_helper
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('cmd_eficonfig')
 @pytest.mark.buildconfigspec('cmd_bootefi_bootmgr')
+@pytest.mark.restart
 def test_efi_eficonfig(ubman):
 
     def prepare_image(u_boot_config):
