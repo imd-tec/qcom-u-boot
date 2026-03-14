@@ -546,6 +546,17 @@ int os_map_file(const char *pathname, int os_flags, void **bufp, int *sizep);
  */
 int os_unmap(void *buf, int size);
 
+/**
+ * malloc_dump_to_file() - Write heap dump to a host file
+ *
+ * This is only available in sandbox builds. It writes the same information
+ * as malloc_dump() but to a file instead of the console.
+ *
+ * @fname: Path to the output file on the host filesystem
+ * Return: 0 on success, negative error code on failure
+ */
+int malloc_dump_to_file(const char *fname);
+
 /*
  * os_find_text_base() - Find the text section in this running process
  *

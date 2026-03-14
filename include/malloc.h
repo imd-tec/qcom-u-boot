@@ -713,17 +713,6 @@ void malloc_disable_testing(void);
 void malloc_dump(void);
 
 /**
- * malloc_dump_to_file() - Write heap dump to a host file
- *
- * @fname: Path to the output file on the host filesystem
- * Return: 0 on success, negative error code on failure
- *
- * This is only available in sandbox builds. It writes the same information
- * as malloc_dump() but to a file instead of the console.
- */
-int malloc_dump_to_file(const char *fname);
-
-/**
  * malloc_log_start() - Start logging malloc traffic
  *
  * Enables recording of malloc/free/realloc calls to a circular buffer.
