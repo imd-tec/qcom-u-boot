@@ -519,6 +519,15 @@ static inline int bootstage_init(bool first)
 	return 0;
 }
 
+static inline uint bootstage_get_rec_count(void)
+{
+	return 0;
+}
+
+static inline void bootstage_set_rec_count(uint count)
+{
+}
+
 #endif /* ENABLE_BOOTSTAGE */
 
 /* helpers for SPL */
