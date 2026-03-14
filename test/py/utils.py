@@ -14,7 +14,25 @@ import signal
 import sys
 import time
 import re
+from contextlib import contextmanager
 import pytest
+
+@contextmanager
+def preserve_bootstage(ubman):
+    """Context manager to save and restore bootstage record count.
+
+    Some commands (e.g. bootm) add bootstage records with unique IDs. These
+    accumulate across tests in a pytest session and can fill the bootstage
+    table. Use this around tests that trigger such commands.
+
+    Args:
+        ubman (ConsoleBase): U-Boot console connection
+    """
+    ubman.run_command('bootstage save')
+    try:
+        yield
+    finally:
+        ubman.run_command('bootstage restore')
 
 def md5sum_data(data):
     """Calculate the MD5 hash of some data.

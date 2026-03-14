@@ -92,6 +92,7 @@ struct ut_arg {
  * @force_run: true to run tests marked with the UTF_MANUAL flag
  * @workers: Number of parallel workers, 0 if not sharding tests
  * @worker_id: ID of this worker (0 to workers-1)
+ * @old_bootstage_count: bootstage record count saved before each test
  * @old_bloblist: stores the old gd->bloblist pointer
  * @soft_fail: continue execution of the test even after it fails
  * @expect_str: Temporary string used to hold expected string value
@@ -128,6 +129,7 @@ struct unit_test_state {
 	bool force_run;
 	int workers;
 	int worker_id;
+	uint old_bootstage_count;
 	void *old_bloblist;
 	bool soft_fail;
 	char expect_str[1024];

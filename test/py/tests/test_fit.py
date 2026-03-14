@@ -140,6 +140,12 @@ class TestFitImage:
       - run code coverage to make sure we are testing all the code
     """
 
+    @pytest.fixture(autouse=True)
+    def save_bootstage(self, ubman):
+        """Save and restore bootstage around each test."""
+        with utils.preserve_bootstage(ubman):
+            yield
+
     def make_fname(self, ubman, leaf):
         """Make a temporary filename
 
