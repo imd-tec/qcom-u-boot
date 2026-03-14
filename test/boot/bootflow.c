@@ -1677,6 +1677,11 @@ static int bootflow_scan_extlinux(struct unit_test_state *uts)
 	const void *fdt;
 	int node;
 
+	/* restore default addresses in case PXE tests changed them */
+	ut_assertok(env_set("kernel_addr_r", "1000000"));
+	ut_assertok(env_set("ramdisk_addr_r", "2000000"));
+	ut_assertok(env_set("fdt_addr_r", "c00000"));
+
 	ut_assertok(run_command("bootflow scan", 0));
 	ut_assert_console_end();
 	ut_assertok(bootstd_get_priv(&std));
@@ -1744,6 +1749,11 @@ static int bootflow_extlinux_localboot(struct unit_test_state *uts)
 	struct bootstd_priv *std;
 	const char **old_order;
 	struct bootflow *bflow;
+
+	/* restore default addresses in case PXE tests changed them */
+	ut_assertok(env_set("kernel_addr_r", "1000000"));
+	ut_assertok(env_set("ramdisk_addr_r", "2000000"));
+	ut_assertok(env_set("fdt_addr_r", "c00000"));
 
 	ut_assertok(prep_mmc_bootdev(uts, "mmc9", false, &old_order));
 
