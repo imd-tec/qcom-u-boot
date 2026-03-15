@@ -7634,7 +7634,237 @@ int malloc_dump_to_file(const char *fname)
 
 	return 0;
 }
+#endif /* IS_ENABLED(CONFIG_SANDBOX) */
+
+/**
+ * count_used_chunks() - Count the number of in-use heap chunks
+ *
+ * Walk the entire dlmalloc heap and count chunks that are currently in use.
+ *
+ * Return: number of used chunks
+ */
+static int count_used_chunks(void)
+{
+	mchunkptr q;
+	msegmentptr s;
+	int count = 0;
+
+	if (!is_initialized(gm))
+		return 0;
+
+	for (s = &gm->seg; s; s = s->next) {
+		q = align_as_chunk(s->base);
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			if (is_inuse(q))
+				count++;
+			q = next_chunk(q);
+		}
+	}
+
+	return count;
+}
+
+size_t malloc_mcheck_hdr_size(void)
+{
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+	return sizeof(struct mcheck_hdr);
+#else
+	return 0;
 #endif
+}
+
+size_t malloc_chunk_size(void *ptr)
+{
+	void *mem;
+	mchunkptr p;
+
+	mem = (char *)ptr - malloc_mcheck_hdr_size();
+	p = mem2chunk(mem);
+
+	return chunksize(p);
+}
+
+int malloc_leak_check_start(struct malloc_leak_snap *snap)
+{
+	mchunkptr q;
+	msegmentptr s;
+	int i;
+
+	if (!is_initialized(gm))
+		return -ENOENT;
+
+	snap->count = count_used_chunks();
+
+	/*
+	 * On sandbox, allocate from the host OS so the snapshot does not
+	 * disturb the U-Boot heap.  On other platforms, use the heap itself
+	 * but reserve one extra slot for the snapshot's own chunk.
+	 */
+#if IS_ENABLED(CONFIG_SANDBOX)
+	snap->addr = os_malloc(snap->count * sizeof(ulong));
+#else
+	snap->addr = malloc((snap->count + 1) * sizeof(ulong));
+#endif
+	if (!snap->addr)
+		return -ENOMEM;
+
+	i = 0;
+	for (s = &gm->seg; s; s = s->next) {
+		q = align_as_chunk(s->base);
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			if (is_inuse(q))
+				snap->addr[i++] = (ulong)chunk2mem(q);
+			q = next_chunk(q);
+		}
+	}
+	snap->count = i;
+
+	return 0;
+}
+
+/**
+ * snap_has_addr() - Check whether an address is in the snapshot
+ *
+ * The addresses are stored in ascending heap order, so use binary search.
+ *
+ * @snap: Snapshot taken earlier
+ * @addr: Address to look for
+ * Return: true if found
+ */
+static bool snap_has_addr(struct malloc_leak_snap *snap, ulong addr)
+{
+	int lo = 0, hi = snap->count - 1;
+
+	while (lo <= hi) {
+		int mid = lo + (hi - lo) / 2;
+
+		if (snap->addr[mid] == addr)
+			return true;
+		if (snap->addr[mid] < addr)
+			lo = mid + 1;
+		else
+			hi = mid - 1;
+	}
+
+	return false;
+}
+
+/**
+ * count_new_allocs() - Count heap allocations not present in the snapshot
+ *
+ * @snap: Snapshot taken earlier
+ * Return: number of new allocations found
+ */
+static int count_new_allocs(struct malloc_leak_snap *snap)
+{
+	msegmentptr s;
+	int leaks = 0;
+	mchunkptr q;
+
+	for (s = &gm->seg; s; s = s->next) {
+		q = align_as_chunk(s->base);
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			if (is_inuse(q) &&
+			    !snap_has_addr(snap, (ulong)chunk2mem(q)))
+				leaks++;
+			q = next_chunk(q);
+		}
+	}
+
+	return leaks;
+}
+
+/**
+ * print_new_allocs() - Print heap allocations not present in the snapshot
+ *
+ * @snap: Snapshot taken earlier
+ */
+static void print_new_allocs(struct malloc_leak_snap *snap)
+{
+	msegmentptr s;
+	mchunkptr q;
+
+	for (s = &gm->seg; s; s = s->next) {
+		q = align_as_chunk(s->base);
+		while (segment_holds(s, q) &&
+		       q != gm->top && q->head != FENCEPOST_HEAD) {
+			if (is_inuse(q) &&
+			    !snap_has_addr(snap, (ulong)chunk2mem(q))) {
+				const char *caller = "";
+				void *mem = chunk2mem(q);
+				size_t sz = chunksize(q);
+
+#if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
+				/*
+				 * Read the caller directly from the mcheck
+				 * header at the start of the chunk rather
+				 * than searching the registry, which may
+				 * have overflowed. Validate the canary first
+				 * to avoid printing garbage from chunks
+				 * allocated without mcheck (e.g. when mcheck
+				 * was temporarily disabled).
+				 */
+				struct mcheck_hdr *hdr = mem;
+				int j;
+
+				for (j = 0; j < CANARY_DEPTH; j++)
+					if (hdr->canary.elems[j] != MAGICWORD)
+						break;
+				if (j == CANARY_DEPTH && hdr->caller[0])
+					caller = hdr->caller;
+#endif
+				printf("  %lx %zx %s\n", (ulong)mem, sz,
+				       caller);
+			}
+			q = next_chunk(q);
+		}
+	}
+}
+
+int malloc_leak_check_end(struct malloc_leak_snap *snap)
+{
+	int leaks;
+
+	if (!is_initialized(gm) || !snap->addr)
+		return -ENOENT;
+
+	leaks = count_new_allocs(snap);
+	if (leaks)
+		print_new_allocs(snap);
+
+
+#if IS_ENABLED(CONFIG_SANDBOX)
+	os_free(snap->addr);
+#else
+	free(snap->addr);
+#endif
+	snap->addr = NULL;
+	snap->count = 0;
+
+	return leaks;
+}
+
+int malloc_leak_check_count(struct malloc_leak_snap *snap)
+{
+	if (!is_initialized(gm) || !snap->addr)
+		return -ENOENT;
+
+	return count_new_allocs(snap);
+}
+
+void malloc_leak_check_free(struct malloc_leak_snap *snap)
+{
+#if IS_ENABLED(CONFIG_SANDBOX)
+	os_free(snap->addr);
+#else
+	free(snap->addr);
+#endif
+	snap->addr = NULL;
+	snap->count = 0;
+}
 
 int initf_malloc(void)
 {

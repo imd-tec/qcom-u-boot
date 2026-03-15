@@ -146,6 +146,21 @@ struct mallinfo {
 #endif  /* HAVE_USR_INCLUDE_MALLOC_H */
 #endif  /* !NO_MALLINFO */
 
+/**
+ * struct malloc_leak_snap - Snapshot of heap allocations for leak checking
+ *
+ * Used by malloc_leak_check_start/end to record the set of in-use chunk
+ * addresses before a test, so that new (leaked) allocations can be identified
+ * afterwards.
+ *
+ * @addr: Array of chunk addresses
+ * @count: Number of entries in @addr
+ */
+struct malloc_leak_snap {
+	unsigned long *addr;
+	int count;
+};
+
 /*
   malloc(size_t n)
   Returns a pointer to a newly allocated chunk of at least n bytes, or
@@ -817,6 +832,72 @@ void malloc_backtrace_skip(bool skip);
 #else
 static inline void malloc_backtrace_skip(bool skip) {}
 #endif
+
+/**
+ * malloc_chunk_size() - Return the dlmalloc chunk size for an allocation
+ *
+ * Given a pointer returned by malloc(), return the size of the underlying
+ * dlmalloc chunk. This is the size shown in heap dumps and leak reports.
+ *
+ * @ptr: Pointer returned by malloc/calloc/realloc
+ * Return: chunk size in bytes
+ */
+size_t malloc_chunk_size(void *ptr);
+
+/**
+ * malloc_mcheck_hdr_size() - Return the size of the mcheck header
+ *
+ * When CONFIG_MCHECK_HEAP_PROTECTION is enabled, each allocation has a
+ * header placed before the returned pointer. This returns its size, or
+ * 0 when mcheck is disabled. This is useful for computing the chunk
+ * address from a malloc pointer (chunk_addr = ptr - hdr_size).
+ *
+ * Return: size of struct mcheck_hdr, or 0
+ */
+size_t malloc_mcheck_hdr_size(void);
+
+/**
+ * malloc_leak_check_start() - Record current heap allocations
+ *
+ * Walk the heap and save the address of every in-use chunk. This snapshot
+ * is later compared by malloc_leak_check_end() to find new allocations.
+ * Storage is allocated with os_malloc() so it does not perturb the heap.
+ *
+ * @snap: Snapshot structure to fill in
+ * Return: 0 on success, -ENOENT if heap not initialised, -ENOMEM on failure
+ */
+int malloc_leak_check_start(struct malloc_leak_snap *snap);
+
+/**
+ * malloc_leak_check_end() - Report allocations not present in the snapshot
+ *
+ * Walk the heap and print every in-use chunk whose address was not recorded
+ * in the snapshot taken by malloc_leak_check_start(). Each leaked allocation
+ * is printed with its address, size, and caller (when mcheck is enabled).
+ * Frees the snapshot storage afterwards.
+ *
+ * @snap: Snapshot taken earlier with malloc_leak_check_start()
+ * Return: number of leaked allocations, or -ve on error
+ */
+int malloc_leak_check_end(struct malloc_leak_snap *snap);
+
+/**
+ * malloc_leak_check_count() - Count allocations not present in the snapshot
+ *
+ * Like malloc_leak_check_end() but only counts, without printing or freeing
+ * the snapshot.
+ *
+ * @snap: Snapshot taken earlier with malloc_leak_check_start()
+ * Return: number of leaked allocations, or -ve on error
+ */
+int malloc_leak_check_count(struct malloc_leak_snap *snap);
+
+/**
+ * malloc_leak_check_free() - Free a snapshot without checking
+ *
+ * @snap: Snapshot taken earlier with malloc_leak_check_start()
+ */
+void malloc_leak_check_free(struct malloc_leak_snap *snap);
 
 /**
  * mem_malloc_init() - Initialize the malloc() heap
