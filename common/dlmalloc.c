@@ -5986,6 +5986,30 @@ void malloc_backtrace_skip(bool skip)
 #endif
 }
 
+void malloc_backtrace_unbusy(void)
+{
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
+	in_backtrace = false;
+#endif
+}
+
+bool malloc_backtrace_is_active(bool *skipp, bool *busyp)
+{
+#if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)
+	if (skipp)
+		*skipp = mcheck_skip_backtrace;
+	if (busyp)
+		*busyp = in_backtrace;
+	return !mcheck_skip_backtrace && !in_backtrace;
+#else
+	if (skipp)
+		*skipp = false;
+	if (busyp)
+		*busyp = false;
+	return false;
+#endif
+}
+
 static const char *mcheck_caller(void)
 {
 #if CONFIG_IS_ENABLED(MCHECK_BACKTRACE)

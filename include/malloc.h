@@ -827,10 +827,40 @@ int malloc_log_entry(uint idx, struct mlog_entry **entryp);
  *
  * @skip: true to skip backtrace collection, false to enable it
  */
+
+/**
+ * malloc_backtrace_unbusy() - Clear the backtrace reentrant guard
+ *
+ * The malloc backtrace collector sets a guard flag while collecting a
+ * backtrace to prevent re-entrancy. If a crash or longjmp occurs during
+ * collection, the guard stays set and all subsequent backtraces are
+ * silently skipped. Call this to reset it.
+ */
+
+/**
+ * malloc_backtrace_is_active() - Check whether backtrace collection works
+ *
+ * @skipp: If non-NULL, returns true if collection is disabled via
+ *	malloc_backtrace_skip()
+ * @busyp: If non-NULL, returns true if the reentrant guard is stuck
+ * Return: true if backtrace collection is active (neither skipped nor busy)
+ */
 #if CONFIG_IS_ENABLED(MCHECK_HEAP_PROTECTION)
 void malloc_backtrace_skip(bool skip);
+void malloc_backtrace_unbusy(void);
+bool malloc_backtrace_is_active(bool *skipp, bool *busyp);
 #else
 static inline void malloc_backtrace_skip(bool skip) {}
+static inline void malloc_backtrace_unbusy(void) {}
+static inline bool malloc_backtrace_is_active(bool *skipp, bool *busyp)
+{
+	if (skipp)
+		*skipp = false;
+	if (busyp)
+		*busyp = false;
+
+	return false;
+}
 #endif
 
 /**

@@ -464,6 +464,14 @@ static int dm_test_restore(struct device_node *of_root)
  */
 static int test_pre_run(struct unit_test_state *uts, struct unit_test *test)
 {
+	/*
+	 * Reset backtrace collection in case a previous test disabled it
+	 * (e.g. stack-protector test via __stack_chk_fail) or a crash
+	 * left the reentrant guard set.
+	 */
+	malloc_backtrace_skip(false);
+	malloc_backtrace_unbusy();
+
 	ut_assertok(event_init());
 
 	/*
