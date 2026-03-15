@@ -39753,3 +39753,91 @@ The branch `cherry-1fa34093294` is ready on top of `ci/master` with all 9 commit
 
 ---
 
+### Review: 2026-03-15
+
+Branch: cherry-1fa34093294
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot directory. Let me proceed:
+
+Let me fetch correctly and check the remote configuration:
+
+Good, the `remotes/ci/master` already exists. Let me fetch the latest and check if rebase is needed:
+
+The branch is based on `b4fb1ff5c1d` but `ci/master` is now at `a4b366e42af`. Let me see how many commits the branch is behind:
+
+The branch is 16 commits behind ci/master. Let me record the commit hashes and deltas before rebasing:
+
+Good, I have the pre-rebase stats recorded. Now let me perform the rebase:
+
+The rebase completed successfully without conflicts. Now let me verify the commits and their deltas:
+
+Now let me verify the deltas match:
+
+All deltas match exactly:
+
+| # | Subject | Pre-rebase | Post-rebase |
+|---|---------|------------|-------------|
+| 1 | xilinx: Make XILINX_OF_BOARD_DTB_ADDR... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 2 | serial: uartlite: Use private data... | 1 file, 14+, 6- | 1 file, 14+, 6- ✓ |
+| 3 | serial: uartlite: Add support for... | 1 file, 18+, 1- | 1 file, 18+, 1- ✓ |
+| 4 | clk: zynqmp: Mark zynqmp_clk_ops... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 5 | mailbox: zynqmp-ipi: Mark... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 6 | dm: core: Mark root_info... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 7 | CI: Wire mbv32 combinations | 2 files, 48+, 4- | 2 files, 48+, 4- ✓ |
+| 8 | ufs: amd-versal2: Configure... | 4 files, 133+ | 4 files, 133+ ✓ |
+| 9 | Merge tag 'xilinx-for-v2026.01-rc1'... | 1 file, 28+ | 1 file, 28+ ✓ |
+| 10 | pickman: Record cherry-pick... | 1 file, 131+ | 1 file, 131+ ✓ |
+
+Now let me run the build test:
+
+Build passed. Now let me create the local -v2 branch and push:
+
+## Summary
+
+### Rebase Completed Successfully
+
+**Branch:** `cherry-1fa34093294`  
+**MR:** !718
+
+### What was done:
+1. **Rebased branch onto latest `ci/master`** (a4b366e42af)
+   - Branch was 16 commits behind target
+   - Rebase completed cleanly without conflicts
+
+2. **Verified all commit deltas match** (pre-rebase vs post-rebase):
+   - All 10 commits preserved with identical file changes
+   - No unexpected modifications
+
+3. **Build test passed** - sandbox build successful
+
+4. **Pushed to remote** - MR updated via force push
+   - Local backup branch: `cherry-1fa34093294-v2`
+   - Remote branch updated: `cherry-1fa34093294`
+
+### Commit mapping (old → new):
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 9a4e3abc1b2 | e23457a7895 | xilinx: Make XILINX_OF_BOARD_DTB_ADDR... |
+| 2 | 2b317cfbb18 | a2586fd07c0 | serial: uartlite: Use private data... |
+| 3 | fb97ddd4233 | 717ca87a96d | serial: uartlite: Add support for OF_PLATDATA |
+| 4 | c4f338f564d | e62802ae239 | clk: zynqmp: Mark zynqmp_clk_ops as const |
+| 5 | 6ae95790bf8 | 0d6de9a09dd | mailbox: zynqmp-ipi: Mark zynqmp_ipi_dest_mbox_ops... |
+| 6 | 5681fad5273 | 8fa731c957e | dm: core: Mark root_info as const |
+| 7 | 6860c3465a7 | 91a5ec62eff | CI: Wire mbv32 combinations |
+| 8 | 38ab44c611f | 1126ac8542f | ufs: amd-versal2: Configure RMMI... |
+| 9 | 763512b955b | 40b2afb3659 | Merge tag 'xilinx-for-v2026.01-rc1'... |
+| 10 | c6c253b01a5 | 1ad80765f8e | pickman: Record cherry-pick... |
+
+### Suggested reply for MR:
+```
+Rebased onto latest ci/master. Build passes.
+```
+
+---
+
