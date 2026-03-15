@@ -39555,3 +39555,70 @@ I see we have 9 cherry-picked commits (skipped 2 that were already applied). Let
 
 ---
 
+## 2026-03-15: us/next
+
+Branch: cherry-5727df87500
+
+Commits:
+- 5727df87500 tpm: tpm_tis_st33zp24: Remove unused drivers
+- 80afd60d9c7 tpm: cr50_i2c: Make use of 'z' for printing size_t
+- 83b1c7fd711 tpm: tpm_tis_infineon: Make use of 'z' for printing size_t
+- 73b23838c44 tpm: tis_infineon: Cannot test unsigned for being negative
+- 25fd8a1bc4f Merge tag 'tpm-next-25082025' of https://source.denx.de/u-boot/custodians/u-boot-tpm into next
+
+### Conversation log
+The deltas match exactly (5 files, 1250 deletions). Now running the build test:
+
+Build passes. Proceeding with second commit:
+
+Deltas match exactly. Running build test:
+
+Build passes. Proceeding with third commit:
+
+Deltas match exactly. Running build test:
+
+Build passes. Proceeding with fourth commit:
+
+Deltas match exactly. Running build test:
+
+Build passes. Proceeding with the fifth commit (merge commit - needs special handling):
+
+The merge commit resulted in an empty commit (expected since we already cherry-picked all the constituent commits). I need to commit it with --allow-empty to preserve the commit sequence:
+
+The merge commit is now empty as expected (all its changes were already applied via the previous cherry-picks). Running build test:
+
+Build passes. Now verifying all commits are present:
+
+All 5 commits are present. Running final build verification:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| Original Commit | Cherry-picked As | Status |
+|----------------|------------------|--------|
+| `5727df87500` - tpm: tpm_tis_st33zp24: Remove unused drivers | `02f01d144a3` | ✓ Clean |
+| `80afd60d9c7` - tpm: cr50_i2c: Make use of 'z' for printing size_t | `8c061f8419b` | ✓ Clean |
+| `83b1c7fd711` - tpm: tpm_tis_infineon: Make use of 'z' for printing size_t | `5b4ebca3b75` | ✓ Clean |
+| `73b23838c44` - tpm: tis_infineon: Cannot test unsigned for being negative | `4edb38edbff` | ✓ Clean |
+| `25fd8a1bc4f` - Merge tag 'tpm-next-25082025' | `762073544dd` | ✓ Empty (expected) |
+
+### Build Result
+- **OK** - All builds passed (sandbox) with no warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all deltas matched exactly between original and cherry-picked commits
+- The merge commit (`25fd8a1bc4f`) is empty as expected since all its constituent commits were already applied individually
+
+### Branch Status
+- Branch `cherry-5727df87500` is ready for pushing
+- Based on `ci/master` (commit `3d3ef6d6720`)
+- Contains 5 new commits on top
+
+---
+
