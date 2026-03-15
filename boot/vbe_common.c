@@ -23,10 +23,11 @@ binman_sym_declare(ulong, u_boot_spl_bss_pad, size);
 
 int vbe_get_blk(const char *storage, struct udevice **blkp)
 {
-	struct blk_desc *desc;
+	struct udevice *blk;
 	char devname[16];
 	const char *end;
 	int devnum;
+	int ret;
 
 	/* First figure out the block device */
 	log_debug("storage=%s\n", storage);
@@ -38,10 +39,10 @@ int vbe_get_blk(const char *storage, struct udevice **blkp)
 	strlcpy(devname, storage, end - storage + 1);
 	log_debug("dev=%s, %x\n", devname, devnum);
 
-	desc = blk_get_dev(devname, devnum);
-	if (!desc)
-		return log_msg_ret("get", -ENXIO);
-	*blkp = desc->bdev;
+	ret = blk_get_devnum_by_uclass_idname(devname, devnum, &blk);
+	if (ret)
+		return log_msg_ret("get", ret);
+	*blkp = blk;
 
 	return 0;
 }
