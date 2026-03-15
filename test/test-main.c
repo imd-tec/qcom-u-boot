@@ -631,12 +631,16 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 {
 	const char *fname = strrchr(test->file, '/') + 1;
 	const char *note = "";
+	struct mallinfo leak_before;
 	int old_fail_count;
 	int ret;
 
 	if ((test->flags & UTF_DM) && !uts->of_live)
 		note = " (flat tree)";
 	printf("Test: %s: %s%s\n", test_name, fname, note);
+
+	if (uts->leak_check)
+		leak_before = mallinfo();
 
 	/* Allow access to test state from drivers */
 	ut_set_state(uts);
@@ -658,6 +662,17 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 		return ret;
 
 	ut_set_state(NULL);
+
+	if (uts->leak_check) {
+		struct mallinfo leak_after;
+		int diff;
+
+		leak_after = mallinfo();
+		diff = leak_after.uordblks - leak_before.uordblks;
+		if (diff)
+			printf("Leak: %d bytes: %s%s\n", diff, test_name,
+			       note);
+	}
 
 	if (uts->emit_result) {
 		bool passed = uts->cur.fail_count == old_fail_count;

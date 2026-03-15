@@ -500,9 +500,29 @@ by checking ``malloc_get_info()`` before and after::
     assert(before.malloc_count == after.malloc_count);
     assert(before.in_use_bytes == after.in_use_bytes);
 
+**Automatic leak checking with ut -L**
+
+The ``ut`` command accepts a ``-L`` flag that checks for memory leaks around
+each test. It takes a ``mallinfo()`` snapshot at the start of ``ut_run_test()``
+and compares it at the end, after both ``test_pre_run()`` and
+``test_post_run()`` have completed::
+
+    => ut -L dm dm_test_acpi_bgrt
+    Test: acpi_bgrt: acpi.c
+    Leak: 448 bytes: acpi_bgrt
+    ...
+
+When using uman, pass ``--leak-check``::
+
+    $ um t --leak-check dm_test_acpi_bgrt
+
+This makes it easy to scan an entire test suite for leaks::
+
+    $ um t --leak-check -V dm
+
 **Practical workflow**
 
-1. Add ``ut_check_delta()`` assertions to your test to detect leaks
+1. Run ``um t --leak-check -V dm`` (or another suite) to find leaky tests
 2. When a leak is detected, add ``malloc_dump_to_file()`` calls before and
    after the leaking operation
 3. Run the test and compare the dump files to identify leaked allocations

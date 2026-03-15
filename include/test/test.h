@@ -102,6 +102,7 @@ struct ut_arg {
  * @arg_error: Set if ut_str/int/bool() detects a type mismatch
  * @keep_record: Preserve console recording when ut_fail() is called
  * @emit_result: Emit result line after each test completes
+ * @leak_check: Check for memory leaks around each test
  * @video_ctx: Vidconsole context for test message display (allocated on use)
  * @video_save: Saved framebuffer region for video tests
  * @priv: Private data for tests to use as needed
@@ -139,6 +140,7 @@ struct unit_test_state {
 	bool arg_error;
 	bool keep_record;
 	bool emit_result;
+	bool leak_check;
 	void *video_ctx;
 	struct abuf video_save;
 	char priv[UT_PRIV_SIZE];
