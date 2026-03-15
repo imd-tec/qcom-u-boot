@@ -3139,6 +3139,16 @@ config CMD_MALLOC
 	  about memory allocation, such as total memory allocated and
 	  currently in use.
 
+config CMD_MALLOC_LEAK
+	bool "malloc leak - Detect heap leaks"
+	depends on CMD_MALLOC && SANDBOX
+	default y
+	help
+	  This adds the 'malloc leak' subcommand which snapshots the heap
+	  and later reports any new allocations. Use 'malloc leak start'
+	  before an operation and 'malloc leak end' afterwards to see
+	  leaked allocations with their caller backtraces.
+
 config CMD_MALLOC_LOG
 	bool "malloc log - Log malloc traffic"
 	depends on CMD_MALLOC && MCHECK_LOG

@@ -54,6 +54,58 @@ static int cmd_test_malloc_dump(struct unit_test_state *uts)
 }
 CMD_TEST(cmd_test_malloc_dump, UTF_CONSOLE);
 
+/* Test 'malloc leak' command using the C API directly */
+static int cmd_test_malloc_leak(struct unit_test_state *uts)
+{
+	struct malloc_leak_snap snap = {};
+	ulong chunk_addr;
+	size_t chunk_sz;
+	void *ptr;
+	int ret;
+
+	/* Take a snapshot, then check with no leaks */
+	ut_assertok(malloc_leak_check_start(&snap));
+	ut_assert(snap.count > 0);
+	ut_asserteq(0, malloc_leak_check_count(&snap));
+
+	/* Allocate something and check it is detected */
+	ptr = malloc(0x42);
+	ut_assertnonnull(ptr);
+	ut_asserteq(1, malloc_leak_check_count(&snap));
+
+	/* Verify freeing clears the leak */
+	free(ptr);
+	ut_asserteq(0, malloc_leak_check_count(&snap));
+
+	/* Re-allocate so end has something to print */
+	ptr = malloc(0x42);
+	ut_assertnonnull(ptr);
+
+	/* End should print the leaked allocation and free the snapshot */
+	ret = malloc_leak_check_end(&snap);
+	ut_asserteq(1, ret);
+
+	/*
+	 * Check the output line shows the correct chunk address and chunk
+	 * size. The chunk address is the malloc pointer minus the mcheck
+	 * header. The caller name is only available with mcheck.
+	 */
+	chunk_addr = (ulong)ptr - malloc_mcheck_hdr_size();
+	chunk_sz = malloc_chunk_size(ptr);
+	if (IS_ENABLED(CONFIG_MCHECK_HEAP_PROTECTION))
+		ut_assert_nextlinen("  %lx %zx %s:", chunk_addr, chunk_sz,
+				    __func__);
+	else
+		ut_assert_nextlinen("  %lx %zx ", chunk_addr, chunk_sz);
+	ut_assert_console_end();
+	ut_assertnull(snap.addr);
+
+	free(ptr);
+
+	return 0;
+}
+CMD_TEST(cmd_test_malloc_leak, UTF_CONSOLE);
+
 #if CONFIG_IS_ENABLED(MCHECK_LOG)
 /* Test 'malloc log' command */
 static int cmd_test_malloc_log(struct unit_test_state *uts)

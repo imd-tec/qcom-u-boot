@@ -527,12 +527,40 @@ This makes it easy to scan an entire test suite for leaks::
 
     $ um t --leak-check -V dm
 
+**Interactive leak checking with the malloc command**
+
+The ``malloc leak`` command provides interactive leak detection at the
+U-Boot command line. Take a snapshot before an operation and check
+afterwards::
+
+    => malloc leak start
+    Heap snapshot: 974 allocs
+    => setenv foo bar
+    => malloc leak end
+      14a2a9a0 90 sandbox_strdup:353 <-hsearch_r:403 <-env_do_env_set:130
+      14a2aa30 90 sandbox_strdup:353 <-hsearch_r:403 <-env_do_env_set:130
+    2 leaked allocs
+
+Use ``malloc leak`` (without arguments) to check the count without
+releasing the snapshot, so you can continue testing::
+
+    => malloc leak start
+    Heap snapshot: 974 allocs
+    => <some operation>
+    => malloc leak
+    No leaks
+    => <another operation>
+    => malloc leak
+    3 new allocs
+    => malloc leak end
+    ...
+
 **Practical workflow**
 
 1. Run ``um t --leak-check -V dm`` (or another suite) to find leaky tests
 2. Use the caller backtrace in the ``-L`` output to find the allocation site
-3. If more detail is needed, add ``malloc_dump_to_file()`` calls or enable
-   ``malloc_log_start()`` to trace all allocations during the operation
+3. If more detail is needed, use ``malloc leak start`` / ``malloc leak end``
+   interactively, or enable ``malloc_log_start()`` to trace all allocations
 4. Fix the leak and verify the test passes
 
 **Dumping heap state on exit**
