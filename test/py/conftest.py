@@ -106,6 +106,8 @@ def pytest_addoption(parser):
                      help='Disable console timeout (useful for debugging)')
     parser.addoption('--no-full', default=False, action='store_true',
                      help='Skip flat-tree tests (run live-tree only)')
+    parser.addoption('--leak-check', default=False, action='store_true',
+                     help='Check for memory leaks around each unit test')
     parser.addoption('--malloc-dump', default=None,
                      help='Write malloc dump to file on exit')
 
@@ -364,6 +366,7 @@ def pytest_configure(config):
     ubconfig.allow_exceptions = config.getoption('allow_exceptions')
     ubconfig.no_timeout = config.getoption('no_timeout')
     ubconfig.no_full = config.getoption('no_full')
+    ubconfig.leak_check = config.getoption('leak_check')
     ubconfig.malloc_dump = config.getoption('malloc_dump')
 
     env_vars = (
