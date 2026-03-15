@@ -304,6 +304,7 @@ static int scmi_base_discover_list_protocols_int(struct udevice *dev,
 	} while (cur < num_protocols);
 
 	*protocols = buf;
+	free(out);
 
 	return num_protocols;
 err:
