@@ -631,7 +631,7 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 {
 	const char *fname = strrchr(test->file, '/') + 1;
 	const char *note = "";
-	struct mallinfo leak_before;
+	struct malloc_leak_snap leak_snap = {};
 	int old_fail_count;
 	int ret;
 
@@ -640,7 +640,7 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 	printf("Test: %s: %s%s\n", test_name, fname, note);
 
 	if (uts->leak_check)
-		leak_before = mallinfo();
+		malloc_leak_check_start(&leak_snap);
 
 	/* Allow access to test state from drivers */
 	ut_set_state(uts);
@@ -664,14 +664,15 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 	ut_set_state(NULL);
 
 	if (uts->leak_check) {
-		struct mallinfo leak_after;
-		int diff;
+		int leaks;
 
-		leak_after = mallinfo();
-		diff = leak_after.uordblks - leak_before.uordblks;
-		if (diff)
-			printf("Leak: %d bytes: %s%s\n", diff, test_name,
-			       note);
+		leaks = malloc_leak_check_count(&leak_snap);
+		if (leaks > 0) {
+			printf("Leak: %d allocs\n", leaks);
+			malloc_leak_check_end(&leak_snap);
+		} else {
+			malloc_leak_check_free(&leak_snap);
+		}
 	}
 
 	if (uts->emit_result) {

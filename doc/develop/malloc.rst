@@ -503,14 +503,21 @@ by checking ``malloc_get_info()`` before and after::
 **Automatic leak checking with ut -L**
 
 The ``ut`` command accepts a ``-L`` flag that checks for memory leaks around
-each test. It takes a ``mallinfo()`` snapshot at the start of ``ut_run_test()``
-and compares it at the end, after both ``test_pre_run()`` and
-``test_post_run()`` have completed::
+each test. It snapshots every in-use heap chunk at the start of
+``ut_run_test()`` and compares after both ``test_pre_run()`` and
+``test_post_run()`` have completed. Any new allocations are reported with
+their address, size and caller backtrace::
 
-    => ut -L dm dm_test_acpi_bgrt
+    => ut -LE dm dm_test_acpi_bgrt
     Test: acpi_bgrt: acpi.c
-    Leak: 448 bytes: acpi_bgrt
-    ...
+    Leak: 2 allocs
+      14a5c5c0 110 stdio_clone:230 <-stdio_register_dev:244 <-vidconsole_post_probe:961
+      14a5c6d0  b0 map_to_sysmem:210 <-video_post_probe:823 <-device_probe:589
+    Result: PASS: acpi_bgrt: acpi.c
+
+The snapshot is stored using ``os_malloc()`` so it does not affect the
+heap being measured. Caller backtraces are available when
+``CONFIG_MCHECK_HEAP_PROTECTION`` is enabled (the default for sandbox).
 
 When using uman, pass ``--leak-check``::
 
@@ -523,13 +530,10 @@ This makes it easy to scan an entire test suite for leaks::
 **Practical workflow**
 
 1. Run ``um t --leak-check -V dm`` (or another suite) to find leaky tests
-2. When a leak is detected, add ``malloc_dump_to_file()`` calls before and
-   after the leaking operation
-3. Run the test and compare the dump files to identify leaked allocations
-4. Use the caller backtrace in the dump to find the allocation site
-5. If more detail is needed, enable ``malloc_log_start()`` to trace all
-   allocations during the operation
-6. Fix the leak and verify the test passes
+2. Use the caller backtrace in the ``-L`` output to find the allocation site
+3. If more detail is needed, add ``malloc_dump_to_file()`` calls or enable
+   ``malloc_log_start()`` to trace all allocations during the operation
+4. Fix the leak and verify the test passes
 
 **Dumping heap state on exit**
 
