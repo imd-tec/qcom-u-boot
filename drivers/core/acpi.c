@@ -377,6 +377,12 @@ int acpi_inject_dsdt(struct acpi_ctx *ctx)
 
 void acpi_reset_items(void)
 {
+	int i;
+
+	for (i = 0; i < item_count; i++) {
+		free(acpi_item[i].buf);
+		acpi_item[i].buf = NULL;
+	}
 	item_count = 0;
 }
 

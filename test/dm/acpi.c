@@ -596,6 +596,8 @@ static int dm_test_acpi_fill_ssdt(struct unit_test_state *uts)
 
 	ut_asserteq('z', buf[4]);
 
+	free(buf);
+
 	return 0;
 }
 DM_TEST(dm_test_acpi_fill_ssdt, UTF_SCAN_PDATA | UTF_SCAN_FDT);
@@ -621,6 +623,8 @@ static int dm_test_acpi_fill_madt(struct unit_test_state *uts)
 	ut_asserteq(0xdeadbeef, buf[0]);
 
 	ut_asserteq('z', buf[1]);
+
+	free(buf);
 
 	return 0;
 }
@@ -653,6 +657,8 @@ static int dm_test_acpi_inject_dsdt(struct unit_test_state *uts)
 	ut_asserteq('k', buf[3]);
 
 	ut_asserteq('z', buf[4]);
+
+	free(buf);
 
 	return 0;
 }
