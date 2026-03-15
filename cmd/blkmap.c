@@ -28,7 +28,7 @@ struct map_handler {
 static int do_blkmap_map_linear(struct map_ctx *ctx, int argc,
 				char *const argv[])
 {
-	struct blk_desc *lbd;
+	struct udevice *ldev;
 	int err, ldevnum;
 	lbaint_t lblknr;
 
@@ -38,15 +38,15 @@ static int do_blkmap_map_linear(struct map_ctx *ctx, int argc,
 	ldevnum = dectoul(argv[2], NULL);
 	lblknr = dectoul(argv[3], NULL);
 
-	lbd = blk_get_devnum_by_uclass_idname(argv[1], ldevnum);
-	if (!lbd) {
+	err = blk_get_devnum_by_uclass_idname(argv[1], ldevnum, &ldev);
+	if (err) {
 		printf("Found no device matching \"%s %d\"\n",
 		       argv[1], ldevnum);
 		return CMD_RET_FAILURE;
 	}
 
 	err = blkmap_map_linear(ctx->dev, ctx->blknr, ctx->blkcnt,
-				lbd->bdev, lblknr);
+				ldev, lblknr);
 	if (err) {
 		printf("Unable to map \"%s %d\" at block 0x" LBAF ": %d\n",
 		       argv[1], ldevnum, ctx->blknr, err);

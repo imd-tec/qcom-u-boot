@@ -199,7 +199,8 @@ int blk_dselect_hwpart(struct blk_desc *desc, int hwpart)
 	return 0;
 }
 
-struct blk_desc *blk_get_devnum_by_uclass_idname(const char *uclass_idname, int devnum)
+struct blk_desc *blk_get_desc_by_uclass_idname(const char *uclass_idname,
+					       int devnum)
 {
 	struct blk_driver *drv = blk_driver_lookup_typename(uclass_idname);
 	struct blk_desc *desc;
