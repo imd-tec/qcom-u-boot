@@ -146,6 +146,16 @@ static int sandbox_i2c_pmic_probe(struct udevice *emul)
 	return 0;
 }
 
+static int sandbox_i2c_pmic_remove(struct udevice *emul)
+{
+	struct sandbox_i2c_pmic_plat_data *plat = dev_get_plat(emul);
+
+	free(plat->reg);
+	plat->reg = NULL;
+
+	return 0;
+}
+
 struct dm_i2c_ops sandbox_i2c_pmic_emul_ops = {
 	.xfer = sandbox_i2c_pmic_xfer,
 };
@@ -161,6 +171,7 @@ U_BOOT_DRIVER(sandbox_i2c_pmic_emul) = {
 	.of_match	= sandbox_i2c_pmic_ids,
 	.of_to_plat = sandbox_i2c_pmic_of_to_plat,
 	.probe		= sandbox_i2c_pmic_probe,
+	.remove		= sandbox_i2c_pmic_remove,
 	.plat_auto	= sizeof(struct sandbox_i2c_pmic_plat_data),
 	.ops		= &sandbox_i2c_pmic_emul_ops,
 };
