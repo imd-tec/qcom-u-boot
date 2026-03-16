@@ -23,7 +23,7 @@ Depending on the build targets further packages maybe needed
 
 .. code-block:: bash
 
-    sudo apt-get install bc bison build-essential coccinelle \
+    sudo apt-get install acpica-tools bc bison build-essential coccinelle \
       device-tree-compiler dfu-util efitools flex gdisk graphviz imagemagick \
       libgnutls28-dev libguestfs-tools libncurses-dev \
       libpython3-dev libsdl2-dev libssl-dev lz4 lzma lzma-alone openssl \
@@ -31,7 +31,7 @@ Depending on the build targets further packages maybe needed
       python3-pkg-resources python3-pycryptodome python3-pyelftools \
       python3-pytest python3-pytest-xdist python3-sphinxcontrib.apidoc \
       python3-sphinx-rtd-theme python3-subunit python3-testtools \
-      python3-venv swig uuid-dev
+      python3-venv srecord swig uuid-dev
 
 SUSE based
 ~~~~~~~~~~
