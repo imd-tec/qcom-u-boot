@@ -66,7 +66,7 @@ class CommandResult:
 
 def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
              capture_stderr=False, oneline=False, raise_on_error=True, cwd=None,
-             binary=False, output_func=None, **kwargs):
+             binary=False, output_func=None, stdin_data=None, **kwargs):
     """
     Perform a command pipeline, with optional input/output filenames.
 
@@ -86,6 +86,7 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
         binary (bool): True to report binary output, False to use strings
         output_func (function): Output function to call with each output
             fragment (if it returns True the function terminates)
+        stdin_data (str or None): Data to send to the first command's stdin
         **kwargs: Additional keyword arguments to cros_subprocess.Popen()
     Returns:
         CommandResult object
@@ -113,6 +114,8 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
             kwargs['stdin'] = last_pipe.stdout
         elif infile:
             kwargs['stdin'] = open(infile, 'rb')
+        elif stdin_data:
+            kwargs['stdin'] = cros_subprocess.PIPE
         if pipeline or capture:
             kwargs['stdout'] = cros_subprocess.PIPE
         elif outfile:
@@ -131,8 +134,14 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
             return result.to_output(binary)
 
     if capture:
+        if stdin_data and isinstance(stdin_data, str):
+            input_buf = stdin_data.encode('utf-8')
+        elif stdin_data:
+            input_buf = stdin_data
+        else:
+            input_buf = b''
         result.stdout, result.stderr, result.combined = (
-                last_pipe.communicate_filter(output_func))
+                last_pipe.communicate_filter(output_func, input_buf))
         if result.stdout and oneline:
             result.output = result.stdout.rstrip(b'\r\n')
     result.return_code = last_pipe.wait()

@@ -203,24 +203,41 @@ def run_test_suites(toolname, debug, verbosity, no_capture, test_preserve_dirs,
         if isinstance(module, str) and (not test_name or test_name == module):
             suite.addTests(doctest.DocTestSuite(module))
 
-    for module in class_and_module_list:
-        if isinstance(module, str):
+    for entry in class_and_module_list:
+        if isinstance(entry, str):
             continue
-        # Test the test module about our arguments, if it is interested
-        if hasattr(module, 'setup_test_args'):
-            setup_test_args = getattr(module, 'setup_test_args')
-            setup_test_args(preserve_indir=test_preserve_dirs,
-                preserve_outdirs=test_preserve_dirs and test_name is not None,
-                toolpath=toolpath, verbosity=verbosity, no_capture=no_capture)
-        if test_name:
-            # Since Python v3.5 If an ImportError or AttributeError occurs
-            # while traversing a name then a synthetic test that raises that
-            # error when run will be returned. Check that the requested test
-            # exists, otherwise these errors are included in the results.
-            if test_name in loader.getTestCaseNames(module):
-                suite.addTests(loader.loadTestsFromName(test_name, module))
+
+        # If entry is a module, extract all TestCase subclasses from it
+        if hasattr(entry, '__file__'):
+            classes = [obj for obj in vars(entry).values()
+                       if (isinstance(obj, type)
+                           and issubclass(obj, unittest.TestCase)
+                           and obj is not unittest.TestCase)]
         else:
-            suite.addTests(loader.loadTestsFromTestCase(module))
+            classes = [entry]
+
+        for module in classes:
+            # Tell the test module about our arguments, if interested
+            if hasattr(module, 'setup_test_args'):
+                setup_test_args = getattr(module, 'setup_test_args')
+                setup_test_args(
+                    preserve_indir=test_preserve_dirs,
+                    preserve_outdirs=(test_preserve_dirs
+                                     and test_name is not None),
+                    toolpath=toolpath, verbosity=verbosity,
+                    no_capture=no_capture)
+            if test_name:
+                # Since Python v3.5 If an ImportError or
+                # AttributeError occurs while traversing a name then
+                # a synthetic test that raises that error when run
+                # will be returned. Check that the requested test
+                # exists, otherwise these errors are included in the
+                # results.
+                if test_name in loader.getTestCaseNames(module):
+                    suite.addTests(
+                        loader.loadTestsFromName(test_name, module))
+            else:
+                suite.addTests(loader.loadTestsFromTestCase(module))
 
     print(f" Running {toolname} tests ".center(70, "="))
     result = runner.run(suite)
