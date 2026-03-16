@@ -190,14 +190,24 @@ class Database:  # pylint: disable=too-many-public-methods
     def get_schema_version(self):
         """Get the version of the database's schema
 
+        Only returns 0 when the schema_version table genuinely does not
+        exist (i.e. a fresh database).  Other errors (read-only, locked,
+        corrupt) are re-raised so that migrate_to() does not accidentally
+        destroy an existing database by re-running all migrations.
+
         Return:
             int: Database version, 0 means there is no data
+
+        Raises:
+            sqlite3.OperationalError: For errors other than a missing table
         """
         try:
             self.cur.execute('SELECT version FROM schema_version')
             return self.cur.fetchone()[0]
-        except sqlite3.OperationalError:
-            return 0
+        except sqlite3.OperationalError as exc:
+            if 'no such table' in str(exc):
+                return 0
+            raise
 
     def execute(self, query, parameters=()):
         """Execute a database query
