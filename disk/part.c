@@ -8,6 +8,7 @@
 
 #include <blk.h>
 #include <command.h>
+#include <dm.h>
 #include <env.h>
 #include <errno.h>
 #include <log.h>
@@ -124,11 +125,23 @@ static struct blk_desc *get_dev_hwpart(const char *ifname, int dev, int hwpart)
 
 	if (!blk_enabled())
 		return NULL;
-	desc = blk_get_devnum_by_uclass_idname(ifname, dev);
-	if (!desc) {
-		debug("%s: No device for iface '%s', dev %d\n", __func__,
-		      ifname, dev);
-		return NULL;
+	if (CONFIG_IS_ENABLED(BLK)) {
+		struct udevice *blk;
+
+		ret = blk_get_devnum_by_uclass_idname(ifname, dev, &blk);
+		if (ret) {
+			log_debug("No device for iface '%s', dev %d: err=%d\n",
+				  ifname, dev, ret);
+			return NULL;
+		}
+		desc = dev_get_uclass_plat(blk);
+	} else {
+		desc = blk_get_desc_by_uclass_idname(ifname, dev);
+		if (!desc) {
+			log_debug("No device for iface '%s', dev %d\n",
+				  ifname, dev);
+			return NULL;
+		}
 	}
 	ret = blk_dselect_hwpart(desc, hwpart);
 	if (ret) {

@@ -642,15 +642,29 @@ struct blk_desc *blk_get_devnum_by_uclass_id(enum uclass_id uclass_id, int devnu
 /**
  * blk_get_devnum_by_uclass_idname() - Get block device by type name and number
  *
- * This looks up the block device type based on @uclass_idname, then calls
- * blk_get_devnum_by_uclass_id().
+ * This looks up the block device type based on @uclass_idname, then probes
+ * the device.
+ *
+ * @uclass_idname:	Block device type name (e.g. "mmc")
+ * @devnum:		Device number
+ * @blkp:		Returns the block device
+ * Return: 0 if OK, -ENODEV if the uclass is not known, -ENXIO if the
+ *	device is not found, or other -ve on probe error
+ */
+int blk_get_devnum_by_uclass_idname(const char *uclass_idname, int devnum,
+				    struct udevice **blkp);
+
+/**
+ * blk_get_desc_by_uclass_idname() - Get block descriptor by type name/number
+ *
+ * Legacy version for non-DM block devices.
  *
  * @uclass_idname:	Block device type name
  * @devnum:		Device number
- * Return: point to block device descriptor, or NULL if not found
+ * Return: pointer to block device descriptor, or NULL if not found
  */
-struct blk_desc *blk_get_devnum_by_uclass_idname(const char *uclass_idname,
-						 int devnum);
+struct blk_desc *blk_get_desc_by_uclass_idname(const char *uclass_idname,
+					       int devnum);
 
 /**
  * blk_dselect_hwpart() - select a hardware partition

@@ -107,7 +107,8 @@ struct blk_desc *blk_get_devnum_by_uclass_id(enum uclass_id uclass_id, int devnu
  * name in a local table. This gives us an interface type which we can match
  * against the uclass of the block device's parent.
  */
-struct blk_desc *blk_get_devnum_by_uclass_idname(const char *uclass_idname, int devnum)
+int blk_get_devnum_by_uclass_idname(const char *uclass_idname, int devnum,
+				    struct udevice **blkp)
 {
 	enum uclass_id uclass_id;
 	enum uclass_id type;
@@ -119,18 +120,18 @@ struct blk_desc *blk_get_devnum_by_uclass_idname(const char *uclass_idname, int 
 	if (type == UCLASS_INVALID) {
 		debug("%s: Unknown interface type '%s'\n", __func__,
 		      uclass_idname);
-		return NULL;
+		return -ENODEV;
 	}
 	uclass_id = conv_uclass_id(type);
 	if (uclass_id == UCLASS_INVALID) {
 		debug("%s: Unknown uclass for interface type'\n",
 		      blk_get_uclass_name(type));
-		return NULL;
+		return -ENODEV;
 	}
 
 	ret = uclass_get(UCLASS_BLK, &uc);
 	if (ret)
-		return NULL;
+		return ret;
 	uclass_foreach_dev(dev, uc) {
 		struct blk_desc *desc = dev_get_uclass_plat(dev);
 
@@ -146,15 +147,17 @@ struct blk_desc *blk_get_devnum_by_uclass_idname(const char *uclass_idname, int 
 			continue;
 		}
 
-		if (device_probe(dev))
-			return NULL;
+		ret = device_probe(dev);
+		if (ret)
+			return ret;
 
 		debug("%s: Device desc %p\n", __func__, desc);
-		return desc;
+		*blkp = dev;
+		return 0;
 	}
 	debug("%s: No device found\n", __func__);
 
-	return NULL;
+	return -ENXIO;
 }
 
 /**

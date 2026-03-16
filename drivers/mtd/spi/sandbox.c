@@ -553,6 +553,7 @@ int sandbox_sf_bind_emul(struct sandbox_state *state, int busnum, int cs,
 		       spec, ret);
 		return ret;
 	}
+	device_set_name_alloced(emul);
 	state->spi[busnum][cs].emul = emul;
 
 	return 0;

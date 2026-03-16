@@ -1874,6 +1874,16 @@ int pci_sriov_get_totalvfs(struct udevice *pdev)
 }
 #endif /* SRIOV */
 
+static int pci_uclass_pre_remove(struct udevice *bus)
+{
+	struct pci_controller *hose = dev_get_uclass_priv(bus);
+
+	free(hose->regions);
+	hose->regions = NULL;
+
+	return 0;
+}
+
 UCLASS_DRIVER(pci) = {
 	.id		= UCLASS_PCI,
 	.name		= "pci",
@@ -1881,6 +1891,7 @@ UCLASS_DRIVER(pci) = {
 	.post_bind	= dm_scan_fdt_dev,
 	.pre_probe	= pci_uclass_pre_probe,
 	.post_probe	= pci_uclass_post_probe,
+	.pre_remove	= pci_uclass_pre_remove,
 	.child_post_bind = pci_uclass_child_post_bind,
 	.per_device_auto	= sizeof(struct pci_controller),
 	.per_child_plat_auto	= sizeof(struct pci_child_plat),

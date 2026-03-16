@@ -220,6 +220,7 @@ BOOTSTD_TEST(bootstd_test_luks2_info, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
 static int bootstd_test_luks_unlock(struct unit_test_state *uts)
 {
 	struct blk_desc *desc;
+	struct udevice *blk;
 	struct udevice *mmc;
 	loff_t file_size;
 
@@ -242,8 +243,8 @@ static int bootstd_test_luks_unlock(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Verify that a file can be read from the decrypted filesystem */
-	desc = blk_get_devnum_by_uclass_idname("blkmap", 0);
-	ut_assertnonnull(desc);
+	ut_assertok(blk_get_devnum_by_uclass_idname("blkmap", 0, &blk));
+	desc = dev_get_uclass_plat(blk);
 
 	ut_assertok(fs_set_blk_dev_with_part(desc, 0));
 	ut_assertok(fs_size("/bin/bash", &file_size));
@@ -262,6 +263,7 @@ static int bootstd_test_luks2_unlock(struct unit_test_state *uts)
 {
 	struct disk_partition info;
 	struct blk_desc *desc;
+	struct udevice *blk;
 	struct udevice *mmc;
 	u8 master_key[512];
 	loff_t file_size;
@@ -284,8 +286,8 @@ static int bootstd_test_luks2_unlock(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Verify that a file can be read from the decrypted filesystem */
-	desc = blk_get_devnum_by_uclass_idname("blkmap", 0);
-	ut_assertnonnull(desc);
+	ut_assertok(blk_get_devnum_by_uclass_idname("blkmap", 0, &blk));
+	desc = dev_get_uclass_plat(blk);
 
 	ut_assertok(fs_set_blk_dev_with_part(desc, 0));
 	ut_assertok(fs_size("/bin/bash", &file_size));
@@ -312,6 +314,7 @@ static int setup_mmc14(struct unit_test_state *uts, struct udevice **mmcp)
 static int bootstd_test_luks2_unlock_prederived(struct unit_test_state *uts)
 {
 	struct blk_desc *desc;
+	struct udevice *blk;
 	struct udevice *mmc;
 	loff_t file_size;
 
@@ -333,8 +336,8 @@ static int bootstd_test_luks2_unlock_prederived(struct unit_test_state *uts)
 	ut_assert_console_end();
 
 	/* Verify that a file can be read from the decrypted filesystem */
-	desc = blk_get_devnum_by_uclass_idname("blkmap", 0);
-	ut_assertnonnull(desc);
+	ut_assertok(blk_get_devnum_by_uclass_idname("blkmap", 0, &blk));
+	desc = dev_get_uclass_plat(blk);
 
 	ut_assertok(fs_set_blk_dev_with_part(desc, 0));
 	ut_assertok(fs_size("/bin/bash", &file_size));

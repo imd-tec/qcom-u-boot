@@ -464,6 +464,14 @@ static int dm_test_restore(struct device_node *of_root)
  */
 static int test_pre_run(struct unit_test_state *uts, struct unit_test *test)
 {
+	/*
+	 * Reset backtrace collection in case a previous test disabled it
+	 * (e.g. stack-protector test via __stack_chk_fail) or a crash
+	 * left the reentrant guard set.
+	 */
+	malloc_backtrace_skip(false);
+	malloc_backtrace_unbusy();
+
 	ut_assertok(event_init());
 
 	/*
@@ -631,12 +639,16 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 {
 	const char *fname = strrchr(test->file, '/') + 1;
 	const char *note = "";
+	struct malloc_leak_snap leak_snap = {};
 	int old_fail_count;
 	int ret;
 
 	if ((test->flags & UTF_DM) && !uts->of_live)
 		note = " (flat tree)";
 	printf("Test: %s: %s%s\n", test_name, fname, note);
+
+	if (uts->leak_check)
+		malloc_leak_check_start(&leak_snap);
 
 	/* Allow access to test state from drivers */
 	ut_set_state(uts);
@@ -658,6 +670,18 @@ static int ut_run_test(struct unit_test_state *uts, struct unit_test *test,
 		return ret;
 
 	ut_set_state(NULL);
+
+	if (uts->leak_check) {
+		int leaks;
+
+		leaks = malloc_leak_check_count(&leak_snap);
+		if (leaks > 0) {
+			printf("Leak: %d allocs\n", leaks);
+			malloc_leak_check_end(&leak_snap);
+		} else {
+			malloc_leak_check_free(&leak_snap);
+		}
+	}
 
 	if (uts->emit_result) {
 		bool passed = uts->cur.fail_count == old_fail_count;

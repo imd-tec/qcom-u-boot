@@ -661,6 +661,7 @@ static int show_splash(struct udevice *dev)
 
 	data = video_image_getptr(u_boot);
 	ret = video_bmp_display(dev, map_to_sysmem(data), -4, 4, true);
+	unmap_sysmem(data);
 
 	return 0;
 }

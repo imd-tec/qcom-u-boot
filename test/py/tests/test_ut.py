@@ -142,11 +142,13 @@ def test_ut(ubman, ut_subtest):
             execute command 'ut foo bar'
     """
 
+    flags = '-L ' if ubman.config.leak_check else ''
+
     if ut_subtest == 'hush hush_test_simple_dollar':
         # ut hush hush_test_simple_dollar prints "Unknown command" on purpose.
         with ubman.disable_check('unknown_command'):
-            output = ubman.run_command('ut ' + ut_subtest)
+            output = ubman.run_command(f'ut {flags}' + ut_subtest)
         assert 'Unknown command \'quux\' - try \'help\'' in output
     else:
-        output = ubman.run_command('ut ' + ut_subtest)
+        output = ubman.run_command(f'ut {flags}' + ut_subtest)
     assert output.endswith('failures: 0')

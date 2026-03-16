@@ -258,6 +258,7 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	bool force_run = false;
 	bool keep_record = false;
 	bool emit_result = false;
+	bool leak_check = false;
 	int runs_per_text = 1;
 	int workers = 0, worker_id = 0;
 	struct suite *ste;
@@ -282,6 +283,9 @@ static int do_ut(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			case 'f':
 			case 'm':
 				force_run = true;
+				break;
+			case 'L':
+				leak_check = true;
 				break;
 			case 'I':
 				test_insert = str + 1;
@@ -316,6 +320,7 @@ next_arg:
 	ut_init_state(&uts);
 	uts.keep_record = keep_record;
 	uts.emit_result = emit_result;
+	uts.leak_check = leak_check;
 	uts.workers = workers;
 	uts.worker_id = worker_id;
 	name = argv[0];
@@ -363,9 +368,10 @@ next_arg:
 }
 
 U_BOOT_LONGHELP(ut,
-	"[-Efmrs] [-R] [-I<n>:<one_test>] [-P<n>:<w>] <suite> [<test> [<args>...]]\n"
+	"[-ELfmrs] [-R] [-I<n>:<one_test>] [-P<n>:<w>] <suite> [<test> [<args>...]]\n"
 	"                                                    - run unit tests\n"
 	"   -E         Emit result line after each test\n"
+	"   -L         Check for memory leaks around each test\n"
 	"   -r<runs>   Number of times to run each test\n"
 	"   -f/-m      Force 'manual' tests to run as well\n"
 	"   -I         Test to run after <n> other tests have run\n"

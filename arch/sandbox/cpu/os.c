@@ -299,7 +299,7 @@ int os_map_file(const char *pathname, int os_flags, void **bufp, int *sizep)
 	ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, ifd, 0);
 	if (ptr == MAP_FAILED) {
 		printf("Can't map file '%s': %s\n", pathname, strerror(errno));
-		ret = -EPERM;
+		ret = errno == ENOMEM ? -ENOMEM : -EPERM;
 		goto out;
 	}
 
