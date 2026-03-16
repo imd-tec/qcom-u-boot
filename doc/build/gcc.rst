@@ -218,6 +218,20 @@ Important ones are
 * clean - remove most generated files but keep the configuration
 * mrproper - remove all generated files + config + various backup files
 
+Rust examples
+~~~~~~~~~~~~~
+
+Boards with ``CONFIG_ULIB`` (sandbox, qemu_arm64, qemu-x86, qemu-riscv64 and
+others) automatically build the Rust examples in ``examples/rust/`` if
+``cargo`` is found.  The recommended way to install the Rust toolchain is via
+`rustup <https://rustup.rs/>`_:
+
+.. code-block:: bash
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+If ``cargo`` is not installed the Rust examples are silently skipped.
+
 Installation
 ------------
 
