@@ -563,7 +563,7 @@ send --cc-cmd cc-fname" cover p1 p2', 0)
 
         result = command.run_pipe(
             [cmd], capture=True, output_func=echo_output,
-            raise_on_error=False, cwd=cwd)
+            raise_on_error=False, cwd=cwd, merge_stderr=True)
         num_sent = result.stdout.count('Result: ')
     cmd_str = ' '.join([f'"{x}"' if ' ' in x and '"' not in x else x
                         for x in cmd])
