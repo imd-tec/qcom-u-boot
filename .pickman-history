@@ -40283,104 +40283,147 @@ No code changes are required for this issue.
 
 ---
 
-Branch: cherry-eb314cb566a
+## 2026-03-17: us/next
+
+Branch: cherry-e0f9a4fb576
 
 Commits:
-- eb314cb566a imx: kontron-sl-mx6ul: Fix include statements for local header
-- 7118d961ccc imx: kontron-sl-mx6ul: Enable standard boot and disable legacy distro boot
-- 8addeb94c72 imx: kontron-sl-mx6ul: Set CONFIG_SDP_LOADADDR to fix SDP boot
-- 048fdda977a imx: kontron-sl-mx6ul: Enable second ethernet interface
-- f3406a2364e imx: kontron-sl-mx6ul: Enable fastboot support
-- 6bd59313e0c imx: kontron-sl-mx6ul: Enable redundant environment
-- 410d9ccc038 imx: kontron-sl-mx6ul: Autostart fastboot if booted from USB
-- 9e26426ceb0 imx: kontron-sl-mx6ul: Enable watchdog and sysreset
-- 827e45f28ff imx: kontron-sl-mx6ul: Enable CONFIG_ENV_IS_NOWHERE
-- 6bfd81c3394 imx: kontron-sl-mx6ul: Force default environment for serial loader boot
-- 1f87a8ac6b3 imx: kontron-sl-mx6ul: Switch to OF_UPSTREAM
-- d95c4bebf40 tools: imx8image: Make imx8image_check_params() static
-- 8c690095b84 arm: dts: imx93-phyboard-segin-u-boot: Clean-up already upstream nodes
-- d271a01dbeb configs: imx93-phycore_defconfig: Disable CONFIG_AHAB_BOOT
-- b4ab315a0a5 board: phytec: phycore-imx93: Use CONFIG_PHYTEC_EEPROM_BUS
-- 5d75b4f8767 imx8m[m,n,p]_evk: Add redundant environment support
-- 28d6f787b0d Add imx8mp-libra-fpsc board
-- 1116d915965 Merge tag 'u-boot-imx-next-20250905a' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+- e0f9a4fb576 drivers: rtc: max313xx: Add delay after setting date
+- a3f0a8e7a1b misc: fs_loader: Initialize actread variable
+- aff7f1314a1 boot: Add LEGACY_IMAGE_FORMAT to DISTRO_DEFAULTS
+- 122c25c00a2 common/spl: use memmove() in load_simple_fit()
+- ae84ef8c625 tools: Drop meaningless comment from Makefile
+- a5b483a52a5 pci: apple: Fix use of uninitialized variable
+- 5d01a971804 arm64: Properly clear BSS
+- c9d4e82670e env: Fix up indent
+- 3c34fd46b6e tools: fdtgrep: Mark util_version() as static
+- 9fe4e088f3d tools: fdtgrep: Mark util_usage() as static
+- 867d762bc51 tools: mkimage: Mark copy_datafile() as static
+- 3ae031135da tools: rkcommon: Mark rkcommon_is_header_v2() as static
+- 5ab15814e8f tool: fit_info: Mark usage() as static
+- 39f7af39bb2 tools: fit_check_sign: Mark usage() as static
+- f006837eada tools: imx8mimage: Mark build_image() as static
+- 1e73651a71d tools: imx8image: Mark imx8mimage_check_params() as static
+- 7d921410ef2 Merge patch series "tools: fdtgrep: Mark util_version() as static"
 
 ### Conversation log
-The repository is clean (just some untracked files which won't interfere). Let me create and checkout the new branch based on ci/master.
+The repository is clean (only untracked files). Now let me create and checkout a new branch based on ci/master:
 
-Good. Now let's cherry-pick the first commit:
+Now let me start cherry-picking the commits one at a time. First commit:
 
-Delta looks identical. Now run the build test:
+Cherry-pick successful. Let me check the delta and run the build:
 
-Build passed. Now continue with commit 2:
+Delta matches. Now running build test:
 
-Delta identical. Build test:
+Build passed. Commit 2:
 
-Continue with commits 3-6:
+Build passed. Commit 3:
 
-Let me check the conflict:
+Build passed. Commit 4:
 
-I see the conflict. The original commit tries to add `static` keyword and change the function signature, but in the HEAD version the function already has a different signature using `struct imgtool *itl` instead of `struct image_tool_params *params`. Let me look at both versions more carefully:
+Build passed. Commit 5:
 
-The original commit just adds `static` to the declaration. In our HEAD, the signature is already different (`struct imgtool *itl`). The fix is straightforward - the function in HEAD should also have the `static` keyword. Let me resolve this:
+Build passed. Commit 6:
 
-The resolution is clear - we should keep the HEAD signature but add the `static` keyword:
+Build passed. Commit 7:
 
-Missing the `{` - let me fix that:
+Build passed. Commit 8:
 
-Now let me add and continue the cherry-pick, amending the commit message to note the fix-up:
+Build passed. Commit 9:
+
+Build passed. Commit 10:
+
+Build passed. Commit 11:
+
+There's a conflict. Let me examine it:
+
+This is a simple conflict - the original commit just adds "static" to a function declaration. Let me look at what the conflict looks like:
+
+I see - the function already has `static` and has different signature (returns int now, takes more parameters). The target branch already has these changes incorporated. The original commit was just to add `static` which is already present. Let me check the original commit to understand what it did:
+
+The original commit just added `static` to `void copy_datafile(int ifd, char *file)`. However, in our current branch, the function already has `static` and has a different signature `static int copy_datafile(struct imgtool *itl, int ifd, char *file)`. The `static` keyword is already applied, so this change is effectively already incorporated.
+
+Let me resolve by keeping HEAD's version since it already has `static`:
+
+The commit is empty because the change (adding `static`) is already present in the target branch. Per the instructions, I should still commit it as empty to preserve the history:
+
+Build passed. Commit 12:
+
+Similar situation - the function already exists but with a different signature. Let me check the original:
+
+The original just adds `static` to the function. Let me check if the current branch version needs `static`:
+
+I see - in HEAD the function doesn't have `static`. I need to add `static` to the HEAD version. Let me resolve this conflict properly:
+
+I need to resolve this by keeping HEAD's function signature but adding `static`:
 
 Let me amend the commit to add a note about the fix-up:
 
-Now let me verify the delta and build:
+Delta matches. Build test:
 
-Now the final commit, which is a merge commit:
+Build passed. Commit 13:
 
-Yes, it's a merge commit with two parents. Use -m 1 --allow-empty:
+Empty commit - the change is already present. Let me commit it as empty:
 
-The merge commit is trying to bring in the same change we already resolved. Since the merge is empty in terms of actual content changes (all the individual commits have already been cherry-picked), we just need to keep the HEAD version:
+Build passed. Commit 14:
 
-As expected, the merge commit is now empty since all individual commits were already applied. Create the empty commit to preserve the merge history:
+Build passed. Commit 15:
 
-Now let me verify all 18 commits are present:
+Build passed. Commit 16:
 
-All 18 commits are present. Now run the final build test:
+Same pattern - need to add `static` to HEAD's version:
 
-All builds passed. Let me summarize the final status:
+Build passed. Now the last commit (17) which is a merge commit:
 
-## Final Status
+These are the same conflicts we've already resolved in the individual commits. Since this is a merge commit and we've already applied all the individual patches, the merge should be empty. Let me resolve all by keeping HEAD:
 
-**Build Result:** ✅ OK - All builds passed without warnings or errors
+As expected, the merge commit is now empty since we already applied all its constituent patches. Let me commit it:
 
-**Cherry-picked Commits:** All 18 commits successfully cherry-picked
+All 17 commits cherry-picked. Now let me verify with git log:
 
-| # | Hash | Subject | Status |
-|---|------|---------|--------|
-| 1 | e1de8016c35 | imx: kontron-sl-mx6ul: Fix include statements for local header | ✅ Clean |
-| 2 | 859c75a1121 | imx: kontron-sl-mx6ul: Enable standard boot and disable legacy distro boot | ✅ Clean |
-| 3 | 5b337d9bf6d | imx: kontron-sl-mx6ul: Set CONFIG_SDP_LOADADDR to fix SDP boot | ✅ Clean |
-| 4 | 397434883f2 | imx: kontron-sl-mx6ul: Enable second ethernet interface | ✅ Clean |
-| 5 | b4cb1c6d85b | imx: kontron-sl-mx6ul: Enable fastboot support | ✅ Clean |
-| 6 | b6ce8d959e0 | imx: kontron-sl-mx6ul: Enable redundant environment | ✅ Clean |
-| 7 | 90d5fe60462 | imx: kontron-sl-mx6ul: Autostart fastboot if booted from USB | ✅ Clean |
-| 8 | 9095f1e97bd | imx: kontron-sl-mx6ul: Enable watchdog and sysreset | ✅ Clean |
-| 9 | bdbb1049524 | imx: kontron-sl-mx6ul: Enable CONFIG_ENV_IS_NOWHERE | ✅ Clean |
-| 10 | ad94df37c44 | imx: kontron-sl-mx6ul: Force default environment for serial loader boot | ✅ Clean |
-| 11 | c845945d506 | imx: kontron-sl-mx6ul: Switch to OF_UPSTREAM | ✅ Clean (auto-merged) |
-| 12 | 0a7437dba01 | tools: imx8image: Make imx8image_check_params() static | ⚠️ **Fix-up applied** |
-| 13 | da2e705a60e | arm: dts: imx93-phyboard-segin-u-boot: Clean-up already upstream nodes | ✅ Clean |
-| 14 | e55f8b69129 | configs: imx93-phycore_defconfig: Disable CONFIG_AHAB_BOOT | ✅ Clean (auto-merged) |
-| 15 | 0fd31fc2e7e | board: phytec: phycore-imx93: Use CONFIG_PHYTEC_EEPROM_BUS | ✅ Clean (auto-merged) |
-| 16 | 661834c2f00 | imx8m[m,n,p]_evk: Add redundant environment support | ✅ Clean (auto-merged) |
-| 17 | 8d58a1ee237 | Add imx8mp-libra-fpsc board | ✅ Clean (auto-merged) |
-| 18 | 2c66b72f893 | Merge tag 'u-boot-imx-next-20250905a' | ✅ Empty commit (as expected) |
+All 17 commits are present (the last two are previous commits on ci/master). Now let me run the final build test:
 
-**Fix-ups Made:**
+Final build passed.
 
-1. **Commit #12 (tools: imx8image: Make imx8image_check_params() static)**: Conflict resolved. The original commit changed `int imx8image_check_params(struct image_tool_params *params)` to `static int imx8image_check_params(struct image_tool_params *params)`. In the target branch, the function signature had been refactored to `int imx8image_check_params(struct imgtool *itl)`. The fix-up applied the `static` keyword while preserving the target branch's function signature. Note added to commit message: `[cherry-pick: adapted to imgtool signature change in target branch]`
+## Summary
 
-**Commits with Concerning Deltas:** None - all deltas matched between cherry-picked and original commits.
+**Cherry-pick completed successfully!**
 
-**Branch Ready:** `cherry-eb314cb566a` is ready for pushing with all 18 commits.
+**Branch:** `cherry-e0f9a4fb576` (based on `ci/master`)
+
+**Build Result:** ✅ OK (no warnings or errors)
+
+**All 17 commits cherry-picked:**
+1. ✅ e0f9a4fb576 → 9a4801bcef6 `drivers: rtc: max313xx: Add delay after setting date`
+2. ✅ a3f0a8e7a1b → f68891a6967 `misc: fs_loader: Initialize actread variable`
+3. ✅ aff7f1314a1 → 6976ef832b3 `boot: Add LEGACY_IMAGE_FORMAT to DISTRO_DEFAULTS`
+4. ✅ 122c25c00a2 → 8841ef6c9bd `common/spl: use memmove() in load_simple_fit()`
+5. ✅ ae84ef8c625 → c5c2b2b8f02 `tools: Drop meaningless comment from Makefile`
+6. ✅ a5b483a52a5 → 33e9708c31a `pci: apple: Fix use of uninitialized variable`
+7. ✅ 5d01a971804 → f16aaaa6a4e `arm64: Properly clear BSS`
+8. ✅ c9d4e82670e → 693b10f49c4 `env: Fix up indent`
+9. ✅ 3c34fd46b6e → 8e1943b528f `tools: fdtgrep: Mark util_version() as static`
+10. ✅ 9fe4e088f3d → 4110b195f5a `tools: fdtgrep: Mark util_usage() as static`
+11. ⚠️ 867d762bc51 → 5e721b116b0 `tools: mkimage: Mark copy_datafile() as static` **(EMPTY - change already present)**
+12. ✅ 3ae031135da → 3c5c03da5b4 `tools: rkcommon: Mark rkcommon_is_header_v2() as static` **(Fix-up: adapted to struct imgtool \*itl API)**
+13. ⚠️ 5ab15814e8f → e2d0334301f `tool: fit_info: Mark usage() as static` **(EMPTY - change already present)**
+14. ✅ 39f7af39bb2 → 3c892910763 `tools: fit_check_sign: Mark usage() as static`
+15. ✅ f006837eada → 328430f4d67 `tools: imx8mimage: Mark build_image() as static`
+16. ✅ 1e73651a71d → ce0042746dd `tools: imx8image: Mark imx8mimage_check_params() as static` **(Fix-up: adapted to struct imgtool \*itl API)**
+17. ⚠️ 7d921410ef2 → 7e8c4655790 `Merge patch series "tools: fdtgrep..."` **(EMPTY - merge commit, patches already applied)**
+
+**Fix-ups made:**
+1. `tools: rkcommon: Mark rkcommon_is_header_v2() as static` - Adapted function signature to use `struct imgtool *itl` instead of `struct image_tool_params *params` due to API changes in target branch
+2. `tools: imx8image: Mark imx8mimage_check_params() as static` - Same API adaptation
+
+**Empty commits (preserved for history):**
+1. `tools: mkimage: Mark copy_datafile() as static` - The `static` keyword was already applied in target branch
+2. `tool: fit_info: Mark usage() as static` - The `static` keyword was already applied in target branch
+3. Merge commit - All individual patches were already cherry-picked
+
+**No concerning deltas** - all commits match their original line counts or are appropriately empty.
+
+The branch is ready for pushing.
+
 ---
 
