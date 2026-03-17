@@ -39843,76 +39843,159 @@ Rebased onto latest ci/master. Build passes.
 
 ## 2026-03-17: us/next
 
-Branch: cherry-42f959d0b09
+Branch: cherry-c9ffeefeb3e
 
 Commits:
-- 42f959d0b09 power: regulator: lp873x: Cannot test unsigned for being negative
-- 8f90028ccdb power: regulator: lp87565: Cannot test unsigned for being negative
-- 96312ed7963 power: regulator: palmas: Cannot test unsigned for being negative
-- cdc0e32e9c5 power: regulator: rzg2l-usbphy: Add parenthesis to return expression
-- c18435e648f power: regulator: tps65941: Cannot test unsigned for being negative
-- f90f10a933e Merge patch series "power: regulator: Fix some Smatch reported issues"
+- c9ffeefeb3e test: Update logic for video test
+- 58b8ff0b663 power: regulator: tps65910: Cannot test unsigned for being negative
+- b7360bd9e8e Revert "pmic: pca9450: Add optional SD_VSEL GPIO for LDO5"
+- 8a04fbd9afd pmic: pca9450: Fix enable register for LDO5
+- addfe454463 pmic: pca9450: Fix control register for LDO5
+- 281829f5ca1 pmic: pca9450: Handle hardware with fixed SD_VSEL for LDO5
+- 925f63b0209 arm: dts: imx8mp-data-modul-edm-sbc: Remove deprecated sd-vsel-gpios
+- dc0a12fecea arm: dts: imx8mp-dhcom-som: Remove deprecated sd-vsel-gpios
+- 38443338c7d power: pmic: s2mps11: look for both {voltage-,}regulators
+- 8575c09a42e ARM: dts: exynos5422-odroidxu3: rename s2mps11 regulators node
+- 983a16f3862 power: pmic: s2mps11: remove check for voltage-regulators node
+- 89cad7ed6fd ARM: dts: exynos4210-universal_c210: rename max8998 regulators node
+- e64d1a03171 ARM: dts: s5c1xx-goni: rename max8998-pmic regulators node
+- 0fdd3b42433 power: pmic: fix typo and capitalisation in max8997 Kconfig help msg
+- 920404409cf power: pmic: max8997: support maxim,max8997-pmic compatible as well
+- 1ca245d1c51 ARM: dts: exynos4210-trats: use maxim,max8997-pmic compatible
+- 31c376cf4f3 power: pmic: max8997: drop maxim,max8997 compatible
+- cec29c00bc4 ARM: dts: trats: rename max8997-pmic regulators node
+- a65798ddbb8 board: samsung: odroid: drop exynos_power_init
+- 9065b87f350 power: pmic: pca9450: Add support for system reset
+- ad197b31b3f power: pmic: pca9450: Add support for reset status
+- 95994d4e599 mmc: iproc_sdhci: Cannot test unsigned variable for negative
+- 140562d3a2b mmc: core: drop space before newline in trace printf
+- 185aa00a4f5 Merge tag 'mmc-power-next-2025-09-01' of https://source.denx.de/u-boot/custodians/u-boot-mmc into next
 
 ### Conversation log
-The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master.
+The repository state is clean (untracked files don't affect cherry-picks). Now let me create and checkout the new branch based on ci/master.
 
-Branch created. Now let me start cherry-picking the commits one at a time, starting with the first commit:
+Now let me start cherry-picking the commits one by one. First commit:
 
-First commit cherry-picked successfully. Let me verify the delta and run a build:
+Delta looks identical. Now let's run the build test:
 
-The delta is identical (1 file, 4 insertions, 4 deletions). Now let me run the build test:
+Build passed. Let me continue with the next commits:
 
-Build passed. Now cherry-pick the second commit:
+Now let me cherry-pick the final commit, which is a merge commit:
 
-Delta is identical. Now build test:
+The merge commit is empty (which is expected since all the constituent commits have already been cherry-picked). Let me commit it with --allow-empty as instructed:
 
-Build passed. Now cherry-pick the third commit:
+The merge commit is empty as expected (all changes were already cherry-picked individually). Now let me run the build test:
 
-Delta identical. Build test:
+All 24 commits are cherry-picked. Now let me verify with `git log --oneline -n 26`:
 
-Build passed. Cherry-pick the fourth commit:
+All 24 commits are present (1 merge + 23 regular commits). Now let me run the final build test:
 
-Delta identical. Build test:
-
-Build passed. Cherry-pick the fifth commit:
-
-Delta identical. Build test:
-
-Build passed. Now cherry-pick the sixth and final commit, which is a merge commit:
-
-The merge commit is empty (expected since all the individual patches were applied). I need to commit it with --allow-empty:
-
-All 6 commits cherry-picked. Let me verify the log and run the final build test:
-
-All 6 commits are present. Let me run the final build test:
-
-## Final Status
-
-**Cherry-pick completed successfully!**
+## Final Status Report
 
 ### Summary
-
-| # | Original Hash | New Hash | Subject | Status |
-|---|---------------|----------|---------|--------|
-| 1 | 42f959d0b09 | f2ca129f5e8 | power: regulator: lp873x: Cannot test unsigned for being negative | ✅ |
-| 2 | 8f90028ccdb | b65a179b898 | power: regulator: lp87565: Cannot test unsigned for being negative | ✅ |
-| 3 | 96312ed7963 | 4d3f93cf7dd | power: regulator: palmas: Cannot test unsigned for being negative | ✅ |
-| 4 | cdc0e32e9c5 | 72ddced909c | power: regulator: rzg2l-usbphy: Add parenthesis to return expression | ✅ |
-| 5 | c18435e648f | 3e82660f1b6 | power: regulator: tps65941: Cannot test unsigned for being negative | ✅ |
-| 6 | f90f10a933e | 21a13bb811d | Merge patch series "power: regulator: Fix some Smatch reported issues" | ✅ (empty) |
+All 24 commits have been successfully cherry-picked from `us/next` branch to the new branch `cherry-c9ffeefeb3e` based on `ci/master`.
 
 ### Build Result
-- **Final build: OK** - sandbox board builds successfully with no warnings/errors
+✅ **OK** - Build passes with no errors or warnings
+
+### Cherry-picked commits (24 total):
+1. `2449210a1e7` - test: Update logic for video test
+2. `c7145f8b88a` - power: regulator: tps65910: Cannot test unsigned for being negative
+3. `99e9fa9c93b` - Revert "pmic: pca9450: Add optional SD_VSEL GPIO for LDO5"
+4. `bc2e20e8777` - pmic: pca9450: Fix enable register for LDO5
+5. `b7a0c77f1d6` - pmic: pca9450: Fix control register for LDO5
+6. `771f12b4f4b` - pmic: pca9450: Handle hardware with fixed SD_VSEL for LDO5
+7. `d1604ff247e` - arm: dts: imx8mp-data-modul-edm-sbc: Remove deprecated sd-vsel-gpios
+8. `423d351a2e1` - arm: dts: imx8mp-dhcom-som: Remove deprecated sd-vsel-gpios
+9. `914a1715d55` - power: pmic: s2mps11: look for both {voltage-,}regulators
+10. `c02f10c1957` - ARM: dts: exynos5422-odroidxu3: rename s2mps11 regulators node
+11. `0a3049213d2` - power: pmic: s2mps11: remove check for voltage-regulators node
+12. `cbaa2904fc4` - ARM: dts: exynos4210-universal_c210: rename max8998 regulators node
+13. `4d8cba01249` - ARM: dts: s5c1xx-goni: rename max8998-pmic regulators node
+14. `8aeac722e7c` - power: pmic: fix typo and capitalisation in max8997 Kconfig help msg
+15. `4d45739a35b` - power: pmic: max8997: support maxim,max8997-pmic compatible as well
+16. `b2c451ea60c` - ARM: dts: exynos4210-trats: use maxim,max8997-pmic compatible
+17. `0c3950b79ef` - power: pmic: max8997: drop maxim,max8997 compatible
+18. `bf26733ab47` - ARM: dts: trats: rename max8997-pmic regulators node
+19. `dab660d0a68` - board: samsung: odroid: drop exynos_power_init
+20. `22496eb2b1a` - power: pmic: pca9450: Add support for system reset
+21. `f9bff07ff80` - power: pmic: pca9450: Add support for reset status
+22. `5dc3fafea9c` - mmc: iproc_sdhci: Cannot test unsigned variable for negative
+23. `6470a9d1a11` - mmc: core: drop space before newline in trace printf
+24. `7429e5e9e2c` - Merge tag 'mmc-power-next-2025-09-01' (empty commit - all changes already included)
 
 ### Fix-ups Made
-- None required
+None - all commits cherry-picked cleanly
 
 ### Commits with Concerning Deltas
-- None - all commit deltas matched exactly
+None - all deltas matched exactly between original and cherry-picked commits
 
-### Notes
-- The merge commit (f90f10a933e) resulted in an empty commit as expected, since all the individual patches in the series were already cherry-picked individually before it
-- Branch `cherry-42f959d0b09` is ready for pushing, based on `ci/master` with 6 commits ahead
+### Branch Status
+The branch `cherry-c9ffeefeb3e` is now 24 commits ahead of `ci/master` and is ready for pushing.
+
+---
+
+### Review: 2026-03-17
+
+Branch: cherry-c9ffeefeb3e
+
+Comments addressed:
+
+
+### Conversation log
+Good, ci/master is up to date. Now let me check the current branch status:
+
+So there are 8 commits on ci/master that are not on the branch. Let me perform the rebase:
+
+There's a conflict in .pickman-history file. Let me resolve this:
+
+This is a history file that needs to be merged. For .pickman-history, I should combine both versions:
+
+Let me see what the conflict actually looks like:
+
+I understand the conflict. The .pickman-history file has both the cherry-42f959d0b09 section (which was added to ci/master after the branch was created) and the cherry-c9ffeefeb3e section (the current MR's section). I need to resolve this conflict by keeping both sections:
+
+The rebase completed successfully. Now let me verify the deltas and run the build:
+
+All 25 commits (24 original + 1 pickman record) are now rebased on top of ci/master. Let me verify a few deltas and then run the build:
+
+The deltas look correct. Now let me run the build test:
+
+Build passed successfully. Now let me check if there's already a -v2 branch and create the appropriate local backup:
+
+The rebase is complete and pushed. Let me verify the final state:
+
+## Summary
+
+### Rebase Completed Successfully
+
+The branch `cherry-c9ffeefeb3e` has been rebased onto the latest `ci/master`.
+
+**Changes made:**
+- Rebased 25 commits (24 cherry-picked commits + 1 pickman record commit) onto latest ci/master
+- Resolved one conflict in `.pickman-history` (expected merge conflict from concurrent cherry-pick operations)
+- Created local backup branch: `cherry-c9ffeefeb3e-v2`
+- Force pushed to remote branch `cherry-c9ffeefeb3e`
+
+**Build Status:** ✅ **PASSED** - sandbox builds successfully
+
+**Commit mapping (old → new):**
+| Old Hash | New Hash | Subject |
+|----------|----------|---------|
+| 2449210a1e7 | c3db4c1d1b6 | test: Update logic for video test |
+| c7145f8b88a | 0bc25accbb2 | power: regulator: tps65910: Cannot test unsigned for being negative |
+| 99e9fa9c93b | 34974df2206 | Revert "pmic: pca9450: Add optional SD_VSEL GPIO for LDO5" |
+| ... | ... | (21 more commits) |
+| 7429e5e9e2c | 1eb275be840 | Merge tag 'mmc-power-next-2025-09-01' |
+| 0505e602616 | 8bf0c7ce6c2 | pickman: Record cherry-pick of 24 commits from us/next |
+
+**Branch Status:** 25 commits ahead of ci/master
+
+### Suggested Reply for MR:
+
+```
+Rebased onto latest ci/master. Build passes.
+```
 
 ---
 
