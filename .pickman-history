@@ -39935,3 +39935,67 @@ The branch `cherry-c9ffeefeb3e` is now 24 commits ahead of `ci/master` and is re
 
 ---
 
+### Review: 2026-03-17
+
+Branch: cherry-c9ffeefeb3e
+
+Comments addressed:
+
+
+### Conversation log
+Good, ci/master is up to date. Now let me check the current branch status:
+
+So there are 8 commits on ci/master that are not on the branch. Let me perform the rebase:
+
+There's a conflict in .pickman-history file. Let me resolve this:
+
+This is a history file that needs to be merged. For .pickman-history, I should combine both versions:
+
+Let me see what the conflict actually looks like:
+
+I understand the conflict. The .pickman-history file has both the cherry-42f959d0b09 section (which was added to ci/master after the branch was created) and the cherry-c9ffeefeb3e section (the current MR's section). I need to resolve this conflict by keeping both sections:
+
+The rebase completed successfully. Now let me verify the deltas and run the build:
+
+All 25 commits (24 original + 1 pickman record) are now rebased on top of ci/master. Let me verify a few deltas and then run the build:
+
+The deltas look correct. Now let me run the build test:
+
+Build passed successfully. Now let me check if there's already a -v2 branch and create the appropriate local backup:
+
+The rebase is complete and pushed. Let me verify the final state:
+
+## Summary
+
+### Rebase Completed Successfully
+
+The branch `cherry-c9ffeefeb3e` has been rebased onto the latest `ci/master`.
+
+**Changes made:**
+- Rebased 25 commits (24 cherry-picked commits + 1 pickman record commit) onto latest ci/master
+- Resolved one conflict in `.pickman-history` (expected merge conflict from concurrent cherry-pick operations)
+- Created local backup branch: `cherry-c9ffeefeb3e-v2`
+- Force pushed to remote branch `cherry-c9ffeefeb3e`
+
+**Build Status:** ✅ **PASSED** - sandbox builds successfully
+
+**Commit mapping (old → new):**
+| Old Hash | New Hash | Subject |
+|----------|----------|---------|
+| 2449210a1e7 | c3db4c1d1b6 | test: Update logic for video test |
+| c7145f8b88a | 0bc25accbb2 | power: regulator: tps65910: Cannot test unsigned for being negative |
+| 99e9fa9c93b | 34974df2206 | Revert "pmic: pca9450: Add optional SD_VSEL GPIO for LDO5" |
+| ... | ... | (21 more commits) |
+| 7429e5e9e2c | 1eb275be840 | Merge tag 'mmc-power-next-2025-09-01' |
+| 0505e602616 | 8bf0c7ce6c2 | pickman: Record cherry-pick of 24 commits from us/next |
+
+**Branch Status:** 25 commits ahead of ci/master
+
+### Suggested Reply for MR:
+
+```
+Rebased onto latest ci/master. Build passes.
+```
+
+---
+
