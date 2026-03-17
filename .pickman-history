@@ -39999,3 +39999,287 @@ Rebased onto latest ci/master. Build passes.
 
 ---
 
+## 2026-03-17: us/next
+
+Branch: cherry-86c5c25b6ca
+
+Commits:
+- 86c5c25b6ca memtest: don't volatile-qualify local variables
+- 835915bb7d2 memtest: only call schedule() once for every 256 words
+- 42529beba5a memtest: remove use of vu_long typedef in mem_test_alt
+- e31947724f6 Merge patch series "memtest performance improvements"
+
+### Conversation log
+The repository is clean (untracked files won't affect cherry-picking). Now let me create and checkout the new branch based on ci/master:
+
+Good. Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the commit delta and run the build:
+
+The deltas match exactly (1 file, +3/-6 lines). Now let me run the build:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second commit cherry-picked. Let me verify the delta and build:
+
+Deltas match exactly (1 file, +8/-3 lines). Now run the build:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked. Let me verify the delta and build:
+
+Deltas match exactly (1 file, +10/-10 lines). Now run the build:
+
+Build passed. Now let me cherry-pick the fourth commit (the merge commit):
+
+The merge commit is empty (as expected since all the patches were already applied). Let me commit it with --allow-empty:
+
+The merge commit was successfully committed. Let me verify the delta and build:
+
+The merge commit is now empty (as expected since the individual patches were already cherry-picked), while the original had combined stats. This is normal for a merge commit cherry-picked after its component commits. Now let me run the build:
+
+Build passed. Now let me verify the final state with git log:
+
+All 4 commits are present. Now let me run the final build:
+
+## Final Status Report
+
+**Cherry-pick operation completed successfully!**
+
+### Summary:
+- **Branch created:** `cherry-86c5c25b6ca` (based on `ci/master`)
+- **All 4 commits cherry-picked successfully:**
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | `86c5c25b6ca` | `ac9d979cbcb` | memtest: don't volatile-qualify local variables |
+| 2 | `835915bb7d2` | `11cfb662c08` | memtest: only call schedule() once for every 256 words |
+| 3 | `42529beba5a` | `20a28aafc3f` | memtest: remove use of vu_long typedef in mem_test_alt |
+| 4 | `e31947724f6` | `0fb74bcafb1` | Merge patch series "memtest performance improvements" |
+
+### Build Result: **OK**
+- All intermediate builds passed
+- Final build passed
+
+### Fix-ups Made: **None**
+- All cherry-picks applied cleanly without conflicts
+
+### Commit Delta Notes:
+- Commits 1-3: All deltas matched exactly between original and cherry-picked versions
+- Commit 4 (merge): Empty as expected - the individual patches were already applied, so the merge commit preserves only the merge message for history tracking
+
+The branch `cherry-86c5c25b6ca` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-17 (attempt 1)
+
+Branch: cherry-86c5c25b6ca
+
+Failed jobs:
+- vbe (sjg-lab)
+
+### Conversation log
+Now I understand the failure. Let me analyze the logs:
+
+The failure is happening in the VPL (Verified Platform Layer) stage of U-Boot boot on a real hardware test (rk3399-generic-ddr3 board). The key error is:
+
+```
+U-Boot VPL 2026.02-g0fb74bcafb1f (Mar 17 2026 - 13:46:39)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -110
+VPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+Error -110 is typically `ETIMEDOUT` in Linux. The board can't boot because VPL fails to boot from `vbe_abrec`.
+
+This is happening on a lab-based hardware test (not a build failure). The MR contains memtest performance improvements which shouldn't affect VBE (Verified Boot for Embedded) booting at all.
+
+Let me checkout the branch and investigate further:
+
+Now let me look at the commits that are part of this MR. The MR contains memtest improvements - these should NOT affect VBE booting at all. Let me check if the failure is related to the actual code changes or if this is an infrastructure/transient issue:
+
+All the MR commits only touch `cmd/mem.c` - the memtest command. This has absolutely nothing to do with VBE (Verified Boot for Embedded) booting or the VPL (Verified Platform Layer) phase.
+
+Let me look more closely at the error - it's a real hardware board test failure:
+
+```
+U-Boot VPL 2026.02-g0fb74bcafb1f (Mar 17 2026 - 13:46:39)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -110
+VPL: failed to boot from all boot devices
+```
+
+Error -110 is ETIMEDOUT - a timeout error. This is happening in the VPL phase trying to boot from `vbe_abrec` boot device.
+
+Let me check if there are any recent issues with this test infrastructure or if ci/master has the same issue:
+
+So this branch has exactly the memtest commits on top of ci/master.
+
+Let me verify the code changes to be absolutely certain they can't affect VBE:
+
+The cmd/mem.c file is just for memory test commands. The VBE boot failure at VPL stage (Error: -110, ETIMEDOUT) has nothing to do with the memtest command implementation.
+
+Let me check the diff to be absolutely sure there's nothing that could affect boot:
+
+The diff confirms it - all changes are strictly within the `mem_test_alt()` function in `cmd/mem.c`. This is the memtest command implementation. The VBE failure is happening at:
+
+1. **VPL stage** - this is the Verified Platform Layer, which boots before U-Boot proper even runs
+2. **Error -110 (ETIMEDOUT)** - a timeout trying to read from storage/flash
+3. **vbe_abrec boot method** - the A/B recovery boot method for VBE
+
+The memtest code:
+- Is in `cmd/mem.c` - a command that runs in U-Boot proper (not TPL, VPL, or SPL)
+- Only affects the `mtest` command when explicitly invoked by a user
+- Is not compiled into or executed by the VPL phase at all
+- Cannot possibly cause a timeout during VPL trying to boot
+
+This is clearly an **infrastructure or transient hardware issue**, not a code problem. The board (Firefly-RK3399) is timing out when VPL tries to read from the boot device (likely eMMC or SD card).
+
+Possible causes:
+- Hardware glitch on the lab board
+- Flash/eMMC/SD issue
+- Power supply problem
+- Lab infrastructure connectivity issue
+
+Let me report this finding:
+
+---
+
+## Analysis Report
+
+### Failure Type: **Infrastructure/Transient Issue**
+
+### Summary
+The VBE job failure is **NOT caused by the code changes** in this MR. This is an infrastructure/hardware issue with the lab test board.
+
+### Evidence
+
+1. **MR Changes**: All commits in this MR only modify `cmd/mem.c`:
+   - `memtest: don't volatile-qualify local variables`
+   - `memtest: only call schedule() once for every 256 words`
+   - `memtest: remove use of vu_long typedef in mem_test_alt`
+   - Plus the merge commit
+
+2. **What the code changes do**: Optimize the `mtest` command for performance by reducing volatile qualifications on local variables and rate-limiting `schedule()` calls.
+
+3. **Failure location**: The failure occurs in **VPL (Verified Platform Layer)** during the early boot phase:
+   ```
+   U-Boot VPL 2026.02-g0fb74bcafb1f
+   Trying to boot from vbe_abrec
+   Error: -110
+   VPL: failed to boot from all boot devices
+   ```
+
+4. **Why code cannot be responsible**:
+   - The memtest code in `cmd/mem.c` is a user command that runs in U-Boot proper
+   - VPL runs before U-Boot proper, during the early boot phase
+   - The memtest command is not even compiled into VPL
+   - Error -110 (`ETIMEDOUT`) indicates a hardware/storage timeout, not a code bug
+
+5. **Root cause**: The Firefly-RK3399 lab board experienced a timeout reading from the boot device (likely eMMC/SD). This could be due to:
+   - Transient hardware issue
+   - Flash wear/reliability problem
+   - Lab infrastructure issue
+   - Power glitch
+
+### Recommendation
+**No code changes needed.** This is an infrastructure issue. The MR should be:
+1. Re-triggered to retry the test, or
+2. The lab board should be investigated for hardware problems
+
+Since this is a transient/infrastructure issue, I am not making any changes to the branch.
+
+---
+
+### Review: 2026-03-17
+
+Branch: cherry-86c5c25b6ca
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) vbe.
+
+Now I understand the failure. Let me analyze the...
+
+### Conversation log
+Now I can see the branch. Let me review the comment again - it says "Pipeline fix (attempt 1): fixed failed job(s) vbe." But looking at the context from the MR description, the previous analysis concluded this was an **infrastructure/transient issue** and NOT a code problem. The VBE failure is unrelated to the memtest code changes.
+
+Let me verify the current state and understand what the comment is asking:
+
+Looking at the review comment again: "Pipeline fix (attempt 1): fixed failed job(s) vbe."
+
+This seems to be saying the pipeline fix for the vbe job failure has been applied. But based on the previous analysis in the MR description, the conclusion was that:
+
+1. The VBE failure is an **infrastructure/transient issue** - not a code problem
+2. The memtest code changes only touch `cmd/mem.c` and cannot affect VBE/VPL booting
+3. No code changes were made ("Since this is a transient/infrastructure issue, I am not making any changes to the branch")
+
+The comment appears to be acknowledging the analysis that no code fix is needed. Let me verify the current state of the code to make sure nothing is broken:
+
+Good, the code changes are all present. Now let me run the build to verify everything is working:
+
+The build passes. Now let me understand the review comment better. Looking at the comment:
+
+> "Pipeline fix (attempt 1): fixed failed job(s) vbe."
+
+This appears to be a comment from an automated bot indicating that an attempt was made to fix the failed vbe job. However, based on the detailed analysis in the MR description, it was determined that:
+
+1. This is an **infrastructure/transient hardware issue** with the Firefly-RK3399 lab board
+2. The memtest code changes cannot possibly affect VPL/VBE boot (they only modify `cmd/mem.c`)
+3. No code changes were made because this is not a code problem
+
+The comment seems to be asking me to review whether any action is needed for this pipeline failure. Since the analysis already concluded this is a transient infrastructure issue:
+
+1. The code is correct
+2. The build passes
+3. The VBE failure is unrelated to the code changes
+
+Since no code changes are needed (this is an infrastructure issue, not a code bug), there's nothing actionable to do for this comment. The appropriate response would be to acknowledge that this is a transient infrastructure issue and request a pipeline retry.
+
+Let me verify no v2 branch already exists and prepare the summary:
+
+## Summary Report
+
+### Review Comment Analysis
+
+**Comment:** "Pipeline fix (attempt 1): fixed failed job(s) vbe."
+
+**Analysis:** This comment references the VBE pipeline job failure that was analyzed in detail in the MR description. The previous analysis concluded:
+
+1. **The failure is an infrastructure/transient issue** - not a code problem
+2. The VBE failure occurred during VPL (Verified Platform Layer) boot with Error -110 (ETIMEDOUT) 
+3. The memtest code changes only modify `cmd/mem.c` - a user command that runs in U-Boot proper
+4. The VPL phase runs before U-Boot proper and does not include the memtest command
+5. The memtest changes cannot possibly cause a VPL boot timeout
+
+### Action Taken
+
+**No code changes needed.** The build passes successfully. This is a transient hardware/infrastructure issue with the Firefly-RK3399 lab board, not a bug in the code.
+
+### Recommended Reply for MR
+
+```
+The VBE job failure is an infrastructure/transient issue, not a code problem.
+
+**Analysis:**
+- All commits in this MR only modify `cmd/mem.c` (memtest command)
+- The failure occurs in VPL phase (Error -110/ETIMEDOUT) before U-Boot proper runs
+- The memtest command is not even compiled into VPL
+- A storage/hardware timeout on the Firefly-RK3399 lab board cannot be caused by memtest code changes
+
+**Recommendation:** Please retry the pipeline. If the failure persists, the lab board hardware should be investigated.
+
+No code changes are required for this issue.
+```
+
+### Status
+- **Branch:** cherry-86c5c25b6ca (no changes made)
+- **Build:** Passes (verified with buildman sandbox)
+- **Action:** None required - this is an infrastructure issue
+- **Next Step:** Request pipeline retry or escalate to lab infrastructure team
+
+---
+
