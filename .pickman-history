@@ -40072,3 +40072,126 @@ The branch `cherry-86c5c25b6ca` is ready for pushing.
 
 ---
 
+### Pipeline fix: 2026-03-17 (attempt 1)
+
+Branch: cherry-86c5c25b6ca
+
+Failed jobs:
+- vbe (sjg-lab)
+
+### Conversation log
+Now I understand the failure. Let me analyze the logs:
+
+The failure is happening in the VPL (Verified Platform Layer) stage of U-Boot boot on a real hardware test (rk3399-generic-ddr3 board). The key error is:
+
+```
+U-Boot VPL 2026.02-g0fb74bcafb1f (Mar 17 2026 - 13:46:39)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -110
+VPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+Error -110 is typically `ETIMEDOUT` in Linux. The board can't boot because VPL fails to boot from `vbe_abrec`.
+
+This is happening on a lab-based hardware test (not a build failure). The MR contains memtest performance improvements which shouldn't affect VBE (Verified Boot for Embedded) booting at all.
+
+Let me checkout the branch and investigate further:
+
+Now let me look at the commits that are part of this MR. The MR contains memtest improvements - these should NOT affect VBE booting at all. Let me check if the failure is related to the actual code changes or if this is an infrastructure/transient issue:
+
+All the MR commits only touch `cmd/mem.c` - the memtest command. This has absolutely nothing to do with VBE (Verified Boot for Embedded) booting or the VPL (Verified Platform Layer) phase.
+
+Let me look more closely at the error - it's a real hardware board test failure:
+
+```
+U-Boot VPL 2026.02-g0fb74bcafb1f (Mar 17 2026 - 13:46:39)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -110
+VPL: failed to boot from all boot devices
+```
+
+Error -110 is ETIMEDOUT - a timeout error. This is happening in the VPL phase trying to boot from `vbe_abrec` boot device.
+
+Let me check if there are any recent issues with this test infrastructure or if ci/master has the same issue:
+
+So this branch has exactly the memtest commits on top of ci/master.
+
+Let me verify the code changes to be absolutely certain they can't affect VBE:
+
+The cmd/mem.c file is just for memory test commands. The VBE boot failure at VPL stage (Error: -110, ETIMEDOUT) has nothing to do with the memtest command implementation.
+
+Let me check the diff to be absolutely sure there's nothing that could affect boot:
+
+The diff confirms it - all changes are strictly within the `mem_test_alt()` function in `cmd/mem.c`. This is the memtest command implementation. The VBE failure is happening at:
+
+1. **VPL stage** - this is the Verified Platform Layer, which boots before U-Boot proper even runs
+2. **Error -110 (ETIMEDOUT)** - a timeout trying to read from storage/flash
+3. **vbe_abrec boot method** - the A/B recovery boot method for VBE
+
+The memtest code:
+- Is in `cmd/mem.c` - a command that runs in U-Boot proper (not TPL, VPL, or SPL)
+- Only affects the `mtest` command when explicitly invoked by a user
+- Is not compiled into or executed by the VPL phase at all
+- Cannot possibly cause a timeout during VPL trying to boot
+
+This is clearly an **infrastructure or transient hardware issue**, not a code problem. The board (Firefly-RK3399) is timing out when VPL tries to read from the boot device (likely eMMC or SD card).
+
+Possible causes:
+- Hardware glitch on the lab board
+- Flash/eMMC/SD issue
+- Power supply problem
+- Lab infrastructure connectivity issue
+
+Let me report this finding:
+
+---
+
+## Analysis Report
+
+### Failure Type: **Infrastructure/Transient Issue**
+
+### Summary
+The VBE job failure is **NOT caused by the code changes** in this MR. This is an infrastructure/hardware issue with the lab test board.
+
+### Evidence
+
+1. **MR Changes**: All commits in this MR only modify `cmd/mem.c`:
+   - `memtest: don't volatile-qualify local variables`
+   - `memtest: only call schedule() once for every 256 words`
+   - `memtest: remove use of vu_long typedef in mem_test_alt`
+   - Plus the merge commit
+
+2. **What the code changes do**: Optimize the `mtest` command for performance by reducing volatile qualifications on local variables and rate-limiting `schedule()` calls.
+
+3. **Failure location**: The failure occurs in **VPL (Verified Platform Layer)** during the early boot phase:
+   ```
+   U-Boot VPL 2026.02-g0fb74bcafb1f
+   Trying to boot from vbe_abrec
+   Error: -110
+   VPL: failed to boot from all boot devices
+   ```
+
+4. **Why code cannot be responsible**:
+   - The memtest code in `cmd/mem.c` is a user command that runs in U-Boot proper
+   - VPL runs before U-Boot proper, during the early boot phase
+   - The memtest command is not even compiled into VPL
+   - Error -110 (`ETIMEDOUT`) indicates a hardware/storage timeout, not a code bug
+
+5. **Root cause**: The Firefly-RK3399 lab board experienced a timeout reading from the boot device (likely eMMC/SD). This could be due to:
+   - Transient hardware issue
+   - Flash wear/reliability problem
+   - Lab infrastructure issue
+   - Power glitch
+
+### Recommendation
+**No code changes needed.** This is an infrastructure issue. The MR should be:
+1. Re-triggered to retry the test, or
+2. The lab board should be investigated for hardware problems
+
+Since this is a transient/infrastructure issue, I am not making any changes to the branch.
+
+---
+
