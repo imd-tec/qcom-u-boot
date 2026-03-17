@@ -40283,3 +40283,104 @@ No code changes are required for this issue.
 
 ---
 
+Branch: cherry-eb314cb566a
+
+Commits:
+- eb314cb566a imx: kontron-sl-mx6ul: Fix include statements for local header
+- 7118d961ccc imx: kontron-sl-mx6ul: Enable standard boot and disable legacy distro boot
+- 8addeb94c72 imx: kontron-sl-mx6ul: Set CONFIG_SDP_LOADADDR to fix SDP boot
+- 048fdda977a imx: kontron-sl-mx6ul: Enable second ethernet interface
+- f3406a2364e imx: kontron-sl-mx6ul: Enable fastboot support
+- 6bd59313e0c imx: kontron-sl-mx6ul: Enable redundant environment
+- 410d9ccc038 imx: kontron-sl-mx6ul: Autostart fastboot if booted from USB
+- 9e26426ceb0 imx: kontron-sl-mx6ul: Enable watchdog and sysreset
+- 827e45f28ff imx: kontron-sl-mx6ul: Enable CONFIG_ENV_IS_NOWHERE
+- 6bfd81c3394 imx: kontron-sl-mx6ul: Force default environment for serial loader boot
+- 1f87a8ac6b3 imx: kontron-sl-mx6ul: Switch to OF_UPSTREAM
+- d95c4bebf40 tools: imx8image: Make imx8image_check_params() static
+- 8c690095b84 arm: dts: imx93-phyboard-segin-u-boot: Clean-up already upstream nodes
+- d271a01dbeb configs: imx93-phycore_defconfig: Disable CONFIG_AHAB_BOOT
+- b4ab315a0a5 board: phytec: phycore-imx93: Use CONFIG_PHYTEC_EEPROM_BUS
+- 5d75b4f8767 imx8m[m,n,p]_evk: Add redundant environment support
+- 28d6f787b0d Add imx8mp-libra-fpsc board
+- 1116d915965 Merge tag 'u-boot-imx-next-20250905a' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+
+### Conversation log
+The repository is clean (just some untracked files which won't interfere). Let me create and checkout the new branch based on ci/master.
+
+Good. Now let's cherry-pick the first commit:
+
+Delta looks identical. Now run the build test:
+
+Build passed. Now continue with commit 2:
+
+Delta identical. Build test:
+
+Continue with commits 3-6:
+
+Let me check the conflict:
+
+I see the conflict. The original commit tries to add `static` keyword and change the function signature, but in the HEAD version the function already has a different signature using `struct imgtool *itl` instead of `struct image_tool_params *params`. Let me look at both versions more carefully:
+
+The original commit just adds `static` to the declaration. In our HEAD, the signature is already different (`struct imgtool *itl`). The fix is straightforward - the function in HEAD should also have the `static` keyword. Let me resolve this:
+
+The resolution is clear - we should keep the HEAD signature but add the `static` keyword:
+
+Missing the `{` - let me fix that:
+
+Now let me add and continue the cherry-pick, amending the commit message to note the fix-up:
+
+Let me amend the commit to add a note about the fix-up:
+
+Now let me verify the delta and build:
+
+Now the final commit, which is a merge commit:
+
+Yes, it's a merge commit with two parents. Use -m 1 --allow-empty:
+
+The merge commit is trying to bring in the same change we already resolved. Since the merge is empty in terms of actual content changes (all the individual commits have already been cherry-picked), we just need to keep the HEAD version:
+
+As expected, the merge commit is now empty since all individual commits were already applied. Create the empty commit to preserve the merge history:
+
+Now let me verify all 18 commits are present:
+
+All 18 commits are present. Now run the final build test:
+
+All builds passed. Let me summarize the final status:
+
+## Final Status
+
+**Build Result:** ✅ OK - All builds passed without warnings or errors
+
+**Cherry-picked Commits:** All 18 commits successfully cherry-picked
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | e1de8016c35 | imx: kontron-sl-mx6ul: Fix include statements for local header | ✅ Clean |
+| 2 | 859c75a1121 | imx: kontron-sl-mx6ul: Enable standard boot and disable legacy distro boot | ✅ Clean |
+| 3 | 5b337d9bf6d | imx: kontron-sl-mx6ul: Set CONFIG_SDP_LOADADDR to fix SDP boot | ✅ Clean |
+| 4 | 397434883f2 | imx: kontron-sl-mx6ul: Enable second ethernet interface | ✅ Clean |
+| 5 | b4cb1c6d85b | imx: kontron-sl-mx6ul: Enable fastboot support | ✅ Clean |
+| 6 | b6ce8d959e0 | imx: kontron-sl-mx6ul: Enable redundant environment | ✅ Clean |
+| 7 | 90d5fe60462 | imx: kontron-sl-mx6ul: Autostart fastboot if booted from USB | ✅ Clean |
+| 8 | 9095f1e97bd | imx: kontron-sl-mx6ul: Enable watchdog and sysreset | ✅ Clean |
+| 9 | bdbb1049524 | imx: kontron-sl-mx6ul: Enable CONFIG_ENV_IS_NOWHERE | ✅ Clean |
+| 10 | ad94df37c44 | imx: kontron-sl-mx6ul: Force default environment for serial loader boot | ✅ Clean |
+| 11 | c845945d506 | imx: kontron-sl-mx6ul: Switch to OF_UPSTREAM | ✅ Clean (auto-merged) |
+| 12 | 0a7437dba01 | tools: imx8image: Make imx8image_check_params() static | ⚠️ **Fix-up applied** |
+| 13 | da2e705a60e | arm: dts: imx93-phyboard-segin-u-boot: Clean-up already upstream nodes | ✅ Clean |
+| 14 | e55f8b69129 | configs: imx93-phycore_defconfig: Disable CONFIG_AHAB_BOOT | ✅ Clean (auto-merged) |
+| 15 | 0fd31fc2e7e | board: phytec: phycore-imx93: Use CONFIG_PHYTEC_EEPROM_BUS | ✅ Clean (auto-merged) |
+| 16 | 661834c2f00 | imx8m[m,n,p]_evk: Add redundant environment support | ✅ Clean (auto-merged) |
+| 17 | 8d58a1ee237 | Add imx8mp-libra-fpsc board | ✅ Clean (auto-merged) |
+| 18 | 2c66b72f893 | Merge tag 'u-boot-imx-next-20250905a' | ✅ Empty commit (as expected) |
+
+**Fix-ups Made:**
+
+1. **Commit #12 (tools: imx8image: Make imx8image_check_params() static)**: Conflict resolved. The original commit changed `int imx8image_check_params(struct image_tool_params *params)` to `static int imx8image_check_params(struct image_tool_params *params)`. In the target branch, the function signature had been refactored to `int imx8image_check_params(struct imgtool *itl)`. The fix-up applied the `static` keyword while preserving the target branch's function signature. Note added to commit message: `[cherry-pick: adapted to imgtool signature change in target branch]`
+
+**Commits with Concerning Deltas:** None - all deltas matched between cherry-picked and original commits.
+
+**Branch Ready:** `cherry-eb314cb566a` is ready for pushing with all 18 commits.
+---
+
