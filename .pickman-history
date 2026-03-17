@@ -39841,3 +39841,78 @@ Rebased onto latest ci/master. Build passes.
 
 ---
 
+## 2026-03-17: us/next
+
+Branch: cherry-42f959d0b09
+
+Commits:
+- 42f959d0b09 power: regulator: lp873x: Cannot test unsigned for being negative
+- 8f90028ccdb power: regulator: lp87565: Cannot test unsigned for being negative
+- 96312ed7963 power: regulator: palmas: Cannot test unsigned for being negative
+- cdc0e32e9c5 power: regulator: rzg2l-usbphy: Add parenthesis to return expression
+- c18435e648f power: regulator: tps65941: Cannot test unsigned for being negative
+- f90f10a933e Merge patch series "power: regulator: Fix some Smatch reported issues"
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master.
+
+Branch created. Now let me start cherry-picking the commits one at a time, starting with the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run a build:
+
+The delta is identical (1 file, 4 insertions, 4 deletions). Now let me run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta is identical. Now build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Delta identical. Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Delta identical. Build test:
+
+Build passed. Cherry-pick the fifth commit:
+
+Delta identical. Build test:
+
+Build passed. Now cherry-pick the sixth and final commit, which is a merge commit:
+
+The merge commit is empty (expected since all the individual patches were applied). I need to commit it with --allow-empty:
+
+All 6 commits cherry-picked. Let me verify the log and run the final build test:
+
+All 6 commits are present. Let me run the final build test:
+
+## Final Status
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 42f959d0b09 | f2ca129f5e8 | power: regulator: lp873x: Cannot test unsigned for being negative | ✅ |
+| 2 | 8f90028ccdb | b65a179b898 | power: regulator: lp87565: Cannot test unsigned for being negative | ✅ |
+| 3 | 96312ed7963 | 4d3f93cf7dd | power: regulator: palmas: Cannot test unsigned for being negative | ✅ |
+| 4 | cdc0e32e9c5 | 72ddced909c | power: regulator: rzg2l-usbphy: Add parenthesis to return expression | ✅ |
+| 5 | c18435e648f | 3e82660f1b6 | power: regulator: tps65941: Cannot test unsigned for being negative | ✅ |
+| 6 | f90f10a933e | 21a13bb811d | Merge patch series "power: regulator: Fix some Smatch reported issues" | ✅ (empty) |
+
+### Build Result
+- **Final build: OK** - sandbox board builds successfully with no warnings/errors
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all commit deltas matched exactly
+
+### Notes
+- The merge commit (f90f10a933e) resulted in an empty commit as expected, since all the individual patches in the series were already cherry-picked individually before it
+- Branch `cherry-42f959d0b09` is ready for pushing, based on `ci/master` with 6 commits ahead
+
+---
+
