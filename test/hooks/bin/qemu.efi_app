@@ -39,7 +39,7 @@ fi
 
 if [ "${efi_virtio_blk}" = "y" ]; then
 	ARGS+=" -device virtio-blk-device,drive=efi_fat"
-	ARGS+=" -drive id=efi_fat,file=fat:rw:${efi_stage},format=raw"
+	ARGS+=" -drive id=efi_fat,if=none,file=fat:rw:${efi_stage},format=raw"
 else
 	ARGS+=" -drive file=fat:rw:${efi_stage},format=raw"
 fi

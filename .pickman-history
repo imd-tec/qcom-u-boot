@@ -39622,3 +39622,222 @@ All 5 commits are present. Running final build verification:
 
 ---
 
+## 2026-03-15: us/next
+
+Branch: cherry-1fa34093294
+
+Commits:
+- 1fa34093294 xilinx: Make XILINX_OF_BOARD_DTB_ADDR depending on OF_BOARD only
+- d0e8a208f6f serial: uartlite: Use private data instead of platform
+- 3a85a27e346 serial: uartlite: Add support for OF_PLATDATA
+- 6d491e8913f clk: zynqmp: Mark zynqmp_clk_ops as const
+- 4b2679efc5f mailbox: zynqmp-ipi: Mark zynqmp_ipi_dest_mbox_ops as const
+- 25801ef2d46 dm: core: Mark root_info as const
+- 029f26eb5f1 CI: Wire mbv32 combinations
+- a51b7dfc6fe ufs: amd-versal2: Configure RMMI and M-PHY registers for HS mode
+- 59d1ce83dd0 Merge tag 'xilinx-for-v2026.01-rc1' of https://source.denx.de/u-boot/custodians/u-boot-microblaze into next
+
+### Conversation log
+The repository state is clean (only untracked files, which won't interfere with cherry-picking). Let me proceed with creating the branch and starting the cherry-picks.
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Let me verify the delta and run the build test:
+
+The delta matches exactly. Now let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta matches. Build test:
+
+Build passed. Third commit:
+
+Delta matches. Build test:
+
+Build passed. Fourth commit:
+
+Delta matches. Build test:
+
+Build passed. Fifth commit:
+
+Delta matches. Build test:
+
+Build passed. Sixth commit:
+
+Delta matches. Build test:
+
+Build passed. Seventh commit:
+
+There's a conflict. Let me check the conflicting file:
+
+I can see the conflict. It's a conflict in the before_script section where the path structure has changed. Let me look at the full conflict markers:
+
+Only one conflict. Let me see the conflicting section in detail:
+
+I can see the conflict clearly. The issue is:
+1. HEAD (ci/master) uses the new path structure `test/hooks/bin/travis-ci/` 
+2. The incoming commit uses the old path `/tmp/uboot-test-hooks/bin/travis-ci/`
+
+The important change from 029f26eb5f1 is adding the xilinx_mbv32_smode board to the if condition on line 78. I need to resolve this by keeping the HEAD paths but including the new board condition.
+
+No more conflict markers. Let me verify the resolution looks correct:
+
+The conflict is resolved correctly. Now let me add the file and continue the cherry-pick:
+
+Now let me amend the commit to add a note about the conflict resolution:
+
+Now let me verify the delta and run the build test:
+
+Delta matches exactly (48 additions, 4 deletions). Let me run the build test:
+
+Build passed. Now the eighth commit:
+
+Delta matches exactly. Build test:
+
+Build passed. Now the ninth and final commit, which is a merge commit:
+
+Another conflict in the merge commit. Let me check what's happening:
+
+Same kind of conflict - the merge commit brings the old path structure but we need to keep the new one. Let me resolve it:
+
+The conflict is straightforward - we keep HEAD's version (new paths with test/hooks/):
+
+Good. Let me verify and continue:
+
+Let me amend this commit with a note about the conflict resolution:
+
+Now let me verify the delta and run the build test:
+
+The delta is different, but that's expected for a merge commit being cherry-picked with `-m 1`. The original merge brought in changes from multiple commits, but when cherry-picking with `-m 1`, we only get the diff against the first parent. In this case, the important thing is that the merge commit is preserved in the history. Let me run the build test:
+
+Build passed. Now let me verify all 9 commits are present:
+
+All 9 commits are present. Now let me run the final build test:
+
+Final build passed. Let me provide a summary:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+No warnings or errors. The sandbox build passes successfully.
+
+### All 9 Commits Cherry-picked:
+| # | Original Hash | Cherry-picked Hash | Subject |
+|---|---------------|-------------------|---------|
+| 1 | 1fa34093294 | 9a4e3abc1b2 | xilinx: Make XILINX_OF_BOARD_DTB_ADDR depending on OF_BOARD only |
+| 2 | d0e8a208f6f | 2b317cfbb18 | serial: uartlite: Use private data instead of platform |
+| 3 | 3a85a27e346 | fb97ddd4233 | serial: uartlite: Add support for OF_PLATDATA |
+| 4 | 6d491e8913f | c4f338f564d | clk: zynqmp: Mark zynqmp_clk_ops as const |
+| 5 | 4b2679efc5f | 6ae95790bf8 | mailbox: zynqmp-ipi: Mark zynqmp_ipi_dest_mbox_ops as const |
+| 6 | 25801ef2d46 | 5681fad5273 | dm: core: Mark root_info as const |
+| 7 | 029f26eb5f1 | 6860c3465a7 | CI: Wire mbv32 combinations |
+| 8 | a51b7dfc6fe | 38ab44c611f | ufs: amd-versal2: Configure RMMI and M-PHY registers for HS mode |
+| 9 | 59d1ce83dd0 | 763512b955b | Merge tag 'xilinx-for-v2026.01-rc1' ... into next |
+
+### Fix-ups Made:
+1. **Commit 7 (CI: Wire mbv32 combinations)**: Conflict resolution in `.gitlab-ci.yml`
+   - Kept `test/hooks/` paths instead of `/tmp/uboot-test-hooks/`
+   - Added `xilinx_mbv32_smode` board to the riscv32 if condition
+   - Note added to commit message
+
+2. **Commit 9 (Merge commit)**: Conflict resolution in `.gitlab-ci.yml`
+   - Same path conflict - kept `test/hooks/` paths instead of `/tmp/uboot-test-hooks/`
+   - Note added to commit message
+
+### Delta Analysis:
+- Commits 1-8: All deltas match exactly between original and cherry-picked versions
+- Commit 9 (merge commit): Expected difference - cherry-picking a merge with `-m 1` only includes the diff against the first parent, not the full merged changes. The commit message is preserved for history tracking.
+
+### Branch Ready for Push:
+The branch `cherry-1fa34093294` is ready on top of `ci/master` with all 9 commits.
+
+---
+
+### Review: 2026-03-15
+
+Branch: cherry-1fa34093294
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot directory. Let me proceed:
+
+Let me fetch correctly and check the remote configuration:
+
+Good, the `remotes/ci/master` already exists. Let me fetch the latest and check if rebase is needed:
+
+The branch is based on `b4fb1ff5c1d` but `ci/master` is now at `a4b366e42af`. Let me see how many commits the branch is behind:
+
+The branch is 16 commits behind ci/master. Let me record the commit hashes and deltas before rebasing:
+
+Good, I have the pre-rebase stats recorded. Now let me perform the rebase:
+
+The rebase completed successfully without conflicts. Now let me verify the commits and their deltas:
+
+Now let me verify the deltas match:
+
+All deltas match exactly:
+
+| # | Subject | Pre-rebase | Post-rebase |
+|---|---------|------------|-------------|
+| 1 | xilinx: Make XILINX_OF_BOARD_DTB_ADDR... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 2 | serial: uartlite: Use private data... | 1 file, 14+, 6- | 1 file, 14+, 6- ✓ |
+| 3 | serial: uartlite: Add support for... | 1 file, 18+, 1- | 1 file, 18+, 1- ✓ |
+| 4 | clk: zynqmp: Mark zynqmp_clk_ops... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 5 | mailbox: zynqmp-ipi: Mark... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 6 | dm: core: Mark root_info... | 1 file, 1+, 1- | 1 file, 1+, 1- ✓ |
+| 7 | CI: Wire mbv32 combinations | 2 files, 48+, 4- | 2 files, 48+, 4- ✓ |
+| 8 | ufs: amd-versal2: Configure... | 4 files, 133+ | 4 files, 133+ ✓ |
+| 9 | Merge tag 'xilinx-for-v2026.01-rc1'... | 1 file, 28+ | 1 file, 28+ ✓ |
+| 10 | pickman: Record cherry-pick... | 1 file, 131+ | 1 file, 131+ ✓ |
+
+Now let me run the build test:
+
+Build passed. Now let me create the local -v2 branch and push:
+
+## Summary
+
+### Rebase Completed Successfully
+
+**Branch:** `cherry-1fa34093294`  
+**MR:** !718
+
+### What was done:
+1. **Rebased branch onto latest `ci/master`** (a4b366e42af)
+   - Branch was 16 commits behind target
+   - Rebase completed cleanly without conflicts
+
+2. **Verified all commit deltas match** (pre-rebase vs post-rebase):
+   - All 10 commits preserved with identical file changes
+   - No unexpected modifications
+
+3. **Build test passed** - sandbox build successful
+
+4. **Pushed to remote** - MR updated via force push
+   - Local backup branch: `cherry-1fa34093294-v2`
+   - Remote branch updated: `cherry-1fa34093294`
+
+### Commit mapping (old → new):
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 9a4e3abc1b2 | e23457a7895 | xilinx: Make XILINX_OF_BOARD_DTB_ADDR... |
+| 2 | 2b317cfbb18 | a2586fd07c0 | serial: uartlite: Use private data... |
+| 3 | fb97ddd4233 | 717ca87a96d | serial: uartlite: Add support for OF_PLATDATA |
+| 4 | c4f338f564d | e62802ae239 | clk: zynqmp: Mark zynqmp_clk_ops as const |
+| 5 | 6ae95790bf8 | 0d6de9a09dd | mailbox: zynqmp-ipi: Mark zynqmp_ipi_dest_mbox_ops... |
+| 6 | 5681fad5273 | 8fa731c957e | dm: core: Mark root_info as const |
+| 7 | 6860c3465a7 | 91a5ec62eff | CI: Wire mbv32 combinations |
+| 8 | 38ab44c611f | 1126ac8542f | ufs: amd-versal2: Configure RMMI... |
+| 9 | 763512b955b | 40b2afb3659 | Merge tag 'xilinx-for-v2026.01-rc1'... |
+| 10 | c6c253b01a5 | 1ad80765f8e | pickman: Record cherry-pick... |
+
+### Suggested reply for MR:
+```
+Rebased onto latest ci/master. Build passes.
+```
+
+---
+
