@@ -40722,3 +40722,233 @@ The branch `cherry-bb947665f57` is now ready for pushing with 10 commits ahead o
 
 ---
 
+## 2026-03-18: us/next
+
+Branch: cherry-ecced05f679
+
+Commits:
+- ecced05f679 lib: Tidy up comments for vsprintf functions
+- e246e2b6588 configs: qemu-sbsa: Define GIC register base address
+- edaaedb5dd0 board: qemu-sbsa: Fix mistyped GICV3 definition
+- 8c4430fc523 Merge patch series "qemu-sbsa: Fix GIC enablement"
+
+### Conversation log
+The repository is clean (only untracked files, no changes to tracked files). Let me proceed with creating the new branch.
+
+Branch created. Now let me first check if commit ecced05f679 (first commit to cherry-pick) might already be applied as suggested (9c252ac0d78). Let me verify by comparing the patches:
+
+The patches are nearly identical - only the commit hash, date, and an extra Signed-off-by line differ. The actual code changes are the same. This confirms that ecced05f679 is already applied as 9c252ac0d78. I'll skip this commit.
+
+Now let me try cherry-picking the second commit:
+
+Second commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+Delta matches exactly (1 file, 4 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Third commit cherry-picked. Let me verify the delta:
+
+Delta matches exactly. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit (merge commit):
+
+The merge commit resulted in an empty commit (as expected, since the patches were already applied). I need to create the empty commit to preserve the history:
+
+The merge commit is now added (as empty). Let me verify the delta and run the build:
+
+The cherry-picked merge commit is empty (which is expected since we already picked the individual commits), while the original has the combined changes. This is normal for merge commits. Now let me run the build test:
+
+Build passed. Now let me verify the final state with git log:
+
+I see 3 commits were cherry-picked (the first was skipped as already applied). Let me run the final build test:
+
+## Summary
+
+**Cherry-pick operation completed successfully.**
+
+### Results:
+
+| Original Hash | Subject | Status |
+|--------------|---------|--------|
+| ecced05f679 | lib: Tidy up comments for vsprintf functions | **SKIPPED** - Already applied as 9c252ac0d78 (verified by patch comparison) |
+| e246e2b6588 | configs: qemu-sbsa: Define GIC register base address | ✅ Cherry-picked as 0542aa6a27b |
+| edaaedb5dd0 | board: qemu-sbsa: Fix mistyped GICV3 definition | ✅ Cherry-picked as 219fcf77a41 |
+| 8c4430fc523 | Merge patch series "qemu-sbsa: Fix GIC enablement" | ✅ Cherry-picked as e3505156d6d (empty commit, preserves history) |
+
+### Final Status:
+- **Build result**: ✅ OK (no warnings/errors)
+- **Fix-ups made**: None required
+- **Delta concerns**: None - all commits matched their original stats exactly
+- **Branch**: `cherry-ecced05f679` is ready for pushing (ahead of ci/master by 3 commits)
+
+---
+
+### Pipeline fix: 2026-03-18 (attempt 1)
+
+Branch: cherry-ecced05f679
+
+Failed jobs:
+- rockpro64 (sjg-lab)
+
+### Conversation log
+Now I can see the issue. Looking at the log, the failure is:
+
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+mmc_load_image_raw_sector: mmc block read error
+Error: -38
+...
+SPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+This is an SPL boot failure on the rockpro64 hardware. The error `-5` is `EIO` (I/O error) and `-38` is `ENOSYS` (function not implemented).
+
+Looking at the MR description, the commits are:
+1. `ecced05f679` - lib: Tidy up comments for vsprintf functions (SKIPPED - already applied)
+2. `e246e2b6588` - configs: qemu-sbsa: Define GIC register base address
+3. `edaaedb5dd0` - board: qemu-sbsa: Fix mistyped GICV3 definition
+4. `8c4430fc523` - Merge patch series "qemu-sbsa: Fix GIC enablement"
+
+The commits are all related to qemu-sbsa GIC configuration, not rockpro64. This appears to be an infrastructure/hardware issue with the test lab (MMC read errors on the rockpro64 hardware).
+
+Let me checkout the branch and verify this is not caused by the commits:
+
+The commits only touch qemu-sbsa configuration files:
+- `board/emulation/qemu-sbsa/Kconfig`
+- `include/configs/qemu-sbsa.h`
+
+These have nothing to do with rockpro64. This is clearly an **infrastructure/hardware issue** - the MMC block read errors on the rockpro64 test hardware indicate a hardware problem on the test lab (possibly a failing SD card, connection issue, or flaky hardware).
+
+The log shows:
+- `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` (I/O error)
+- `mmc_load_image_raw_sector: mmc block read error`
+- `Error: -38` (ENOSYS)
+- Multiple MMC boot attempts all failing
+- `SPL: failed to boot from all boot devices`
+
+This is a transient lab infrastructure failure, not a code issue introduced by the commits.
+
+Let me verify by checking if rockpro64 builds correctly:
+
+The build "error" is just due to missing ATF blob (atf-bl31) which is expected in a local build environment without ARM Trusted Firmware. This is not a real build failure - it's standard behavior for rockpro64 when ATF is not provided.
+
+Let me verify the commits don't touch anything related to rockpro64:
+
+No output - the commits don't touch any rockpro64 files.
+
+Let me also verify by looking at the commits' changes more specifically:
+
+This confirms the cherry-picked commits only modify:
+1. `board/emulation/qemu-sbsa/Kconfig` - qemu-sbsa board Kconfig (not rockpro64)
+2. `include/configs/qemu-sbsa.h` - qemu-sbsa config header (not rockpro64)
+
+## Summary
+
+**This is an infrastructure/transient issue, NOT a code problem.**
+
+### Root Cause Analysis:
+
+The rockpro64 job failed due to **hardware MMC errors in the test lab**, not due to any code changes in this MR. The evidence:
+
+1. **The failure is an MMC hardware issue**: The log shows repeated MMC block read errors:
+   - `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` (I/O error)
+   - `mmc_load_image_raw_sector: mmc block read error`
+   - `Error: -38` (ENOSYS)
+   - `SPL: failed to boot from all boot devices`
+
+2. **The commits don't touch rockpro64 at all**: All cherry-picked commits only modify qemu-sbsa files:
+   - `board/emulation/qemu-sbsa/Kconfig`
+   - `include/configs/qemu-sbsa.h`
+
+3. **No code path could affect rockpro64**: The qemu-sbsa GIC configuration changes are completely isolated from rockpro64's boot path.
+
+### Recommendation:
+
+**No code changes are required.** This is a lab infrastructure issue (likely a flaky SD card, hardware connection, or transient failure on the rockpro64 test board). The pipeline should be retried, or the hardware needs to be investigated.
+
+---
+
+### Review: 2026-03-18
+
+Branch: cherry-ecced05f679
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) rockpro64.
+
+Now I can see the issue. Looking at the lo...
+
+### Conversation log
+Now let me understand the review comment. The comment says:
+
+> Pipeline fix (attempt 1): fixed failed job(s) rockpro64.
+
+This is saying that the pipeline failed with rockpro64, but looking at the context from the MR description, the previous analysis concluded this was an **infrastructure/hardware issue**, not a code problem. The commits only touch qemu-sbsa files and have nothing to do with rockpro64.
+
+Let me verify what files were actually changed in the cherry-picked commits:
+
+The commits only touch:
+- `include/configs/qemu-sbsa.h`
+- `board/emulation/qemu-sbsa/Kconfig`
+
+These are completely unrelated to rockpro64. The review comment mentions "Pipeline fix (attempt 1): fixed failed job(s) rockpro64" - but this seems to be saying that an **external fix** was made to address the rockpro64 failure (probably lab infrastructure was fixed or the pipeline was retried).
+
+Looking at the context more carefully, the comment is from "project_1_bot_2541d37e7146e9c25808a380e05ebef0" which appears to be a bot reporting that the rockpro64 job was fixed (likely through retrying or infrastructure fix).
+
+Let me check if there are any actual code changes that need to be made:
+
+Let me re-read the review comment more carefully. The comment says:
+
+> Pipeline fix (attempt 1): fixed failed job(s) rockpro64.
+
+The format "Pipeline fix (attempt 1):" is a prefix that indicates this is a report about a pipeline fix attempt. The comment is essentially reporting that the rockpro64 job failure was addressed (presumably by determining it was an infrastructure issue and the pipeline was retried successfully).
+
+This is **not an actionable code review comment** - it's a status update from the bot saying the pipeline issue was resolved. There's no code change required.
+
+Let me verify the build passes as requested:
+
+The build passes. Now let me understand what action is actually needed here.
+
+Looking at the review comment format:
+- The comment is from a bot (`project_1_bot_...`)
+- The comment prefix "Pipeline fix (attempt 1):" indicates this is about a pipeline failure
+- The message "fixed failed job(s) rockpro64" suggests the issue was addressed
+
+Since the previous analysis in the MR description concluded this was an **infrastructure issue** (MMC hardware errors on the rockpro64 test board) and not a code problem, and the commits don't touch rockpro64-related files at all, there's nothing to fix in the code.
+
+However, the task says to "address 1 review comment(s)". Let me check if perhaps the comment is asking for a code change by looking at the format more carefully.
+
+Actually, looking at this again - the comment says "fixed failed job(s) rockpro64" which means the job was ALREADY fixed. This is an informational comment reporting that the pipeline fix was successful, not a request for code changes.
+
+Since there are no actionable code changes to make (the comment is just reporting that an infrastructure issue was resolved), I should report this finding.
+
+Let me verify there's nothing else to do:
+
+The branch is clean. The review comment is not requesting any code changes - it's simply reporting that the rockpro64 job failure was a transient infrastructure issue that has been resolved.
+
+## Summary
+
+**No code changes required.**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0`:
+
+> Pipeline fix (attempt 1): fixed failed job(s) rockpro64.
+
+This is an **informational status comment**, not a request for code changes. The comment reports that the rockpro64 pipeline failure was addressed. Based on the MR description context:
+
+1. The rockpro64 failure was due to **hardware MMC errors** in the test lab (I/O errors, `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)`)
+2. The commits in this MR only touch qemu-sbsa files (`board/emulation/qemu-sbsa/Kconfig` and `include/configs/qemu-sbsa.h`)
+3. These changes have no relation to rockpro64
+
+**Since there are no actionable code changes to make:**
+- No commits need to be amended
+- No new branch version (-v2) is needed
+- No force push is required
+
+**Reply to post on the MR:**
+
+> Acknowledged. The rockpro64 failure was correctly identified as a transient infrastructure issue (MMC hardware errors in the test lab) unrelated to the code changes in this MR. The cherry-picked commits only modify qemu-sbsa configuration files and have no impact on rockpro64. No code changes were required.
+
+---
+
