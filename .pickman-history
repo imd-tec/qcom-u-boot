@@ -40519,3 +40519,89 @@ The branch `cherry-29f6db89add` is ready for pushing. It is based on `ci/master`
 
 ---
 
+## 2026-03-17: us/next
+
+Branch: cherry-7be74f63f7e
+
+Commits:
+- 7be74f63f7e thermal: Sort the Makefile
+- 27fc6a67a4c thermal: sandbox: Staticize sandbox_thermal_get_temp()
+- c6a4b44cdcc phy: Reset init count on phy exit failure
+- 1c735620e19 board: dhelectronics: Check pointer before access in dh_get_value_from_eeprom_buffer()
+- fd396316432 board: dhelectronics: Use isascii() before isprint() in dh_read_eeprom_id_page()
+- a209627ed79 Merge patch series "board: dhelectronics: Check pointer before access in dh_get_value_from_eeprom_buffer()"
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits. Let's start with the first commit:
+
+Cherry-pick succeeded. Let me verify the delta and run the build test:
+
+Delta looks identical (1 file, 3 insertions, 3 deletions). Now run the build test:
+
+Build passed. Now let's cherry-pick the second commit:
+
+Delta matches. Run build test:
+
+Build passed. Now let's cherry-pick the third commit:
+
+Delta matches. Run build test:
+
+Build passed. Now let's check the fourth commit which is marked as "maybe already applied as 6073cd504cc":
+
+The patches are significantly different. `6073cd504cc` is a merge commit with different content, not the same as `1c735620e19`. Let me try to cherry-pick it:
+
+The cherry-pick is empty, meaning the changes from `1c735620e19` are already in the code. Let me check if this commit is already applied in ci/master:
+
+The commit is already applied! Let me compare the actual changes:
+
+The changes are essentially identical (just different commit hashes). This commit is already applied. Let me skip it:
+
+Now let's check the fifth commit (also marked as maybe already applied):
+
+That's a different commit (pickman history record). Let me search for the actual patch commit:
+
+The changes are identical (only commit hash differs). Let me try the cherry-pick anyway to see if it's already applied:
+
+Also already applied. Let me skip it:
+
+Now let's handle the sixth commit which is a merge commit (also marked as maybe already applied):
+
+The merge commits are essentially identical (just different dates and parent hashes due to being cherry-picked). Let me try the cherry-pick anyway:
+
+The merge is also empty, confirming the changes are already applied. The instructions say to always include merge commits even if empty. Let me commit it:
+
+Now let me verify the final state:
+
+I see only 4 commits added (3 cherry-picks + 1 merge). The 2 commits for dhelectronics were skipped because they were already applied. Let me run the final build test:
+
+Build passed. Let me provide a final summary:
+
+## Summary
+
+### Cherry-pick results:
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 7be74f63f7e | thermal: Sort the Makefile | ✅ Applied as 920ba41dd05 |
+| 27fc6a67a4c | thermal: sandbox: Staticize sandbox_thermal_get_temp() | ✅ Applied as 9c2b72f2a10 |
+| c6a4b44cdcc | phy: Reset init count on phy exit failure | ✅ Applied as ecc4ba0b9d6 |
+| 1c735620e19 | board: dhelectronics: Check pointer before access | ⏭️ **Skipped** - already applied as e4d236d0f1e (via cherry-pick from 5634cf1afcf) |
+| fd396316432 | board: dhelectronics: Use isascii() before isprint() | ⏭️ **Skipped** - already applied as e6a81ea9e00 (via cherry-pick from 7cd9d2db262) |
+| a209627ed79 | Merge patch series "board: dhelectronics..." | ✅ Applied as 935236790c5 (empty merge, preserves history) |
+
+### Build result: **OK** (no warnings/errors)
+
+### Notes:
+- 3 commits were cherry-picked successfully
+- 2 commits were skipped because they were already applied to ci/master via a previous cherry-pick series (commits from branch `cherry-5634cf1afcf`)
+- The merge commit was applied as an empty commit to preserve the commit message/history
+- No fix-ups were needed
+- No concerning deltas detected (all cherry-picked commits matched the original exactly)
+
+### Branch status:
+Branch `cherry-7be74f63f7e` is ready for pushing with 4 new commits on top of `ci/master`.
+
+---
+
