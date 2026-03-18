@@ -40427,3 +40427,135 @@ The branch is ready for pushing.
 
 ---
 
+## 2026-03-17: us/next
+
+Branch: cherry-371a76e8455
+
+Commits:
+- 371a76e8455 tools: Do not generate logo when cross-building
+- 1f8fd9d37d6 fs: ext4fs: Add initialization failure recovery path in ext4fs_write
+- 8c599da5060 fs: ext4fs: add CONFIG_EXT4_MAX_JOURNAL_ENTRIES to Kconfig
+- 320d1d04eb5 checkpatch.pl: Ignore mdelay instead of udelay
+- 5964c6f4ef0 i2c: davinci: prefer kernel types (u8/u32)
+- c85b8071e7d virtio: blk: support block sizes exceeding 512 bytes
+- 6fd45dd488f mach-k3: am62*: Fix backup from eMMC boot mode
+- e3e7d0d29aa arm: mach-k3: increase max resasg_entries
+- 8633643769b board: ti: am65x: Overwrite get_overlay_mmc
+- 4d1caf58d22 board: ti: fdt_ops: make ti_set_fdt_env() const-correct
+- 49a3ad7a5e6 arm: mach-k3: am64_hardware.h: Add CTRLMMR_MCU_RST_SRC reset cause bit mappings
+- 3d9bd76b07f arm: mach-k3: am64x: Implement get_reset_reason()
+- 5cd1b21bf6f Merge patch series "arm: mach-k3: am64x: Add reset cause for cpuinfo"
+
+### Conversation log
+The repository state is clean (untracked files don't affect cherry-picks). Now I'll create and checkout the new branch based on ci/master.
+
+Now I'll start cherry-picking the commits one by one. Let me start with the first commit:
+
+First cherry-pick succeeded. Now let me verify the delta and run the build test:
+
+Deltas match (1 file, 2 insertions). Now let me run the build test:
+
+Build passed. Let me continue with commit 2:
+
+Deltas match. Build test:
+
+Build passed. Commit 3:
+
+Deltas match. Build test:
+
+Build passed. Commit 4:
+
+Deltas match. Build test:
+
+Build passed. Commit 5:
+
+Deltas match. Build test:
+
+Build passed. Commit 6:
+
+Deltas match. Build test:
+
+Build passed. Commit 7:
+
+Deltas match. Build test:
+
+Build passed. Commit 8:
+
+Deltas match. Build test:
+
+Build passed. Commit 9:
+
+Deltas match. Build test:
+
+Build passed. Commit 10:
+
+Deltas match. Build test:
+
+Build passed. Commit 11:
+
+Deltas match. Build test:
+
+Build passed. Commit 12:
+
+Deltas match. Build test:
+
+Build passed. Now the last commit - commit 13 is a merge commit as indicated by "Merge" in the subject:
+
+There's a conflict with the merge commit. Let me examine the conflicts:
+
+Let me check the current directory:
+
+I see a very trivial conflict - just a whitespace difference in alignment. Let me also check the header file:
+
+Both conflicts are trivial whitespace differences - extra blank lines. The merge commit is trying to add content that already exists from the previous cherry-picks (commits 11 and 12). This is expected since the merge commit is just combining the previously cherry-picked changes.
+
+Since the content is already present from the previous cherry-picks, I just need to resolve the conflicts by choosing our version (HEAD):
+
+The merge commit is empty because all the changes are already present from the individual cherry-picks. As per the instructions, I need to preserve the merge commit even if it's empty:
+
+Now let me verify the delta for the merge commit and run the build test:
+
+The cherry-picked merge commit shows no changes (empty) because the content was already applied in the previous individual commits. This is expected behavior for cherry-picking a merge commit after its constituent commits have already been applied.
+
+Let me run the build test:
+
+Build passed. Now let me verify all 13 commits are present:
+
+All 13 commits are present. Now let me run the final build:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+All builds passed without any warnings or errors.
+
+### Cherry-Pick Summary
+
+All 13 commits were successfully cherry-picked from `us/next` branch:
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 371a76e8455 | tools: Do not generate logo when cross-building | ✅ Clean |
+| 2 | 1f8fd9d37d6 | fs: ext4fs: Add initialization failure recovery path in ext4fs_write | ✅ Clean |
+| 3 | 8c599da5060 | fs: ext4fs: add CONFIG_EXT4_MAX_JOURNAL_ENTRIES to Kconfig | ✅ Clean |
+| 4 | 320d1d04eb5 | checkpatch.pl: Ignore mdelay instead of udelay | ✅ Clean |
+| 5 | 5964c6f4ef0 | i2c: davinci: prefer kernel types (u8/u32) | ✅ Clean |
+| 6 | c85b8071e7d | virtio: blk: support block sizes exceeding 512 bytes | ✅ Clean |
+| 7 | 6fd45dd488f | mach-k3: am62*: Fix backup from eMMC boot mode | ✅ Clean |
+| 8 | e3e7d0d29aa | arm: mach-k3: increase max resasg_entries | ✅ Clean |
+| 9 | 8633643769b | board: ti: am65x: Overwrite get_overlay_mmc | ✅ Clean |
+| 10 | 4d1caf58d22 | board: ti: fdt_ops: make ti_set_fdt_env() const-correct | ✅ Clean |
+| 11 | 49a3ad7a5e6 | arm: mach-k3: am64_hardware.h: Add CTRLMMR_MCU_RST_SRC reset cause bit mappings | ✅ Clean |
+| 12 | 3d9bd76b07f | arm: mach-k3: am64x: Implement get_reset_reason() | ✅ Clean |
+| 13 | 5cd1b21bf6f | Merge patch series "arm: mach-k3: am64x: Add reset cause for cpuinfo" | ✅ Empty (expected) |
+
+### Fix-ups Made
+- **Commit 13 (merge commit)**: Minor whitespace conflict in `arch/arm/mach-k3/am64x/boot.c` and `arch/arm/mach-k3/include/mach/am64_hardware.h` resolved by keeping our version (HEAD). The merge commit is empty because commits 11 and 12 already applied the same changes as the merge would have introduced.
+
+### Delta Concerns
+- **None.** All commit deltas matched between original and cherry-picked versions.
+
+### Branch Status
+The branch `cherry-371a76e8455` is ready for pushing. It is based on `ci/master` and contains 13 new commits.
+
+---
+
