@@ -49,7 +49,7 @@ static uint32_t get_cfg_value(char *token, char *name,  int linenr)
 	return value;
 }
 
-int imx8mimage_check_params(struct imgtool *itl)
+static int imx8mimage_check_params(struct imgtool *itl)
 {
 	return 0;
 }
@@ -475,7 +475,7 @@ static int generate_fspi_header (int ifd)
 }
 #endif
 
-void build_image(int ofd)
+static void build_image(int ofd)
 {
 	int file_off, header_hdmi_off = 0, header_image_off;
 
