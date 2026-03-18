@@ -41082,3 +41082,145 @@ This is an **infrastructure/transient failure**, NOT a code issue introduced by 
 
 ---
 
+## 2026-03-18: us/next
+
+Branch: cherry-b717a4090fb
+
+Commits:
+- b717a4090fb imx8: Add ahab_commit command
+- 00ef795981d pci: dw: Fix wrong register used for PCI_COMMAND
+- f8b18835081 pci: pcie_dw_imx: Add iMX9 support to the driver
+- d680ac6cfd0 clk: imx: Add imx95 blkctrl clock driver
+- f98d812e535 power: regulator: Add vin-supply for GPIO and Fixed regulators
+- 87119e0f793 clk: clk-uclass: Fix clk_set_default_rates issue
+- 749f6762b40 arm: dts: imx95: Assign HSIOPLL_VCO as HSIOPLL parent clock
+- 5c4e28e52f2 arm: dts: imx95-evk: set alias for enetc PCI buses
+- 9f90e39d1cc imx95_evk: Enable PCI host controller on iMX95 19x19 EVK
+- 8918b60e331 imx93_frdm: Add support for flashing board with UUU
+- 2727de799a6 power: regulator: pfuze100: Fix accessing the regulator desc
+- edc666f1cf7 clk: imx6q: Add definition for missing PWM clocks
+- f7857695c91 phytec-imx8m boards: enable OP-TEE for KASLR
+- cb1292450d8 doc: phytec: update imx8m docs for optee builds
+- db6487861ae doc: phytec: imx8m: Style and firmware update
+- d81c1118580 Merge tag 'u-boot-imx-next-20250922' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx into next
+
+### Conversation log
+Good, I'm in the u-boot directory. Let me check the git status:
+
+The repository is clean (only untracked files). Now let me create and checkout a new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Now let me verify the commit delta and run a build test:
+
+The delta matches (3 files changed, 66 insertions). Now let me run a build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Good. Commit 2 done. Let me cherry-pick commit 3:
+
+Good. Commit 3 done. Let me cherry-pick commit 4:
+
+Good. Commit 4 done. Let me cherry-pick commit 5:
+
+Good. Commit 5 done. Let me cherry-pick commit 6:
+
+Good. Commit 6 done. Let me cherry-pick commit 7:
+
+There was auto-merging. Let me verify the delta:
+
+Good. Commit 7 done. Let me cherry-pick commit 8:
+
+Good. Commit 8 done. Let me cherry-pick commit 9:
+
+There's a conflict. Let me examine it:
+
+I can see the conflict. The HEAD (ci/master) has a config fragment include while the commit being cherry-picked has the full config. Let me check what the original file looks like in ci/master:
+
+Let me check the diff from the original commit:
+
+I see - the original commit adds CONFIG_CLK_IMX95_BLKCTRL=y and CONFIG_PCIE_DW_IMX=y while removing some other config options. In ci/master, the defconfig file now uses a config fragment include. Let me check if the config fragment file exists and what's in it:
+
+I can see that the config fragment already exists. Let me check if it contains the options the commit was adding:
+
+The config options CONFIG_CLK_IMX95_BLKCTRL and CONFIG_PCIE_DW_IMX are NOT in the config fragment. The proper resolution would be to:
+1. Keep the config fragment include approach (HEAD version)  
+2. Add the two new config options from the original commit to the config fragment
+
+Let me resolve the conflict:
+
+Now I need to add CONFIG_CLK_IMX95_BLKCTRL and CONFIG_PCIE_DW_IMX to the config fragment:
+
+I need to add CONFIG_CLK_IMX95_BLKCTRL=y and CONFIG_PCIE_DW_IMX=y to the config fragment. Looking at the original commit, they should be added after line 103 (CONFIG_SPL_CLK_SCMI=y) and line 130 (CONFIG_PCIE_ECAM_GENERIC=y) respectively:
+
+Now let me stage the changes and continue the cherry-pick:
+
+The conflict was resolved. Now I need to amend the commit message to note the fix-up. Let me also verify the delta and run a build test:
+
+The delta is different - the original touched configs/imx95_19x19_evk_defconfig while we touched configs/imx95_evk.config. This is because ci/master uses a config fragment approach. The net effect should be the same: 2 config options are added. Let me amend the commit message to note this fix-up:
+
+Good. Commit 9 done. Let me continue with commit 10:
+
+Good. Commit 10 done. Let me continue with commit 11:
+
+Good. Commit 11 done. Let me continue with commit 12:
+
+Good. Commit 12 done. Let me continue with commit 13:
+
+Good. Commit 13 done. Let me continue with commit 14:
+
+Good. Commit 14 done. Let me continue with commit 15:
+
+Good. Commit 15 done. Now for the last commit - the merge commit. This needs -m 1 --allow-empty:
+
+There are conflicts in the merge commit. Since this is a merge commit, the content of these commits has already been cherry-picked. The conflicts are expected since the same content is being applied twice. Let me examine what changes are in the merge commit vs what we've already cherry-picked:
+
+The merge commit conflicts are because we already cherry-picked the individual commits. The merge commit is combining all those changes which we already have. In this case, since we cherry-picked all the commits that make up the merge, we should resolve by keeping our current versions (the ones we already cherry-picked).
+
+Let me examine each conflict and resolve them by keeping the current version:
+
+I see the conflicts. Since the merge commit is supposed to bring together changes we've already cherry-picked, we should keep our current state (HEAD version) for all conflicts. This is because we already applied the individual commits.
+
+Let me resolve all conflicts by keeping HEAD versions:
+
+Now let me continue the cherry-pick:
+
+The merge commit is empty because all its changes were already cherry-picked. As per instructions, we should use --allow-empty to preserve the merge commit message:
+
+Now let me verify the commit log:
+
+All 16 commits are present. Now let me run the final build test:
+
+## Summary - Cherry-pick Complete
+
+**Build Result:** ✅ OK - All builds passed
+
+**Commits Cherry-picked (16 total):**
+1. ✅ b717a4090fb - imx8: Add ahab_commit command
+2. ✅ 00ef795981d - pci: dw: Fix wrong register used for PCI_COMMAND
+3. ✅ f8b18835081 - pci: pcie_dw_imx: Add iMX9 support to the driver
+4. ✅ d680ac6cfd0 - clk: imx: Add imx95 blkctrl clock driver
+5. ✅ f98d812e535 - power: regulator: Add vin-supply for GPIO and Fixed regulators
+6. ✅ 87119e0f793 - clk: clk-uclass: Fix clk_set_default_rates issue
+7. ✅ 749f6762b40 - arm: dts: imx95: Assign HSIOPLL_VCO as HSIOPLL parent clock
+8. ✅ 5c4e28e52f2 - arm: dts: imx95-evk: set alias for enetc PCI buses
+9. ✅ 9f90e39d1cc - imx95_evk: Enable PCI host controller on iMX95 19x19 EVK ⚠️
+10. ✅ 8918b60e331 - imx93_frdm: Add support for flashing board with UUU
+11. ✅ 2727de799a6 - power: regulator: pfuze100: Fix accessing the regulator desc
+12. ✅ edc666f1cf7 - clk: imx6q: Add definition for missing PWM clocks
+13. ✅ f7857695c91 - phytec-imx8m boards: enable OP-TEE for KASLR
+14. ✅ cb1292450d8 - doc: phytec: update imx8m docs for optee builds
+15. ✅ db6487861ae - doc: phytec: imx8m: Style and firmware update
+16. ✅ d81c1118580 - Merge tag 'u-boot-imx-next-20250922' (empty commit, content already applied)
+
+**Fix-ups Made:**
+1. **Commit 9f90e39d1cc** - Applied config changes to `configs/imx95_evk.config` instead of `configs/imx95_19x19_evk_defconfig` due to config fragment refactoring in ci/master. The same CONFIG_CLK_IMX95_BLKCTRL=y and CONFIG_PCIE_DW_IMX=y options were added but to the shared config fragment.
+
+2. **Commit d81c1118580 (merge commit)** - Resolved as empty commit using --allow-empty because all constituent commits were already cherry-picked individually. The merge commit message is preserved for history tracking.
+
+**Commits with Concerning Deltas:** None - all deltas matched after accounting for the config fragment refactoring.
+
+**Branch Status:** Branch `cherry-b717a4090fb` is ready for pushing with 16 commits ahead of ci/master.
+
+---
+
