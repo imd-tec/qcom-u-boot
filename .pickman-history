@@ -40952,3 +40952,133 @@ This is an **informational status comment**, not a request for code changes. The
 
 ---
 
+## 2026-03-18: us/next
+
+Branch: cherry-6f79e80079a
+
+Commits:
+- 6f79e80079a configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets
+- be5715f9aa9 configs: phycore_am62ax_a53_defconfig: eMMC boot from raw offsets
+- 31eee7d42b4 Merge patch series "configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets"
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me proceed with creating the branch and starting the cherry-picks.
+
+Now let me cherry-pick the first commit (regular commit, not a merge):
+
+First cherry-pick successful. Now let me verify the delta and run the build test:
+
+The delta is identical (1 file changed, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick successful. Let me verify the delta and run the build test:
+
+Delta is identical (1 file changed, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (which is a merge commit - needs -m 1 --allow-empty):
+
+The merge commit is empty because we already cherry-picked the individual commits. This is expected - let me commit it as an empty commit to preserve the commit message:
+
+The merge commit was created. Let me verify the delta and run the build test:
+
+The merge commit is empty on the cherry-pick (as expected since the individual commits were already cherry-picked), while the original merge commit showed 2 files changed with 4 insertions. This is expected behavior for cherry-picking a merge commit when the constituent commits have already been applied. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All 3 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-6f79e80079a` (based on `ci/master`):
+
+| Original Hash | New Hash | Subject | Status |
+|--------------|----------|---------|--------|
+| `6f79e80079a` | `10bd980b7ae` | configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets | ✅ OK |
+| `be5715f9aa9` | `e639c3fd220` | configs: phycore_am62ax_a53_defconfig: eMMC boot from raw offsets | ✅ OK |
+| `31eee7d42b4` | `dbd9dfb715b` | Merge patch series "configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets" | ✅ OK (empty) |
+
+### Build Result
+- **OK** - All builds passed with no warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Delta Analysis
+- **Commit 1**: Identical delta (1 file, +2 lines)
+- **Commit 2**: Identical delta (1 file, +2 lines)  
+- **Commit 3**: Empty commit (expected - merge commit where constituent commits were already applied)
+
+### Notes
+- The merge commit (31eee7d42b4) resulted in an empty commit, which is expected since the individual commits it merged were cherry-picked first. The commit message was preserved for history tracking.
+- The branch `cherry-6f79e80079a` is ready for pushing and is currently 3 commits ahead of `ci/master`.
+
+---
+
+### Pipeline fix: 2026-03-18 (attempt 1)
+
+Branch: cherry-6f79e80079a
+
+Failed jobs:
+- vbe (sjg-lab)
+
+### Conversation log
+Let me analyze the job log. The failure is:
+
+```
+U-Boot VPL 2026.02-gdbd9dfb715b0 (Mar 18 2026 - 14:05:13)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -110
+VPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+The error code -110 is `ETIMEDOUT` in Linux. This is happening on a VBE (Verified Boot for Embedded) test running on real hardware (rk3399-generic-ddr3 / Firefly-RK3399 board).
+
+Looking at the MR description, the commits being cherry-picked are:
+1. `6f79e80079a` configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets
+2. `be5715f9aa9` configs: phycore_am62ax_a53_defconfig: eMMC boot from raw offsets
+3. `31eee7d42b4` Merge patch series (empty after cherry-pick)
+
+These commits modify AM62Ax defconfig files, which are **completely unrelated** to the RK3399 VBE test that failed. The VBE test is running on a Firefly-RK3399 board, while the commits only touch phycore_am62ax configs.
+
+This appears to be an infrastructure/hardware issue on the CI runner, not a code issue introduced by these commits. The error `-110` (timeout) during VPL boot suggests:
+1. Hardware communication timeout (possibly MMC or storage issue)
+2. Intermittent lab hardware failure
+3. Transient connection issue to the test board
+
+Let me checkout the branch and verify the commits to confirm they don't affect VBE or RK3399:
+
+Let me also verify what files were changed in this branch vs the base:
+
+The changes in this branch are:
+1. `configs/phycore_am62ax_a53_defconfig` - +2 lines
+2. `configs/phycore_am62ax_r5_defconfig` - +2 lines  
+3. `.pickman-history` - metadata file
+
+These changes only affect **phycore AM62Ax** boards - completely unrelated to the **Firefly RK3399** VBE test that failed.
+
+Let me verify this is indeed an infrastructure/transient failure by checking if the RK3399 VBE code path could be affected:
+
+No output confirms no RK3399/VBE related files were changed.
+
+## Summary
+
+This is an **infrastructure/transient failure**, NOT a code issue introduced by the commits in this MR.
+
+**Evidence:**
+1. The commits only modify `configs/phycore_am62ax_*_defconfig` files - these are for TI AM62Ax boards
+2. The failure is on a **Firefly RK3399** board running VBE tests - completely unrelated hardware/platform
+3. The error is `-110` (ETIMEDOUT) during VPL boot phase, which indicates a hardware/communication timeout
+4. The error message "VPL: failed to boot from all boot devices" suggests the test board had a transient issue communicating with its boot storage
+5. No code changes in this MR affect any RK3399, Rockchip, VBE, or VPL code paths
+
+**Root cause:** The Firefly-RK3399 test board in the CI lab experienced a timeout (likely hardware/connection issue) during the VPL boot phase. This is a transient lab infrastructure issue.
+
+**Recommendation:** Retry the CI job. No code changes are needed.
+
+---
+
