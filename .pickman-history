@@ -40952,3 +40952,68 @@ This is an **informational status comment**, not a request for code changes. The
 
 ---
 
+## 2026-03-18: us/next
+
+Branch: cherry-6f79e80079a
+
+Commits:
+- 6f79e80079a configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets
+- be5715f9aa9 configs: phycore_am62ax_a53_defconfig: eMMC boot from raw offsets
+- 31eee7d42b4 Merge patch series "configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets"
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me proceed with creating the branch and starting the cherry-picks.
+
+Now let me cherry-pick the first commit (regular commit, not a merge):
+
+First cherry-pick successful. Now let me verify the delta and run the build test:
+
+The delta is identical (1 file changed, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick successful. Let me verify the delta and run the build test:
+
+Delta is identical (1 file changed, 2 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (which is a merge commit - needs -m 1 --allow-empty):
+
+The merge commit is empty because we already cherry-picked the individual commits. This is expected - let me commit it as an empty commit to preserve the commit message:
+
+The merge commit was created. Let me verify the delta and run the build test:
+
+The merge commit is empty on the cherry-pick (as expected since the individual commits were already cherry-picked), while the original merge commit showed 2 files changed with 4 insertions. This is expected behavior for cherry-picking a merge commit when the constituent commits have already been applied. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All 3 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-6f79e80079a` (based on `ci/master`):
+
+| Original Hash | New Hash | Subject | Status |
+|--------------|----------|---------|--------|
+| `6f79e80079a` | `10bd980b7ae` | configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets | ✅ OK |
+| `be5715f9aa9` | `e639c3fd220` | configs: phycore_am62ax_a53_defconfig: eMMC boot from raw offsets | ✅ OK |
+| `31eee7d42b4` | `dbd9dfb715b` | Merge patch series "configs: phycore_am62ax_r5_defconfig: eMMC boot from raw offsets" | ✅ OK (empty) |
+
+### Build Result
+- **OK** - All builds passed with no warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Delta Analysis
+- **Commit 1**: Identical delta (1 file, +2 lines)
+- **Commit 2**: Identical delta (1 file, +2 lines)  
+- **Commit 3**: Empty commit (expected - merge commit where constituent commits were already applied)
+
+### Notes
+- The merge commit (31eee7d42b4) resulted in an empty commit, which is expected since the individual commits it merged were cherry-picked first. The commit message was preserved for history tracking.
+- The branch `cherry-6f79e80079a` is ready for pushing and is currently 3 commits ahead of `ci/master`.
+
+---
+
