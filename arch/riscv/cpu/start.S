@@ -151,7 +151,7 @@ call_harts_early_init:
 	 */
 	la	t0, hart_lottery
 	li	t1, 1
-#if CONFIG_IS_ENABLED(RISCV_ISA_ZAAMO)
+#ifdef CONFIG_RISCV_ISA_ZAAMO
 	amoswap.w s2, t1, 0(t0)
 	bnez	s2, wait_for_gd_init
 #else
@@ -184,7 +184,7 @@ call_harts_early_init:
 #if !CONFIG_IS_ENABLED(XIP)
 #ifdef CONFIG_AVAILABLE_HARTS
 	la	t0, available_harts_lock
-#if CONFIG_IS_ENABLED(RISCV_ISA_ZAAMO)
+#ifdef CONFIG_RISCV_ISA_ZAAMO
 	amoswap.w.rl zero, zero, 0(t0)
 #else
 	fence	rw, w
@@ -203,7 +203,7 @@ wait_for_gd_init:
 	la	t0, available_harts_lock
 	li	t1, 1
 1:
-#if CONFIG_IS_ENABLED(RISCV_ISA_ZAAMO)
+#ifdef CONFIG_RISCV_ISA_ZAAMO
 	amoswap.w.aq t1, t1, 0(t0)
 #else
 	lr.w.aq	t1, 0(t0)
@@ -219,7 +219,7 @@ wait_for_gd_init:
 	or	t2, t2, t1
 	SREG	t2, GD_AVAILABLE_HARTS(gp)
 
-#if CONFIG_IS_ENABLED(RISCV_ISA_ZAAMO)
+#ifdef CONFIG_RISCV_ISA_ZAAMO
 	amoswap.w.rl zero, zero, 0(t0)
 #else
 	fence	rw, w
