@@ -41698,3 +41698,99 @@ https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/739
 
 ---
 
+## 2026-03-19: us/next
+
+Branch: cherry-5289b6e5540
+
+Commits:
+- 5289b6e5540 android: boot: fix wrong end of header in v3/v4 parsing
+- 8558aaa3cf9 sandbox: use env_get() for time offset instead of getenv()
+- 5d0b813d6e4 imls: remove return parentheses
+- 7cae89bac47 lib: optee: Add line ending to debug() outputs
+- 44c4919e9dd test: Fix optee unit test
+- f83a9e5df4c usb: dwc3: Tighten driver glue dependencies
+- 70553ec85f0 usb: gadget: Tighten requirements on USB_GADGET_ATMEL_USBA
+- 219751e8c72 usb: gadget: bcm_udc_otg: Remove unused driver
+- 56edb1cc76c usb: gadget: max3420_udc: Remove unused driver
+- be8c07b606b usb: host: Tighten USB host driver dependencies
+- 3285584429b usb: host: Tighten USB musb-new host glue driver dependencies
+- 97f2f941e77 Merge branch 'next' of git://source.denx.de/u-boot-usb into next
+
+### Conversation log
+The repository has untracked files but is otherwise clean. Let me create the new branch and start cherry-picking.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+The stats match. Let me run the build test:
+
+Build passes. Now let me continue with the second commit:
+
+Third commit:
+
+Fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+Eleventh commit:
+
+Twelfth commit - this is a merge commit. First let me check if it's already been applied as 702025856df:
+
+These are completely different commits. Let me check if 702025856df is in the current branch:
+
+Let me check if there's a merge with the same parent commits:
+
+That's different. Let me verify 97b92f7d174:
+
+Those are different merges. Let me search more specifically:
+
+The merge is not yet in ci/master. Let me cherry-pick the merge commit:
+
+The merge commit is empty because all its constituent commits have already been cherry-picked. Let me commit it with --allow-empty:
+
+All cherry-picks complete. Let me verify the final state:
+
+All 12 commits are present. Let me run the final build test:
+
+## Summary
+
+All 12 commits have been successfully cherry-picked from `us/next` branch onto `ci/master`.
+
+### Cherry-Pick Results
+
+| # | Original Hash | Commit Subject | Status |
+|---|---------------|----------------|--------|
+| 1 | 5289b6e5540 | android: boot: fix wrong end of header in v3/v4 parsing | ✅ OK |
+| 2 | 8558aaa3cf9 | sandbox: use env_get() for time offset instead of getenv() | ✅ OK |
+| 3 | 5d0b813d6e4 | imls: remove return parentheses | ✅ OK |
+| 4 | 7cae89bac47 | lib: optee: Add line ending to debug() outputs | ✅ OK |
+| 5 | 44c4919e9dd | test: Fix optee unit test | ✅ OK |
+| 6 | f83a9e5df4c | usb: dwc3: Tighten driver glue dependencies | ✅ OK |
+| 7 | 70553ec85f0 | usb: gadget: Tighten requirements on USB_GADGET_ATMEL_USBA | ✅ OK |
+| 8 | 219751e8c72 | usb: gadget: bcm_udc_otg: Remove unused driver | ✅ OK |
+| 9 | 56edb1cc76c | usb: gadget: max3420_udc: Remove unused driver | ✅ OK |
+| 10 | be8c07b606b | usb: host: Tighten USB host driver dependencies | ✅ OK |
+| 11 | 3285584429b | usb: host: Tighten USB musb-new host glue driver dependencies | ✅ OK |
+| 12 | 97f2f941e77 | Merge branch 'next' of git://source.denx.de/u-boot-usb into next | ✅ OK (empty) |
+
+### Final Status
+- **Build result**: OK - sandbox build passes
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None - all cherry-picks matched their original commits exactly
+- **Notes**: 
+  - Commit #12 was a merge commit that resulted in an empty commit (as expected, since all its constituent patches were already cherry-picked individually)
+  - The suggested `702025856df` was NOT the same commit - it's a completely different pickman record commit
+
+The branch `cherry-5289b6e5540` is ready for pushing with 12 new commits on top of `ci/master`.
+
+---
+
