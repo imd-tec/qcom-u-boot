@@ -90,7 +90,7 @@ int abrec_read_bootflow_fw(struct udevice *dev, struct bootflow *bflow)
 static int abrec_run_vpl(struct udevice *blk, struct spl_image_info *image,
 			 struct vbe_handoff *handoff)
 {
-	uint flags, tries, prev_result;
+	uint prev_result;
 	struct abrec_priv priv;
 	struct abrec_state state;
 	enum vbe_pick_t pick;
@@ -119,12 +119,12 @@ static int abrec_run_vpl(struct udevice *blk, struct spl_image_info *image,
 		pick = VBEP_RECOVERY;
 
 	/* if we are trying B but ran out of tries, use A */
-	} else if ((prev_result == VBETR_TRYING) && !tries) {
+	} else if ((prev_result == VBETR_TRYING) && !try_count) {
 		pick = VBEP_A;
 		state.try_result = VBETR_BAD;
 
 	/* if requested, try B */
-	} else if (flags & VBEF_TRY_B) {
+	} else if (state.try_b) {
 		pick = VBEP_B;
 
 		/* decrement the try count if not already zero */
