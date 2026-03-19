@@ -41880,5 +41880,125 @@ The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` is a bo
 >
 > Build verified: sandbox build passes. No additional changes required.
 
+
+## 2026-03-18: us/next
+
+Branch: cherry-88392a59bf8
+
+Commits:
+- 88392a59bf8 binman: Fix typo for the test case name
+- dade54edaff binman: Fix FIT image overlap issues
+- a06733fc83f binman: Fix FIT image overlap issues for testFitSplitElf
+- cbc4da1dce3 arm: dts: k3-am6xx: Fix FIT image memory overlap in binman configurations
+- 588094f2c8e tools: mkimage: detect overlapping load regions in FIT configurations
+- 8f3d3510e31 test: Add test case for FIT image load address overlap detection
+- 4907a920e82 doc: binman: Add guidance for determining ELF load addresses
+- 4d84fa1261e Merge patch series "mkimage: Detect FIT image load address overlaps and fix related test/DTS issues"
+
+### Conversation log
+The repository has untracked files but no staged or uncommitted changes. This is clean enough to proceed. Let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+Delta looks identical (1 file, 1 insertion, 1 deletion). Now running the build test:
+
+Build passed. Let me proceed with the second commit:
+
+Second cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the third commit:
+
+Third cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the fourth commit:
+
+Fourth cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the fifth commit:
+
+Fifth cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the sixth commit:
+
+Sixth cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the seventh commit:
+
+Seventh cherry-pick succeeded. Let me verify delta and build:
+
+Delta is identical. Running build test:
+
+Build passed. Now the eighth and final commit - this is a merge commit, so I need to use special flags:
+
+There's a conflict in the merge commit. Let me check the conflicting files:
+
+Let me see the conflict markers in the file:
+
+Let me see more context of the conflict:
+
+I see the issue. The merge commit is trying to introduce the same code that's already in HEAD from the previous cherry-picks. Since we cherry-picked each commit individually (commits 5-7 already added this code), the merge commit is finding conflicts with code that's already there.
+
+Looking at the conflict, HEAD has the code already (from the earlier cherry-picked commits), and the merge commit is trying to add the same code. The HEAD version is empty between the conflict markers because HEAD already has this code later in the file.
+
+Let me check what the merge commit would actually add that isn't already there:
+
+I see - the merge commit includes all the changes from the individual commits we've already cherry-picked. Since we've cherry-picked all 7 individual commits, the actual content of the merge commit is already present in our branch. The conflict is occurring because we're trying to add the same code that's already there.
+
+In this case, the resolution is simple - we should keep what's in HEAD (which already has all the changes). Let me resolve this by accepting HEAD's version and then creating the merge commit as an empty commit (since all changes are already applied):
+
+As expected, the cherry-pick is now empty because all changes were already present. Per the instructions, I need to commit it with --allow-empty to preserve the commit sequence and history:
+
+Let me verify the delta for the merge commit and run the build test:
+
+The merge commit is empty (no file changes shown) as expected since all changes were already applied via the individual commits. Running the build test:
+
+Build passed. Now let me verify all 8 commits are present:
+
+All 8 commits are present. Let me run the final build test to confirm everything works together:
+
+Build passed. Here's the final status report:
+
+## Cherry-Pick Summary
+
+**Branch:** `cherry-88392a59bf8` (based on `ci/master`)
+
+### Commits Cherry-Picked (8 total)
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 88392a59bf8 | bda3b56e03a | binman: Fix typo for the test case name | ✅ OK |
+| 2 | dade54edaff | a468f626925 | binman: Fix FIT image overlap issues | ✅ OK |
+| 3 | a06733fc83f | a94bbe14c1d | binman: Fix FIT image overlap issues for testFitSplitElf | ✅ OK |
+| 4 | cbc4da1dce3 | 0eadf82c4ad | arm: dts: k3-am6xx: Fix FIT image memory overlap in binman configurations | ✅ OK |
+| 5 | 588094f2c8e | e80e6447ef7 | tools: mkimage: detect overlapping load regions in FIT configurations | ✅ OK |
+| 6 | 8f3d3510e31 | 4ef3c10f7de | test: Add test case for FIT image load address overlap detection | ✅ OK |
+| 7 | 4907a920e82 | 1991dbb9e19 | doc: binman: Add guidance for determining ELF load addresses | ✅ OK |
+| 8 | 4d84fa1261e | c7b838cec34 | Merge patch series "mkimage: Detect FIT image load address overlaps..." | ✅ OK (empty) |
+
+### Build Result
+- **Final build:** ✅ OK - `buildman -L --board sandbox` passed with no errors or warnings
+
+### Fix-ups Made
+1. **Commit 8 (merge commit):** Cherry-picked as an empty commit because all changes were already present from the individual cherry-picks. Added note to commit message explaining this.
+
+### Commits with Concerning Deltas
+- None. All commits had identical deltas between original and cherry-picked versions.
+
+### Notes
+- The merge commit (4d84fa1261e) resulted in a conflict because all its content was already present from the preceding individual commits. This was resolved by keeping HEAD's version and creating an empty commit with `--allow-empty` to preserve the commit message/history for tracking purposes.
+- The branch `cherry-88392a59bf8` is ready for pushing.
+
 ---
 
