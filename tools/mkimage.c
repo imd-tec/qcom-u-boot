@@ -650,8 +650,7 @@ static int process_fit(struct imgtool *itl, struct imgtool_funcs *tfuncs)
 	if (tfuncs->fflag_handle) {
 		retval = tfuncs->fflag_handle(itl);
 		if (retval != EXIT_SUCCESS) {
-			if (retval == FDT_ERR_NOTFOUND ||
-			    retval == FDT_ERR_BADSTRUCTURE) {
+			if (retval == FDT_ERR_NOTFOUND) {
 				// Already printed error, exit cleanly
 				exit(EXIT_FAILURE);
 			}
