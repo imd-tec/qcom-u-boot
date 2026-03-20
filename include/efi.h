@@ -759,6 +759,18 @@ int efi_get_mmap(struct efi_mem_desc **descp, int *sizep, uint *keyp,
 		 int *desc_sizep, uint *versionp);
 
 /**
+ * efi_ft_system_setup() - EFI app FDT fixup (memory, simplefb, reserved mem)
+ *
+ * Board code that overrides ft_system_setup() should call this to
+ * retain the standard EFI app FDT fixups.
+ *
+ * @fdt: Device tree blob
+ * @bd: Board info
+ * Returns: 0 on success, -ve on error
+ */
+int efi_ft_system_setup(void *fdt, struct bd_info *bd);
+
+/**
  * efi_show_tables() - Show a list of available tables
  *
  * Shows the address, GUID (and name where known) for each table

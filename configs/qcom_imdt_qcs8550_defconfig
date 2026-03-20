@@ -1,0 +1,10 @@
+# Configuration for IMDT QCS8550 SBC
+# Based on efi-arm_app64_defconfig with board-specific overrides
+#include "efi-arm_app64_defconfig"
+CONFIG_TARGET_IMDT_QCS8550=y
+CONFIG_VIDEO=n
+CONFIG_CHID=n
+CONFIG_RUST_EXAMPLES=n
+CONFIG_AUTOBOOT_KEYED=y
+CONFIG_AUTOBOOT_DELAY_STR="d"
+CONFIG_AUTOBOOT_STOP_STR=" "

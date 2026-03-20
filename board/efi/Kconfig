@@ -51,6 +51,17 @@ config TARGET_EFI_ARM_APP64
 	  starts once the RAM, video and CPU are fully running.
 	  U-Boot is loaded as an application from EFI.
 
+config TARGET_IMDT_QCS8550
+	bool "IMDT QCS8550 SBC (EFI application)"
+	depends on ARM
+	select EFI_APP
+	select SYS_CUSTOM_LDSCRIPT
+	select ARM64
+	help
+	  IMDT QCS8550 SBC board running as an EFI application on top
+	  of Qualcomm XBL firmware. Supports CPU partial goods fuse
+	  reading via EFI_CHIPINFO_PROTOCOL.
+
 config TARGET_EFI_RISCV_APP64
 	bool "64-bit efi application"
 	depends on RISCV
@@ -71,6 +82,7 @@ source "board/efi/efi-x86_payload/Kconfig"
 endif
 
 if ARM
+source "board/qualcomm/imdt-qcs8550/Kconfig"
 source "board/efi/efi-arm_app/Kconfig"
 endif
 

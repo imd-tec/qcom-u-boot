@@ -321,7 +321,7 @@ int efi_app_exit_boot_services(struct efi_priv *priv, uint key)
 	return 0;
 }
 
-int ft_system_setup(void *fdt, struct bd_info *bd)
+int efi_ft_system_setup(void *fdt, struct bd_info *bd)
 {
 	struct efi_mem_desc *map, *desc, *end;
 	u64 ram_start, ram_end;
@@ -379,6 +379,11 @@ int ft_system_setup(void *fdt, struct bd_info *bd)
 	free(map);
 
 	return 0;
+}
+
+__weak int ft_system_setup(void *fdt, struct bd_info *bd)
+{
+	return efi_ft_system_setup(fdt, bd);
 }
 
 static const struct udevice_id efi_sysreset_ids[] = {

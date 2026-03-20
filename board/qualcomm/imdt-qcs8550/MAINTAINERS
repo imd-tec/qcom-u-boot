@@ -1,0 +1,5 @@
+IMDT QCS8550 SBC
+M:	William Bright <William.Bright@imd-tec.com>
+S:	Maintained
+F:	board/qualcomm/imdt-qcs8550/
+F:	configs/qcom_imdt_qcs8550_defconfig

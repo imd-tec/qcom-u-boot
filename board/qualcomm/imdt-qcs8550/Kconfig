@@ -1,0 +1,15 @@
+if TARGET_IMDT_QCS8550
+
+config SYS_BOARD
+	default "imdt-qcs8550"
+
+config SYS_VENDOR
+	default "qualcomm"
+
+config SYS_SOC
+	default "efi"
+
+config SYS_LDSCRIPT
+	default "arch/arm/lib/elf_aarch64_efi.lds"
+
+endif
