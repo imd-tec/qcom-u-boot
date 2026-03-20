@@ -43536,6 +43536,101 @@ All 5 commits are present. Let me run the final build test:
 ### Branch Status:
 - Branch `cherry-3ce8a0e9115` is ready for pushing
 - 5 commits ahead of `ci/master`
+Branch: cherry-e589d5822ca
+
+Commits:
+- e589d5822ca env: spi: Fix gd->env_valid for the first write
+- 8fd3768ca16 arm: armv8: remove redundant definition of mmu_status
+- 5c9dffa4052 configs: brcp1: Drop CONFIG_SUPPORT_PASSING_ATAGS
+- 92c2effbbfb configs: brcp150: Drop CONFIG_SUPPORT_PASSING_ATAGS
+- de8f3868102 configs: brcp170: Drop CONFIG_SUPPORT_PASSING_ATAGS
+- 70ae44f3713 linux/kernel.h: Update upper_NN_bits() and lower_NN_bits() macros
+- 601cebc29d2 cmd: spl: Remove ATAG support from this command
+- eede1fccec4 Merge patch series "Drop ATAGS for B&R boards"
+
+### Conversation log
+The repository has untracked files but is otherwise clean (no staged or modified tracked files). This is acceptable for cherry-picking. Let me proceed with creating the new branch.
+
+Branch created successfully. Now let me cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+Delta matches perfectly: 1 file changed, 1 insertion, 1 deletion. Now let me run the build test:
+
+Build passed. Proceeding to the second cherry-pick:
+
+Second cherry-pick succeeded. Checking the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Proceeding to the third cherry-pick:
+
+Third cherry-pick succeeded (with auto-merge). Let me verify the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Proceeding to the fourth cherry-pick:
+
+Fourth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Proceeding to the fifth cherry-pick:
+
+Fifth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Proceeding to the sixth cherry-pick:
+
+Sixth cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Proceeding to the seventh cherry-pick:
+
+Seventh cherry-pick succeeded. Let me verify the delta:
+
+Delta matches perfectly. Running build test:
+
+Build passed. Now proceeding to the eighth (and final) cherry-pick. This is a merge commit so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (which is expected since the individual commits were already applied). As instructed, I need to commit it as an empty commit to preserve the merge commit message:
+
+Merge commit cherry-picked successfully (as empty commit preserving the merge commit message). Let me verify the delta:
+
+The original was a merge commit that shows the combined diff (5 files, 10 deletions), but our cherry-pick is empty because those individual commits were already applied separately. This is expected behavior for merge commits when the component commits have already been cherry-picked.
+
+Let me run the build test:
+
+Build passed. Now let me verify all 8 commits are present:
+
+All 8 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick operation completed successfully!**
+
+### Summary
+
+| # | Commit Hash | Subject | Status |
+|---|-------------|---------|--------|
+| 1 | e589d5822ca | env: spi: Fix gd->env_valid for the first write | ✅ OK |
+| 2 | 8fd3768ca16 | arm: armv8: remove redundant definition of mmu_status | ✅ OK |
+| 3 | 5c9dffa4052 | configs: brcp1: Drop CONFIG_SUPPORT_PASSING_ATAGS | ✅ OK (auto-merged) |
+| 4 | 92c2effbbfb | configs: brcp150: Drop CONFIG_SUPPORT_PASSING_ATAGS | ✅ OK (auto-merged) |
+| 5 | de8f3868102 | configs: brcp170: Drop CONFIG_SUPPORT_PASSING_ATAGS | ✅ OK (auto-merged) |
+| 6 | 70ae44f3713 | linux/kernel.h: Update upper_NN_bits() and lower_NN_bits() macros | ✅ OK (auto-merged) |
+| 7 | 601cebc29d2 | cmd: spl: Remove ATAG support from this command | ✅ OK (auto-merged) |
+| 8 | eede1fccec4 | Merge patch series "Drop ATAGS for B&R boards" | ✅ OK (empty commit) |
+
+### Details
+
+- **Build result**: ✅ OK - All builds passed (sandbox board)
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None - all deltas matched perfectly
+- **Merge commit (eede1fccec4)**: Cherry-picked as empty commit to preserve the merge commit message (expected behavior since component commits were already applied individually)
+- **Branch status**: `cherry-e589d5822ca` is ready for pushing, ahead of `ci/master` by 8 commits
 
 ---
 
