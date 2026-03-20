@@ -42847,3 +42847,69 @@ The branch `cherry-6578475a966` is ready for pushing with 3 commits ahead of `ci
 
 ---
 
+### Review: 2026-03-20
+
+Branch: cherry-c8a74db0cd2
+
+Comments addressed:
+
+
+### Conversation log
+The branch is behind ci/master (merge-base is 979defb80da but ci/master is at 48dd86fa29f). I need to rebase. Let me first get the list of commits to rebase and save their hashes for delta comparison:
+
+I have the pre-rebase stats. Now let me rebase:
+
+There's a conflict in `.pickman-history`. This is expected since this file is updated by both branches. Let me resolve it by accepting both changes:
+
+This is an append-style history file. I need to resolve the conflict by keeping both sections (both HEAD's content and the incoming changes). Let me resolve this properly:
+
+The conflict is at line 42409. The conflict is between two different MR entries - I need to keep both. Let me resolve this:
+
+The rebase completed. Now let me verify the commits and check deltas:
+
+Now let me check delta for each rebased commit vs the pre-rebase versions:
+
+All deltas match the pre-rebase versions. Now let me run the build test:
+
+Build passed. Now let me create the versioned local branch and push:
+
+No existing versioned branches, so I'll create -v2:
+
+## Summary
+
+**Rebase completed successfully!**
+
+### What was done:
+1. **Rebased** branch `cherry-c8a74db0cd2` onto latest `ci/master` (48dd86fa29f)
+2. **Resolved conflict** in `.pickman-history` - this is expected as this file is updated by multiple MRs
+3. **Verified all commit deltas** - all 8 commits have identical stats before and after rebase
+4. **Build test passed** - sandbox build successful
+5. **Created local branch** `cherry-c8a74db0cd2-v2` for reference
+6. **Force pushed** to remote branch `cherry-c8a74db0cd2`
+
+### Commits after rebase (8 commits ahead of ci/master):
+| Hash | Subject |
+|------|---------|
+| c82374639cc | arm: Change SYS_INIT_SP_BSS_OFFSET from int to hex |
+| 8891c59cc81 | scripts: checkpatch.pl: Extend some checks to "env" files |
+| d7d2d544262 | arm64: Add MIDR entry for Cortex-A720 |
+| aff8244b59a | bootstage: stash boot records to reserved mem before kernel handoff |
+| 11bf23e4953 | vexpress64: Set the DM_RNG property |
+| 31b3028dc98 | arm: vexpress64: Enable SYSRESET and SYSRESET_PSCI |
+| f739e2dc026 | Merge patch series "vexpress63: Set the DM_RNG property" |
+| c54a63f1c12 | pickman: Record cherry-pick of 7 commits from us/next |
+
+### Reply to post on MR:
+
+```
+Rebased onto latest ci/master (48dd86fa29f).
+
+- All commit deltas verified unchanged
+- Build test: OK (sandbox)
+- Pipeline triggered automatically
+
+No changes to the commits themselves - only the base was updated.
+```
+
+---
+
