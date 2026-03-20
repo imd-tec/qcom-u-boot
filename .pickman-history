@@ -43343,3 +43343,123 @@ Since:
 
 ---
 
+## 2026-03-20: us/next
+
+Branch: cherry-f0e722def6c
+
+Commits:
+- f0e722def6c arch: arm: dts: agilex5: Disable cache allocation for reads
+- f6dbe41638b arch: arm: dts: stratix10: Add NAND IP to base dtsi
+- 27e13c9c8d0 arch: arm: socfpga: Remove speed and mode from flash probe
+- 26ffc37787e arm: dts: socfpga: Enable driver model for watchdog timer
+- 2a7771166ea configs: Simplify Agilex7 VAB defconfig
+- 65261e83f3b configs: socfpga: Add CRC32 support
+- 3d084d91eda configs: socfpga: Remove SYS_BOOTM_LEN from N5X VAB config
+- 5d2ef97c66f drivers: ddr: altera: Check IOSSM mailbox compatibility
+- 63ef1c7a739 drivers: ddr: altera: Correct DDR calibration status check
+- fb7aa75561b arm: socfpga: Define Use FPGA switch handoff section size for Agilex5
+- f4db0664551 arm: socfpga: mailbox: Remove CONFIG_CADENCE_QSPI guard from QSPI mailbox API declarations
+- 36e013490ed configs: agilex5: Increase watchdog timeout
+- 8d28f121d37 arch: arm: mach-socfpga: smc: Add dcache flushing and invalidation in smc_send_mailbox()
+- c4e9554015e include: dt-bindings: clk: agilex: Add Agilex clock definitions header file
+- 38d49808d4c cache: Check dcache availability before calling cache functions
+- 022b2159b5d drivers: clk: agilex: Support for enable/disable API
+- 190a339ae34 configs: agilex5: Enable config SPL_SYS_DCACHE_OFF
+- ab27182cac8 mmc: socfpga_dw_mmc: Enable/disable SDMMC clock via API
+- 924a9fc4021 drivers: clk: agilex: Fix EMAC clock source selection
+- 2ff686bcfd1 drivers: clk: agilex: Use FIELD_GET during EMAC clock selection
+- e3a11a240ad arch: arm: dts: Enable USB3.1 for Agilex5
+- 61c4768d83f configs: Enable USB DWC3 host drivers for Agilex5
+- 060ed1bbbe0 configs: Increase USB Hub debounce timeout in Agilex5
+- da57acb4c39 arch: arm: socfpga: Configure USB3 System Manager registers
+- aff68c85148 Merge tag 'u-boot-socfpga-next-20250930' of https://source.denx.de/u-boot/custodians/u-boot-socfpga into next
+
+### Conversation log
+The repository is clean (just some untracked files which is fine). Now let me create and checkout a new branch based on ci/master.
+
+Now let me start cherry-picking the commits one at a time. First, let me verify the commits exist on us/next branch:
+
+Let me search for the specific commits we need to cherry-pick:
+
+Now let's cherry-pick the first commit:
+
+Delta looks good. Now let me run the build test:
+
+Build passes. Let's continue with the second commit:
+
+We have a conflict. Let me analyze it:
+
+I see the conflict. The original commit is trying to remove all those config options (since the file should just include the base config plus add VAB-specific options). Let me look at what the original commit intended:
+
+I understand the conflict. The original commit replaces the entire file with just the include and one config option. The conflict is because the current file on ci/master already has the include but kept some different config options. The original commit wants to remove all those extra options and keep just the VAB auth config.
+
+Let me resolve this by keeping the intended final state from the original commit - just the include and VAB config:
+
+The delta matches! Now build test:
+
+Continuing with the remaining commits:
+
+Now the last commit - the merge commit. I need to use special flags for merge commits:
+
+Let me check the conflict:
+
+This is just a config file conflict - I'll keep the HEAD version since it has the full command:
+
+The merge commit is now empty because all the individual commits have already been cherry-picked. As instructed, I'll use --allow-empty to preserve the merge commit message:
+
+Now let me verify all commits are present and run the final build:
+
+All 25 commits are present (24 regular commits + 1 merge commit). Now let's run the final build:
+
+Build passes. Let me update the todo list and provide a summary:
+
+## Final Status Report
+
+### Build Result: ✅ OK
+
+All 25 commits were successfully cherry-picked from `us/next` to the new branch `cherry-f0e722def6c` based on `ci/master`.
+
+### Commits Applied (25 total):
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | d69a3a954bd | arch: arm: dts: agilex5: Disable cache allocation for reads |
+| 2 | 667c6120da7 | arch: arm: dts: stratix10: Add NAND IP to base dtsi |
+| 3 | d935dc5a7e7 | arch: arm: socfpga: Remove speed and mode from flash probe |
+| 4 | 9cc143a9fc3 | arm: dts: socfpga: Enable driver model for watchdog timer |
+| 5 | 388066af2a2 | configs: Simplify Agilex7 VAB defconfig |
+| 6 | 3d3ee2e3afd | configs: socfpga: Add CRC32 support |
+| 7 | b4ae9f8b57b | configs: socfpga: Remove SYS_BOOTM_LEN from N5X VAB config |
+| 8 | c20eedac4e7 | drivers: ddr: altera: Check IOSSM mailbox compatibility |
+| 9 | d4d4182793e | drivers: ddr: altera: Correct DDR calibration status check |
+| 10 | f891367070a | arm: socfpga: Define Use FPGA switch handoff section size for Agilex5 |
+| 11 | 6367c8c3242 | arm: socfpga: mailbox: Remove CONFIG_CADENCE_QSPI guard |
+| 12 | 6f68f98fe03 | configs: agilex5: Increase watchdog timeout |
+| 13 | ccdce612d0d | arch: arm: mach-socfpga: smc: Add dcache flushing and invalidation |
+| 14 | 693042f3588 | include: dt-bindings: clk: agilex: Add Agilex clock definitions header |
+| 15 | 2625295d578 | cache: Check dcache availability before calling cache functions |
+| 16 | 7da8c21db48 | drivers: clk: agilex: Support for enable/disable API |
+| 17 | 88d8a1443ae | configs: agilex5: Enable config SPL_SYS_DCACHE_OFF |
+| 18 | 22f75583ad0 | mmc: socfpga_dw_mmc: Enable/disable SDMMC clock via API |
+| 19 | b97f78d681e | drivers: clk: agilex: Fix EMAC clock source selection |
+| 20 | 5d6dac509d0 | drivers: clk: agilex: Use FIELD_GET during EMAC clock selection |
+| 21 | 15302f82560 | arch: arm: dts: Enable USB3.1 for Agilex5 |
+| 22 | 388fbbfbd3a | configs: Enable USB DWC3 host drivers for Agilex5 |
+| 23 | 76347ec4a3c | configs: Increase USB Hub debounce timeout in Agilex5 |
+| 24 | 79199e047d6 | arch: arm: socfpga: Configure USB3 System Manager registers |
+| 25 | 1b54f4db648 | Merge tag 'u-boot-socfpga-next-20250930' (empty commit - preserved for history) |
+
+### Fix-ups Made:
+
+1. **Commit 5 (388066af2a2 - Simplify Agilex7 VAB defconfig)**: Resolved conflict in `configs/socfpga_agilex_vab_defconfig`. The original file on ci/master already had the include directive but with extra config options. Resolved to match the intended final state of the original commit (just include + VAB auth config).
+
+2. **Commit 25 (1b54f4db648 - Merge tag)**: Resolved conflict in `.b4-config` (kept HEAD version). The merge commit resulted in an empty commit since all individual commits were already cherry-picked - preserved with `--allow-empty` to maintain commit history.
+
+### Commits with No Delta Concerns:
+All commits matched their original delta exactly (same files modified, same line counts).
+
+### Branch Status:
+The branch `cherry-f0e722def6c` is ready for pushing. It contains all 25 requested commits cherry-picked from `us/next` onto `ci/master`.
+
+---
+
