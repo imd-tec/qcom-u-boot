@@ -43078,3 +43078,22 @@ This is a **transient/infrastructure issue**, not a code problem introduced by t
 
 ---
 
+
+### Pipeline fix (attempt 3)
+
+**Failed jobs:** vbe (rk3399-generic-ddr3)
+
+**Analysis:**
+This is the same error as attempt 2 - `Error: -95` (EOPNOTSUPP) during VPL boot from `vbe_abrec`.
+
+**Root Cause:** This is a **transient infrastructure issue**, not a code bug:
+1. Error -95 is from MMC driver when SD/eMMC card fails to respond during initialization
+2. The error occurs during VPL boot, before any MR code changes take effect
+3. None of the commits in this MR touch VPL, VBE, MMC, or rk3399 code
+4. The bootstage commit's `bootstage_stash_default()` call:
+   - Is only active when CONFIG_BOOTSTAGE_STASH is enabled
+   - rk3399-generic-ddr3 does NOT have CONFIG_BOOTSTAGE_STASH enabled
+   - So the function is a no-op for this board
+5. The function is in `bootm_final.c` which is only called when booting to kernel, not during VPL/SPL phases
+
+**Action:** Retry pipeline - no code changes needed
