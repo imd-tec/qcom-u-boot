@@ -34,6 +34,7 @@
 #include <asm/u-boot-sandbox.h>
 #include <os.h>
 #include <rtc_def.h>
+#include <env.h>
 
 /* Environment variable for time offset */
 #define ENV_TIME_OFFSET "UBOOT_SB_TIME_OFFSET"
@@ -1097,7 +1098,7 @@ long os_get_time_offset(void)
 {
 	const char *offset;
 
-	offset = getenv(ENV_TIME_OFFSET);
+	offset = env_get(ENV_TIME_OFFSET);
 	if (offset)
 		return strtol(offset, NULL, 0);
 	return 0;

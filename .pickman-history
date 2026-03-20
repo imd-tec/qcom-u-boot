@@ -41698,3 +41698,187 @@ https://concept.u-boot.org/u-boot/u-boot/-/merge_requests/739
 
 ---
 
+## 2026-03-19: us/next
+
+Branch: cherry-5289b6e5540
+
+Commits:
+- 5289b6e5540 android: boot: fix wrong end of header in v3/v4 parsing
+- 8558aaa3cf9 sandbox: use env_get() for time offset instead of getenv()
+- 5d0b813d6e4 imls: remove return parentheses
+- 7cae89bac47 lib: optee: Add line ending to debug() outputs
+- 44c4919e9dd test: Fix optee unit test
+- f83a9e5df4c usb: dwc3: Tighten driver glue dependencies
+- 70553ec85f0 usb: gadget: Tighten requirements on USB_GADGET_ATMEL_USBA
+- 219751e8c72 usb: gadget: bcm_udc_otg: Remove unused driver
+- 56edb1cc76c usb: gadget: max3420_udc: Remove unused driver
+- be8c07b606b usb: host: Tighten USB host driver dependencies
+- 3285584429b usb: host: Tighten USB musb-new host glue driver dependencies
+- 97f2f941e77 Merge branch 'next' of git://source.denx.de/u-boot-usb into next
+
+### Conversation log
+The repository has untracked files but is otherwise clean. Let me create the new branch and start cherry-picking.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+The stats match. Let me run the build test:
+
+Build passes. Now let me continue with the second commit:
+
+Third commit:
+
+Fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+Eleventh commit:
+
+Twelfth commit - this is a merge commit. First let me check if it's already been applied as 702025856df:
+
+These are completely different commits. Let me check if 702025856df is in the current branch:
+
+Let me check if there's a merge with the same parent commits:
+
+That's different. Let me verify 97b92f7d174:
+
+Those are different merges. Let me search more specifically:
+
+The merge is not yet in ci/master. Let me cherry-pick the merge commit:
+
+The merge commit is empty because all its constituent commits have already been cherry-picked. Let me commit it with --allow-empty:
+
+All cherry-picks complete. Let me verify the final state:
+
+All 12 commits are present. Let me run the final build test:
+
+## Summary
+
+All 12 commits have been successfully cherry-picked from `us/next` branch onto `ci/master`.
+
+### Cherry-Pick Results
+
+| # | Original Hash | Commit Subject | Status |
+|---|---------------|----------------|--------|
+| 1 | 5289b6e5540 | android: boot: fix wrong end of header in v3/v4 parsing | ✅ OK |
+| 2 | 8558aaa3cf9 | sandbox: use env_get() for time offset instead of getenv() | ✅ OK |
+| 3 | 5d0b813d6e4 | imls: remove return parentheses | ✅ OK |
+| 4 | 7cae89bac47 | lib: optee: Add line ending to debug() outputs | ✅ OK |
+| 5 | 44c4919e9dd | test: Fix optee unit test | ✅ OK |
+| 6 | f83a9e5df4c | usb: dwc3: Tighten driver glue dependencies | ✅ OK |
+| 7 | 70553ec85f0 | usb: gadget: Tighten requirements on USB_GADGET_ATMEL_USBA | ✅ OK |
+| 8 | 219751e8c72 | usb: gadget: bcm_udc_otg: Remove unused driver | ✅ OK |
+| 9 | 56edb1cc76c | usb: gadget: max3420_udc: Remove unused driver | ✅ OK |
+| 10 | be8c07b606b | usb: host: Tighten USB host driver dependencies | ✅ OK |
+| 11 | 3285584429b | usb: host: Tighten USB musb-new host glue driver dependencies | ✅ OK |
+| 12 | 97f2f941e77 | Merge branch 'next' of git://source.denx.de/u-boot-usb into next | ✅ OK (empty) |
+
+### Final Status
+- **Build result**: OK - sandbox build passes
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None - all cherry-picks matched their original commits exactly
+- **Notes**: 
+  - Commit #12 was a merge commit that resulted in an empty commit (as expected, since all its constituent patches were already cherry-picked individually)
+  - The suggested `702025856df` was NOT the same commit - it's a completely different pickman record commit
+
+The branch `cherry-5289b6e5540` is ready for pushing with 12 new commits on top of `ci/master`.
+
+---
+
+### Review: 2026-03-19
+
+Branch: cherry-5289b6e5540
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) vbe.
+
+Looking at the logs, I can see the VBE test fail...
+
+### Conversation log
+Now I can see the branch already has the fix commit `9cfdf08420e` from the previous pipeline fix attempt. Let me re-read the review comment to understand what needs to be addressed.
+
+Looking at the review comment:
+> Pipeline fix (attempt 1): fixed failed job(s) vbe.
+
+This seems to be a status update or acknowledgment of the previous fix rather than a request for changes. The comment indicates that a fix was applied for the failed vbe job.
+
+Let me verify the current state of the fix that was applied:
+
+Good, I can see the fix has already been applied. The code now correctly uses `try_count` (line 122) and `state.try_b` (line 127) instead of the uninitialized variables `tries` and `flags`. Let me also verify the commit that was made:
+
+Now let me understand what the review comment is requesting. Looking back at the comment:
+
+> Pipeline fix (attempt 1): fixed failed job(s) vbe.
+
+This appears to be a review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` which is a bot comment documenting that a fix was applied. This is not an actionable request for changes - it's just a record of what was done.
+
+However, the task says there's 1 review comment to address. Let me verify the build still passes and then check if the branch needs to be updated:
+
+The build passes. Now let me check if the remote branch already has this fix:
+
+The remote branch already has the fix commit `9cfdf08420e`. The local and remote branches are in sync.
+
+Looking at the context more carefully, the review comment from the bot is saying "Pipeline fix (attempt 1): fixed failed job(s) vbe." - this is a documentation comment, not a request for changes. However, the task says to "address 1 review comment(s)".
+
+Let me re-read the review comment context more carefully. The comment appears to be documenting what happened during the pipeline fix attempt. Since this is a bot comment documenting the fix that was already applied, there may not be any actionable changes needed.
+
+Let me check if there's a pipeline running or if we need to acknowledge this:
+
+The fix was already applied and pushed to the remote. The review comment appears to be a status update from a bot rather than a request for changes.
+
+Looking at the review comment more carefully:
+> `[project_1_bot_2541d37e7146e9c25808a380e05ebef0]`: Pipeline fix (attempt 1): fixed failed job(s) vbe.
+
+This is followed by the detailed explanation of the fix that was applied. This appears to be a bot-generated comment documenting the pipeline fix that was already made. Since the fix has already been applied and pushed, there's no additional action needed.
+
+However, the task instructs me to address the review comment. Given that:
+1. The fix is already applied (commit `9cfdf08420e`)
+2. The remote branch already has this fix
+3. The build passes
+
+The appropriate response is to acknowledge that the fix was already applied and no further changes are needed.
+
+Let me create the -v2 branch as instructed and verify everything is in order:
+
+The branch is ready. Since the remote branch already has this fix, no push is needed. But let me verify they match:
+
+No diff - the branches are identical. The remote already has the fix applied.
+
+## Summary
+
+**Review Comment Analysis:**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` is a bot-generated status update documenting that:
+- Pipeline fix (attempt 1) was applied
+- The fix addressed the failed `vbe` job 
+- The fix corrected uninitialized variables `tries` and `flags` in `boot/vbe_abrec_fw.c`
+
+**Current State:**
+- The fix commit `9cfdf08420e` ("vbe: abrec: Fix uninitialized variables in abrec_run_vpl()") is already present on both the local and remote branches
+- The sandbox build passes
+- No additional changes are required
+
+**What Was Done:**
+- Verified the fix is already applied and pushed
+- Created local branch `cherry-5289b6e5540-v2` (identical to current state)
+- Confirmed build passes
+
+**No push needed** - the remote branch `cherry-5289b6e5540` already contains the fix and is up to date.
+
+**Reply to post on MR:**
+
+> The pipeline fix for the `vbe` job failure has already been applied and pushed. The fix (commit `9cfdf08420e`) corrects the uninitialized variables `tries` and `flags` in `boot/vbe_abrec_fw.c` by using the properly initialized `try_count` and `state.try_b` variables instead.
+>
+> Build verified: sandbox build passes. No additional changes required.
+
+---
+
