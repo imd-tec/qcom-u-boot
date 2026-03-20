@@ -42181,3 +42181,87 @@ The fix is on local branch `cherry-88392a59bf8-fix1`, ready for pushing.
 
 ---
 
+### Review: 2026-03-20
+
+Branch: cherry-88392a59bf8
+
+Comments addressed:
+- [sjg]: I manually pushed a branch with a revert for this patch:
+
+ad3874cc5ff tools: mkimage: detect overlap...
+
+### Conversation log
+Let me understand the review comment. The reviewer (sjg) manually pushed a branch with a revert for the patch `ad3874cc5ff tools: mkimage: detect overlapping load regions in FIT configurations`. I need to find out what branch was pushed and incorporate the revert.
+
+I see! The reviewer (sjg) already pushed a revert commit `a34b7d01eb7 Revert "tools: mkimage: detect overlapping load regions in FIT configurations"` to the remote branch. This revert is between the original overlap detection commit and the test commit.
+
+Let me understand the state better:
+
+Now I understand. The reviewer (sjg) reverted the overlap detection commit because it breaks the vf2 board in the sjg lab. The review comment says he "manually pushed a branch with a revert for this patch". 
+
+I need to reset my local branch to the remote branch state to incorporate the revert, then verify the build:
+
+Good, the local branch now has the revert commit. Now let me verify the build passes:
+
+The build passes. Now let me also verify the vf2 board builds (since the revert was to fix vf2):
+
+The vf2 board build failure is just due to missing external blobs (OpenSBI fw_dynamic.bin), which is expected in a build environment without the firmware. The important thing is there's NO overlap detection error - which was the original issue the revert was meant to fix.
+
+Now I need to understand what action is required. The reviewer pushed a revert commit. The review comment says "I manually pushed a branch with a revert for this patch." This seems like an acknowledgment that the reviewer has already taken action, not a request for me to do something.
+
+Let me check if the branch is up to date and if I need to create a new version:
+
+The branch is already up to date with ci/master (merge base equals ci/master HEAD). The reviewer's revert has already been pushed to the remote branch. Let me check the local version branches to see what version suffix should be used:
+
+The local branch is already synced with the remote. The reviewer has pushed the revert directly to the branch. Since no further action is needed on my part (the revert was pushed by the reviewer), I should:
+
+1. Create a local v9 branch to record this state
+2. Acknowledge the review comment
+
+Let me verify there are no pending changes to push:
+
+The local and remote branches are identical. Let me create the v9 local branch to record this state:
+
+## Summary
+
+**Review Comment Addressed:**
+
+The reviewer (sjg) manually pushed a revert commit `a34b7d01eb7` ("Revert 'tools: mkimage: detect overlapping load regions in FIT configurations'") to the branch. The revert was necessary because the overlap detection feature was breaking the vf2 board in the sjg lab.
+
+**Current Branch State:**
+- The remote branch `ci/cherry-88392a59bf8` already contains the revert commit
+- The local branch has been synced to match the remote
+- Build verified successfully (sandbox passes)
+- The vf2 board build no longer shows the overlap detection error (only shows expected missing blob warnings)
+
+**Commits on the branch now:**
+1. `b1a597209ca` - binman: Fix typo for the test case name
+2. `6fe4518507d` - binman: Fix FIT image overlap issues
+3. `130540e5a80` - binman: Fix FIT image overlap issues for testFitSplitElf
+4. `f7e63254a96` - arm: dts: k3-am6xx: Fix FIT image memory overlap in binman configurations
+5. `8b854ecc426` - tools: mkimage: detect overlapping load regions in FIT configurations
+6. `a34b7d01eb7` - **Revert "tools: mkimage: detect overlapping load regions in FIT configurations"** *(pushed by reviewer)*
+7. `f2035b6182e` - test: Add test case for FIT image load address overlap detection
+8. `bc60d548790` - doc: binman: Add guidance for determining ELF load addresses
+9. `28edf2ad53f` - Merge patch series "mkimage: Detect FIT image..."
+10. `9ec1bd60e03` - pickman: Record cherry-pick of 8 commits from us/next
+11. `568aa53f807` - pickman: Record pipeline fix for cherry-88392a59bf8
+
+**No action needed** - The reviewer has already applied the fix by pushing the revert commit directly to the branch.
+
+### Reply to post on MR:
+
+```
+Acknowledged the revert pushed to the branch.
+
+The revert (`a34b7d01eb7`) for commit `8b854ecc426` (tools: mkimage: detect overlapping load regions in FIT configurations) has been incorporated. This addresses the vf2 board build failure in the sjg lab.
+
+Build verified:
+- sandbox: ✅ passes
+- starfive_visionfive2 (vf2): No overlap detection error (only expected missing blob warnings for OpenSBI)
+
+Local branch `cherry-88392a59bf8-v9` created to record this state.
+```
+
+---
+
