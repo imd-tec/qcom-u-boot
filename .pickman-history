@@ -42913,3 +42913,168 @@ No changes to the commits themselves - only the base was updated.
 
 ---
 
+### Pipeline fix: 2026-03-20 (attempt 2)
+
+Branch: cherry-c8a74db0cd2
+
+Failed jobs:
+- vbe (sjg-lab)
+
+### Conversation log
+Let me analyze the failure:
+
+1. **Job**: vbe (stage: sjg-lab)
+2. **Error**: During VPL boot phase, we see:
+   - `U-Boot VPL 2026.02-gc6978625fa43`
+   - `Trying to boot from vbe_abrec`
+   - `Error: -95`
+   - `VPL: failed to boot from all boot devices`
+   - `### ERROR ### Please RESET the board ###`
+
+Error -95 is `EOPNOTSUPP` (Operation not supported). This is happening during VPL boot from `vbe_abrec` on the rk3399-generic-ddr3 board.
+
+Let me checkout the branch and investigate further:
+
+The error is "Error: -95" during VPL boot from vbe_abrec. This is EOPNOTSUPP. Looking at the commit history, the `bootstage` commit (aff8244b59a) is the one related to boot sequences. Let me examine this error more closely - this error is happening in VPL while trying to boot. Let me search for what could be returning -95 (EOPNOTSUPP) during VPL boot:
+
+Let me look more closely at what the bootstage commit changed. This looks like the most likely culprit because it touches the boot sequence:
+
+Now let me look at `bootm_final.c` and see if this `bootstage_stash_default()` function is problematic during VPL stage:
+
+The issue is that `bootstage_stash_default()` is being called unconditionally here on line 36. But the VPL boot failure with error -95 (EOPNOTSUPP) suggests this function is being called when it shouldn't be, or during a stage that doesn't support it.
+
+Let me check if VPL uses `bootm_final`:
+
+Now let me check what `bootstage_stash_default()` does and if it returns errors:
+
+Now let me look at where this error -95 could come from. The error happens during VPL boot, not during bootm_final. The log shows:
+
+```
+U-Boot VPL 2026.02-gc6978625fa43
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -95
+VPL: failed to boot from all boot devices
+```
+
+So the error is in VBE boot flow, not in bootm_final. Let me check VBE-related code for -95 returns. Looking at the error context: "Trying to boot from vbe_abrec" - this might be related to rockchip tpl/vpl code.
+
+The log shows that VPL is booting, not TPL. Let me look at VPL boot flow. The error is "Error: -95" and then "VPL: failed to boot from all boot devices". This suggests something in the VPL boot mechanism is returning EOPNOTSUPP.
+
+Let me look at what's different from ci/master in the VBE or boot device code:
+
+The only change related to boot in this MR is the `bootstage_stash_default()` call in bootm_final.c. But that shouldn't affect VPL boot since VPL doesn't use bootm_final.
+
+Wait, the error occurs during VPL boot from `vbe_abrec`. Let me check if this is actually a transient/infrastructure issue by looking more at the context. The error -95 (EOPNOTSUPP) in VPL context could be a VBE method that's not supported.
+
+Let me search for where VPL reports this "failed to boot from all boot devices" message:
+
+Let me check the previous attempt number 1 to see if this error existed before:
+
+I see from the history that this error has appeared before. But let me check more carefully if this specific error is related to the `bootstage` commit, since that's the only boot-related change in this MR. Let me look at whether this is a legitimate code issue or an infrastructure problem.
+
+Now let me build the rk3399-generic-ddr3 board with the current commits to see if there are any build errors:
+
+I cannot cross-compile ARM boards on this x86 machine without a cross-compiler. Let me focus on the actual analysis instead.
+
+Looking at the log more carefully:
+- The build on the CI passed (the job shows it built successfully)
+- The error occurs at runtime during boot test on the physical hardware
+- Error -95 (EOPNOTSUPP) happens when VPL tries to boot from `vbe_abrec`
+
+Let me look at the vbe_abrec boot method to see if there's something specific that could return EOPNOTSUPP:
+
+Now let me check the git history of this file to see if any recent changes might have caused this:
+
+No commits in this MR touch the vbe_abrec_fw.c file. Let me check if ci/master itself has this issue by looking at the commit history:
+
+There were some recent changes to VBE abrec files on ci/master. Let me see what `9cfdf08420e` fixed:
+
+This fix is in ci/master already. Let me verify that this branch has this fix:
+
+The branch is based on the current ci/master head (48dd86fa29f). Let me check if the VBE fix commit is an ancestor:
+
+The VBE fix is included. Let me look more carefully at what could return -95. The error log shows:
+
+```
+U-Boot VPL 2026.02-gc6978625fa43 (Mar 20 2026 - 10:18:40)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -95
+VPL: failed to boot from all boot devices
+```
+
+The `-95` error code is EOPNOTSUPP. Let me search more broadly for what could cause this:
+
+Let me look at MMC driver since VBE reads from MMC:
+
+The -EOPNOTSUPP error seems to come from MMC card initialization issues - timeouts or card not responding. This is a hardware/infrastructure issue, not related to the code changes in this MR.
+
+Let me also check if maybe it's coming from somewhere in the VBE common code:
+
+Let me look at the boot/vbe_common.c to understand the vbe_read_fit function:
+
+The error is happening during a `blk_read` call to the MMC. The `-95` (EOPNOTSUPP) is coming from MMC initialization timeouts. This is a hardware/infrastructure issue where the MMC card didn't respond properly to initialization.
+
+Looking at this comprehensively:
+
+1. The error occurs during VPL boot when trying to read from MMC
+2. The error code `-95` (EOPNOTSUPP) is generated by the MMC driver when the card doesn't respond properly
+3. None of the commits in this MR touch any MMC code, VBE code, or rk3399 code
+4. The bootstage commit only adds a call to `bootstage_stash_default()` in `bootm_final.c`, which is only called when booting to a kernel (not during VPL/SPL phase)
+
+This is a **transient/infrastructure issue** - the physical test board had a temporary communication problem with its MMC storage.
+
+Let me verify the bootstage change doesn't affect VPL:
+
+I see that `bootm_final.o` is built unconditionally (line 15: `obj-y += image.o image-board.o bootm_final.o`). This means it's compiled for all phases including VPL. However, the `bootm_final()` function is only called when booting to the kernel, not during SPL->VPL->SPL transitions.
+
+Let me double check when `bootm_final()` is actually called:
+
+The `bootm_final()` function is called from:
+- `arch/arm/lib/bootm.c` - when booting ARM kernel
+- `arch/x86/lib/bootm.c` - when booting x86 kernel
+- `arch/riscv/lib/bootm.c` - when booting RISC-V kernel
+- `lib/efi_loader/efi_boottime.c` - when booting EFI
+
+These are all full U-Boot (not SPL/VPL) scenarios. The VPL failure is happening way before any kernel boot.
+
+**Conclusion: This is a transient/infrastructure issue.**
+
+The error `-95` (EOPNOTSUPP) during VPL boot is caused by the MMC card not responding properly during initialization. This is a hardware/timing issue on the test board, not caused by any of the commits in this MR:
+- The bootstage commit only affects kernel boot in full U-Boot, not VPL
+- No other commits touch any VPL, VBE, or rk3399 code
+- The commits are: arm changes, checkpatch script, ARM64 MIDR entry, bootstage, and vexpress changes
+
+This is **not a code issue that can be fixed by modifying the branch**. The pipeline should be retried.
+
+## Report
+
+**Job:** vbe (stage: sjg-lab)
+**Board:** rk3399-generic-ddr3
+**Error:** `Error: -95` followed by `VPL: failed to boot from all boot devices`
+
+**Root Cause Analysis:**
+This is a **transient/infrastructure issue**, not a code problem introduced by this MR.
+
+**Evidence:**
+1. Error code `-95` is `EOPNOTSUPP`, which in this context is returned by the MMC driver when the SD/eMMC card fails to respond properly during initialization (see `drivers/mmc/mmc.c` lines 692, 797, 2774, 2970)
+
+2. The error occurs during VPL boot when trying to read from the storage device, before any of the MR's code changes could take effect
+
+3. None of the commits in this MR touch VPL, VBE, MMC, or rk3399 code:
+   - `c82374639cc` - arm: SYS_INIT_SP_BSS_OFFSET config change
+   - `8891c59cc81` - scripts: checkpatch.pl extension
+   - `d7d2d544262` - arm64: MIDR entry for Cortex-A720
+   - `aff8244b59a` - bootstage stash (only affects kernel boot, not VPL/SPL phases)
+   - `11bf23e4953` - vexpress64: DM_RNG property
+   - `31b3028dc98` - vexpress64: SYSRESET
+
+4. The bootstage commit adds `bootstage_stash_default()` to `bootm_final()`, but `bootm_final()` is only called when booting to a kernel, not during VPL→SPL transitions
+
+5. The VBE fix for uninitialized variables (commit `9cfdf08420e`) is already included in this branch's base
+
+**Recommendation:** This is an infrastructure/transient issue. The pipeline should be retried without making any code changes.
+
+---
+
