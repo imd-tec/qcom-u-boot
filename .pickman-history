@@ -42618,3 +42618,72 @@ The branch `cherry-e54bf98c3af` is ready for pushing.
 
 ---
 
+## 2026-03-20: us/next
+
+Branch: cherry-6578475a966
+
+Commits:
+- 6578475a966 doc: ext4fs: update documentation for Ext4 Write configuration
+- 1998334d5af doc: usage: Add File System section and Ext4 documentation
+- 9710d98e894 Merge tag 'doc-next-2025-09-27' of https://source.denx.de/u-boot/custodians/u-boot-efi into next
+
+### Conversation log
+The repository has untracked files but no staged changes. This is clean enough to proceed. Let me create and checkout the new branch based on ci/master.
+
+Good, branch created. Now let me cherry-pick the first commit (a regular commit):
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build test:
+
+Deltas match perfectly (1 file changed, 11 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded with auto-merge. Let me verify the commit delta:
+
+Deltas match perfectly (2 files changed, 77 insertions, 26 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit. This is a merge commit (contains "Merge" in the subject), so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (which is expected since the changes were already cherry-picked in the previous commits). The instructions say to always include merge commits even if empty. Let me commit it as empty to preserve the merge commit message:
+
+Good, the merge commit was preserved. Let me verify the deltas and run the build test:
+
+The cherry-picked commit is empty (as expected since the changes were already applied via the previous two commits), while the original merge commit shows the actual changes. This is expected behavior since we cherry-picked the individual commits before the merge commit. The merge commit message is preserved.
+
+Let me run the build test:
+
+Build passed. Now let me verify the final state with `git log --oneline -n 5`:
+
+All 3 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**All cherry-picks completed successfully!**
+
+### Summary
+
+| Commit | Subject | Status |
+|--------|---------|--------|
+| 6578475a966 → fba05b6c592 | doc: ext4fs: update documentation for Ext4 Write configuration | ✅ OK |
+| 1998334d5af → 0095ff51799 | doc: usage: Add File System section and Ext4 documentation | ✅ OK (auto-merged) |
+| 9710d98e894 → 3245a26768c | Merge tag 'doc-next-2025-09-27' of https://source.denx.de/u-boot/custodians/u-boot-efi into next | ✅ OK (empty, as expected) |
+
+### Build Result
+- **Build: OK** - sandbox board builds successfully with no warnings or errors
+
+### Delta Verification
+- **Commit 1**: Exact match (1 file, +11 lines)
+- **Commit 2**: Exact match (2 files, +77/-26 lines)
+- **Commit 3**: Empty commit (expected - the merge commit's changes were already applied via the individual commits)
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None
+
+### Branch Status
+The branch `cherry-6578475a966` is ready for pushing with 3 commits ahead of `ci/master`.
+
+---
+
