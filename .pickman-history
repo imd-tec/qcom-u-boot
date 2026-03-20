@@ -42615,6 +42615,166 @@ None - all non-empty commits had identical deltas between the original and cherr
 | 10 | 14b784aaf2a | Merge patch series "exports overhaul" | **EMPTY** (merge commit) |
 
 The branch `cherry-e54bf98c3af` is ready for pushing.
+## 2026-03-20: us/next
+
+Branch: cherry-c8a74db0cd2
+
+Commits:
+- c8a74db0cd2 arm: Change SYS_INIT_SP_BSS_OFFSET from int to hex
+- 40888b1e4cc scripts: checkpatch.pl: Extend some checks to "env" files
+- 7c0f1c46f88 arm64: Add MIDR entry for Cortex-A720
+- b6d9aa6aafc bootstage: stash boot records to reserved mem before kernel handoff
+- 2767386806c vexpress64: Set the DM_RNG property
+- 1f3f1e090a2 arm: vexpress64: Enable SYSRESET and SYSRESET_PSCI
+- 6190036e236 Merge patch series "vexpress63: Set the DM_RNG property"
+
+### Conversation log
+The repository has untracked files but no staged changes, so it's clean enough to proceed. Let me create the new branch based on ci/master.
+
+Now let's cherry-pick the first commit:
+
+First cherry-pick succeeded with auto-merge. Let me check the delta and run build test:
+
+The commit stats match exactly (8 files, 9 insertions, 9 deletions). Now let me run the build test:
+
+Build passed. Let me cherry-pick the second commit:
+
+There's a conflict. Let me check the conflict details:
+
+This is a simple conflict - the original commit adds "env" to the file extensions, but the ci/master branch has a slightly different regex (it includes "rs" for Rust). Let me resolve this by including both:
+
+I can resolve this conflict by merging both additions - keeping "rs" (Rust) from HEAD and adding "env" from the cherry-pick:
+
+Good, the conflict is resolved. Now let me complete the cherry-pick:
+
+Now let me amend the commit to note the fix-up:
+
+Now let me check the delta and run the build test:
+
+Delta matches (1 file, 1 insertion, 1 deletion). Now build test:
+
+Build passed. Cherry-pick the third commit:
+
+Good. Check delta and build:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Another conflict. Let me check the details:
+
+The conflict shows that the incoming commit has a new `announce_and_cleanup()` function that doesn't exist in HEAD. Let me check if there's already a similar function in ci/master:
+
+Interesting, there are lines 55 and 59 that reference it, but the conflict markers are earlier. Let me look at the full file structure:
+
+I see - the incoming commit adds a whole function that HEAD doesn't have. Let me check if HEAD already has a similar function elsewhere in the file:
+
+Neither ci/master nor HEAD have `announce_and_cleanup` or `bootstage_stash`, so the incoming commit adds new functionality. This is a simple conflict where HEAD has nothing at that location and incoming wants to add the function. I should accept the incoming changes:
+
+I'll resolve by accepting the incoming changes (the new function):
+
+Wait, using `--theirs` will discard any changes from HEAD (ci/master). Let me check if there are important changes in HEAD that I need to preserve:
+
+I see the issue! ci/master has changes (like `#define LOG_CATEGORY` and `#include <init.h>`) that the base of the incoming commit doesn't have. Using `--theirs` will lose those. Let me restore and do a proper merge:
+
+Good, there's only one conflict section - the new function. Let me resolve it by accepting the new function:
+
+The conflict is that ci/master has nothing at that location (just the empty line between `board_quiesce_devices` and `setup_start_tag`), while the incoming commit adds the `announce_and_cleanup` function. I need to accept the theirs side (the new function). Let me do this with sed:
+
+Good, the conflict is resolved. Let me complete the cherry-pick:
+
+Now let me check the delta and build test:
+
+There's a significant delta here! The original commit shows `1 file changed, 1 insertion(+)` but the cherry-picked commit shows `1 file changed, 32 insertions(+)`. This is because the original commit was adding one line to an existing function, but ci/master doesn't have that function at all, so the cherry-pick had to add the entire function.
+
+Let me analyze the original commit more carefully:
+
+I see! The original commit only adds one line `bootstage_stash_default();` to an existing `announce_and_cleanup()` function. The problem is that ci/master doesn't have this function at all, which means there's a dependency on an earlier commit that introduced the function.
+
+Let me check what commit introduced `announce_and_cleanup` in the us/next branch:
+
+Interesting! Commit `ba992d3eacd` (arm: Call bootm_final()) actually REMOVES the `announce_and_cleanup()` function. Let me see what state ci/master is in:
+
+OK, I understand now! ci/master ALREADY has commit `9571da723bf` which removed `announce_and_cleanup()` and replaced it with `bootm_final()`. So the commit `b6d9aa6aafc` which adds a line to `announce_and_cleanup()` is incompatible with ci/master.
+
+The cherry-pick added the whole function back, which is incorrect because ci/master has moved to using `bootm_final()` instead.
+
+I need to undo this cherry-pick and instead apply the intent of the commit (adding `bootstage_stash_default()`) to the correct location in ci/master's code.
+
+I see - the `bootstage_stash_default()` call needs to be added to `bootm_final()` instead. The intent of the original commit is to call `bootstage_stash_default()` before kernel handoff. Let me reset this cherry-pick and apply the change correctly:
+
+Now let me apply the change manually to the correct location in `bootm_final.c`:
+
+Looking at the original commit, it adds `bootstage_stash_default();` after `bootstage_fdt_add_report()` and before `bootstage_report()`. In `bootm_final.c`, that would be between lines 35 and 36. However, looking more closely at the original code:
+
+```c
+#ifdef CONFIG_BOOTSTAGE_FDT
+	bootstage_fdt_add_report();
+#endif
+	bootstage_stash_default();
+#ifdef CONFIG_BOOTSTAGE_REPORT
+	bootstage_report();
+#endif
+```
+
+The `bootstage_stash_default()` is unconditional, not wrapped in a CONFIG check. Let me add it in the equivalent location in `bootm_final.c`:
+
+Good. Now let me commit this with the original commit message:
+
+Now build test:
+
+Build passed. Now let's cherry-pick the fifth commit:
+
+Check delta and build:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick the sixth commit:
+
+Check delta and build:
+
+Delta matches. Build test:
+
+Build passed. Now the seventh and final commit which is a merge commit:
+
+As expected, the merge commit is empty since we already cherry-picked the two commits in the series. Let me commit it as empty:
+
+All 7 commits have been cherry-picked. Let me verify with git log and run the final build:
+
+All 7 commits are present. Now final build test:
+
+All builds passed.
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+All 7 commits have been successfully cherry-picked from `us/next` to branch `cherry-c8a74db0cd2` based on `ci/master`.
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | c8a74db0cd2 | arm: Change SYS_INIT_SP_BSS_OFFSET from int to hex | ✅ Clean |
+| 2 | 40888b1e4cc | scripts: checkpatch.pl: Extend some checks to "env" files | ⚠️ Conflict resolved |
+| 3 | 7c0f1c46f88 | arm64: Add MIDR entry for Cortex-A720 | ✅ Clean |
+| 4 | b6d9aa6aafc | bootstage: stash boot records to reserved mem before kernel handoff | ⚠️ Manually applied |
+| 5 | 2767386806c | vexpress64: Set the DM_RNG property | ✅ Clean |
+| 6 | 1f3f1e090a2 | arm: vexpress64: Enable SYSRESET and SYSRESET_PSCI | ✅ Auto-merged |
+| 7 | 6190036e236 | Merge patch series "vexpress63: Set the DM_RNG property" | ✅ Empty merge |
+
+### Build Result
+- **Build: OK** - All builds passed with no warnings or errors
+
+### Fix-ups Applied
+
+1. **40888b1e4cc (checkpatch.pl)**: Conflict resolved by merging both `rs` (Rust) extension from ci/master and `env` extension from the incoming commit.
+
+2. **b6d9aa6aafc (bootstage)**: This commit was manually applied to `boot/bootm_final.c` instead of `arch/arm/lib/bootm.c` because ci/master has replaced `announce_and_cleanup()` with `bootm_final()`. The change adds `bootstage_stash_default()` call to the equivalent location in the new architecture.
+
+### Commits with Concerning Deltas
+- **b6d9aa6aafc**: Original shows 1 line change, but manual application was required due to architectural differences. The fix-up correctly captures the intent of the original commit.
+
+### Branch Status
+Branch `cherry-c8a74db0cd2` is ready for pushing with 7 commits ahead of `ci/master`.
 
 ---
 
