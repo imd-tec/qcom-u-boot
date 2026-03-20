@@ -42406,3 +42406,215 @@ Branch `cherry-88392a59bf8-fix3` has been created at the same commit as `cherry-
 
 ---
 
+## 2026-03-19: us/next
+
+Branch: cherry-e54bf98c3af
+
+Commits:
+- e54bf98c3af malloc.h: be a bit more consistent with macro definitions
+- 0933358163a _exports.h: drop creating dummy i2c entries and fixup config dependency
+- 475a72f6471 _exports.h: simplify condition for including spi functions
+- eb178c849c2 _exports.h: drop the last dummy entries
+- a78941bc7ff exports.c: drop unused dummy function
+- bdbaaee65c6 exports.h: make sure declarations are in sync with the actual exports
+- 2ef6c17f7f4 _exports.h: reorganize a bit
+- d9570615820 _exports.h: export standard memory/string handling functions
+- 07588f4ad9b exports.h: bump XF_VERSION
+- 14b784aaf2a Merge patch series "exports overhaul"
+
+### Conversation log
+The repository has some untracked files but no staged changes. Let me create and checkout the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+There's a conflict on the first cherry-pick. Before aborting, let me check if these commits are already applied in ci/master with different hashes:
+
+None of the commits were found in ci/master by their commit subjects. Let me try a broader search for any matching commits, and also check the conflict to see if I can resolve it:
+
+Let me look at the conflict markers more clearly and also check what the original commit contains:
+
+Now I understand the conflict. The original commit changes a section at line 904 in a `#ifdef USE_DL_PREFIX` section, but the ci/master version has a different structure. Let me look at the ci/master version of this file around the conflicting area:
+
+I can see that ci/master already has the correct function-like macro definitions (e.g., `#define calloc(n, s) dlcalloc(n, s)`) in lines 107-120, which is what the original commit is trying to add. The original commit was modifying lines in a different section that exists in us/next but has been restructured in ci/master.
+
+Let me verify that ci/master already has the change from this commit applied - the core change is making the macros function-like:
+
+Interesting. Both versions have function-like macros for calloc, malloc, memalign, realloc, and free in the `USE_DL_PREFIX` section. The changes are essentially already applied in ci/master (with slightly different parameter naming like `(n, s)` vs `(x,y)`).
+
+This conflict appears to be because the file structure is different between us/next and ci/master. The commit appears to be applied in a different location in ci/master. Let me check the other commits to see if they're also effectively already present:
+
+Now I need to compare the files affected by this series between us/next and ci/master to see if the changes are already applied with different hashes. Let me compare the _exports.h and exports.h files between the two branches:
+
+I see significant differences between the branches. The us/next branch has the changes from this series (e.g., simplified _exports.h, XF_VERSION=10, using EXPORT_FUNC macro for declarations in exports.h), while ci/master has the older version (with dummy entries, XF_VERSION=9, explicit declarations in exports.h).
+
+This means the commits are NOT already applied to ci/master - there are real differences. Let me try to resolve the conflict. The conflict is in malloc.h, and looking at the conflict markers, I can see that the conflict is actually a merge conflict where ci/master has a different structure.
+
+Let me abort the cherry-pick and try a different approach - manually applying the patch:
+
+Let me take a closer look at the malloc.h file and try to understand where the original commit's changes should be applied. The original commit is modifying macros in a `#ifdef USE_DL_PREFIX` section (around line 904 in the us/next version), but in ci/master the structure is different:
+
+I see! The malloc.h files are significantly different between ci/master and us/next. In ci/master, the file was already restructured (probably by a different series), while us/next has a much older version of the file.
+
+Let me check if the changes in the first commit (making macros function-like) are already present in ci/master:
+
+This is interesting! The ci/master version already has function-like macros (`#define calloc(n, s) dlcalloc(n, s)` etc.) in the USE_DL_PREFIX section. The effect of the first commit is already present in ci/master.
+
+The us/next branch (both before and after the series at line 904) had the macros but was modified by the first commit to make them function-like. However, in ci/master, the macros are ALREADY function-like, so the first commit's changes are essentially already applied!
+
+This explains the conflict - the commit is trying to change something that's already been changed in a different way in ci/master.
+
+Let me check if ALL the commits' changes are effectively already in ci/master. Let me compare the final state of the affected files:
+
+The diff shows that the two files are quite different:
+
+1. **us/next** (after the series):
+   - No dummy entries
+   - Reorganized layout
+   - Added new exports (memcpy, memmove, strchr, strlen, strncmp, strncpy, strnlen, sprintf, snprintf, vsprintf, vsnprintf, realloc, calloc)
+   - XF_VERSION=10
+
+2. **ci/master**:
+   - Still has dummy entries
+   - Old layout
+   - Fewer exports
+   - XF_VERSION=9
+
+The commits are NOT already applied to ci/master. The conflict is happening because malloc.h in ci/master has been restructured differently, and the first commit's changes don't apply cleanly because they're targeting a different file structure.
+
+Let me check if the first commit's effect (making macros function-like) is already present in ci/master even though the structure is different:
+
+I see! Looking at lines 107-120 in ci/master's malloc.h, the macros are ALREADY function-like macros:
+- `#define calloc(n, s)           dlcalloc(n, s)` 
+- `#define free(p)                dlfree(p)`
+- `#define malloc(s)              dlmalloc(s)`
+- etc.
+
+This means the **intent** of the first commit (e54bf98c3af - making macros function-like for consistency) is already achieved in ci/master, though via a different code structure.
+
+Given that:
+1. The first commit's effect is already present in ci/master
+2. The file structure is completely different between branches
+3. All the commits deal with the exports mechanism which is significantly different between branches
+
+I believe this series has already been applied to ci/master via a different path (likely a refactoring of malloc.h that consolidated the changes). Let me verify by checking if the key changes from the series are present:
+
+Excellent! Now I can see the differences clearly:
+
+1. **ci/master exports.c** has the `dummy()` function and the `#ifndef CONFIG_PHY_AQUANTIA` defines that use `dummy`
+2. **us/next exports.c** (after the series) does NOT have the dummy function - it was removed by commit a78941bc7ff
+
+This confirms the commits are NOT already in ci/master. The issue is that the first commit conflicts because malloc.h has been restructured in ci/master in a way that the same fix (function-like macros) is already present, but through different code.
+
+Let me try to apply the first commit's changes by creating an empty commit since the effect is already present, then continue with the remaining commits:
+
+Actually, wait - let me re-examine. The key question is: is the first commit's change truly redundant in ci/master?
+
+The original commit modifies lines at around line 904 in us/next's malloc.h, changing:
+- `#define calloc dlcalloc` → `#define calloc(x,y) dlcalloc(x,y)`
+- `#define memalign dlmemalign` → `#define memalign(a,x) dlmemalign(a,x)`
+- `#define realloc dlrealloc` → `#define realloc(p,x) dlrealloc(p,x)`
+
+But ci/master already has these as function-like macros at lines 107-120:
+- `#define calloc(n, s) dlcalloc(n, s)`
+- `#define memalign(a, s) dlmemalign(a, s)`
+- `#define realloc(p, s) dlrealloc(p, s)`
+
+So the effect of the first commit IS already present in ci/master, but because the file structure is completely different (ci/master has a modernized malloc.h), the cherry-pick conflicts.
+
+Given the complexity here, I should try to manually apply what each commit does to ci/master:
+
+1. **e54bf98c3af** - Already done (macros are function-like in ci/master)
+2. **0933358163a - d9570615820** - These modify _exports.h, exports.c, exports.h
+
+Let me try to skip the first commit (by creating an empty commit with a note), and then try cherry-picking the rest:
+
+Now let me cherry-pick the second commit:
+
+The second commit applied successfully. Let me verify the delta and run a build test:
+
+Delta is identical (1 file, 1 insertion, 5 deletions). Now let me run a build test:
+
+Build passed! Now let me cherry-pick the third commit:
+
+Delta is identical. Build test:
+
+Build passed! Cherry-pick the fourth commit:
+
+Delta identical. Build test:
+
+Cherry-pick the fifth commit:
+
+Delta identical. Build test:
+
+Cherry-pick the sixth commit:
+
+Delta identical. Build test:
+
+Cherry-pick the seventh commit:
+
+Delta identical. Build test:
+
+Cherry-pick the eighth commit:
+
+Delta identical. Build test:
+
+Cherry-pick the ninth commit:
+
+Delta identical. Build test:
+
+Now cherry-pick the merge commit (tenth and final):
+
+There's a conflict in the merge commit. Let me check what's happening:
+
+The merge commit is trying to bring in the same change as the first commit (making macros function-like) which conflicts. Since this is a merge commit and the only change from it affecting malloc.h is the same as the first commit which we've already established is present in ci/master, I can resolve this by keeping our version:
+
+The merge commit results in an empty commit because all changes have been cherry-picked individually. This is expected - I'll commit it as an empty commit to preserve the merge commit message:
+
+Now let me verify the final state:
+
+All 10 commits are present. Now run the final build test:
+
+Final build passes. Let me also verify the branch status:
+
+## Final Status Report
+
+### Summary
+Successfully cherry-picked all 10 commits from us/next to branch `cherry-e54bf98c3af` based on `ci/master`.
+
+### Build Result: **OK** ✓
+All builds passed (sandbox target).
+
+### Fix-ups Made
+
+1. **e54bf98c3af (malloc.h: be a bit more consistent with macro definitions)**
+   - Created as an **empty commit** because the file `include/malloc.h` in ci/master has already been restructured with the same function-like macro definitions (at lines 107-120).
+   - The original commit targeted a different section in us/next's older malloc.h structure, but the effect (making calloc, memalign, realloc function-like macros instead of object-like macros) is already present in ci/master.
+   - Note added to commit message explaining this.
+
+2. **14b784aaf2a (Merge patch series "exports overhaul")**
+   - Also an **empty commit** because all constituent commits were cherry-picked individually.
+   - The merge commit's changes to malloc.h conflicted due to the same reasons as above.
+   - Resolved by keeping ci/master's version (which already has the changes).
+   - Note added to commit message explaining this.
+
+### Commits with Concerning Deltas
+None - all non-empty commits had identical deltas between the original and cherry-picked versions.
+
+### Commits Applied
+| # | Original Hash | Subject | Delta |
+|---|---------------|---------|-------|
+| 1 | e54bf98c3af | malloc.h: be a bit more consistent with macro definitions | **EMPTY** (already present) |
+| 2 | 0933358163a | _exports.h: drop creating dummy i2c entries and fixup config dependency | 1 file, +1, -5 ✓ |
+| 3 | 475a72f6471 | _exports.h: simplify condition for including spi functions | 1 file, +1, -10 ✓ |
+| 4 | eb178c849c2 | _exports.h: drop the last dummy entries | 1 file, -3 ✓ |
+| 5 | a78941bc7ff | exports.c: drop unused dummy function | 1 file, -11 ✓ |
+| 6 | bdbaaee65c6 | exports.h: make sure declarations are in sync with the actual exports | 1 file, +3, -33 ✓ |
+| 7 | 2ef6c17f7f4 | _exports.h: reorganize a bit | 1 file, +8, -8 ✓ |
+| 8 | d9570615820 | _exports.h: export standard memory/string handling functions | 1 file, +14 ✓ |
+| 9 | 07588f4ad9b | exports.h: bump XF_VERSION | 1 file, +1, -1 ✓ |
+| 10 | 14b784aaf2a | Merge patch series "exports overhaul" | **EMPTY** (merge commit) |
+
+The branch `cherry-e54bf98c3af` is ready for pushing.
+
+---
+
