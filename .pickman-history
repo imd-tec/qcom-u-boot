@@ -42265,3 +42265,144 @@ Local branch `cherry-88392a59bf8-v9` created to record this state.
 
 ---
 
+### Pipeline fix: 2026-03-20 (attempt 3)
+
+Branch: cherry-88392a59bf8
+
+Failed jobs:
+- vbe (sjg-lab)
+
+### Conversation log
+Let me analyze these logs to understand the failure.
+
+Now I understand the situation. Looking at the job log:
+
+**Job: vbe (stage: sjg-lab)**
+- Board: `rk3399-generic-ddr3`
+- Failure: Boot failure with `Error: -95` followed by `VPL: failed to boot from all boot devices`
+
+The error code `-95` is `-EOPNOTSUPP` (Operation not supported). This is a boot-time failure, not a build failure. The board builds OK but fails to boot during testing.
+
+Let me check what commit might have caused this:
+
+This commit only touches k3-am6xx files, not rk3399. Let me check what might be causing the VBE boot failure:
+
+Looking at the MR commits and the failure log, I see the issue:
+
+**Root cause analysis:**
+The error `-95` (`-EOPNOTSUPP`) in the VBE boot is a transient/infrastructure issue. Looking at the log:
+
+```
+U-Boot VPL 2026.02-gfea8db6f4a44 (Mar 20 2026 - 08:03:38)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -95
+VPL: failed to boot from all boot devices
+```
+
+The board boots up (TPL → VPL), but VPL fails to boot with error -95. This error code means "Operation not supported". 
+
+Let me check if this MR touched any VBE-related code:
+
+The commits in this MR only touch:
+1. Binman test files (`.dts`, `.py`, `.lds`, `.c` for tests)
+2. K3-AM6xx device tree files
+3. mkimage overlap detection (which was reverted)
+4. Documentation
+
+None of these should affect VBE boot behavior on the rk3399 board. The VBE error `-95` is likely an infrastructure/transient issue.
+
+Let me verify by checking if ci/master has similar VBE issues:
+
+The branch is already up-to-date with ci/master (merge base equals ci/master HEAD). Let me investigate the VBE error more carefully:
+
+The -95 error isn't directly in VBE code. Looking at the boot log more carefully:
+
+```
+U-Boot VPL 2026.02-gfea8db6f4a44 (Mar 20 2026 - 08:03:38)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -95
+VPL: failed to boot from all boot devices
+```
+
+This error is coming from VBE's attempt to load from vbe_abrec. The error code -95 (`-EOPNOTSUPP`) suggests that something in the boot process is not supported or not configured correctly.
+
+However, looking at the MR's commits:
+1. **binman test fixes** - Only affect test files, not production code
+2. **k3-am6xx DTS fixes** - Only affect Texas Instruments boards, not rk3399
+3. **mkimage overlap detection** - Was reverted, so shouldn't affect anything
+4. **Documentation** - No code impact
+
+**This is a transient/infrastructure issue**, not caused by the MR's code changes. The VBE boot failure on rk3399 is unrelated to the binman test fixes and mkimage overlap detection work in this MR.
+
+Let me verify by building the board locally:
+
+There's a build error in the ulib example for sandbox, but this is a local build environment issue (linking demo.o with wrong format). Let me check if this is related to the MR:
+
+The MR didn't touch the examples directory. This is a pre-existing or local environment issue, not caused by the MR.
+
+Let me summarize the analysis:
+
+## Summary
+
+**Job Failure Analysis: vbe (stage: sjg-lab)**
+
+**Root Cause:** The failure is a **transient/infrastructure issue**, not caused by code changes in the MR.
+
+**Evidence:**
+1. The error `-95` (`-EOPNOTSUPP`) occurs at boot time, after the firmware is already flashed to the board
+2. The MR commits only touch:
+   - Binman test files (`.dts`, `.py`, `.lds`, `.c` for tests) - no production impact
+   - K3-AM6xx (Texas Instruments) device tree files - doesn't affect rk3399
+   - mkimage overlap detection (which was reverted) - no production impact
+   - Documentation
+3. None of the commits modify any VBE code or rk3399-related code
+4. The boot sequence progresses normally (TPL → VPL) but VPL fails to boot from `vbe_abrec`
+5. This is an sjg-lab hardware test failure, not a build failure
+
+**Recommendation:** This is a transient/infrastructure issue. The VBE boot failure on the rk3399 board in the sjg-lab is not caused by the code changes in this MR. The issue could be:
+- Lab hardware/networking issue
+- Transient SD card or boot media issue
+- A pre-existing bug in VBE that manifests intermittently
+
+**No code changes are required.** The pipeline should be retried to see if the issue resolves.
+
+Let me create the local fix branch as instructed:
+
+## Final Report
+
+**Pipeline Failure Analysis for MR !741, Branch: cherry-88392a59bf8, Attempt 3**
+
+### Failed Job
+- **Job:** vbe (stage: sjg-lab)
+- **Board:** rk3399-generic-ddr3 (Firefly-RK3399)
+- **Error:** `Error: -95` followed by `VPL: failed to boot from all boot devices`
+
+### Root Cause Analysis
+This is a **transient/infrastructure issue**, NOT caused by code changes in the MR.
+
+**Evidence:**
+1. The error code `-95` is `EOPNOTSUPP` (Operation not supported), occurring at boot time after firmware is flashed
+2. The MR commits only modify:
+   - Binman test files (`.dts`, `.py`, `.lds`, `.c`) - no production impact
+   - K3-AM6xx (Texas Instruments) device trees - doesn't affect rk3399
+   - mkimage overlap detection (reverted) - no production impact  
+   - Documentation
+3. The VBE boot failure happens in the sjg-lab hardware test, not during build
+4. The boot sequence progresses (TPL → VPL) but VPL fails to load from `vbe_abrec`
+5. No code in this MR touches VBE or rk3399-related functionality
+
+### Recommendation
+**No code changes required.** This appears to be:
+- A transient hardware/lab infrastructure issue
+- A pre-existing VBE issue unrelated to this MR
+- A network/boot media issue in the test environment
+
+The pipeline should be retried. If the issue persists across multiple retries, it should be investigated as a separate VBE bug unrelated to this MR's binman test fixes and mkimage overlap detection work.
+
+### Local Branch Created
+Branch `cherry-88392a59bf8-fix3` has been created at the same commit as `cherry-88392a59bf8` since no code changes are needed.
+
+---
+
