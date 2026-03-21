@@ -44910,3 +44910,68 @@ Ready for push: Yes
 
 ---
 
+## 2026-03-21: us/next
+
+Branch: cherry-524d637bb93
+
+Commits:
+- 524d637bb93 crypto/rng: double the entropy delay interval for retry
+- b1ca952b488 NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A
+- e0516d3807d Merge tag 'fsl-qoriq-master-2025-10-10' of https://source.denx.de/u-boot/custodians/u-boot-fsl-qoriq
+
+### Conversation log
+The repository state is clean (only untracked files, no uncommitted changes). Now let me create and checkout the new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick the first commit (524d637bb93 - crypto/rng: double the entropy delay interval for retry):
+
+First commit cherry-picked successfully. Let me check the delta and run the build test:
+
+Delta matches exactly (1 file, 1 insertion, 1 deletion). Now running the build test:
+
+Build passed. Now let me cherry-pick the second commit (b1ca952b488 - NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A):
+
+Second commit cherry-picked (with auto-merge). Let me check the delta:
+
+Delta matches exactly (1 file, 1 insertion). Now running the build test:
+
+Build passed. Now let me cherry-pick the third commit (e0516d3807d - Merge tag 'fsl-qoriq-master-2025-10-10'). This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The cherry-pick is empty (expected since this is a merge commit and the changes are already present). I need to commit with --allow-empty to preserve the merge commit message:
+
+Merge commit preserved as empty commit. Let me verify the delta (it should be empty on the cherry-picked side):
+
+The merge commit was cherry-picked as empty (as expected since the individual commits were already applied). The original merge shows 2 files changed, but our cherry-picked version is empty because those changes were already applied in the previous two cherry-picks. This is correct behavior. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| Original Hash | Subject | Cherry-picked Hash | Status |
+|---------------|---------|-------------------|--------|
+| 524d637bb93 | crypto/rng: double the entropy delay interval for retry | 702960d589b | ✅ Applied |
+| b1ca952b488 | NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A | 33349da1a0e | ✅ Applied (auto-merged) |
+| e0516d3807d | Merge tag 'fsl-qoriq-master-2025-10-10' | c5a83c41e33 | ✅ Applied (empty commit, as expected) |
+
+### Build Result
+- **Status:** ✅ OK
+- All builds passed (sandbox board)
+- No warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- **e0516d3807d (merge commit):** Cherry-picked as empty commit. This is expected behavior because the merge commit's changes (the 2 individual commits) were already applied via the previous cherry-picks. The merge commit message was preserved for history tracking.
+
+### Branch Status
+- Branch `cherry-524d637bb93` is ready for pushing
+- Currently 3 commits ahead of `ci/master`
+
+---
+
