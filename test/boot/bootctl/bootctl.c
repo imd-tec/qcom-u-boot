@@ -101,6 +101,10 @@ static int bootctl_oslist_usb(struct unit_test_state *uts)
 	ut_assertok(bc_oslist_next(dev, &iter, &info));
 	ut_asserteq_str("hub1.p4.usb_mass_storage.lun0.bootdev.part_1", bflow->name);
 
+	/* second entry from flash3 (Ubuntu has two extlinux labels) */
+	ut_assertok(bc_oslist_next(dev, &iter, &info));
+	ut_asserteq_str("hub1.p4.usb_mass_storage.lun0.bootdev.part_1", bflow->name);
+
 	ut_asserteq(-ENODEV, bc_oslist_next(dev, &iter, &info));
 
 	return 0;
@@ -455,6 +459,10 @@ static int check_multiboot_ui(struct unit_test_state *uts,
 	bc_oslist_setup_iter(&iter);
 	ut_assertok(bc_oslist_next(oslist_dev, &iter, &info[0]));
 	ut_asserteq_str("mmc11.bootdev.part_1", info[0].bflow.name);
+
+	/* skip the second mmc11 entry (Ubuntu has two extlinux labels) */
+	ut_assertok(bc_oslist_next(oslist_dev, &iter, &info[1]));
+	ut_asserteq_str("mmc11.bootdev.part_1", info[1].bflow.name);
 
 	ut_assertok(bc_oslist_next(oslist_dev, &iter, &info[1]));
 	ut_asserteq_str("hub1.p4.usb_mass_storage.lun0.bootdev.part_1",

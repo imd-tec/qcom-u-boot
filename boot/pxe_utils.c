@@ -1513,30 +1513,40 @@ int pxe_boot(struct pxe_context *ctx)
 
 int pxe_boot_entry(struct pxe_context *ctx, ulong addr, int entry)
 {
+	bool free_cfg = false;
 	struct pxe_label *label;
 	struct pxe_menu *cfg;
-	int ret, i = 0;
-	void *ptr;
+	int i = 0;
+	int ret;
 
-	ptr = map_sysmem(addr, 0);
-	ctx->pxe_file_size = strnlen(ptr, SZ_64K);
-	unmap_sysmem(ptr);
+	/* Use cached config if available, otherwise parse */
+	cfg = ctx->cfg;
+	if (!cfg) {
+		void *ptr;
 
-	cfg = pxe_prepare(ctx, addr, false);
-	if (!cfg)
-		return log_msg_ret("prp", -EINVAL);
+		ptr = map_sysmem(addr, 0);
+		ctx->pxe_file_size = strnlen(ptr, SZ_64K);
+		unmap_sysmem(ptr);
+
+		cfg = pxe_prepare(ctx, addr, false);
+		if (!cfg)
+			return log_msg_ret("prp", -EINVAL);
+		free_cfg = true;
+	}
 
 	list_for_each_entry(label, &cfg->labels, list) {
 		if (i == entry)
 			goto found;
 		i++;
 	}
-	pxe_menu_uninit(cfg);
+	if (free_cfg)
+		pxe_menu_uninit(cfg);
 	return log_msg_ret("lab", -ENOENT);
 
 found:
 	ret = label_boot(ctx, label);
-	pxe_menu_uninit(cfg);
+	if (free_cfg)
+		pxe_menu_uninit(cfg);
 
 	return ret;
 }

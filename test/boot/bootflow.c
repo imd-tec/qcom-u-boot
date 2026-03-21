@@ -292,7 +292,7 @@ static int bootflow_scan_boot(struct unit_test_state *uts)
 	ut_assertok(run_command("bootflow scan -b", 0));
 	ut_assert_nextline(
 		"** Booting bootflow 'mmc1.bootdev.part_1' with extlinux");
-	ut_assert_nextline("Ignoring unknown command: ui");
+	/* cached parse from scanning suppresses parser warnings */
 
 	/*
 	 * We expect it to get through to boot although sandbox always returns
@@ -636,7 +636,7 @@ static int bootflow_cmd_boot(struct unit_test_state *uts)
 	ut_asserteq(1, run_command("bootflow boot", 0));
 	ut_assert_nextline(
 		"** Booting bootflow 'mmc1.bootdev.part_1' with extlinux");
-	ut_assert_nextline("Ignoring unknown command: ui");
+	/* cached parse from scanning suppresses parser warnings */
 
 	/*
 	 * We expect it to get through to boot although sandbox always returns
@@ -1861,6 +1861,8 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 {
 	struct bootstd_priv *std;
 	const char **old_order;
+	struct bootflow *bflow;
+	bool test_first;
 
 	ut_assertok(prep_mmc_bootdev(uts, "mmc15", true, &old_order));
 	ut_assertok(run_command("bootflow scan", 0));
@@ -1871,13 +1873,25 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	free(std->bootdev_order);
 	std->bootdev_order = old_order;
 
+	/*
+	 * BLS entry order depends on the filesystem, so detect which
+	 * .conf file came first and check accordingly
+	 */
+	bflow = alist_getw(&std->bootflows, 1, struct bootflow);
+	test_first = !strcmp(bflow->os_name, "Test Boot");
+
 	ut_assertok(run_command("bootflow list", 0));
 	ut_assert_nextline("Showing all bootflows");
 	ut_assert_nextline(HEADER);
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
-	ut_assert_nextline("  1  bls          ready   mmc          1    0     mmc15.bootdev.part_1      /loader/entries/6.8.0.conf");
-	ut_assert_nextline("  2  bls          ready   mmc          1    1     mmc15.bootdev.part_1      /loader/entries/6.8.0-rescue.conf");
+	if (test_first) {
+		ut_assert_nextline("  1  bls          ready   mmc          1    0     mmc15.bootdev.part_1      /loader/entries/6.8.0.conf");
+		ut_assert_nextline("  2  bls          ready   mmc          1    1     mmc15.bootdev.part_1      /loader/entries/6.8.0-rescue.conf");
+	} else {
+		ut_assert_nextline("  1  bls          ready   mmc          1    0     mmc15.bootdev.part_1      /loader/entries/6.8.0-rescue.conf");
+		ut_assert_nextline("  2  bls          ready   mmc          1    1     mmc15.bootdev.part_1      /loader/entries/6.8.0.conf");
+	}
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("(3 bootflows, 3 valid)");
 	ut_assert_console_end();
@@ -1892,12 +1906,15 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	ut_assert_nextline("Method:    bls");
 	ut_assert_nextline("State:     ready");
 	ut_assert_nextline("Partition: 1");
-	ut_assert_nextline("Entry:     0: Test Boot");
+	ut_assert_nextline("Entry:     0: %s",
+			   test_first ? "Test Boot" : "Rescue Boot");
 	if (IS_ENABLED(CONFIG_BLK_LUKS))
 		ut_assert_nextline("Encrypted: no");
 	ut_assert_nextline("Subdir:    (none)");
-	ut_assert_nextline("Filename:  /loader/entries/6.8.0.conf");
-	ut_assert_skip_to_line("OS:        Test Boot");
+	ut_assert_nextline("Filename:  /loader/entries/%s",
+			   test_first ? "6.8.0.conf" : "6.8.0-rescue.conf");
+	ut_assert_skip_to_line("OS:        %s",
+			       test_first ? "Test Boot" : "Rescue Boot");
 	ut_assert_skip_to_line("Error:     0");
 	ut_assert_console_end();
 
@@ -1906,8 +1923,10 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	ut_assert_console_end();
 	ut_assertok(run_command("bootflow info", 0));
 	ut_assert_nextline("Name:      mmc15.bootdev.part_1");
-	ut_assert_skip_to_line("Filename:  /loader/entries/6.8.0-rescue.conf");
-	ut_assert_skip_to_line("OS:        Rescue Boot");
+	ut_assert_skip_to_line("Filename:  /loader/entries/%s",
+			       test_first ? "6.8.0-rescue.conf" : "6.8.0.conf");
+	ut_assert_skip_to_line("OS:        %s",
+			       test_first ? "Rescue Boot" : "Test Boot");
 	ut_assert_skip_to_line("Error:     0");
 	ut_assert_console_end();
 

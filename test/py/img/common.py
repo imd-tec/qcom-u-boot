@@ -34,7 +34,8 @@ def copy_partition(ubman, fsfile, outname):
 
 def setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
                          script, part2_size=1, use_fde=0, luks_kdf='pbkdf2',
-                         encrypt_keyfile=None, master_keyfile=None):
+                         encrypt_keyfile=None, master_keyfile=None,
+                         extra_conf=None):
     """Create a 20MB disk image with a single FAT partition
 
     Args:
@@ -54,6 +55,8 @@ def setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
             If provided, takes precedence over passphrase.
         master_keyfile (str, optional): Path to file containing the raw master
             key. If provided, this exact key is used as the LUKS master key.
+        extra_conf (dict, optional): Extra files to create in the extlinux
+            directory, as {filename: content} pairs.
     """
     fsh = FsHelper(config, 'vfat', 18, prefix=basename)
     fsh.setup()
@@ -64,6 +67,12 @@ def setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
     conf = os.path.join(ext, 'extlinux.conf')
     with open(conf, 'w', encoding='ascii') as fd:
         print(script, file=fd)
+
+    if extra_conf:
+        for fname, content in extra_conf.items():
+            with open(os.path.join(ext, fname), 'w',
+                      encoding='ascii') as fd:
+                print(content, file=fd)
 
     inf = os.path.join(config.persistent_data_dir, 'inf')
     with open(inf, 'wb') as fd:
