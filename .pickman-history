@@ -43463,3 +43463,79 @@ The branch `cherry-f0e722def6c` is ready for pushing. It contains all 25 request
 
 ---
 
+## 2026-03-20: us/next
+
+Branch: cherry-3ce8a0e9115
+
+Commits:
+- 3ce8a0e9115 fastboot: Fix has-slot command always returning yes for fb_nand
+- f5866758724 usb: gadget: atmel: Add missing null check
+- 5ac61383b2d usb: dwc2: Add missing null check
+- 8cd4a5e94ba usb: dwc3: Remove redundant test
+- a14253b15c8 Merge tag 'u-boot-dfu-next-20251001' of https://source.denx.de/u-boot/custodians/u-boot-dfu into next
+
+### Conversation log
+The repository has some untracked files but is otherwise clean (no staged or modified tracked files). I can proceed with the cherry-pick.
+
+Now let me cherry-pick the first commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test:
+
+The delta matches (1 file changed, 6 insertions, 1 deletion). Now let me run the build test:
+
+Build passed. Let me proceed with the second cherry-pick:
+
+Delta matches. Running build test:
+
+Build passed. Let me cherry-pick the third commit:
+
+Delta matches. Running build test:
+
+Build passed. Let me cherry-pick the fourth commit:
+
+Delta matches. Running build test:
+
+Build passed. Now the fifth commit - this is a merge commit so I need to use -m 1 --allow-empty:
+
+The merge commit resulted in an empty commit (as expected since the merged changes are already in the base). I need to commit it with --allow-empty to preserve the commit history:
+
+The merge commit was created (though empty since the changes were already applied). Let me verify the delta:
+
+This is expected - the original merge commit had changes (4 files), but the cherry-picked version is empty because all those changes were already applied via the individual cherry-picks we did before. This is the correct behavior - the merge commit is preserved for history but has no changes since we already applied the commits it was merging.
+
+Let me run a build test:
+
+Build passed. Now let me verify all 5 commits are present:
+
+All 5 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+**All 5 commits cherry-picked successfully!**
+
+### Cherry-picked commits (in order):
+| # | Hash (New) | Hash (Original) | Subject |
+|---|------------|-----------------|---------|
+| 1 | e0115bc987d | 3ce8a0e9115 | fastboot: Fix has-slot command always returning yes for fb_nand |
+| 2 | 0f8716c987f | f5866758724 | usb: gadget: atmel: Add missing null check |
+| 3 | 6539fcc0ac5 | 5ac61383b2d | usb: dwc2: Add missing null check |
+| 4 | f959a1630ab | 8cd4a5e94ba | usb: dwc3: Remove redundant test |
+| 5 | c18b1b3c8c9 | a14253b15c8 | Merge tag 'u-boot-dfu-next-20251001'... (empty - changes already applied) |
+
+### Build Result: **OK**
+- All builds passed (sandbox)
+- No warnings or errors
+
+### Fix-ups Made: **None**
+- All commits applied cleanly without conflicts
+
+### Commits with Concerning Deltas: **None**
+- All 4 regular commits had identical deltas (same files, same line counts)
+- Merge commit was empty as expected (since its changes were already cherry-picked individually)
+
+### Branch Status:
+- Branch `cherry-3ce8a0e9115` is ready for pushing
+- 5 commits ahead of `ci/master`
+
+---
+
