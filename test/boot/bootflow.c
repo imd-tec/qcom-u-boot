@@ -258,6 +258,7 @@ static int bootflow_cmd_info(struct unit_test_state *uts)
 	ut_assert_nextline("Method:    extlinux");
 	ut_assert_nextline("State:     ready");
 	ut_assert_nextline("Partition: 1");
+	ut_assert_nextline("Entry:     0");
 	if (IS_ENABLED(CONFIG_BLK_LUKS))
 		ut_assert_nextline("Encrypted: no");
 	ut_assert_nextline("Subdir:    (none)");
@@ -1845,6 +1846,7 @@ static int bootflow_cmd_info_encrypted(struct unit_test_state *uts)
 	ut_assert_nextline("Method:    extlinux");
 	ut_assert_nextline("State:     ready");
 	ut_assert_nextline("Partition: 1");
+	ut_assert_nextline("Entry:     0");
 	if (IS_ENABLED(CONFIG_BLK_LUKS))
 		ut_assert_nextline("Encrypted: LUKSv2");
 	ut_assert_skip_to_line("Error:     0");
@@ -1890,6 +1892,7 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	ut_assert_nextline("Method:    bls");
 	ut_assert_nextline("State:     ready");
 	ut_assert_nextline("Partition: 1");
+	ut_assert_nextline("Entry:     0");
 	if (IS_ENABLED(CONFIG_BLK_LUKS))
 		ut_assert_nextline("Encrypted: no");
 	ut_assert_nextline("Subdir:    (none)");

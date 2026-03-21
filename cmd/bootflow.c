@@ -9,6 +9,7 @@
 #include <bootdev.h>
 #include <bootflow.h>
 #include <bootm.h>
+#include <bootmeth.h>
 #include <bootstd.h>
 #include <command.h>
 #include <console.h>
@@ -371,6 +372,13 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	printf("Method:    %s\n", bflow->method ? bflow->method->name : "(none)");
 	printf("State:     %s\n", bootflow_state_get_name(bflow->state));
 	printf("Partition: %d\n", bflow->part);
+	if (bflow->method) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(bflow->method);
+		if (ucp->flags & BOOTMETHF_MULTI)
+			printf("Entry:     %d\n", bflow->entry);
+	}
 
 	/* Show encryption status with LUKS version if applicable */
 	if (IS_ENABLED(CONFIG_BLK_LUKS)) {

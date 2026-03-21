@@ -167,6 +167,7 @@ Type       distro
 Method:    extlinux
 State      ready
 Partition  2
+Entry      0
 Encrypted  no
 Subdir     (none)
 Filename   /extlinux/extlinux.conf
@@ -184,6 +185,12 @@ Device
 
 Block dev
     Name of the block device, if any. Network devices don't have a block device.
+
+Entry
+    Entry number and name for boot methods that support multiple entries
+    (``BOOTMETHF_MULTI``). For example, an extlinux config with several
+    labels shows the entry index and label name. Only shown when
+    the boot method supports multi-entry.
 
 Encrypted
     Encryption status. Shows ``LUKSv1`` or ``LUKSv2`` if a LUKS-encrypted
@@ -344,6 +351,7 @@ displayed and booted::
     Method:    distro
     State:     ready
     Partition: 2
+    Entry:     0
     Encrypted: no
     Subdir:    (none)
     Filename:  extlinux/extlinux.conf
@@ -355,8 +363,7 @@ displayed and booted::
     FDT:       <NULL>
     Error:     0
     U-Boot> bootflow boot
-    ** Booting bootflow 'smsc95xx_eth.bootdev.0'
-    Ignoring unknown command: ui
+    ** Booting bootflow 'mmc@7e202000.bootdev.part_2'
     Ignoring malformed menu command:  autoboot
     Ignoring malformed menu command:  hidden
     Ignoring unknown command: totaltimeout
