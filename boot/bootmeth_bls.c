@@ -9,7 +9,8 @@
  * https://uapi-group.org/specifications/specs/boot_loader_specification/
  *
  * Supported features:
- * - Single BLS entry file at loader/entry.conf
+ * - Scans loader/entries/ directory for .conf files
+ * - Falls back to single loader/entry.conf if no entries/ directory
  * - Fields: title, version, linux, options, initrd, devicetree
  * - Multiple options lines (concatenated with spaces)
  * - Multiple initrd lines (only first used, PXE limitation)
@@ -17,7 +18,7 @@
  * - Zero-copy parsing (fields point into bootflow buffer)
  *
  * Current limitations:
- * - Single entry file only, not multiple entries in loader/entries/
+ * - Only the first entry file in loader/entries/ is used
  * - Only first initrd used (PXE infrastructure supports one)
  * - No devicetree-overlay support
  * - No architecture/machine-id filtering
@@ -34,6 +35,8 @@
 #include <bootmeth.h>
 #include <bootstd.h>
 #include <dm.h>
+#include <env.h>
+#include <fs_common.h>
 #include <fs_legacy.h>
 #include <malloc.h>
 #include <mapmem.h>
@@ -41,7 +44,8 @@
 #include <pxe_utils.h>
 #include <linux/string.h>
 
-/* Single BLS entry file to check */
+/* BLS entry directory and fallback single file */
+#define BLS_ENTRIES_DIR		"loader/entries"
 #define BLS_ENTRY_FILE		"loader/entry.conf"
 
 /**
@@ -117,10 +121,12 @@ static int bls_to_pxe_label(struct bootflow *bflow,
 
 	INIT_LIST_HEAD(&label->list);
 	alist_init_struct(&label->files, struct pxe_file);
+	alist_init_struct(&label->initrds, char *);
 
+	label->name = strdup("");
 	label->menu = strdup(bflow->os_name ?: "");
 	label->append = strdup(bflow->cmdline ?: "");
-	if (!label->menu || !label->append) {
+	if (!label->name || !label->menu || !label->append) {
 		ret = -ENOMEM;
 		goto err;
 	}
@@ -137,10 +143,12 @@ static int bls_to_pxe_label(struct bootflow *bflow,
 
 		switch ((int)img->type) {
 		case IH_TYPE_KERNEL:
-			if (!label->kernel)
+			if (!label->kernel) {
 				label->kernel = fname;
-			else
+				label->kernel_label = strdup(fname);
+			} else {
 				free(fname);
+			}
 			break;
 		case IH_TYPE_RAMDISK:
 			if (!alist_add(&label->initrds, fname)) {
@@ -231,6 +239,59 @@ static int bls_entry_init(struct bls_entry *entry, struct bootflow *bflow,
 	return 0;
 }
 
+/**
+ * bls_scan_entries_dir() - Scan loader/entries/ for a .conf file
+ *
+ * Looks for the Nth .conf file in the BLS entries directory, where N is
+ * given by @entry. The filesystem must already be set up for the partition.
+ *
+ * @prefix: Prefix to prepend to the directory path (e.g. "/boot")
+ * @entry: Entry index (0 for first .conf file, 1 for second, etc.)
+ * @fname: Buffer to store the full path of the found entry
+ * @fname_size: Size of @fname buffer
+ * Return: 0 on success, -ENOENT if no more entries
+ */
+static int bls_scan_entries_dir(const char *prefix, int entry, char *fname,
+				int fname_size)
+{
+	struct fs_dir_stream *dirs;
+	struct fs_dirent *dent;
+	char dirpath[200];
+	int ret = -ENOENT;
+	int found = 0;
+
+	snprintf(dirpath, sizeof(dirpath), "%s%s", prefix ? prefix : "",
+		 BLS_ENTRIES_DIR);
+	log_debug("BLS: scanning dir %s entry %d\n", dirpath, entry);
+
+	dirs = fs_opendir(dirpath);
+	if (!dirs)
+		return log_msg_ret("opn", -ENOENT);
+
+	while ((dent = fs_readdir(dirs))) {
+		int len;
+
+		if (dent->type != FS_DT_REG)
+			continue;
+		len = strlen(dent->name);
+		if (len < 6 || strcmp(dent->name + len - 5, ".conf"))
+			continue;
+
+		if (found == entry) {
+			snprintf(fname, fname_size, "%s%s/%s",
+				 prefix ? prefix : "", BLS_ENTRIES_DIR,
+				 dent->name);
+			log_debug("BLS: found entry %s\n", fname);
+			ret = 0;
+			break;
+		}
+		found++;
+	}
+	fs_closedir(dirs);
+
+	return ret;
+}
+
 static int bls_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 {
 	struct bls_entry entry;
@@ -259,13 +320,33 @@ static int bls_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 	prefixes = bootstd_get_prefixes(bootstd);
 	desc = bflow->blk ? dev_get_uclass_plat(bflow->blk) : NULL;
 
-	/* Try each prefix to find the BLS entry file */
+	/* Try each prefix: first scan entries/, then fall back to entry.conf */
 	i = 0;
+	ret = -ENOENT;
 	do {
+		char fname[200];
+
 		prefix = prefixes ? prefixes[i] : NULL;
 		log_debug("trying prefix %s\n", prefix);
 
-		ret = bootmeth_try_file(bflow, desc, prefix, BLS_ENTRY_FILE);
+		ret = bootmeth_setup_fs(bflow, desc);
+		if (ret)
+			return log_msg_ret("bfs", ret);
+
+		if (!bls_scan_entries_dir(prefix, bflow->entry, fname,
+					  sizeof(fname))) {
+			/* fs_closedir() closes the fs, so re-open it */
+			ret = bootmeth_setup_fs(bflow, desc);
+			if (!ret)
+				ret = bootmeth_try_file(bflow, desc, NULL,
+							fname);
+		} else if (!bflow->entry) {
+			/* fs_opendir() closes the fs, so re-open it */
+			ret = bootmeth_setup_fs(bflow, desc);
+			if (!ret)
+				ret = bootmeth_try_file(bflow, desc, prefix,
+							BLS_ENTRY_FILE);
+		}
 	} while (ret && prefixes && prefixes[++i]);
 
 	if (ret) {
@@ -306,8 +387,8 @@ static int bls_load_files(struct udevice *dev, struct bootflow *bflow,
 	bool already_loaded;
 	int ret;
 
-	/* Check if files are already loaded (first image has address) */
-	first_img = alist_get(&bflow->images, 0, struct bootflow_img);
+	/* Check if kernel is already loaded (skip the BLS config image) */
+	first_img = alist_get(&bflow->images, 1, struct bootflow_img);
 	already_loaded = first_img && first_img->addr;
 
 	/* Set up PXE context */
@@ -410,6 +491,10 @@ static int bls_boot(struct udevice *dev, struct bootflow *bflow)
 	if (ret)
 		return ret;
 
+	/* Set bootargs from BLS options before booting */
+	if (label->append)
+		env_set("bootargs", label->append);
+
 	/* Boot the label */
 	pxe_ctx.label = label;
 	ret = pxe_boot(&pxe_ctx);
@@ -427,6 +512,7 @@ static int bls_bootmeth_bind(struct udevice *dev)
 
 	plat->desc = IS_ENABLED(CONFIG_BOOTSTD_FULL) ?
 		"Boot Loader Specification (BLS) Type #1" : "bls";
+	plat->flags = BOOTMETHF_MULTI;
 
 	return 0;
 }

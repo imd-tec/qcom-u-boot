@@ -1874,12 +1874,13 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	ut_assert_nextline("Seq  Method       State   Uclass    Part  E  Name                      Filename");
 	ut_assert_nextlinen("---");
 	ut_assert_nextlinen("  0  extlinux");
-	ut_assert_nextline("  1  bls          ready   mmc          1     mmc15.bootdev.part_1      /loader/entry.conf");
+	ut_assert_nextline("  1  bls          ready   mmc          1     mmc15.bootdev.part_1      /loader/entries/6.8.0.conf");
+	ut_assert_nextline("  2  bls          ready   mmc          1     mmc15.bootdev.part_1      /loader/entries/6.8.0-rescue.conf");
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("(2 bootflows, 2 valid)");
+	ut_assert_nextline("(3 bootflows, 3 valid)");
 	ut_assert_console_end();
 
-	/* Select the BLS bootflow and check info */
+	/* Select the first BLS bootflow and check info */
 	ut_assertok(run_command("bootflow select 1", 0));
 	ut_assert_console_end();
 	ut_assertok(run_command("bootflow info", 0));
@@ -1892,7 +1893,18 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	if (IS_ENABLED(CONFIG_BLK_LUKS))
 		ut_assert_nextline("Encrypted: no");
 	ut_assert_nextline("Subdir:    (none)");
-	ut_assert_nextline("Filename:  /loader/entry.conf");
+	ut_assert_nextline("Filename:  /loader/entries/6.8.0.conf");
+	ut_assert_skip_to_line("OS:        Test Boot");
+	ut_assert_skip_to_line("Error:     0");
+	ut_assert_console_end();
+
+	/* Select the second BLS bootflow and check info */
+	ut_assertok(run_command("bootflow select 2", 0));
+	ut_assert_console_end();
+	ut_assertok(run_command("bootflow info", 0));
+	ut_assert_nextline("Name:      mmc15.bootdev.part_1");
+	ut_assert_skip_to_line("Filename:  /loader/entries/6.8.0-rescue.conf");
+	ut_assert_skip_to_line("OS:        Rescue Boot");
 	ut_assert_skip_to_line("Error:     0");
 	ut_assert_console_end();
 

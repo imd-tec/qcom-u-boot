@@ -25,24 +25,36 @@ def setup_bls_image(config, log, devnum, basename):
     dtb = 'sandbox.dtb'
 
     # BLS Type #1 entry format
-    script = f'''title Test Boot
+    entry1 = f'''title Test Boot
 version 6.8.0
 linux /{vmlinux}
 options root=/dev/mmcblk0p2 ro quiet
 initrd /{initrd}
 devicetree /{dtb}'''
 
+    entry2 = f'''title Rescue Boot
+version 6.8.0-rescue
+linux /{vmlinux}
+options root=/dev/mmcblk0p2 ro quiet single
+initrd /{initrd}
+devicetree /{dtb}'''
+
     fsh = FsHelper(config, 'vfat', 18, prefix=basename)
     fsh.setup()
 
-    # Create loader directory for BLS entry
+    # Create loader/entries directory for BLS entries
     loader = os.path.join(fsh.srcdir, 'loader')
     mkdir_cond(loader)
+    entries = os.path.join(loader, 'entries')
+    mkdir_cond(entries)
 
-    # Create BLS entry file
-    conf = os.path.join(loader, 'entry.conf')
-    with open(conf, 'w', encoding='ascii') as fd:
-        print(script, file=fd)
+    # Create two BLS entry files
+    with open(os.path.join(entries, '6.8.0.conf'), 'w',
+              encoding='ascii') as fd:
+        print(entry1, file=fd)
+    with open(os.path.join(entries, '6.8.0-rescue.conf'), 'w',
+              encoding='ascii') as fd:
+        print(entry2, file=fd)
 
     # Create compressed kernel image
     inf = os.path.join(config.persistent_data_dir, 'inf')
