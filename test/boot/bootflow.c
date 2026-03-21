@@ -402,6 +402,7 @@ static int bootflow_iter(struct unit_test_state *uts)
 	ut_asserteq(0x1e, iter.max_part);
 	ut_asserteq_str("extlinux", iter.method->name);
 	ut_asserteq(0, bflow.err);
+	ut_asserteq(0, iter.err);
 	ut_asserteq(BOOTFLOWST_READY, bflow.state);
 	bootflow_free(&bflow);
 

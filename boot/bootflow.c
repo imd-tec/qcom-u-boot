@@ -687,8 +687,10 @@ int bootflow_scan_next(struct bootflow_iter *iter, struct bootflow *bflow)
 			}
 			ret = bootflow_check(iter, bflow);
 			log_debug("check - ret=%d\n", ret);
-			if (!ret)
+			if (!ret) {
+				iter->err = 0;
 				return 0;
+			}
 			iter->err = ret;
 			if (ret != BF_NO_MORE_PARTS && ret != -ENOSYS) {
 				if (iter->flags & BOOTFLOWIF_ALL)
