@@ -18,12 +18,14 @@ Note that the :doc:`pxelinux` uses the same file format, but in a
 network context.
 
 When invoked on a bootdev, this bootmeth searches for the file and creates a
-bootflow if found.
+bootflow for each label defined in the configuration. Since an extlinux config
+can contain several labels (each pointing to a different kernel), the bootmeth
+sets the ``BOOTMETHF_MULTI`` flag so that the iterator produces one bootflow per
+label. The ``bflow->entry`` field selects which label to use. Include directives
+are processed during scanning so labels from included files are also discovered.
 
-When the bootflow is booted, the bootmeth calls ``pxe_setup_ctx()`` to set up
-the context, then ``pxe_process_str()`` to process the file. Depending on the
-contents, this may boot an operating system or provide a list of options to
-the user, perhaps with a timeout.
+When the bootflow is booted, ``pxe_boot_entry()`` parses the config, walks to
+the selected label and boots it directly.
 
 The compatible string "u-boot,extlinux" is used for the driver. It is present
 if `CONFIG_BOOTMETH_EXTLINUX` is enabled.

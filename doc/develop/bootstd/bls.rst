@@ -13,6 +13,10 @@ The entry file ``loader/entry.conf`` is searched for under each boot prefix
 (``{"/", "/boot"}`` by default). These prefixes can be selected with the
 `filename-prefixes` property in the bootstd device.
 
+The bootmeth sets ``BOOTMETHF_MULTI`` so that each ``.conf`` file in the
+entries directory produces a separate bootflow. The ``bflow->entry`` field
+selects which file to use during scanning.
+
 When invoked on a bootdev, the ``bls_read_bootflow()`` function searches for the
 entry file, reads it and passes it to ``bls_parse_entry()`` which processes
 the key-value pairs into a ``struct bls_entry``. The parser uses an enum-based
