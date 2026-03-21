@@ -211,17 +211,20 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 	ut_assert_nextline("  5  vbe          media   mmc          0     mmc1.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-2: No such file or directory");
 	ut_assert_nextline("  6  extlinux     ready   mmc          1     mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	/* multi-entry tries entry 1 on extlinux (Fedora has one label) */
+	ut_assert_nextline("  7  extlinux     ready   mmc          1     mmc1.bootdev.part_1       /extlinux/extlinux.conf");
+	ut_assert_nextline("     ** Ready, err=-2: No such file or directory");
 	ut_assert_nextline(
-		"  7  efi          fs      mmc          1     mmc1.bootdev.part_1       /EFI/BOOT/%s",
+		"  8  efi          fs      mmc          1     mmc1.bootdev.part_1       /EFI/BOOT/%s",
 		efi_get_basename());
 
 	ut_assert_skip_to_line("Scanning bootdev 'mmc0.bootdev':");
 	ut_assert_skip_to_line(
-		" 5f  vbe          media   mmc          0     mmc0.bootdev.whole        ");
+		" 60  vbe          media   mmc          0     mmc0.bootdev.whole        ");
 	ut_assert_nextline("     ** No partition found, err=-93: Protocol not supported");
 	ut_assert_nextline("No more bootdevs");
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("(96 bootflows, 1 valid)");
+	ut_assert_nextline("(97 bootflows, 1 valid)");
 	ut_assert_console_end();
 
 	ut_assertok(run_command("bootflow list", 0));
@@ -230,9 +233,9 @@ static int bootflow_cmd_scan_e(struct unit_test_state *uts)
 	ut_assert_nextlinen("---");
 	ut_assert_nextline("  0  extlinux     media   mmc          0     mmc2.bootdev.whole        ");
 	ut_assert_nextline("  1  efi          media   mmc          0     mmc2.bootdev.whole        ");
-	ut_assert_skip_to_line(" 5f  vbe          media   mmc          0     mmc0.bootdev.whole        ");
+	ut_assert_skip_to_line(" 60  vbe          media   mmc          0     mmc0.bootdev.whole        ");
 	ut_assert_nextlinen("---");
-	ut_assert_nextline("(96 bootflows, 1 valid)");
+	ut_assert_nextline("(97 bootflows, 2 valid)");
 	ut_assert_console_end();
 
 	return 0;
@@ -404,6 +407,17 @@ static int bootflow_iter(struct unit_test_state *uts)
 	ut_asserteq(0, bflow.err);
 	ut_asserteq(0, iter.err);
 	ut_asserteq(BOOTFLOWST_READY, bflow.state);
+	bootflow_free(&bflow);
+
+	/*
+	 * With BOOTMETHF_MULTI, the iterator tries entry 1 on extlinux.
+	 * Fedora has only one label, so entry 1 fails. Since BOOTFLOWIF_ALL
+	 * is set, this failed attempt is returned.
+	 */
+	ut_asserteq(-ENOENT, bootflow_scan_next(&iter, &bflow));
+	ut_asserteq(0, iter.cur_method);
+	ut_asserteq(1, iter.entry);
+	ut_asserteq(1, iter.part);
 	bootflow_free(&bflow);
 
 	ut_asserteq(-ENOENT, bootflow_scan_next(&iter, &bflow));
@@ -1435,8 +1449,10 @@ static int bootflow_efi(struct unit_test_state *uts)
 		"  1  efi          ready   usb          1     hub1.p2.usb_mass_storage. /EFI/BOOT/BOOTSBOX.EFI");
 	ut_assert_nextlinen(
 		"  2  extlinux     ready   usb          1     hub1.p4.usb_mass_storage. /extlinux/extlinux.conf");
+	ut_assert_nextlinen(
+		"  3  extlinux     ready   usb          1     hub1.p4.usb_mass_storage. /extlinux/extlinux.conf");
 	ut_assert_nextlinen("---");
-	ut_assert_skip_to_line("(3 bootflows, 3 valid)");
+	ut_assert_skip_to_line("(4 bootflows, 4 valid)");
 	ut_assert_console_end();
 
 	ut_assertok(run_command("bootflow select 1", 0));
@@ -1812,8 +1828,11 @@ static int bootflow_cmd_info_encrypted(struct unit_test_state *uts)
 	ut_assert_nextline(
 		"  1  extlinux     ready   mmc          1  %c  mmc12.bootdev.part_1      /extlinux/extlinux.conf",
 		IS_ENABLED(CONFIG_BLK_LUKS) ? 'E' : ' ');
+	ut_assert_nextline(
+		"  2  extlinux     ready   mmc          1  %c  mmc12.bootdev.part_1      /extlinux/extlinux.conf",
+		IS_ENABLED(CONFIG_BLK_LUKS) ? 'E' : ' ');
 	ut_assert_nextline("---  -----------  ------  --------  ----  -  ------------------------  ----------------");
-	ut_assert_nextline("(2 bootflows, 2 valid)");
+	ut_assert_nextline("(3 bootflows, 3 valid)");
 	ut_assert_console_end();
 
 	/* Select the mmc12 bootflow and check info shows encryption */

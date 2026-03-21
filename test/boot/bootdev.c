@@ -228,6 +228,9 @@ static int bootdev_test_order(struct unit_test_state *uts)
 	/* get the second usb device which has a backing file (flash3.img) */
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 
+	/* get the second entry from flash3 (Ubuntu has two extlinux labels) */
+	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
+
 	ut_asserteq(-ENODEV, bootflow_scan_next(&iter, &bflow));
 	ut_asserteq(6, iter.num_devs);
 	ut_asserteq_str("mmc1.bootdev", iter.dev_used[0]->name);
@@ -269,8 +272,10 @@ static int bootdev_test_order(struct unit_test_state *uts)
 
 	/*
 	 * Now scan past mmc1 and make sure that the 4 USB devices show up. The
-	 * first two have a backing file so returns success
+	 * first two have a backing file so returns success. flash3 has two
+	 * extlinux labels so produces an extra bootflow.
 	 */
+	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 	ut_asserteq(-ENODEV, bootflow_scan_next(&iter, &bflow));
@@ -341,6 +346,9 @@ static int bootdev_test_prio(struct unit_test_state *uts)
 	/* get the second usb device which has a backing file (flash3.img) */
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 
+	/* get the second entry from flash3 (Ubuntu has two extlinux labels) */
+	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
+
 	ut_asserteq(-ENODEV, bootflow_scan_next(&iter, &bflow));
 	ut_asserteq(7, iter.num_devs);
 	ut_asserteq_str("mmc2.bootdev", iter.dev_used[0]->name);
@@ -363,6 +371,9 @@ static int bootdev_test_prio(struct unit_test_state *uts)
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 
 	/* get the second usb device which has a backing file (flash3.img) */
+	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
+
+	/* get the second entry from flash3 (Ubuntu has two extlinux labels) */
 	ut_asserteq(0, bootflow_scan_next(&iter, &bflow));
 
 	ut_asserteq(-ENODEV, bootflow_scan_next(&iter, &bflow));

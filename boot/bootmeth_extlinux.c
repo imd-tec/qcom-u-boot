@@ -117,11 +117,12 @@ static int extlinux_check_luks(struct bootflow *bflow)
 /**
  * extlinux_fill_info() - Decode the extlinux file to find out its info
  *
- * Uses pxe_parse() to parse the configuration file and extract the first
- * label's name to use as the bootflow OS name.
+ * Uses pxe_parse() to parse the configuration file and extract the label
+ * selected by @bflow->entry to use as the bootflow OS name.
  *
- * @bflow: Bootflow to process
- * Return: 0 if OK, -ve on error
+ * @bflow: Bootflow to process (entry selects which label)
+ * Return: 0 if OK, -ENOENT if entry index exceeds available labels, other
+ * -ve on error
  */
 static int extlinux_fill_info(struct bootflow *bflow)
 {
@@ -129,19 +130,28 @@ static int extlinux_fill_info(struct bootflow *bflow)
 	struct pxe_label *label;
 	const char *name;
 	ulong addr;
+	int i;
 
-	log_debug("parsing bflow file size %x\n", bflow->size);
+	log_debug("parsing bflow file size %x entry %d\n", bflow->size,
+		  bflow->entry);
 	addr = map_to_sysmem(bflow->buf);
 	ctx = pxe_parse(addr, bflow->size, bflow->fname);
 	if (!ctx)
 		return log_msg_ret("prs", -EINVAL);
 
-	if (list_empty(&ctx->cfg->labels)) {
-		pxe_cleanup(ctx);
-		return log_msg_ret("lab", -ENOENT);
+	/* Walk to the requested label */
+	i = 0;
+	list_for_each_entry(label, &ctx->cfg->labels, list) {
+		if (i == bflow->entry)
+			goto found;
+		i++;
 	}
 
-	label = list_first_entry(&ctx->cfg->labels, struct pxe_label, list);
+	/* No more entries at this index */
+	pxe_cleanup(ctx);
+	return -ENOENT;
+
+found:
 	name = label->menu ? label->menu : label->name;
 	if (name) {
 		bflow->os_name = strdup(name);
@@ -267,6 +277,7 @@ static int extlinux_bootmeth_bind(struct udevice *dev)
 
 	plat->desc = IS_ENABLED(CONFIG_BOOTSTD_FULL) ?
 		"Extlinux boot from a block device" : "extlinux";
+	plat->flags = BOOTMETHF_MULTI;
 
 	return 0;
 }
