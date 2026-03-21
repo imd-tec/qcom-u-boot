@@ -19,10 +19,15 @@ struct udevice;
  * @BOOTMETHF_GLOBAL: bootmeth handles bootdev selection automatically
  * @BOOTMETHF_ANY_PART: bootmeth is willing to check any partition, even if it
  * has no filesystem
+ * @BOOTMETHF_MULTI: bootmeth can produce multiple bootflows from a single
+ * partition (e.g. extlinux with several labels). The read_bootflow() op should
+ * check bflow->entry to select which entry to return, and return -ENOENT
+ * when the index exceeds available entries.
  */
 enum bootmeth_flags {
 	BOOTMETHF_GLOBAL	= BIT(0),
 	BOOTMETHF_ANY_PART	= BIT(1),
+	BOOTMETHF_MULTI		= BIT(2),
 };
 
 /**

@@ -364,6 +364,23 @@ static int iter_incr(struct bootflow_iter *iter)
 		return BF_NO_MORE_DEVICES;
 	}
 
+	/*
+	 * If the current method supports multiple entries and the last call
+	 * succeeded, try the next entry before advancing the method
+	 */
+	if (iter->method && !iter->err) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(iter->method);
+		if (ucp->flags & BOOTMETHF_MULTI) {
+			iter->entry++;
+			log_debug("-> next entry %d for method '%s'\n",
+				  iter->entry, iter->method->name);
+			return 0;
+		}
+	}
+	iter->entry = 0;
+
 	/* Get the next boothmethod */
 	for (iter->cur_method++; iter->cur_method < iter->num_methods;
 	     iter->cur_method++) {

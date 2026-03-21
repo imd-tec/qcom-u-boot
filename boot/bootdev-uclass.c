@@ -574,6 +574,7 @@ int bootdev_get_bootflow(struct udevice *dev, struct bootflow_iter *iter,
 	log_debug("->get_bootflow %s,%x=%p\n", dev->name, iter->part,
 		  ops->get_bootflow);
 	bootflow_init(bflow, dev, iter->method);
+	bflow->entry = iter->entry;
 	if (!ops->get_bootflow)
 		return default_get_bootflow(dev, iter, bflow);
 

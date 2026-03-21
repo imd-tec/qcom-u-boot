@@ -75,6 +75,9 @@ enum bootflow_flags_t {
  * @blk: Block device which contains this bootflow, NULL if this is a network
  *	device or sandbox 'host' device
  * @part: Partition number (0 for whole device)
+ * @entry: Entry index within this (dev, part, method) combination. Used by
+ *	bootmeths with BOOTMETHF_MULTI to select which entry to return (e.g.
+ *	which label in an extlinux config). Always 0 for non-multi bootmeths.
  * @fs_type: Filesystem type (FS_TYPE...) if this is fixed by the media, else 0.
  *	For example, the sandbox host-filesystem bootdev sets this to
  *	FS_TYPE_SANDBOX
@@ -110,6 +113,7 @@ struct bootflow {
 	struct udevice *dev;
 	struct udevice *blk;
 	int part;
+	int entry;
 	int fs_type;
 	struct udevice *method;
 	char *name;
@@ -266,6 +270,7 @@ enum {
  * @dev: Current bootdev, NULL if none. This is only ever updated in
  * bootflow_iter_set_dev()
  * @part: Current partition number (0 for whole device)
+ * @entry: Current entry index for BOOTMETHF_MULTI bootmeths, else 0
  * @method: Current bootmeth
  * @max_part: Maximum hardware partition number in @dev, 0 if there is no
  *	partition table
@@ -300,6 +305,7 @@ struct bootflow_iter {
 	int flags;
 	struct udevice *dev;
 	int part;
+	int entry;
 	struct udevice *method;
 	int max_part;
 	int first_bootable;
