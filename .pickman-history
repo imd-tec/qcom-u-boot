@@ -43846,69 +43846,83 @@ The branch has been pushed, which will trigger a new pipeline run on the MR.
 
 ## 2026-03-20: us/next
 
-Branch: cherry-f4dd112a382
+Branch: cherry-6b8e03a9586
 
 Commits:
-- f4dd112a382 usb: onboard-hub: Make i2c-bus optional
-- 4e4a9de31de Merge branch 'next' of git://source.denx.de/u-boot-usb into next
+- 6b8e03a9586 spl: fat: load kernel image before args in falcon
+- 50953dd5cd8 spl: ext: load kernel image before args in falcon
+- 00edec55f38 spl: mmc: load kernel image before args in falcon
+- d0b5b33c4fa spl: ext, fat: cleanup use of CONFIG_SPL_LIBCOMMON_SUPPORT
+- 6f180984700 Merge patch series "Add support for secure falcon mode: load kernel image before args"
 
 ### Conversation log
-Let me find the repository first:
+The repository state is clean (untracked files don't affect git operations). Now let me create and checkout a new branch based on ci/master:
 
-The repository is clean (only untracked files). Now let me create and checkout the new branch based on ci/master:
+Branch created. Now let's cherry-pick the commits one by one. Starting with the first commit:
 
-Now let me verify the commits exist and get their details:
+First cherry-pick successful. Let me verify the commit delta and run the build test:
 
-The second commit (4e4a9de31de) is marked as "maybe already applied as c7f9d3f2bef", but c7f9d3f2bef has a different subject ("Merge branch 'cherry-5289b6e5540' into 'master'" vs "Merge branch 'next' of git://source.denx.de/u-boot-usb into next"). Let me compare the actual patches to see if they're the same:
+Commit delta looks identical (1 file, +24/-17 lines). Now running the build test:
 
-These are different merge commits (different parents, different subjects, different purposes). c7f9d3f2bef is a GitLab merge of an earlier cherry-pick, not the same as 4e4a9de31de. Let me search for the actual merge commit in ci/master:
+Build passed. Now cherry-pick the second commit:
 
-The first commit subject isn't found in ci/master directly. Let me search for it more broadly:
+Delta looks identical (1 file, +34/-22 lines). Running build test:
 
-Let me check if the content from f4dd112a382 already exists by looking at the file it modifies:
+Build passed. Now cherry-pick the third commit:
 
-Let me check what the actual code changes are in f4dd112a382:
+Delta identical (1 file, +10/-10 lines). Running build test:
 
-Now let me proceed with the cherry-picks. First, cherry-pick the first commit:
+Build passed. Now cherry-pick the fourth commit:
 
-Now let me verify the delta and run build test:
+Delta identical (2 files, -14 lines). Running build test:
 
-Delta looks correct (6 insertions, 1 deletion in both). Now run the build test:
+Build passed. Now cherry-pick the fifth (merge) commit with special flags:
 
-Build passed. Now let me cherry-pick the second commit (merge commit):
+The merge commit is empty (as expected, since all changes were already applied by the individual commits). Let me commit the empty merge with --allow-empty as instructed:
 
-The merge commit is empty because the changes were already applied via the first cherry-pick. This is expected behavior. Let me commit it as an empty commit:
+Merge commit added successfully. Let me verify it and check the stats:
 
-Now let me verify the delta for the merge commit:
+The merge commit is now empty (as expected, since we cherry-picked its individual commits first). Running build test:
 
-The merge commit is empty as expected since the actual changes were already applied via the first commit. Run build test:
+All cherry-picks completed. Now let me verify with git log:
 
-Build passed. Now let me verify with the git log:
+All 5 commits are present. Now running the final build test:
 
-All 2 commits are present. Let me run the final build verification:
-
-## Final Status
+## Final Status Report
 
 **Cherry-pick completed successfully!**
 
-### Summary:
-| Commit | Subject | Status |
-|--------|---------|--------|
-| f4dd112a382 | usb: onboard-hub: Make i2c-bus optional | ✅ Applied as 162a8792f90 |
-| 4e4a9de31de | Merge branch 'next' of git://source.denx.de/u-boot-usb into next | ✅ Applied as b2b69609a99 (empty - changes in parent commit) |
+### Summary
 
-### Build Result: **OK** ✅
-- All builds passed with no warnings or errors
+| Commit | Subject | Status | Delta Check |
+|--------|---------|--------|-------------|
+| `6b8e03a9586` | spl: fat: load kernel image before args in falcon | ✅ OK | Identical (1 file, +24/-17) |
+| `50953dd5cd8` | spl: ext: load kernel image before args in falcon | ✅ OK | Identical (1 file, +34/-22) |
+| `00edec55f38` | spl: mmc: load kernel image before args in falcon | ✅ OK | Identical (1 file, +10/-10) |
+| `d0b5b33c4fa` | spl: ext, fat: cleanup use of CONFIG_SPL_LIBCOMMON_SUPPORT | ✅ OK | Identical (2 files, -14 lines) |
+| `6f180984700` | Merge patch series "Add support for secure falcon mode..." | ✅ OK (empty commit) | Expected - changes already applied by individual commits |
 
-### Fix-ups Made:
-- None required
+### Build Result
+- **Status**: ✅ OK - Build passed for sandbox board
+- **No warnings or errors**
 
-### Commits with Concerning Deltas:
-- The merge commit (4e4a9de31de) resulted in an empty cherry-pick because the actual changes were already included in its parent commit (f4dd112a382). This is expected behavior for cherry-picking merge commits with `-m 1`.
+### Fix-ups Made
+- None required - all cherry-picks applied cleanly
 
-### Branch Status:
-- Branch `cherry-f4dd112a382` is ready for pushing
-- Contains 2 new commits on top of `ci/master`
+### Commits with Concerning Deltas
+- None - all deltas matched their original commits exactly
+
+### Branch Status
+```
+cherry-6b8e03a9586 is ahead of ci/master by 5 commits
+```
+
+The cherry-pick branch is ready for pushing. All 5 commits are present in the correct order:
+1. `7aa309ab3cd` - spl: fat: load kernel image before args in falcon
+2. `cc151c400b5` - spl: ext: load kernel image before args in falcon  
+3. `5fc504c45ae` - spl: mmc: load kernel image before args in falcon
+4. `5a887603382` - spl: ext, fat: cleanup use of CONFIG_SPL_LIBCOMMON_SUPPORT
+5. `6c6a700e81d` - Merge patch series (empty commit preserving merge history)
 
 ---
 
