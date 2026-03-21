@@ -117,47 +117,41 @@ static int extlinux_check_luks(struct bootflow *bflow)
 /**
  * extlinux_fill_info() - Decode the extlinux file to find out its info
  *
+ * Uses pxe_parse() to parse the configuration file and extract the first
+ * label's name to use as the bootflow OS name.
+ *
  * @bflow: Bootflow to process
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 static int extlinux_fill_info(struct bootflow *bflow)
 {
-	struct membuf mb;
-	char line[200];
-	char *data;
-	int len;
+	struct pxe_context *ctx;
+	struct pxe_label *label;
+	const char *name;
+	ulong addr;
 
 	log_debug("parsing bflow file size %x\n", bflow->size);
-	membuf_init(&mb, bflow->buf, bflow->size);
-	membuf_putraw(&mb, bflow->size, true, &data);
-	while (len = membuf_readline(&mb, line, sizeof(line) - 1, 0, true), len) {
-		char *tok, *p = line;
-		const char *name = NULL;
+	addr = map_to_sysmem(bflow->buf);
+	ctx = pxe_parse(addr, bflow->size, bflow->fname);
+	if (!ctx)
+		return log_msg_ret("prs", -EINVAL);
 
-		if (*p == '#')
-			continue;
-		while (*p == ' ' || *p == '\t')
-			p++;
-		tok = strsep(&p, " ");
-		if (p) {
-			if (!strcmp("label", tok)) {
-				name = p;
-				if (bflow->os_name)
-					break;	/* just find the first */
-			} else if (!strcmp("menu", tok)) {
-				tok = strsep(&p, " ");
-				if (!strcmp("label", tok)) {
-					name = p;
-				}
-			}
-			if (name) {
-				free(bflow->os_name);
-				bflow->os_name = strdup(name);
-				if (!bflow->os_name)
-					return log_msg_ret("os", -ENOMEM);
-			}
+	if (list_empty(&ctx->cfg->labels)) {
+		pxe_cleanup(ctx);
+		return log_msg_ret("lab", -ENOENT);
+	}
+
+	label = list_first_entry(&ctx->cfg->labels, struct pxe_label, list);
+	name = label->menu ? label->menu : label->name;
+	if (name) {
+		bflow->os_name = strdup(name);
+		if (!bflow->os_name) {
+			pxe_cleanup(ctx);
+			return log_msg_ret("os", -ENOMEM);
 		}
 	}
+
+	pxe_cleanup(ctx);
 
 	return 0;
 }
