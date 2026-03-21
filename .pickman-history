@@ -44736,3 +44736,98 @@ The branch now includes these commits that were added to ci/master since the ori
 
 ---
 
+## 2026-03-21: us/next
+
+Branch: cherry-92fe41caadf
+
+Commits:
+- 92fe41caadf firmware: scmi: Typo fix
+- 8c48bae4f57 firmware: scmi: smt: Use io helpers
+- 23e2b769220 firmware: scmi: smt: Dump more info
+- eb7469eb1a3 firmware: scmi: Add error code IN_USE
+- b2ae10970d4 firmware: scmi: use PAGE_SIZE alignment for ARM64
+- f116ec5b910 firmware: scmi: mailbox: Update timeout to 30ms
+- 5e9fb0e5835 firmware: scmi: mailbox: Support arm,max_rx_timeout_ms
+- 0d71bc3a1bf clk: scmi: Replace log_debug with dev_dbg
+- 5ea37da2987 cmd: scmi: Add pin control protocol name
+- 7828597f543 MAINTAINERS: Add an entry for SCMI
+- ecdc3872a76 Merge patch series "firmware: scmi: various update"
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me proceed with creating the new branch based on ci/master:
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Commit delta looks identical. Now run build test:
+
+Build successful. Second commit:
+
+Identical delta. Build test:
+
+Third commit:
+
+Fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+Eleventh and final commit (merge commit - needs special handling):
+
+The merge commit is empty (as expected since all the commits were already cherry-picked). I need to commit the empty commit to preserve the merge commit message:
+
+The merge commit is now an empty commit (which is expected since all the individual commits were already cherry-picked separately). Let me run the final build test:
+
+Now let me verify with the git log:
+
+All 11 commits have been successfully cherry-picked.
+
+## Final Status Report
+
+### Cherry-pick Summary: ✅ SUCCESS
+
+**Branch:** `cherry-92fe41caadf` (based on `ci/master`)
+
+**All 11 commits cherry-picked successfully:**
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 92fe41caadf | 5bafec41dca | firmware: scmi: Typo fix |
+| 2 | 8c48bae4f57 | 60fafaae77d | firmware: scmi: smt: Use io helpers |
+| 3 | 23e2b769220 | dffd2c7f9b0 | firmware: scmi: smt: Dump more info |
+| 4 | eb7469eb1a3 | 87f6fdc13ed | firmware: scmi: Add error code IN_USE |
+| 5 | b2ae10970d4 | 406fd1f6c32 | firmware: scmi: use PAGE_SIZE alignment for ARM64 |
+| 6 | f116ec5b910 | 3b8c6c09995 | firmware: scmi: mailbox: Update timeout to 30ms |
+| 7 | 5e9fb0e5835 | 1b327eebc9e | firmware: scmi: mailbox: Support arm,max_rx_timeout_ms |
+| 8 | 0d71bc3a1bf | 8ebe6bf3752 | clk: scmi: Replace log_debug with dev_dbg |
+| 9 | 5ea37da2987 | ea9edb91691 | cmd: scmi: Add pin control protocol name |
+| 10 | 7828597f543 | 0dc43180c93 | MAINTAINERS: Add an entry for SCMI |
+| 11 | ecdc3872a76 | 3f9290591d2 | Merge patch series "firmware: scmi: various update" |
+
+### Build Result: ✅ OK
+- All builds passed (sandbox board)
+- No warnings or errors
+
+### Fix-ups Made: None
+- All commits cherry-picked cleanly
+- Two commits had auto-merges (eb7469eb1a3 and 7828597f543) but resolved automatically without conflicts
+- Merge commit (ecdc3872a76) created as empty commit (expected, since individual commits already applied)
+
+### Commit Delta Analysis: All OK
+- All 10 regular commits had identical file changes and line counts between original and cherry-picked versions
+- Merge commit is empty (expected behavior when cherry-picking a merge after its constituent commits)
+
+### Notes:
+- The branch `cherry-92fe41caadf` is ready for pushing
+- Branch is 11 commits ahead of `ci/master`
+
+---
+
