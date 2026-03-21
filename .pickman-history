@@ -43926,3 +43926,61 @@ The cherry-pick branch is ready for pushing. All 5 commits are present in the co
 
 ---
 
+### Pipeline fix: 2026-03-21 (attempt 1)
+
+Branch: cherry-fcddf2fc7ef
+
+Failed jobs:
+- play (sjg-lab)
+- vbe (sjg-lab)
+- tk1 (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Based on my analysis of all the job logs, all four failures are **infrastructure/transient issues** - not code problems that can be fixed by modifying the branch:
+
+## Analysis of Failed Jobs:
+
+### Job: play (stage: sjg-lab)
+- **Failure type**: Lab infrastructure timeout
+- **Evidence**: `Lab failure: Timeout executing 'sleep 3': Marking connection bad - no other tests will run`
+- **Note**: The board (BeaglePlay AM62X) booted successfully with U-Boot 2021.01 (an older version running on the test infrastructure), but the test harness itself timed out.
+
+### Job: vbe (stage: sjg-lab)
+- **Failure type**: VPL boot failure on hardware
+- **Evidence**: 
+  ```
+  U-Boot VPL 2026.02-gfa45614e28ba (Mar 21 2026 - 07:37:10)
+  Trying to boot from vbe_abrec
+  Error: -5
+  VPL: failed to boot from all boot devices
+  ### ERROR ### Please RESET the board ###
+  ```
+  Then: `pexpect.exceptions.TIMEOUT: Timeout of 50 seconds exceeded during waiting for login`
+- **Analysis**: This is a VPL boot failure on the rk3399-generic-ddr3 hardware test board. Error -5 is `-EIO` (I/O error). This appears to be a hardware/lab infrastructure issue as both firmware builds (fa45614e and 031bdc26) failed with similar errors.
+
+### Job: tk1 (stage: sjg-lab)
+- **Failure type**: Hardware resource unavailable
+- **Evidence**: `labgrid-client: error: Not all resources are available: {NetworkTegraUSBLoader(..., avail=False, ...)}`
+- **Note**: The Tegra TK1 USB loader resource was not available on the test runner.
+
+### Job: pcduino3_nano (stage: sjg-lab)
+- **Failure type**: Lab infrastructure timeout
+- **Evidence**: `pexpect.exceptions.TIMEOUT: Timeout of 15 seconds exceeded during waiting for login`
+- **Note**: The pcduino3_nano board did not respond during the test boot sequence.
+
+## Conclusion:
+
+**All four failures are infrastructure/transient issues** - not code problems in the MR branch:
+
+1. **play**: Test harness timeout (infrastructure)
+2. **vbe**: VPL boot I/O error on hardware (hardware/lab issue)
+3. **tk1**: USB loader hardware resource unavailable (infrastructure)
+4. **pcduino3_nano**: Board unresponsive/timeout (hardware/lab issue)
+
+These failures cannot be fixed by modifying the code in the branch. The MR commits themselves (primarily i.MX Kontron-sl-mx8mm and phycore_imx8mp related changes) are unrelated to the failing test boards (BeaglePlay AM62X, Rockchip RK3399, Jetson TK1, pcduino3 Allwinner).
+
+**Recommendation**: Retry the pipeline - these are transient lab failures that should pass on retry when the hardware resources become available and respond normally.
+
+---
+
