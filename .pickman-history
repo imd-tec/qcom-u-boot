@@ -44831,3 +44831,82 @@ All 11 commits have been successfully cherry-picked.
 
 ---
 
+## 2026-03-21: us/next
+
+Branch: cherry-0524f40947b
+
+Commits:
+- 0524f40947b mmc: sdhci-cadence6: Use dev_read_u32() for device tree property parsing
+- 6304cfa5a7e mmc: Fix a potential warning in xPL
+- 2a846e04c62 power: regulator: Correct dependencies on SPL_REGULATOR_PWM
+- 63bce690478 mmc: cv1800b_sdhci: Fix possible warning with MMC_SUPPORTS_TUNING=n
+- 824236dd603 Merge tag 'mmc-power-master-2025-10-10' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me create the new branch based on ci/master:
+
+Branch created. Now let me cherry-pick the first commit:
+
+First commit cherry-picked. Let me check the delta and run the build test:
+
+The delta matches exactly (1 file, 4 insertions, 14 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Delta matches exactly. Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Delta matches exactly. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Delta matches exactly. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fifth commit (the merge commit - needs special handling):
+
+The merge commit is empty (as expected since we already cherry-picked all its constituent commits). Let me continue with the empty commit:
+
+Let me verify the delta and run the build test for this commit:
+
+The cherry-picked merge commit is empty (no files changed) which is expected since we already applied the constituent commits individually. The original merge commit shows 4 files changed because it's a merge. This is the expected behavior for cherry-picking merge commits when the constituent commits have already been applied. Let me run the build test:
+
+Build passed. Now let me verify all 5 commits are present:
+
+All 5 commits are present. Let me run the final build test:
+
+## Cherry-pick Summary
+
+**Status: ✅ SUCCESS**
+
+All 5 commits have been successfully cherry-picked onto branch `cherry-0524f40947b` from `ci/master`.
+
+### Commits Applied:
+
+| # | Original Hash | Subject | Delta Check |
+|---|---------------|---------|-------------|
+| 1 | 0524f40947b | mmc: sdhci-cadence6: Use dev_read_u32() for device tree property parsing | ✅ Match |
+| 2 | 6304cfa5a7e | mmc: Fix a potential warning in xPL | ✅ Match |
+| 3 | 2a846e04c62 | power: regulator: Correct dependencies on SPL_REGULATOR_PWM | ✅ Match |
+| 4 | 63bce690478 | mmc: cv1800b_sdhci: Fix possible warning with MMC_SUPPORTS_TUNING=n | ✅ Match |
+| 5 | 824236dd603 | Merge tag 'mmc-power-master-2025-10-10' (merge commit) | ✅ Empty (expected) |
+
+### Build Result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Fix-ups Made: None
+- All cherry-picks applied cleanly without conflicts
+
+### Commits with Concerning Deltas: None
+- The merge commit (#5) is empty, which is expected since its constituent commits were already applied individually
+
+### Branch Status:
+```
+Branch: cherry-0524f40947b
+Tracking: ci/master
+Ahead by: 5 commits
+Ready for push: Yes
+```
+
+---
+
