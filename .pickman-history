@@ -44037,6 +44037,151 @@ Based on my analysis of all the job logs, I can see that **all failures are infr
 **Fix Applied:** None required - these are infrastructure issues, not code issues. The pipeline should be retried when the Docker Hub network connectivity is restored and the lab equipment is available.
 
 **Recommendation:** Retry the pipeline. If Docker Hub connectivity issues persist, consider using a local Docker registry mirror or checking the CI runner network configuration.
+## 2026-03-21: us/next
+
+Branch: cherry-fcddf2fc7ef
+
+Commits:
+- fcddf2fc7ef board: phytec: phycore_imx8mp: Add rauc to bootmeths
+- 4d5a28e4f9b imx: kontron-sl-mx8mm: Increase CONFIG_SPL_MAX_SIZE
+- c1cd4f3806b imx: kontron-sl-mx8mm: Enable SDP support for loading via USB
+- a9b865dd468 imx: kontron-sl-mx8mm: Remove deprecation warning for old modules
+- 0d0c00ace40 imx: kontron-sl-mx8mm: Enable fixed regulators
+- 6679a940408 imx: kontron-sl-mx8mm: Add support for EEPROM on OSM-S module
+- 83a18f82417 imx: kontron-sl-mx8mm: Use eMMC boot part for environment if booting from eMMC
+- d31ca9e2598 imx: kontron-sl-mx8mm: Export current env config to devicetree
+- 194c747442a imx: kontron-sl-mx8mm: Enable multiple useful commands, drivers and features
+- 16ead099eb3 imx: kontron-sl-mx8mm: Enable standard boot and disable legacy distro boot
+- de704144fff imx: kontron-sl-mx8mm: Enable USB hub on BL i.MX8MM OSM-S board
+- c5ab46695cd imx: kontron-sl-mx8mm: Autostart fastboot if booted from USB
+- 228f7f2e26b imx: kontron-sl-mx8mm: Force default environment for serial loader boot
+- 7f9362ef7fb imx: kontron-sl-mx8mm: Convert to OF_UPSTREAM
+- 5d5d4c6bc77 imx93_frdm: Fix USB vendor ID
+- 15bed125d76 arm: dts: imx8mp-toradex-smarc: migrate to OF_UPSTREAM
+- a1fd7a9589b Merge tag 'u-boot-imx-master-20251009' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository is clean. Now let me create and checkout the new branch based on ci/master:
+
+Now let's start cherry-picking the commits one by one. Starting with the first commit:
+
+Let me check the commit delta and run the build test:
+
+Delta looks identical. Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the third commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the fourth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the fifth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the sixth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the seventh commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the eighth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the ninth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the tenth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the eleventh commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the twelfth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the thirteenth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the fourteenth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the fifteenth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Continue with the sixteenth commit:
+
+Delta is identical. Run build test:
+
+Build passed. Now the final commit - which is a merge commit, so we need to use special handling:
+
+Yes, this is a merge commit. Cherry-pick it with `-m 1 --allow-empty`:
+
+The merge commit is empty (which is expected since all its changes were already applied via the individual cherry-picks). Let me commit it with `--allow-empty` as required:
+
+Let me check the delta for the merge commit:
+
+The cherry-picked merge commit is empty (as expected - all changes were already applied via individual commits). The original shows the full delta of all changes in the merge. This is correct behavior. Run final build test:
+
+Build passed. Now let's verify all 17 commits are present:
+
+All 17 commits are present in the expected order. Now run the final build test:
+
+## Final Status Report
+
+### Cherry-Pick Summary
+
+**Branch created:** `cherry-fcddf2fc7ef` (based on `ci/master`)
+
+**Build result:** ✅ OK - All builds passed
+
+**Commits cherry-picked (17 total):**
+
+| # | Hash | Subject | Delta | Status |
+|---|------|---------|-------|--------|
+| 1 | f66df2b3c84 | board: phytec: phycore_imx8mp: Add rauc to bootmeths | ✅ Identical | OK |
+| 2 | ea40a20e37c | imx: kontron-sl-mx8mm: Increase CONFIG_SPL_MAX_SIZE | ✅ Identical | OK |
+| 3 | dbeaaefd3e5 | imx: kontron-sl-mx8mm: Enable SDP support for loading via USB | ✅ Identical | OK |
+| 4 | 4aba7f2ccad | imx: kontron-sl-mx8mm: Remove deprecation warning for old modules | ✅ Identical | OK |
+| 5 | 9e5a3218a01 | imx: kontron-sl-mx8mm: Enable fixed regulators | ✅ Identical | OK |
+| 6 | feabd58523d | imx: kontron-sl-mx8mm: Add support for EEPROM on OSM-S module | ✅ Identical | OK |
+| 7 | 4844270ed94 | imx: kontron-sl-mx8mm: Use eMMC boot part for environment if booting from eMMC | ✅ Identical | OK |
+| 8 | 18fdf95b796 | imx: kontron-sl-mx8mm: Export current env config to devicetree | ✅ Identical | OK |
+| 9 | 6ab9747ff86 | imx: kontron-sl-mx8mm: Enable multiple useful commands, drivers and features | ✅ Identical | OK |
+| 10 | 053738836e5 | imx: kontron-sl-mx8mm: Enable standard boot and disable legacy distro boot | ✅ Identical | OK |
+| 11 | 6f4fd58032e | imx: kontron-sl-mx8mm: Enable USB hub on BL i.MX8MM OSM-S board | ✅ Identical | OK |
+| 12 | dc116814bce | imx: kontron-sl-mx8mm: Autostart fastboot if booted from USB | ✅ Identical | OK |
+| 13 | 09268137575 | imx: kontron-sl-mx8mm: Force default environment for serial loader boot | ✅ Identical | OK |
+| 14 | 362a8eeeb94 | imx: kontron-sl-mx8mm: Convert to OF_UPSTREAM | ✅ Identical | OK (auto-merge) |
+| 15 | e5ca97e21e4 | imx93_frdm: Fix USB vendor ID | ✅ Identical | OK (auto-merge) |
+| 16 | 4896abaf1ae | arm: dts: imx8mp-toradex-smarc: migrate to OF_UPSTREAM | ✅ Identical | OK (auto-merge) |
+| 17 | fa45614e28b | Merge tag 'u-boot-imx-master-20251009' | Empty (expected) | OK |
+
+**Fix-ups made:** None - all cherry-picks applied cleanly
+
+**Commits with concerning deltas:** None - all deltas were identical
+
+**Notes:**
+- Commits 14, 15, and 16 had automatic merges in `arch/arm/dts/Makefile`, `arch/arm/mach-imx/imx8m/Kconfig`, `configs/imx93_frdm_defconfig`, and `configs/toradex-smarc-imx8mp_defconfig` but deltas remained identical
+- The merge commit (17) is intentionally empty since all changes were already applied via the individual cherry-picks
+
+The branch `cherry-fcddf2fc7ef` is ready for pushing.
 
 ---
 
