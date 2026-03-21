@@ -1426,6 +1426,7 @@ struct pxe_context *pxe_parse(ulong addr, ulong size, const char *bootfile)
 		free(ctx);
 		return NULL;
 	}
+	ctx->quiet = true;
 	ctx->pxe_file_size = size;
 
 	abuf_init_addr(&buf, addr, size);
