@@ -655,11 +655,11 @@ int bootflow_scan_first(struct udevice *dev, const char *label,
 	ret = bootflow_check(iter, bflow);
 	if (ret) {
 		log_debug("check - ret=%d\n", ret);
+		iter->err = ret;
 		if (ret != BF_NO_MORE_PARTS && ret != -ENOSYS) {
 			if (iter->flags & BOOTFLOWIF_ALL)
 				return log_msg_ret("all", ret);
 		}
-		iter->err = ret;
 		bootflow_free(bflow);
 		ret = bootflow_scan_next(iter, bflow);
 		if (ret)

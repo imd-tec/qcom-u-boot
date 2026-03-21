@@ -321,6 +321,7 @@ static int bootflow_iter(struct unit_test_state *uts)
 	ut_asserteq(0, iter.max_part);
 	ut_asserteq_str("extlinux", iter.method->name);
 	ut_asserteq(0, bflow.err);
+	ut_asserteq(-EPROTONOSUPPORT, iter.err);
 	ut_assert(!iter.doing_global);
 	ut_assert(!iter.have_global);
 	ut_asserteq(-1, iter.first_glob_method);
