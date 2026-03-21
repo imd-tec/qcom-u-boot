@@ -1899,3 +1899,57 @@ static int bootflow_cmd_bls(struct unit_test_state *uts)
 	return 0;
 }
 BOOTSTD_TEST(bootflow_cmd_bls, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
+
+/* Test multi-entry scanning with the Ubuntu image on USB (two labels) */
+static int bootflow_multi(struct unit_test_state *uts)
+{
+	static const char *order[] = {"usb", NULL};
+	struct bootstd_priv *std;
+	struct udevice *bootstd;
+	const char **old_order;
+	struct bootflow *bflow;
+
+	test_set_eth_enable(false);
+	test_set_skip_delays(true);
+
+	ut_assertok(uclass_first_device_err(UCLASS_BOOTSTD, &bootstd));
+	std = dev_get_priv(bootstd);
+	old_order = std->bootdev_order;
+	std->bootdev_order = order;
+
+	bootstd_reset_usb();
+
+	ut_assertok(run_command("bootflow scan", 0));
+
+	/* Restore the order as soon as scanning is done */
+	std->bootdev_order = old_order;
+
+	ut_assert_skip_to_line("Bus usb@1: 6 USB Device(s) found");
+
+	ut_assertok(run_command("bootflow list", 0));
+	ut_assert_nextlinen("Showing all");
+	ut_assert_nextlinen("Seq");
+	ut_assert_nextlinen("---");
+	ut_assert_nextlinen(
+		"  0  efi          ready   usb          1     hub1.p2.usb_mass_storage.");
+	ut_assert_nextlinen(
+		"  1  extlinux     ready   usb          1     hub1.p4.usb_mass_storage.");
+	ut_assert_nextlinen(
+		"  2  extlinux     ready   usb          1     hub1.p4.usb_mass_storage.");
+	ut_assert_nextlinen("---");
+	ut_assert_nextline("(3 bootflows, 3 valid)");
+	ut_assert_console_end();
+
+	/* Check that the two extlinux entries have different OS names */
+	bflow = alist_getw(&std->bootflows, 1, struct bootflow);
+	ut_asserteq_str("Ubuntu 25.04 6.8.0-53-generic", bflow->os_name);
+	ut_asserteq(0, bflow->entry);
+
+	bflow = alist_getw(&std->bootflows, 2, struct bootflow);
+	ut_asserteq_str("Ubuntu 25.04 6.8.0-53-generic (rescue target)",
+			bflow->os_name);
+	ut_asserteq(1, bflow->entry);
+
+	return 0;
+}
+BOOTSTD_TEST(bootflow_multi, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
