@@ -738,6 +738,7 @@ void bootflow_free(struct bootflow *bflow)
 	struct bootflow_img *img;
 
 	free(bflow->name);
+	free(bflow->entry_name);
 	free(bflow->subdir);
 	free(bflow->fname);
 	if (!(bflow->flags & BOOTFLOWF_STATIC_BUF))

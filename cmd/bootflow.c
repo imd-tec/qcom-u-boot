@@ -377,7 +377,8 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 
 		ucp = dev_get_uclass_plat(bflow->method);
 		if (ucp->flags & BOOTMETHF_MULTI)
-			printf("Entry:     %d\n", bflow->entry);
+			printf("Entry:     %d: %s\n", bflow->entry,
+			       bflow->entry_name);
 	}
 
 	/* Show encryption status with LUKS version if applicable */

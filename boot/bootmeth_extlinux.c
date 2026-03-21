@@ -160,6 +160,13 @@ found:
 			return log_msg_ret("os", -ENOMEM);
 		}
 	}
+	if (label->name) {
+		bflow->entry_name = strdup(label->name);
+		if (!bflow->entry_name) {
+			pxe_cleanup(ctx);
+			return log_msg_ret("xnt", -ENOMEM);
+		}
+	}
 
 	pxe_cleanup(ctx);
 

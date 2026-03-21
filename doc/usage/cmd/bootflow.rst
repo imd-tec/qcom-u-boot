@@ -167,7 +167,7 @@ Type       distro
 Method:    extlinux
 State      ready
 Partition  2
-Entry      0
+Entry      0: l0
 Encrypted  no
 Subdir     (none)
 Filename   /extlinux/extlinux.conf
@@ -351,7 +351,7 @@ displayed and booted::
     Method:    distro
     State:     ready
     Partition: 2
-    Entry:     0
+    Entry:     0: Fedora-Workstation-armhfp-31-1.9 (5.3.7-301.fc31.armv7hl)
     Encrypted: no
     Subdir:    (none)
     Filename:  extlinux/extlinux.conf

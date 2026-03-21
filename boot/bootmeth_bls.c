@@ -364,8 +364,17 @@ static int bls_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 
 	ret = bls_entry_init(&entry, bflow, size);
 	bls_entry_uninit(&entry);
+	if (ret)
+		return ret;
 
-	return ret;
+	/* Use the title as the entry identifier */
+	if (bflow->os_name) {
+		bflow->entry_name = strdup(bflow->os_name);
+		if (!bflow->entry_name)
+			return log_msg_ret("ent", -ENOMEM);
+	}
+
+	return 0;
 }
 
 /**
