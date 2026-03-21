@@ -136,7 +136,8 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 			return log_msg_ret("elb", ret);
 		ctx->restart = restart;
 		addr = map_to_sysmem(bflow->buf);
-		ret = pxe_process_str(ctx, addr, false);
+
+		ret = pxe_boot_entry(ctx, addr, bflow->entry);
 	}
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);

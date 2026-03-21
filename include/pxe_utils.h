@@ -611,4 +611,18 @@ void pxe_load(struct pxe_file *file, ulong addr, ulong size);
  */
 void pxe_cleanup(struct pxe_context *ctx);
 
+/**
+ * pxe_boot_entry() - Parse a PXE config and boot a specific entry by index
+ *
+ * This parses the config file, walks to the Nth label, loads its files and
+ * boots it. Used by multi-entry bootmeths to boot a specific label that was
+ * selected during scanning.
+ *
+ * @ctx: PXE context (must be set up with pxe_setup_ctx())
+ * @addr: Address where config file is loaded
+ * @entry: Entry index (0 for first label, 1 for second, etc.)
+ * Return: Does not return on success, -ve on error
+ */
+int pxe_boot_entry(struct pxe_context *ctx, ulong addr, int entry);
+
 #endif /* __PXE_UTILS_H */

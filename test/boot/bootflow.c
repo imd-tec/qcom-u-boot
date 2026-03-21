@@ -1962,6 +1962,12 @@ static int bootflow_multi(struct unit_test_state *uts)
 			bflow->os_name);
 	ut_asserteq(1, bflow->entry);
 
+	/* Try booting the second entry (rescue) - exercises pxe_boot_entry() */
+	ut_assertok(env_set("kernel_addr_r", "1000000"));
+	ut_assertok(env_set("ramdisk_addr_r", "2000000"));
+	std->cur_bootflow = bflow;
+	ut_asserteq(-EFAULT, bootflow_boot(bflow));
+
 	return 0;
 }
 BOOTSTD_TEST(bootflow_multi, UTF_DM | UTF_SCAN_FDT | UTF_CONSOLE);
