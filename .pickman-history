@@ -45697,3 +45697,121 @@ The branch `cherry-d748154ff17` is ready for pushing, currently ahead of `ci/mas
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-9de2fc9878e
+
+Commits:
+- 9de2fc9878e arm: v7m: Allow SYS_ARCH_TIMER here
+- b30155c08e9 sandbox: Rework readX/writeX macros to be more like ARM
+- 16bbc225fed iotrace: Finish migrating this to Kconfig
+- dde1515be5e lz4: Do not disable LZ4_decompress_safe* for xPL
+- 42b35341251 fs: Rework filesystem guards for xPL phases
+- 87b7eaf3244 fs/squashfs: Ensure memory is freed by using unwind goto
+- 48f21e66e36 fs: jffs2: Remove always true test
+- d6277523e54 bootstd: rauc: no valid slot fallback: fix info msg to reflect real flow
+- 1c3687782fc bootstd: rauc: extend and fix doc to reflect real flow
+- 768b5167bd5 Merge patch series "bootstd: rauc: fix doc and info msg to reflect real flow"
+
+### Conversation log
+The repository is clean (only untracked files present, which is fine). Now let me create and checkout the new branch based on ci/master.
+
+Now let me start cherry-picking the commits one by one. Let me start with the first commit:
+
+First cherry-pick succeeded. Let me verify the delta and run the build:
+
+Delta looks identical (1 file, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit:
+
+Let me verify the delta:
+
+Delta is identical (4 files, +21/-24). Let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the fifth commit:
+
+Let me verify the delta:
+
+I notice a difference - the original touched `fs/fs.c` but the cherry-pick touched `fs/fs_legacy.c`. This is likely due to a rename in ci/master. Let me verify the content is correct:
+
+The changes are essentially the same - the file was renamed from `fs/fs.c` to `fs/fs_legacy.c` in ci/master. The actual code changes (+3/-5) are identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the sixth commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the seventh commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the eighth commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the ninth commit:
+
+Let me verify the delta:
+
+Delta is identical. Let me run the build test:
+
+Build passed. Now let me cherry-pick the tenth and final commit. This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (the changes were already applied by the preceding commits). I need to commit it with --allow-empty:
+
+Let me verify the delta:
+
+The original merge commit showed changes because it was comparing against its first parent, but the cherry-picked commit is empty because all the changes were already applied by the preceding commits we cherry-picked. This is expected behavior. Let me run the build test:
+
+Build passed. Now let me verify all 10 commits are present:
+
+All 10 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+All 10 commits have been successfully cherry-picked:
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 9de2fc9878e | dc310f01379 | arm: v7m: Allow SYS_ARCH_TIMER here | ✅ OK |
+| 2 | b30155c08e9 | 121c0b4dfab | sandbox: Rework readX/writeX macros to be more like ARM | ✅ OK |
+| 3 | 16bbc225fed | 361fe7691ae | iotrace: Finish migrating this to Kconfig | ✅ OK |
+| 4 | dde1515be5e | 3e558f3f8db | lz4: Do not disable LZ4_decompress_safe* for xPL | ✅ OK |
+| 5 | 42b35341251 | c587cb6de23 | fs: Rework filesystem guards for xPL phases | ✅ OK (file renamed fs/fs.c → fs/fs_legacy.c) |
+| 6 | 87b7eaf3244 | 3fe24daa34d | fs/squashfs: Ensure memory is freed by using unwind goto | ✅ OK |
+| 7 | 48f21e66e36 | 0c8b3ebfe06 | fs: jffs2: Remove always true test | ✅ OK |
+| 8 | d6277523e54 | 414b9317f58 | bootstd: rauc: no valid slot fallback: fix info msg to reflect real flow | ✅ OK |
+| 9 | 1c3687782fc | 3867ee0bc6b | bootstd: rauc: extend and fix doc to reflect real flow | ✅ OK |
+| 10 | 768b5167bd5 | ee31f961d5a | Merge patch series "bootstd: rauc: fix doc..." | ✅ OK (empty - expected) |
+
+**Build result:** ✅ OK - No warnings or errors
+
+**Notes:**
+- Commit #5 (fs: Rework filesystem guards for xPL phases): The file was renamed from `fs/fs.c` to `fs/fs_legacy.c` in ci/master. Git automatically applied the changes to the renamed file. The delta (+3/-5 lines) is identical.
+- Commit #10 (merge commit): As expected, cherry-picking a merge commit resulted in an empty commit since the two patches it merged were already applied as separate commits (commits #8 and #9). The commit was preserved with `--allow-empty` to maintain the commit history.
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** None - all deltas matched exactly (with the expected file rename in commit #5)
+
+The branch `cherry-9de2fc9878e` is ready for pushing.
+
+---
+
