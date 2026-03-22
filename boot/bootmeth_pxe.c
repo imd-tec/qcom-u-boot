@@ -145,15 +145,29 @@ static int extlinux_pxe_read_file(struct udevice *dev, struct bootflow *bflow,
 
 static int extlinux_pxe_boot(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_boot(dev, bflow, extlinux_pxe_getfile, false,
-			     bflow->subdir, false);
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+
+	ctx = extlinux_get_ctx(priv, bflow);
+	if (!ctx)
+		return log_msg_ret("ctx", -ENOMEM);
+
+	return extlinux_boot(dev, bflow, ctx, extlinux_pxe_getfile,
+			     false, bflow->subdir, false);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int extlinux_pxe_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_read_all(dev, bflow, extlinux_pxe_getfile, false,
-				 bflow->subdir);
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+
+	ctx = extlinux_get_ctx(priv, bflow);
+	if (!ctx)
+		return log_msg_ret("ctx", -ENOMEM);
+
+	return extlinux_read_all(dev, bflow, ctx,
+				 extlinux_pxe_getfile, false, bflow->subdir);
 }
 #endif
 
@@ -189,5 +203,8 @@ U_BOOT_DRIVER(bootmeth_zpxe) = {
 	.of_match	= extlinux_bootmeth_pxe_ids,
 	.ops		= &extlinux_bootmeth_pxe_ops,
 	.bind		= extlinux_bootmeth_pxe_bind,
-	.plat_auto	= sizeof(struct extlinux_plat)
+	.probe		= extlinux_bootmeth_probe,
+	.remove		= extlinux_bootmeth_remove,
+	.plat_auto	= sizeof(struct extlinux_plat),
+	.priv_auto	= sizeof(struct extlinux_priv),
 };

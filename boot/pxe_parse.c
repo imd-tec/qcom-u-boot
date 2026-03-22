@@ -498,8 +498,9 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
 		err = parse_sliteral(c, &cfg->bmp, limit);
 		break;
 	default:
-		printf("Ignoring malformed menu command: %.*s\n",
-		       (int)(*c - s), s);
+		if (!ctx->quiet)
+			printf("Ignoring malformed menu command: %.*s\n",
+			       (int)(*c - s), s);
 	}
 	free(t.val);
 	if (err < 0)
@@ -513,8 +514,9 @@ static int parse_menu(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
 /*
  * Handles parsing a 'menu line' when we're parsing a label.
  */
-static int parse_label_menu(char **c, struct pxe_menu *cfg,
-			    struct pxe_label *label, const char *limit)
+static int parse_label_menu(struct pxe_context *ctx, char **c,
+			    struct pxe_menu *cfg, struct pxe_label *label,
+			    const char *limit)
 {
 	struct token t;
 	char *s;
@@ -536,8 +538,9 @@ static int parse_label_menu(char **c, struct pxe_menu *cfg,
 		parse_sliteral(c, &label->menu, limit);
 		break;
 	default:
-		printf("Ignoring malformed menu command: %.*s\n",
-		       (int)(*c - s), s);
+		if (!ctx->quiet)
+			printf("Ignoring malformed menu command: %.*s\n",
+			       (int)(*c - s), s);
 	}
 
 	free(t.val);
@@ -584,7 +587,8 @@ static int parse_label_kernel(char **c, struct pxe_label *label,
  * get some input we otherwise don't have a handler defined
  * for.
  */
-static int parse_label(char **c, struct pxe_menu *cfg, const char *limit)
+static int parse_label(struct pxe_context *ctx, char **c, struct pxe_menu *cfg,
+		       const char *limit)
 {
 	struct token t;
 	int len;
@@ -614,7 +618,7 @@ static int parse_label(char **c, struct pxe_menu *cfg, const char *limit)
 		err = 0;
 		switch (t.type) {
 		case T_MENU:
-			err = parse_label_menu(c, cfg, label, limit);
+			err = parse_label_menu(ctx, c, cfg, label, limit);
 			break;
 		case T_KERNEL:
 		case T_LINUX:
@@ -770,7 +774,7 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 			err = parse_integer(&p, &cfg->timeout, limit);
 			break;
 		case T_LABEL:
-			err = parse_label(&p, cfg, limit);
+			err = parse_label(ctx, &p, cfg, limit);
 			break;
 		case T_DEFAULT:
 		case T_ONTIMEOUT:
@@ -806,8 +810,9 @@ int parse_pxefile_top(struct pxe_context *ctx, char *p, const char *limit,
 			free(t.val);
 			return 1;
 		default:
-			printf("Ignoring unknown command: %.*s\n",
-			       (int)(p - s), s);
+			if (!ctx->quiet)
+				printf("Ignoring unknown command: %.*s\n",
+				       (int)(p - s), s);
 			eol_or_eof(&p);
 		}
 

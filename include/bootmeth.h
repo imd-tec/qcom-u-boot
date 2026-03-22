@@ -156,6 +156,19 @@ struct bootmeth_ops {
 	int (*boot)(struct udevice *dev, struct bootflow *bflow);
 
 	/**
+	 * free_bootflow() - free bootmeth-private data in a bootflow
+	 *
+	 * This is called from bootmeth_free_bootflow() to allow the bootmeth
+	 * to free any internal allocations within bflow->bootmeth_priv. The
+	 * caller handles free(bflow->bootmeth_priv) afterwards, so the op
+	 * should not free the priv struct itself.
+	 *
+	 * @dev:	Bootmethod device
+	 * @bflow:	Bootflow being freed
+	 */
+	void (*free_bootflow)(struct udevice *dev, struct bootflow *bflow);
+
+	/**
 	 * set_property() - set the bootmeth property
 	 *
 	 * This allows the setting of bootmeth-specific properties to enable
@@ -308,6 +321,17 @@ int bootmeth_boot(struct udevice *dev, struct bootflow *bflow);
  *	on other error
  */
 int bootmeth_setup_iter_order(struct bootflow_iter *iter, bool include_global);
+
+/**
+ * bootmeth_free_bootflow() - free bootmeth-private data in a bootflow
+ *
+ * Calls the bootmeth's free_bootflow() op if provided to free internal
+ * allocations, then frees bflow->bootmeth_priv and sets it to NULL.
+ *
+ * @dev:	Bootmethod device
+ * @bflow:	Bootflow being freed
+ */
+void bootmeth_free_bootflow(struct udevice *dev, struct bootflow *bflow);
 
 /**
  * bootmeth_set_order() - Set the bootmeth order

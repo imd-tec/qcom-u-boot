@@ -606,10 +606,19 @@ static int android_bootmeth_bind(struct udevice *dev)
 	return 0;
 }
 
+static void android_free_bootflow(struct udevice *dev, struct bootflow *bflow)
+{
+	struct android_priv *priv = bflow->bootmeth_priv;
+
+	if (priv)
+		free(priv->slot);
+}
+
 static struct bootmeth_ops android_bootmeth_ops = {
 	.check		= android_check,
 	.read_bootflow	= android_read_bootflow,
 	.read_file	= android_read_file,
+	.free_bootflow	= android_free_bootflow,
 	.boot		= android_boot,
 };
 

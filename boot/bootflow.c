@@ -655,11 +655,11 @@ int bootflow_scan_first(struct udevice *dev, const char *label,
 	ret = bootflow_check(iter, bflow);
 	if (ret) {
 		log_debug("check - ret=%d\n", ret);
+		iter->err = ret;
 		if (ret != BF_NO_MORE_PARTS && ret != -ENOSYS) {
 			if (iter->flags & BOOTFLOWIF_ALL)
 				return log_msg_ret("all", ret);
 		}
-		iter->err = ret;
 		bootflow_free(bflow);
 		ret = bootflow_scan_next(iter, bflow);
 		if (ret)
@@ -687,8 +687,10 @@ int bootflow_scan_next(struct bootflow_iter *iter, struct bootflow *bflow)
 			}
 			ret = bootflow_check(iter, bflow);
 			log_debug("check - ret=%d\n", ret);
-			if (!ret)
+			if (!ret) {
+				iter->err = 0;
 				return 0;
+			}
 			iter->err = ret;
 			if (ret != BF_NO_MORE_PARTS && ret != -ENOSYS) {
 				if (iter->flags & BOOTFLOWIF_ALL)
@@ -710,6 +712,7 @@ void bootflow_init(struct bootflow *bflow, struct udevice *bootdev,
 	bflow->dev = bootdev;
 	bflow->method = meth;
 	bflow->state = BOOTFLOWST_BASE;
+	bflow->bootmeth_id = -1;
 	alist_init_struct(&bflow->images, struct bootflow_img);
 }
 
@@ -724,7 +727,9 @@ void bootflow_free(struct bootflow *bflow)
 		free(bflow->buf);
 	free(bflow->os_name);
 	free(bflow->fdt_fname);
-	free(bflow->bootmeth_priv);
+	/* bootmeth_priv is only set when method is set */
+	if (bflow->method)
+		bootmeth_free_bootflow(bflow->method, bflow);
 
 	alist_for_each(img, &bflow->images)
 		free(img->fname);

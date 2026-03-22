@@ -75,6 +75,28 @@ int extlinux_set_property(struct udevice *dev, const char *property,
 	return 0;
 }
 
+struct pxe_context *extlinux_get_ctx(struct extlinux_priv *priv,
+				     struct bootflow *bflow)
+{
+	struct pxe_context *ctx;
+
+	/* Return existing context if one was already allocated */
+	if (bflow->bootmeth_id >= 0) {
+		ctx = alist_getw(&priv->ctxs, bflow->bootmeth_id,
+				 struct pxe_context);
+		if (ctx)
+			return ctx;
+	}
+
+	/* Allocate a new one */
+	ctx = alist_add_placeholder(&priv->ctxs);
+	if (!ctx)
+		return NULL;
+	bflow->bootmeth_id = priv->ctxs.count - 1;
+
+	return ctx;
+}
+
 static int extlinux_setup(struct udevice *dev, struct bootflow *bflow,
 			  pxe_getfile_func getfile, bool allow_abs_path,
 			  const char *bootfile, struct pxe_context *ctx)
@@ -85,8 +107,8 @@ static int extlinux_setup(struct udevice *dev, struct bootflow *bflow,
 	plat->info.dev = dev;
 	plat->info.bflow = bflow;
 
-	ret = pxe_setup_ctx(ctx, getfile, &plat->info, allow_abs_path, bootfile,
-			    false, plat->use_fallback, bflow);
+	ret = pxe_setup_ctx(ctx, getfile, &plat->info, allow_abs_path,
+			    bootfile, false, plat->use_fallback, bflow);
 	if (ret)
 		return log_msg_ret("ctx", ret);
 	log_debug("bootfl flags %x\n", bflow->flags);
@@ -97,25 +119,24 @@ static int extlinux_setup(struct udevice *dev, struct bootflow *bflow,
 }
 
 int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
-		  pxe_getfile_func getfile, bool allow_abs_path,
-		  const char *bootfile, bool restart)
+		  struct pxe_context *ctx, pxe_getfile_func getfile,
+		  bool allow_abs_path, const char *bootfile, bool restart)
 {
-	struct extlinux_plat *plat = dev_get_plat(dev);
 	ulong addr;
 	int ret;
 
 	/* if we have already selected a label, just boot it */
-	if (plat->ctx.label) {
-		plat->ctx.fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
-		ret = pxe_boot(&plat->ctx);
+	if (ctx->label) {
+		ctx->fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
+		ret = pxe_boot(ctx);
 	} else {
 		ret = extlinux_setup(dev, bflow, getfile, allow_abs_path,
-				     bootfile, &plat->ctx);
+				     bootfile, ctx);
 		if (ret)
 			return log_msg_ret("elb", ret);
-		plat->ctx.restart = restart;
+		ctx->restart = restart;
 		addr = map_to_sysmem(bflow->buf);
-		ret = pxe_process_str(&plat->ctx, addr, false);
+		ret = pxe_process_str(ctx, addr, false);
 	}
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);
@@ -124,20 +145,19 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 }
 
 int extlinux_read_all(struct udevice *dev, struct bootflow *bflow,
-		      pxe_getfile_func getfile, bool allow_abs_path,
-		      const char *bootfile)
+		      struct pxe_context *ctx, pxe_getfile_func getfile,
+		      bool allow_abs_path, const char *bootfile)
 {
-	struct extlinux_plat *plat = dev_get_plat(dev);
 	ulong addr;
 	int ret;
 
 	ret = extlinux_setup(dev, bflow, getfile, allow_abs_path, bootfile,
-			     &plat->ctx);
+			     ctx);
 	if (ret)
 		return log_msg_ret("era", ret);
 	addr = map_to_sysmem(bflow->buf);
-	plat->ctx.pxe_file_size = bflow->size;
-	ret = pxe_probe(&plat->ctx, addr, false);
+	ctx->pxe_file_size = bflow->size;
+	ret = pxe_probe(ctx, addr, false);
 	if (ret)
 		return log_msg_ret("elb", -EFAULT);
 

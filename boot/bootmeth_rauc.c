@@ -63,7 +63,6 @@ static void distro_rauc_priv_free(struct distro_rauc_priv *priv)
 		free(priv->slots[i]);
 	}
 	free(priv->slots);
-	free(priv);
 }
 
 static struct distro_rauc_slot *get_slot(struct distro_rauc_priv *priv,
@@ -202,6 +201,8 @@ static int distro_rauc_read_bootflow(struct udevice *dev, struct bootflow *bflow
 	ret = distro_rauc_scan_parts(bflow);
 	if (ret < 0) {
 		distro_rauc_priv_free(priv);
+		free(priv);
+		bflow->bootmeth_priv = NULL;
 		free(boot_order_copy);
 		return ret;
 	}
@@ -412,6 +413,8 @@ static int distro_rauc_boot(struct udevice *dev, struct bootflow *bflow)
 		return log_msg_ret("boot", ret);
 
 	distro_rauc_priv_free(priv);
+	free(priv);
+	bflow->bootmeth_priv = NULL;
 
 	return 0;
 }
@@ -426,10 +429,18 @@ static int distro_rauc_bootmeth_bind(struct udevice *dev)
 	return 0;
 }
 
+static void distro_rauc_free_bootflow(struct udevice *dev,
+				      struct bootflow *bflow)
+{
+	if (bflow->bootmeth_priv)
+		distro_rauc_priv_free(bflow->bootmeth_priv);
+}
+
 static struct bootmeth_ops distro_rauc_bootmeth_ops = {
 	.check		= distro_rauc_check,
 	.read_bootflow	= distro_rauc_read_bootflow,
 	.read_file	= distro_rauc_read_file,
+	.free_bootflow	= distro_rauc_free_bootflow,
 	.boot		= distro_rauc_boot,
 };
 

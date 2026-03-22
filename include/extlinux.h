@@ -23,17 +23,60 @@ struct extlinux_info {
 };
 
 /**
- * struct extlinux_plat - locate state for this bootmeth
+ * struct extlinux_plat - platform data for this bootmeth
  *
  * @use_falllback: true to boot with the fallback option
- * @ctx: holds the PXE context, if it should be saved
  * @info: information used for the getfile() method
  */
 struct extlinux_plat {
 	bool use_fallback;
-	struct pxe_context ctx;
 	struct extlinux_info info;
 };
+
+/**
+ * struct extlinux_priv - private runtime data for this bootmeth
+ *
+ * @ctxs: list of parsed PXE contexts (alist of struct pxe_context), one per
+ *	extlinux.conf file found during scanning
+ */
+struct extlinux_priv {
+	struct alist ctxs;
+};
+
+/**
+ * extlinux_bootmeth_probe() - Probe function for extlinux-based bootmeths
+ *
+ * Initialises the context alist in extlinux_priv. Must be called from the
+ * probe function of any driver that uses extlinux_priv.
+ *
+ * @dev: Bootmethod device
+ * Return: 0 if OK
+ */
+int extlinux_bootmeth_probe(struct udevice *dev);
+
+/**
+ * extlinux_bootmeth_remove() - Remove function for extlinux-based bootmeths
+ *
+ * Frees all cached PXE contexts in the alist.
+ *
+ * @dev: Bootmethod device
+ * Return: 0 if OK
+ */
+int extlinux_bootmeth_remove(struct udevice *dev);
+
+/**
+ * extlinux_get_ctx() - Get or allocate a PXE context for a bootflow
+ *
+ * If bflow->bootmeth_id already points to a valid context (e.g. from a
+ * prior read_all), return it. Otherwise allocate a new context in the
+ * alist and store its index in bflow->bootmeth_id.
+ *
+ * @priv: Private data for this bootmeth
+ * @bflow: Bootflow to get context for
+ * Return: Context, or NULL on allocation failure
+ */
+struct pxe_context *extlinux_get_ctx(struct extlinux_priv *priv,
+				     struct bootflow *bflow);
 
 /**
  * extlinux_set_property() - set an extlinux property
@@ -54,6 +97,7 @@ int extlinux_set_property(struct udevice *dev, const char *property,
  *
  * @dev: bootmeth device
  * @bflow: Bootflow to boot
+ * @ctx: PXE context to use for booting
  * @getfile: Function to use to read files
  * @allow_abs_path: true to allow absolute paths
  * @bootfile: Bootfile whose directory loaded files are relative to, NULL if
@@ -63,14 +107,15 @@ int extlinux_set_property(struct udevice *dev, const char *property,
  * Return: 0 if OK, -ve error code on failure
  */
 int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
-		  pxe_getfile_func getfile, bool allow_abs_path,
-		  const char *bootfile, bool restart);
+		  struct pxe_context *ctx, pxe_getfile_func getfile,
+		  bool allow_abs_path, const char *bootfile, bool restart);
 
 /**
  * extlinux_read_all() - read all files for a bootflow
  *
  * @dev: Bootmethod device to boot
  * @bflow: Bootflow to read
+ * @ctx: PXE context to use for reading
  * @getfile: Function to use to read files
  * @allow_abs_path: true to allow absolute paths
  * @bootfile: Bootfile whose directory loaded files are relative to, NULL if
@@ -78,7 +123,7 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
  * Return: 0 if OK, -EIO on I/O error, other -ve on other error
  */
 int extlinux_read_all(struct udevice *dev, struct bootflow *bflow,
-		      pxe_getfile_func getfile, bool allow_abs_path,
-		      const char *bootfile);
+		      struct pxe_context *ctx, pxe_getfile_func getfile,
+		      bool allow_abs_path, const char *bootfile);
 
 #endif

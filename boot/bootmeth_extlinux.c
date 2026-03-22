@@ -217,17 +217,55 @@ static int extlinux_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 
 static int extlinux_local_boot(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_boot(dev, bflow, extlinux_getfile, true, bflow->fname,
-			     false);
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+
+	ctx = extlinux_get_ctx(priv, bflow);
+	if (!ctx)
+		return log_msg_ret("ctx", -ENOMEM);
+
+	return extlinux_boot(dev, bflow, ctx, extlinux_getfile, true,
+			     bflow->fname, false);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int extlinux_local_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_read_all(dev, bflow, extlinux_getfile, true,
-				 bflow->fname);
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+
+	ctx = extlinux_get_ctx(priv, bflow);
+	if (!ctx)
+		return log_msg_ret("ctx", -ENOMEM);
+
+	return extlinux_read_all(dev, bflow, ctx, extlinux_getfile,
+				 true, bflow->fname);
 }
 #endif
+
+int extlinux_bootmeth_probe(struct udevice *dev)
+{
+	struct extlinux_priv *priv = dev_get_priv(dev);
+
+	alist_init_struct(&priv->ctxs, struct pxe_context);
+
+	return 0;
+}
+
+int extlinux_bootmeth_remove(struct udevice *dev)
+{
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+
+	alist_for_each(ctx, &priv->ctxs) {
+		if (ctx->cfg)
+			pxe_menu_uninit(ctx->cfg);
+		pxe_destroy_ctx(ctx);
+	}
+	alist_uninit(&priv->ctxs);
+
+	return 0;
+}
 
 static int extlinux_bootmeth_bind(struct udevice *dev)
 {
@@ -263,5 +301,8 @@ U_BOOT_DRIVER(bootmeth_1extlinux) = {
 	.of_match	= extlinux_bootmeth_ids,
 	.ops		= &extlinux_bootmeth_ops,
 	.bind		= extlinux_bootmeth_bind,
-	.plat_auto	= sizeof(struct extlinux_plat)
+	.probe		= extlinux_bootmeth_probe,
+	.remove		= extlinux_bootmeth_remove,
+	.plat_auto	= sizeof(struct extlinux_plat),
+	.priv_auto	= sizeof(struct extlinux_priv),
 };
