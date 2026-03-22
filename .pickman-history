@@ -46388,3 +46388,106 @@ Key evidence:
 
 ---
 
+### Review: 2026-03-22
+
+Branch: cherry-28c341ca071
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the correct repository path:
+
+I'm already in the u-boot repository at `/home/sglass/dev/u-boot`. Let me continue:
+
+Let me record the commit deltas before rebasing:
+
+Good, I've recorded the deltas. Now let me check the base commit before rebasing and compare with ci/master:
+
+Now let me start the rebase onto ci/master:
+
+There's a conflict in `.pickman-history`. This is a metadata file that tracks pickman operations. Let me resolve this by keeping both versions:
+
+Let me look at the actual conflict:
+
+The conflict is in `.pickman-history`. This is a metadata file for pickman. The conflict is at the end of the file - we need to keep both the HEAD content (new entries added during rebase) and the incoming content (original cherry-pick record). Let me resolve this:
+
+The conflict is at the end of the file. The resolution should keep the HEAD version (which has the new commits from ci/master) and append the incoming commit's content. Let me resolve this:
+
+I see - the conflict is that both HEAD (ci/master) has new cherry-pick entries from `cherry-ae7fea1b374` and the incoming commit has entries for `cherry-28c341ca071`. Both need to be kept. Let me resolve this by keeping HEAD's content and appending the incoming content:
+
+Good, no conflict markers remain. Now let me stage the file and continue the rebase:
+
+Another conflict in the same file. Let me resolve this one:
+
+This is the second pickman commit that records the review handling. Let me resolve this:
+
+The HEAD side is empty (no new content) and the incoming side has the review handling record. Let me keep the incoming content:
+
+Good. Now continue the rebase:
+
+Rebase completed successfully. Now let me verify the commits and their deltas:
+
+The commits are rebased. Now let me verify the deltas match and run build tests:
+
+All deltas match exactly:
+
+| Commit | Before Rebase | After Rebase | Match |
+|--------|---------------|--------------|-------|
+| 1 (part) | 2 files, +22/-17 | 2 files, +22/-17 | ✅ |
+| 2 (efi_loader) | 1 file, +35/-14 | 1 file, +35/-14 | ✅ |
+| 3 (tee) | 2 files, +2/-4 | 2 files, +2/-4 | ✅ |
+| 4 (tpm) | 1 file, +1/-1 | 1 file, +1/-1 | ✅ |
+| 5 (merge) | Empty | Empty | ✅ |
+
+Now let me run the build test:
+
+Build passes. Now let me create the local branch with -v2 suffix and force push:
+
+Now let me force push to update the MR:
+
+## Summary
+
+### Rebase completed successfully ✅
+
+**Branch:** `cherry-28c341ca071`  
+**MR:** !769
+
+### What was done:
+
+1. **Checked out** the MR branch `cherry-28c341ca071`
+2. **Fetched** latest `ci/master`
+3. **Rebased** onto `ci/master` using `git rebase --keep-empty`
+   - Resolved 2 conflicts in `.pickman-history` (metadata file) by merging both versions
+4. **Verified all deltas match** before/after rebase:
+   - Commit 1 (part): 2 files, +22/-17 ✅
+   - Commit 2 (efi_loader): 1 file, +35/-14 ✅
+   - Commit 3 (tee): 2 files, +2/-4 ✅
+   - Commit 4 (tpm): 1 file, +1/-1 ✅
+   - Commit 5 (merge): Empty (expected) ✅
+5. **Build test passed** (`buildman -L --board sandbox`)
+6. **Created local branch** `cherry-28c341ca071-v2`
+7. **Force pushed** to update the MR
+
+### New commit history (after rebase):
+```
+1fee9b1755b pickman: Record review handling for cherry-28c341ca071
+f99e65599d8 pickman: Record cherry-pick of 5 commits from us/next
+1b44ca21dc0 Merge tag 'mix-next-14102025' of https://source.denx.de/u-boot/custodians/u-boot-tpm
+faa9b74c900 tpm: Make U_BOOT_DRIVER entries unique
+58f551e7850 tee: Rework Makefile logic
+b6b121135da efi_loader: Improve disk image detection in efi_bootmgr
+d4a6878d231 part: Export part_driver_lookup_type for external use
+d87309370c5 Merge branch 'cherry-ae7fea1b374' into 'master' (ci/master)
+```
+
+### Suggested reply to post on MR:
+
+```
+Rebased onto latest ci/master.
+
+All deltas verified to match and sandbox build passes.
+```
+
+---
+
