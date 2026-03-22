@@ -46488,6 +46488,127 @@ Rebased onto latest ci/master.
 
 All deltas verified to match and sandbox build passes.
 ```
+## 2026-03-22: us/next
+
+Branch: cherry-038580206d4
+
+Commits:
+- 038580206d4 drivers: net: Add versal2 10GBE device support
+- f791695685f clk: xilinx: Call generic smc_call_handler()
+- e7fe2c7bc60 clk: xilinx: Separate legacy format to own handler
+- 4146a31dcec drivers: firmware: update xilinx_pm_request to support max payload
+- fe8d071c498 pwm: cadence-ttc: Insufficient elements in array
+- 733f2de3324 arm64: zynqmp: Disable coresight by default
+- 09c862aca4d arm64: zynqmp: Remove undocumented arasan, has-mdma property
+- e2aaac3f6b4 arm64: zynqmp: Remove RTC calibration from sm-k26
+- 4640051cdfd arm64: zynqmp: Remove "ti,tps53679" property
+- 5b13a280b48 arm64: xilinx: Add i2c mux idle disconnect property
+- 09311c8a386 arm64: zynqmp: Revert usb node drive strength and slew rate for zcu106
+- 5fc47ae48e9 arm64: zynqmp: Fix incomplete comment in zynqmp-sc-vn-p-b2197-00-revA.dtso
+- 4bd21839847 arm64: zynqmp: Enable PSCI 1.0
+- b852fece849 arm64: zynqmp: Update compatible string for tps546X24
+- 8e27bd3a7ad arm64: zynqmp: Introduce DP port labels
+- 8651f2a50af arm64: zynqmp: Enable DP for kr260, kv260, zcu100, zcu102, zcu104, zcu111
+- 9b68682d1cc arm64: zynqmp: Add pmw_fan label to k26
+- aa4e7f70837 FWU: Add platform hook support for fwu metata
+- 68dc66d7e06 board: xilinx: update guid based on metadata
+- 145645a9f29 arm64: zynqmp: Fix DTOVL warning about graphs in kv/kr260
+- a3861c71d54 timer: Tighten CADENCE_TTC_TIMER dependencies
+- ed5b149b81a xilinx: Replace PHY_VITESSE by PHY_MSCC
+- 4c606b165b5 video: zynqmp: Prevent use of uninitialised variables
+- d413e228edd xilinx: mbv: Remove redundancy in MB-V defconfigs
+- 0cb6970639e xilinx: Enable SNTP/DATE commands and RTC
+- a040578d827 spi: cadence-qspi: Remove cdns,is-dma property handling
+- b1cc9a53d7b Merge tag 'xilinx-for-v2026.01-rc1-v2' of https://source.denx.de/u-boot/custodians/u-boot-microblaze
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Let me create and checkout the new branch based on ci/master.
+
+Now let's cherry-pick the first commit:
+
+Delta looks identical. Let me run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Now the 21st commit - this one has "maybe already applied as 59a71455d5f" annotation. Let me verify first:
+
+The patches look very similar - only the commit hash and a few metadata lines differ. Let me see the actual code changes:
+
+The commits have identical content (same author, same date, same file changes) - just different upstream metadata. This is already applied. Let me skip it and continue:
+
+Let me check the conflicts:
+
+I can see the conflict. The commit is removing lines that are considered redundant (already in the included base config). Let me check the other files:
+
+The conflict pattern is clear - the original commit wants to remove the redundant lines (keep the empty/incoming version), while HEAD has these lines. The intent of the commit is to remove redundancy, so I should accept the incoming (theirs) version which removes these lines.
+
+The deltas match exactly. Let me run the build test:
+
+Now the last commit - a merge commit:
+
+The merge commit is empty because all its content was already cherry-picked. Let me commit it with --allow-empty to preserve the merge commit history:
+
+Now let me verify the log to ensure all commits are present:
+
+I count 26 commits (not 27 because we skipped the already-applied one). Let me verify:
+- 27 commits in original list
+- 1 skipped (a3861c71d54 - already applied as 59a71455d5f)
+- = 26 cherry-picked
+
+Let me run the final build test:
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+**Branch created:** `cherry-038580206d4` based on `ci/master`
+
+**Build result:** ✅ OK - sandbox builds successfully
+
+**Commits cherry-picked:** 26 of 27
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 038580206d4 | drivers: net: Add versal2 10GBE device support | ✅ Applied |
+| 2 | f791695685f | clk: xilinx: Call generic smc_call_handler() | ✅ Applied |
+| 3 | e7fe2c7bc60 | clk: xilinx: Separate legacy format to own handler | ✅ Applied |
+| 4 | 4146a31dcec | drivers: firmware: update xilinx_pm_request to support max payload | ✅ Applied (auto-merge) |
+| 5 | fe8d071c498 | pwm: cadence-ttc: Insufficient elements in array | ✅ Applied |
+| 6 | 733f2de3324 | arm64: zynqmp: Disable coresight by default | ✅ Applied |
+| 7 | 09c862aca4d | arm64: zynqmp: Remove undocumented arasan, has-mdma property | ✅ Applied |
+| 8 | e2aaac3f6b4 | arm64: zynqmp: Remove RTC calibration from sm-k26 | ✅ Applied |
+| 9 | 4640051cdfd | arm64: zynqmp: Remove "ti,tps53679" property | ✅ Applied |
+| 10 | 5b13a280b48 | arm64: xilinx: Add i2c mux idle disconnect property | ✅ Applied |
+| 11 | 09311c8a386 | arm64: zynqmp: Revert usb node drive strength and slew rate for zcu106 | ✅ Applied |
+| 12 | 5fc47ae48e9 | arm64: zynqmp: Fix incomplete comment in zynqmp-sc-vn-p-b2197-00-revA.dtso | ✅ Applied |
+| 13 | 4bd21839847 | arm64: zynqmp: Enable PSCI 1.0 | ✅ Applied |
+| 14 | b852fece849 | arm64: zynqmp: Update compatible string for tps546X24 | ✅ Applied |
+| 15 | 8e27bd3a7ad | arm64: zynqmp: Introduce DP port labels | ✅ Applied |
+| 16 | 8651f2a50af | arm64: zynqmp: Enable DP for kr260, kv260, zcu100, zcu102, zcu104, zcu111 | ✅ Applied |
+| 17 | 9b68682d1cc | arm64: zynqmp: Add pmw_fan label to k26 | ✅ Applied |
+| 18 | aa4e7f70837 | FWU: Add platform hook support for fwu metata | ✅ Applied |
+| 19 | 68dc66d7e06 | board: xilinx: update guid based on metadata | ✅ Applied |
+| 20 | 145645a9f29 | arm64: zynqmp: Fix DTOVL warning about graphs in kv/kr260 | ✅ Applied |
+| 21 | a3861c71d54 | timer: Tighten CADENCE_TTC_TIMER dependencies | ⏭️ **SKIPPED** - Already applied as 59a71455d5f |
+| 22 | ed5b149b81a | xilinx: Replace PHY_VITESSE by PHY_MSCC | ✅ Applied (auto-merge) |
+| 23 | 4c606b165b5 | video: zynqmp: Prevent use of uninitialised variables | ✅ Applied |
+| 24 | d413e228edd | xilinx: mbv: Remove redundancy in MB-V defconfigs | ✅ Applied (conflict resolved) |
+| 25 | 0cb6970639e | xilinx: Enable SNTP/DATE commands and RTC | ✅ Applied (auto-merge) |
+| 26 | a040578d827 | spi: cadence-qspi: Remove cdns,is-dma property handling | ✅ Applied |
+| 27 | b1cc9a53d7b | Merge tag 'xilinx-for-v2026.01-rc1-v2' | ✅ Applied (empty - content already present) |
+
+### Fix-ups Applied
+
+1. **d413e228edd** (xilinx: mbv: Remove redundancy in MB-V defconfigs): Resolved conflicts in 3 defconfig files by accepting the incoming (theirs) version which removes redundant configuration entries from: `configs/xilinx_mbv32_smode_defconfig`, `configs/xilinx_mbv64_defconfig`, `configs/xilinx_mbv64_smode_defconfig`
+
+### Notes
+
+- The commit `a3861c71d54` was verified to be identical in content to `59a71455d5f` (already in ci/master), so it was skipped
+- The merge commit `b1cc9a53d7b` was applied as an empty commit since all its content was already cherry-picked
+- All deltas were verified to match between original and cherry-picked commits
+- No concerning deltas observed
+
+**The branch `cherry-038580206d4` is ready for pushing.**
 
 ---
 
