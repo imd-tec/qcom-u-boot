@@ -46612,3 +46612,173 @@ Let me run the final build test:
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-f6cd0a36cee
+
+Commits:
+- f6cd0a36cee boot: Improve comments related to global bootmeths
+- 996ded5463f boot: Move preparing bootdev into a function
+- aebf3a98bff test: Remove not needed null check
+- 77d11d2f7a3 arm: dts: k3-am62p-verdin: migrate to OF_UPSTREAM
+- 00ed9753c80 test: Do not build expo and cedit test if no SDL
+- 40f57b571c1 arm/airoha: an7581 ignores CFG_MAX_MEM_MAPPED value
+- 4e4bbb49f92 cmd: ti: Add DDRSS Inline ECC Error Injection command
+- ce175fa9f0e arm/airoha: partly revert support of multiple RAM size for an7581
+- f21920f7e79 .mailmap: update e-mail address for Abbarapu Venkatesh Yadav
+- 2ba64e303b2 Merge patch series "fix an7581 panic caused by attempt to support multiple RAM size"
+
+### Conversation log
+Let me find the repository first:
+
+Good, I'm already in the u-boot directory. Let me check the git status:
+
+The repository is clean (untracked files are fine). Now let me create and checkout the new branch based on ci/master:
+
+Good, branch created. Now let me check if the first two commits have "maybe already applied" versions. Let me first compare the first commit pair:
+
+The patches have meaningful differences. Let me look at the actual content differences more closely:
+
+Same subjects. Let me check if the "found" commits are in ci/master:
+
+The found commits are not in ci/master, so the "maybe already applied" commits haven't been applied yet. Let me proceed with cherry-picking. Let me start with the first commit:
+
+There's a conflict. Let me check the conflicting files and see if I can resolve it:
+
+This is a simple conflict - the comment changed from "end" to "start". Looking at the conflict, the cherry-picked version says "at the start" while HEAD says "at the end". Let me check what the original commit intended:
+
+The original change was from "right at the end" to "at the start". The current HEAD has "at the end" (without "right"). The cherry-pick wants to change it to "at the start". Let me accept the cherry-picked version (theirs):
+
+Hmm, that only shows 1 file changed but the original should have more. Let me check:
+
+The original modified 4 files, but the cherry-pick only shows 1 file. This is a significant delta issue. The other changes were likely already present in ci/master. Let me verify:
+
+Good! The changes from the original commit in 3 of the 4 files are already present in ci/master. The only difference was in test/boot/bootflow.c. This is expected behavior - the cherry-pick correctly applied only the missing change. The delta is not a problem, it's just that most of the changes were already applied.
+
+Now let me run the build test:
+
+Build passed. Now let's continue with the second commit:
+
+Multiple conflicts. Let me check what the changes look like:
+
+This is getting complex. Let me see what the original commit was trying to do and then check if this change is already in ci/master:
+
+5fcdd37f14e is already in ci/master. Let me check if it's already present in our current branch:
+
+So 5fcdd37f14e is already in our branch (since we based on ci/master). The original 996ded5463f is a different version that conflicts with what's already there. Let me check the actual difference:
+
+The key differences are:
+1. Different commit messages (slightly different wording)
+2. Different line numbers (context shifted)
+3. No "Reviewed-by: Tom Rini" in the found version
+
+But the actual code changes (the function extraction) appear to be the same. Since the prepare_bootdev() function already exists in ci/master (via 5fcdd37f14e), this commit is already applied. Let me abort this cherry-pick and skip this commit:
+
+The second commit (996ded5463f) was already applied as 5fcdd37f14e with different hash. Let me continue with the third commit:
+
+Deltas match. Let me run the build:
+
+Good, build passed. Continue with commit 4:
+
+Deltas match. Build test:
+
+Good. Next commit:
+
+Let me see the original change:
+
+I see the conflict. The original commit wanted to wrap expo.o and cedit.o with `ifdef CONFIG_VIDEO_SANDBOX_SDL`, but the current HEAD has added expo_common.o, editenv.o, and bootctl/. I need to merge these changes appropriately - add the SDL check while keeping the new object files:
+
+There's an issue - there are two `endif` on lines 18-19 but we now have an additional `endif` for SDL. Let me check the original structure to get the correct logic:
+
+I see - there was only one `endif` at line 17, not two. The fix should be:
+
+Now I need to amend to add a note about the conflict resolution:
+
+Build passed. Next commit:
+
+The cherry-picked version wants to add `DECLARE_GLOBAL_DATA_PTR;` but HEAD doesn't have it. Let me check the original commit:
+
+The original commit removes `#define CFG_MAX_MEM_MAPPED SZ_2G` but HEAD doesn't have this define. Let me check what HEAD has:
+
+ci/master doesn't have the `CFG_MAX_MEM_MAPPED` definition or `DECLARE_GLOBAL_DATA_PTR`. It seems the base version for this commit was different. Let me check if this change is even needed:
+
+That's just the conflict marker. Let me check properly:
+
+The `CFG_MAX_MEM_MAPPED` define doesn't exist in ci/master. The original commit tries to remove something that doesn't exist. This means the patch is not directly applicable. Let me check the commit this one fixes:
+
+Commit 726404a66c773 (which this fix is for) is NOT in ci/master. So this fix commit (40f57b571c1) is fixing something that doesn't exist in ci/master. This cherry-pick will result in an empty or wrong commit. Let me check the merge commit at the end of the list (2ba64e303b2) to understand the full picture:
+
+I see - commits 40f57b571c1 and ce175fa9f0e are both about Airoha and they're part of a "fix an7581 panic" series. Let me look at ce175fa9f0e:
+
+Both 40f57b571c1 and ce175fa9f0e are fixing commit 726404a66c773, but that commit is not in ci/master. These two commits are therefore not applicable to ci/master since the code they're fixing doesn't exist. 
+
+Let me abort this cherry-pick and create empty commits to preserve the sequence:
+
+Continue with commit 7 - the TI DDRSS command:
+
+Good, deltas match. Build test:
+
+Now commit 8 (ce175fa9f0e) - this is also fixing the 726404a66c773 commit that doesn't exist in ci/master:
+
+As expected, this is empty because the code doesn't exist. Let me commit it as empty with a note:
+
+Continue with commit 9 - mailmap update:
+
+Good. Build test:
+
+Now the last commit - the merge commit:
+
+This is the same conflict we saw before. The merge commit is trying to add code that depends on 726404a66c773 which isn't in ci/master. Let me abort and create an empty merge commit:
+
+Now let me verify all commits:
+
+I see 9 commits, but we had 10 in the original list. The second commit (996ded5463f) was skipped because it was already applied as 5fcdd37f14e. Let me count the commits against the original list:
+
+1. f6cd0a36cee → 41f507176ca ✓ (boot: Improve comments related to global bootmeths)
+2. 996ded5463f → SKIPPED (already applied as 5fcdd37f14e)
+3. aebf3a98bff → d22bf2418c0 ✓ (test: Remove not needed null check)
+4. 77d11d2f7a3 → e86b9b93275 ✓ (arm: dts: k3-am62p-verdin: migrate to OF_UPSTREAM)
+5. 00ed9753c80 → 938c591157a ✓ (test: Do not build expo and cedit test if no SDL)
+6. 40f57b571c1 → 2a81882a43f ✓ [SKIPPED] (arm/airoha: an7581 ignores CFG_MAX_MEM_MAPPED value)
+7. 4e4bbb49f92 → 939a8506545 ✓ (cmd: ti: Add DDRSS Inline ECC Error Injection command)
+8. ce175fa9f0e → 0ae465a0877 ✓ [EMPTY] (arm/airoha: partly revert support of multiple RAM size for an7581)
+9. f21920f7e79 → b6fef02f097 ✓ (.mailmap: update e-mail address)
+10. 2ba64e303b2 → 1c718a049b2 ✓ [EMPTY] (Merge patch series...)
+
+So we have 9 commits on the branch (1 was skipped as already applied). Let me run the final build:
+
+Build passed.
+
+## Final Status Report
+
+### Cherry-pick Summary
+
+| # | Original Commit | Subject | Status |
+|---|-----------------|---------|--------|
+| 1 | f6cd0a36cee | boot: Improve comments related to global bootmeths | ✓ Applied (conflict resolved) |
+| 2 | 996ded5463f | boot: Move preparing bootdev into a function | **SKIPPED** - Already applied as 5fcdd37f14e |
+| 3 | aebf3a98bff | test: Remove not needed null check | ✓ Applied |
+| 4 | 77d11d2f7a3 | arm: dts: k3-am62p-verdin: migrate to OF_UPSTREAM | ✓ Applied |
+| 5 | 00ed9753c80 | test: Do not build expo and cedit test if no SDL | ✓ Applied (conflict resolved) |
+| 6 | 40f57b571c1 | arm/airoha: an7581 ignores CFG_MAX_MEM_MAPPED value | ⚠️ SKIPPED - Fixes code not in ci/master |
+| 7 | 4e4bbb49f92 | cmd: ti: Add DDRSS Inline ECC Error Injection command | ✓ Applied |
+| 8 | ce175fa9f0e | arm/airoha: partly revert support of multiple RAM size for an7581 | ⚠️ EMPTY - Reverts code not in ci/master |
+| 9 | f21920f7e79 | .mailmap: update e-mail address for Abbarapu Venkatesh Yadav | ✓ Applied |
+| 10 | 2ba64e303b2 | Merge patch series "fix an7581 panic..." | ⚠️ EMPTY - Merge of empty commits |
+
+### Build Result
+**OK** - sandbox build passes
+
+### Fix-ups Made
+1. **f6cd0a36cee**: Resolved conflict in `test/boot/bootflow.c` - accepted cherry-picked change ("at the start" comment)
+2. **00ed9753c80**: Resolved conflict in `test/boot/Makefile` - merged SDL check with updated object files (expo_common.o, editenv.o)
+
+### Commits with Concerning Deltas
+1. **f6cd0a36cee**: Cherry-pick shows 1 file changed vs original's 4 files. This is expected - the other 3 files' changes were already present in ci/master.
+
+### Notes
+- Commits 40f57b571c1, ce175fa9f0e, and merge 2ba64e303b2 all fix commit 726404a66c773 ("airoha: rework RAM size handling") which is NOT in ci/master. These were created as empty/skipped commits to preserve the history.
+- Branch `cherry-f6cd0a36cee` is ready with 9 commits (10 requested, 1 already applied).
+
+---
+
