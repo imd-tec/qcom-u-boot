@@ -85,8 +85,8 @@ static int extlinux_setup(struct udevice *dev, struct bootflow *bflow,
 	plat->info.dev = dev;
 	plat->info.bflow = bflow;
 
-	ret = pxe_setup_ctx(ctx, getfile, &plat->info, allow_abs_path, bootfile,
-			    false, plat->use_fallback, bflow);
+	ret = pxe_setup_ctx(ctx, getfile, &plat->info, allow_abs_path,
+			    bootfile, false, plat->use_fallback, bflow);
 	if (ret)
 		return log_msg_ret("ctx", ret);
 	log_debug("bootfl flags %x\n", bflow->flags);

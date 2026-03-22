@@ -217,18 +217,18 @@ static int extlinux_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 
 static int extlinux_local_boot(struct udevice *dev, struct bootflow *bflow)
 {
-	struct extlinux_plat *plat = dev_get_plat(dev);
+	struct extlinux_priv *priv = dev_get_priv(dev);
 
-	return extlinux_boot(dev, bflow, &plat->ctx, extlinux_getfile, true,
+	return extlinux_boot(dev, bflow, &priv->ctx, extlinux_getfile, true,
 			     bflow->fname, false);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int extlinux_local_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	struct extlinux_plat *plat = dev_get_plat(dev);
+	struct extlinux_priv *priv = dev_get_priv(dev);
 
-	return extlinux_read_all(dev, bflow, &plat->ctx, extlinux_getfile,
+	return extlinux_read_all(dev, bflow, &priv->ctx, extlinux_getfile,
 				 true, bflow->fname);
 }
 #endif
@@ -267,5 +267,6 @@ U_BOOT_DRIVER(bootmeth_1extlinux) = {
 	.of_match	= extlinux_bootmeth_ids,
 	.ops		= &extlinux_bootmeth_ops,
 	.bind		= extlinux_bootmeth_bind,
-	.plat_auto	= sizeof(struct extlinux_plat)
+	.plat_auto	= sizeof(struct extlinux_plat),
+	.priv_auto	= sizeof(struct extlinux_priv),
 };

@@ -23,16 +23,23 @@ struct extlinux_info {
 };
 
 /**
- * struct extlinux_plat - locate state for this bootmeth
+ * struct extlinux_plat - platform data for this bootmeth
  *
  * @use_falllback: true to boot with the fallback option
- * @ctx: holds the PXE context, if it should be saved
  * @info: information used for the getfile() method
  */
 struct extlinux_plat {
 	bool use_fallback;
-	struct pxe_context ctx;
 	struct extlinux_info info;
+};
+
+/**
+ * struct extlinux_priv - private runtime data for this bootmeth
+ *
+ * @ctx: holds the PXE context
+ */
+struct extlinux_priv {
+	struct pxe_context ctx;
 };
 
 /**
