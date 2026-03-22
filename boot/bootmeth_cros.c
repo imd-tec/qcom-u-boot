@@ -467,10 +467,19 @@ static int cros_bootmeth_bind(struct udevice *dev)
 	return 0;
 }
 
+static void cros_free_bootflow(struct udevice *dev, struct bootflow *bflow)
+{
+	struct cros_priv *priv = bflow->bootmeth_priv;
+
+	if (priv)
+		free(priv->info_buf);
+}
+
 static struct bootmeth_ops cros_bootmeth_ops = {
 	.check		= cros_check,
 	.read_bootflow	= cros_read_bootflow,
 	.read_file	= cros_read_file,
+	.free_bootflow	= cros_free_bootflow,
 	.boot		= cros_boot,
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 	.read_all	= cros_read_all,
