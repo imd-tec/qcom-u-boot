@@ -46782,3 +46782,66 @@ Build passed.
 
 ---
 
+### Review: 2026-03-22
+
+Branch: cherry-f6cd0a36cee
+
+Comments addressed:
+
+
+### Conversation log
+Let me find the repository:
+
+I'm already in the u-boot directory at `/home/sglass/dev/u-boot`. Let me proceed with the rebase:
+
+I can see the branch has 10 commits including the pickman record. Let me check the merge base to understand the rebase scope:
+
+Now let me save the current commit stats before rebasing, so I can verify after each commit:
+
+Now I have the baseline stats. Let me start the rebase:
+
+The rebase completed successfully with no conflicts. Let me verify the commits and their stats:
+
+Now let me verify the stats of each rebased commit match the original:
+
+All commit stats match the original. Now let me run the build test:
+
+Build passed. Now let me create the local branch with -v2 suffix and check if there's already a -v2:
+
+No version branches exist yet. Let me create -v2 and then force push:
+
+The rebase and push completed successfully. Let me verify the final state:
+
+## Summary
+
+**Rebase completed successfully.**
+
+### What was done:
+1. Checked out branch `cherry-f6cd0a36cee`
+2. Fetched latest from ci remote
+3. Rebased 10 commits onto `ci/master` (104c2dba3bc) with `--keep-empty` to preserve empty merge commits
+4. Rebase completed without conflicts
+5. Verified all commit deltas match the original (before/after rebase)
+6. Build test passed (sandbox)
+7. Created local backup branch `cherry-f6cd0a36cee-v2`
+8. Force pushed to remote branch `cherry-f6cd0a36cee` to update MR !771
+
+### Commits on branch (10 total):
+| Commit | Subject |
+|--------|---------|
+| ef87b67107b | boot: Improve comments related to global bootmeths |
+| 3111506c5f6 | test: Remove not needed null check |
+| 2bc525f4b47 | arm: dts: k3-am62p-verdin: migrate to OF_UPSTREAM |
+| 736aaf4d94e | test: Do not build expo and cedit test if no SDL |
+| 3d9be58e216 | arm/airoha: an7581 ignores CFG_MAX_MEM_MAPPED value [SKIPPED] |
+| db2196de485 | cmd: ti: Add DDRSS Inline ECC Error Injection command |
+| 919205a84ee | arm/airoha: partly revert support of multiple RAM size for an7581 [EMPTY] |
+| e5b1c662b64 | .mailmap: update e-mail address for Abbarapu Venkatesh Yadav |
+| 0055d066a16 | Merge patch series... [EMPTY] |
+| 34ef119d3b1 | pickman: Record cherry-pick of 10 commits from us/next |
+
+### Suggested reply for MR:
+> Rebased onto latest ci/master (104c2dba3bc). No conflicts encountered. Build test passed.
+
+---
+
