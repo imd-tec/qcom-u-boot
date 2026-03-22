@@ -165,7 +165,13 @@ void *alist_ensure_ptr(struct alist *lst, uint index)
 
 void *alist_add_placeholder(struct alist *lst)
 {
-	return alist_ensure_ptr(lst, lst->count);
+	void *ptr;
+
+	ptr = alist_ensure_ptr(lst, lst->count);
+	if (ptr)
+		memset(ptr, '\0', lst->obj_size);
+
+	return ptr;
 }
 
 void *alist_add_ptr(struct alist *lst, void *obj)

@@ -219,8 +219,18 @@ static int lib_test_alist_add(struct unit_test_state *uts)
 	ut_asserteq(123, ptr->val);
 	ut_asserteq(456, ptr->other_val);
 
+	/* Add a non-zero entry then remove it, so the memory is dirty */
 	ptr2 = alist_add_placeholder(&lst);
 	ut_assertnonnull(ptr2);
+	ptr2->val = 999;
+	ptr2->other_val = 888;
+	lst.count--;
+
+	/* Now add again — the slot should be zeroed despite dirty memory */
+	ptr2 = alist_add_placeholder(&lst);
+	ut_assertnonnull(ptr2);
+	ut_asserteq(0, ptr2->val);
+	ut_asserteq(0, ptr2->other_val);
 
 	ptr2->val = 321;
 	ptr2->other_val = 654;
