@@ -45144,3 +45144,226 @@ All 9 commits have been cherry-picked successfully. Let me provide the final sta
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-5e1e08549bd
+
+Commits:
+- 5e1e08549bd configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot
+- 6a22d03164c configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot
+- 33b16e00433 Merge patch series "configs: verdin-am*: enable USB Gadget OS Descriptors"
+
+### Conversation log
+The repository has some untracked files but no staged or modified tracked files, so it's clean enough to proceed. Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (a regular commit):
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The delta matches exactly - 1 file changed, 1 insertion. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now run the build test:
+
+Build passed. Now let me cherry-pick the third commit (merge commit):
+
+The merge commit is empty (as expected since we already cherry-picked its component commits). Let me commit it with --allow-empty as instructed:
+
+The merge commit has been preserved. Let me verify the delta:
+
+The merge commit is empty as expected (the individual commits were already applied separately). The original merge commit showed 2 files changed because it was a merge that combined those changes. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present with git log:
+
+All 3 commits are present in the expected order. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Commits Cherry-picked (in order):
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 5e1e08549bd | c13b6a833f1 | configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot |
+| 2 | 6a22d03164c | c8482bdf51c | configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot |
+| 3 | 33b16e00433 | a17ad36f107 | Merge patch series "configs: verdin-am*: enable USB Gadget OS Descriptors" |
+
+### Build Result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Fix-ups Made: None
+- All commits applied cleanly
+
+### Delta Verification:
+- **Commit 1**: 1 file changed, 1 insertion ✅ (matches original)
+- **Commit 2**: 1 file changed, 1 insertion ✅ (matches original)
+- **Commit 3**: Empty commit ✅ (expected - the merge commit's changes were already applied by commits 1 & 2)
+
+### Branch Status:
+- Branch `cherry-5e1e08549bd` is ready for pushing
+- Currently 3 commits ahead of `ci/master`
+
+---
+
+### Pipeline fix: 2026-03-22 (attempt 1)
+
+Branch: cherry-5e1e08549bd
+
+Failed jobs:
+- vbe (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Now I understand the situation. Let me analyze the logs:
+
+**vbe job (rk3399-generic-ddr3)**: The log shows a real boot failure:
+```
+U-Boot VPL 2026.02-ga17ad36f107a (Mar 22 2026 - 06:01:20)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -5
+VPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+**pcduino3_nano job (Linksprite_pcDuino3_Nano)**: Shows a timeout waiting for login with no U-Boot output at all - just "Timeout of 15 seconds exceeded during waiting for login".
+
+Looking at the MR description, the commits are:
+1. `5e1e08549bd` - configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot
+2. `6a22d03164c` - configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot
+3. `33b16e00433` - Merge patch series (empty)
+
+These commits only modify `verdin-am62` and `verdin-am62p` config files. They should have **no effect** on `vbe` (rk3399-generic-ddr3) or `pcduino3_nano` boards.
+
+This appears to be an **infrastructure/transient issue** - the commits in this MR don't touch any files that would affect these boards. The "VPL: failed to boot from all boot devices" error on the vbe board and the timeout on pcduino3_nano indicate hardware lab issues, not code problems.
+
+Let me verify by checking out the branch and examining the commits:
+
+As I suspected, these commits only touch:
+- `configs/verdin-am62_a53_defconfig`
+- `configs/verdin-am62p_a53_defconfig`
+
+These are completely unrelated to:
+- `vbe` (rk3399-generic-ddr3 board)
+- `pcduino3_nano` (Linksprite_pcDuino3_Nano board)
+
+The failures are **infrastructure/transient issues** with the hardware lab boards:
+
+1. **vbe job**: The rk3399 board failed with "Error: -5" and "VPL: failed to boot from all boot devices". This is a hardware boot failure on the lab board, not related to the config changes in this MR.
+
+2. **pcduino3_nano job**: The board timed out waiting for login with no U-Boot output at all. This suggests a hardware connectivity issue or the board didn't boot.
+
+Let me double-check whether the base branch (ci/master) has any recent changes that might be affecting these boards by looking at what's in the MR vs the base:
+
+Let me also verify none of these config changes would have any unexpected influence on other boards:
+
+This confirms that the only changes in this MR are:
+1. Adding `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `configs/verdin-am62_a53_defconfig`
+2. Adding `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `configs/verdin-am62p_a53_defconfig`
+
+These changes are **completely isolated** to the verdin-am62 boards and have **zero effect** on any other board configuration including vbe (rk3399) or pcduino3_nano.
+
+## Conclusion: Infrastructure/Transient Issue
+
+**This is an infrastructure/transient issue, not a code problem.**
+
+**Root Cause Analysis:**
+- The MR only modifies two verdin-am62 config files, adding USB Gadget OS Descriptors support
+- Neither `vbe` (rk3399-generic-ddr3) nor `pcduino3_nano` are affected by these changes
+- The `vbe` failure shows "Error: -5" and "VPL: failed to boot from all boot devices" - this is a hardware boot issue on the lab's rk3399 board
+- The `pcduino3_nano` failure shows a timeout with no U-Boot output - indicating the board didn't boot or there's a connectivity issue
+
+**Recommendation:**
+- No code changes are needed for this MR
+- The jobs should be retried once the lab hardware issues are resolved
+- These appear to be transient hardware/infrastructure failures unrelated to the commits being tested
+
+---
+
+### Review: 2026-03-22
+
+Branch: cherry-5e1e08549bd
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) vbe, pcduino3_nano.
+
+Now I understand the situation. L...
+
+### Conversation log
+Now let me understand the review comment. The comment says:
+
+> Pipeline fix (attempt 1): fixed failed job(s) vbe, pcduino3_nano.
+
+Looking at the context provided in the MR description, the previous analysis concluded that these failures were **infrastructure/transient issues** because:
+1. The commits only modify `configs/verdin-am62_a53_defconfig` and `configs/verdin-am62p_a53_defconfig`
+2. These have no effect on `vbe` (rk3399-generic-ddr3) or `pcduino3_nano` boards
+3. The failures show hardware boot/connectivity issues, not code problems
+
+This comment appears to be from a bot recording that pipeline fix attempt 1 was made (the commit `1a99b6ced8f pickman: Record pipeline fix for cherry-5e1e08549bd` shows this was already recorded).
+
+Since this is a transient/infrastructure issue and not a code problem, there are **no code changes needed**. The appropriate response would be to:
+1. Acknowledge this is an infrastructure issue
+2. Request a pipeline retry
+
+Let me verify the current state of the branch and what files are changed:
+
+The review comment is from the bot (`project_1_bot_2541d37e7146e9c25808a380e05ebef0`) recording that pipeline fix attempt 1 was made. Looking at the context carefully:
+
+1. The failed jobs (`vbe`, `pcduino3_nano`) are completely unrelated to the changes in this MR
+2. The MR only touches verdin-am62 configs, which don't affect rk3399 or pcduino3_nano boards
+3. The failures are hardware/infrastructure issues (boot failures, timeouts)
+
+This is **not an actionable code review comment** - it's a bot status message. There are no code changes to make. The appropriate action is to retry the pipeline since these are transient infrastructure failures.
+
+Let me check if there's anything else expected:
+
+## Summary Report
+
+### Review Comment Analysis
+
+The review comment to address is:
+> **Pipeline fix (attempt 1): fixed failed job(s) vbe, pcduino3_nano.**
+
+This is **not an actionable code review comment** - it's a bot-generated status message recording that a pipeline fix attempt was made.
+
+### Analysis
+
+Looking at the MR context:
+1. **Failed jobs**: `vbe` (rk3399-generic-ddr3) and `pcduino3_nano` (Linksprite_pcDuino3_Nano)
+2. **MR changes**: Only add `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `verdin-am62_a53_defconfig` and `verdin-am62p_a53_defconfig`
+3. **Relationship**: The failed boards are **completely unrelated** to the verdin-am62 boards modified by this MR
+4. **Failure types**: 
+   - `vbe`: Hardware boot failure ("Error: -5", "VPL: failed to boot from all boot devices")
+   - `pcduino3_nano`: Timeout waiting for login with no U-Boot output
+
+### Conclusion
+
+This is an **infrastructure/transient issue**, not a code problem. The commits in this MR cannot possibly affect the failed boards since they only modify verdin-am62 config files.
+
+### Actions Taken
+
+**No code changes required** - there is nothing to fix in the code.
+
+### Recommended Reply to Post on MR
+
+```
+The pipeline failures for `vbe` and `pcduino3_nano` are infrastructure/transient issues. These boards are completely unrelated to the verdin-am62 configs modified in this MR:
+
+- **vbe** (rk3399-generic-ddr3): Shows hardware boot failure with "Error: -5" and "VPL: failed to boot from all boot devices"
+- **pcduino3_nano**: Shows timeout with no U-Boot output, indicating hardware connectivity issues
+
+Since the MR only adds `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `verdin-am62_a53_defconfig` and `verdin-am62p_a53_defconfig`, these failures cannot be caused by these changes.
+
+No code changes are needed. Please retry the pipeline once the lab hardware issues are resolved.
+```
+
+### No Branch Update Needed
+
+Since there are no code changes to make, no new branch version (`-v2`) needs to be created and no force push is required.
+
+---
+
