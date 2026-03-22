@@ -75,6 +75,28 @@ int extlinux_set_property(struct udevice *dev, const char *property,
 	return 0;
 }
 
+struct pxe_context *extlinux_get_ctx(struct extlinux_priv *priv,
+				     struct bootflow *bflow)
+{
+	struct pxe_context *ctx;
+
+	/* Return existing context if one was already allocated */
+	if (bflow->bootmeth_id >= 0) {
+		ctx = alist_getw(&priv->ctxs, bflow->bootmeth_id,
+				 struct pxe_context);
+		if (ctx)
+			return ctx;
+	}
+
+	/* Allocate a new one */
+	ctx = alist_add_placeholder(&priv->ctxs);
+	if (!ctx)
+		return NULL;
+	bflow->bootmeth_id = priv->ctxs.count - 1;
+
+	return ctx;
+}
+
 static int extlinux_setup(struct udevice *dev, struct bootflow *bflow,
 			  pxe_getfile_func getfile, bool allow_abs_path,
 			  const char *bootfile, struct pxe_context *ctx)

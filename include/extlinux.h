@@ -36,21 +36,47 @@ struct extlinux_plat {
 /**
  * struct extlinux_priv - private runtime data for this bootmeth
  *
- * @ctx: holds the PXE context
+ * @ctxs: list of parsed PXE contexts (alist of struct pxe_context), one per
+ *	extlinux.conf file found during scanning
  */
 struct extlinux_priv {
-	struct pxe_context ctx;
+	struct alist ctxs;
 };
+
+/**
+ * extlinux_bootmeth_probe() - Probe function for extlinux-based bootmeths
+ *
+ * Initialises the context alist in extlinux_priv. Must be called from the
+ * probe function of any driver that uses extlinux_priv.
+ *
+ * @dev: Bootmethod device
+ * Return: 0 if OK
+ */
+int extlinux_bootmeth_probe(struct udevice *dev);
 
 /**
  * extlinux_bootmeth_remove() - Remove function for extlinux-based bootmeths
  *
- * Frees the PXE context. Shared by extlinux and PXE drivers.
+ * Frees all cached PXE contexts in the alist.
  *
  * @dev: Bootmethod device
  * Return: 0 if OK
  */
 int extlinux_bootmeth_remove(struct udevice *dev);
+
+/**
+ * extlinux_get_ctx() - Get or allocate a PXE context for a bootflow
+ *
+ * If bflow->bootmeth_id already points to a valid context (e.g. from a
+ * prior read_all), return it. Otherwise allocate a new context in the
+ * alist and store its index in bflow->bootmeth_id.
+ *
+ * @priv: Private data for this bootmeth
+ * @bflow: Bootflow to get context for
+ * Return: Context, or NULL on allocation failure
+ */
+struct pxe_context *extlinux_get_ctx(struct extlinux_priv *priv,
+				     struct bootflow *bflow);
 
 /**
  * extlinux_set_property() - set an extlinux property

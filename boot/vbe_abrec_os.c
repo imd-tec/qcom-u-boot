@@ -288,5 +288,5 @@ U_BOOT_DRIVER(vbe_abrec_os) = {
 	.bind	= bootmeth_vbe_abrec_os_bind,
 	.probe	= bootmeth_vbe_abrec_os_probe,
 	.priv_auto	= sizeof(struct abrec_priv),
-	.plat_auto	= sizeof(struct extlinux_plat)
+	.plat_auto	= sizeof(struct extlinux_plat),
 };
