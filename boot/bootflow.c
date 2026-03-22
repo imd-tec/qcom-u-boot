@@ -712,6 +712,7 @@ void bootflow_init(struct bootflow *bflow, struct udevice *bootdev,
 	bflow->dev = bootdev;
 	bflow->method = meth;
 	bflow->state = BOOTFLOWST_BASE;
+	bflow->bootmeth_id = -1;
 	alist_init_struct(&bflow->images, struct bootflow_img);
 }
 

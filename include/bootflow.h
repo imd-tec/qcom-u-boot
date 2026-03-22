@@ -101,6 +101,9 @@ enum bootflow_flags_t {
  * @bootmeth_priv: Private data for the bootmeth (allocated). Freed by
  *	bootmeth_free_bootflow() which calls the bootmeth's free_bootflow() op
  *	for internal cleanup, then frees the pointer itself.
+ * @bootmeth_id: Bootmeth-specific identifier for this bootflow, e.g. an
+ *	alist index for the PXE context used during scanning. Interpretation
+ *	is up to the bootmeth.
  * @images: List of loaded images (struct bootstd_img)
  */
 struct bootflow {
@@ -127,6 +130,7 @@ struct bootflow {
 	char *cmdline;
 	void *x86_setup;
 	void *bootmeth_priv;
+	int bootmeth_id;
 	struct alist images;
 };
 
