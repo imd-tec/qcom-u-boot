@@ -22,7 +22,7 @@
 
 #define MT76XX_AGPIO_CFG	0x1000003c
 
-#define FACTORY_DATA_OFFS	0xc0000
+#define FACTORY_DATA_OFFS	0xd0000
 #define FACTORY_DATA_SECT_SIZE	0x10000
 #if ((CONFIG_ENV_OFFSET_REDUND + CONFIG_ENV_SIZE) > FACTORY_DATA_OFFS)
 #error "U-Boot image with environment too big (overlapping with factory-data)!"
