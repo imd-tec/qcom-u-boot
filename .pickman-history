@@ -45035,3 +45035,112 @@ Since this was an infrastructure failure and no code changes were made, an appro
 
 ---
 
+## 2026-03-21: us/next
+
+Branch: cherry-0a71fe2805e
+
+Commits:
+- 0a71fe2805e configs: j7200_evm_a72_defconfig: Enable DP83867 Ethernet PHY
+- 8ea8487da05 include: completion.h: Convert the rest of the dummy functions to macros
+- 0ceea8b7215 gpio: Remove FTGPIO0010 driver
+- 1d34d80881c timer: Tighten dependencies on MCHP_PIT64B_TIMER
+- 3da6f00af38 dts: Set a default value for DEFAULT_DEVICE_TREE for SANDBOX
+- a574f8a3e50 spl: spl_sata: Add __maybe_unused decorator
+- 8db554dcbb2 net: mdio-uclass: introduce dm_eth_phy_connect_interface()
+- 4b10bcfdef9 net: ethernet: ti: am65-cpsw: fix up PHY mode for fixed RGMII TX delay
+- a073d3d37c9 Merge patch series "am65-cpsw-nuss phy_interface_t fixup for fixed TX delay"
+
+### Conversation log
+The repository has some untracked files but no staged changes, so it's clean enough to proceed. Let me create the new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick the first commit.
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test.
+
+Delta looks identical (1 file, 1 insertion). Now let me run the build test.
+
+Build passed. Let me continue with the second commit.
+
+Conflict on the first commit that actually needed cherry-pick (the first one applied cleanly). Let me check if these commits are already present in ci/master with different hashes.
+
+The commits don't seem to be in ci/master with those exact subjects. Let me check the conflicts and also search for similar commits with partial matches.
+
+Let me check the conflict in the file to understand what's happening.
+
+I can see the conflict - it's a straightforward change where the original wanted to convert inline functions to macros. Let me resolve this by taking the incoming changes (the macros).
+
+Let me verify the delta and run the build test.
+
+Delta matches exactly. Now run the build test.
+
+Build passed. Now cherry-pick the third commit (Remove FTGPIO0010 driver).
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the fourth commit.
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the fifth commit.
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the sixth commit.
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the seventh commit.
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the eighth commit.
+
+Delta matches. Run build test.
+
+Build passed. Now cherry-pick the ninth (final) commit, which is a merge commit.
+
+The merge commit is empty (as expected since we cherry-picked the individual commits). Let me commit it with --allow-empty.
+
+The merge commit was cherry-picked as empty (expected since we already cherry-picked the individual patches). Run final build test.
+
+Build passed. Now let me verify all 9 commits are present.
+
+All 9 commits have been cherry-picked successfully. Let me provide the final status report:
+
+## Final Status Report
+
+### ✅ Cherry-pick Completed Successfully
+
+**Branch:** `cherry-0a71fe2805e` (based on `ci/master`)
+
+### Commits Cherry-picked (9 total):
+
+| # | Original Hash | New Hash | Subject |
+|---|--------------|----------|---------|
+| 1 | 0a71fe2805e | 2917a696bc1 | configs: j7200_evm_a72_defconfig: Enable DP83867 Ethernet PHY |
+| 2 | 8ea8487da05 | 8224d3ddb78 | include: completion.h: Convert the rest of the dummy functions to macros |
+| 3 | 0ceea8b7215 | 68684333d77 | gpio: Remove FTGPIO0010 driver |
+| 4 | 1d34d80881c | 3d4fe424a7c | timer: Tighten dependencies on MCHP_PIT64B_TIMER |
+| 5 | 3da6f00af38 | 004fe37e81f | dts: Set a default value for DEFAULT_DEVICE_TREE for SANDBOX |
+| 6 | a574f8a3e50 | 5a30642b1a1 | spl: spl_sata: Add __maybe_unused decorator |
+| 7 | 8db554dcbb2 | c01eadabaa2 | net: mdio-uclass: introduce dm_eth_phy_connect_interface() |
+| 8 | 4b10bcfdef9 | e20bff31c66 | net: ethernet: ti: am65-cpsw: fix up PHY mode for fixed RGMII TX delay |
+| 9 | a073d3d37c9 | 24ed0e4a59e | Merge patch series "am65-cpsw-nuss phy_interface_t fixup for fixed TX delay" |
+
+### Build Result: ✅ OK
+- All 9 builds passed (sandbox target)
+- No warnings or errors
+
+### Fix-ups Made:
+1. **Commit 2 (8ea8487da05)**: Resolved merge conflict in `include/linux/completion.h` by accepting incoming changes (converting inline functions to macros). The conflict was a straightforward substitution - the base had static inline functions while the patch converted them to macros.
+
+### Commit Deltas:
+- All commits had matching deltas (same files and line counts as originals)
+- Merge commit (commit 9) was empty as expected, since the individual patches were already cherry-picked
+
+### Notes:
+- The branch is ready for pushing
+- Branch is 9 commits ahead of `ci/master`
+
+---
+
