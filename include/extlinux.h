@@ -43,6 +43,16 @@ struct extlinux_priv {
 };
 
 /**
+ * extlinux_bootmeth_remove() - Remove function for extlinux-based bootmeths
+ *
+ * Frees the PXE context. Shared by extlinux and PXE drivers.
+ *
+ * @dev: Bootmethod device
+ * Return: 0 if OK
+ */
+int extlinux_bootmeth_remove(struct udevice *dev);
+
+/**
  * extlinux_set_property() - set an extlinux property
  *
  * This allows the setting of bootmeth-specific properties to enable

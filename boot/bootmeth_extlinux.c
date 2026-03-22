@@ -233,6 +233,17 @@ static int extlinux_local_read_all(struct udevice *dev, struct bootflow *bflow)
 }
 #endif
 
+int extlinux_bootmeth_remove(struct udevice *dev)
+{
+	struct extlinux_priv *priv = dev_get_priv(dev);
+
+	if (priv->ctx.cfg)
+		pxe_menu_uninit(priv->ctx.cfg);
+	pxe_destroy_ctx(&priv->ctx);
+
+	return 0;
+}
+
 static int extlinux_bootmeth_bind(struct udevice *dev)
 {
 	struct bootmeth_uc_plat *plat = dev_get_uclass_plat(dev);
@@ -267,6 +278,7 @@ U_BOOT_DRIVER(bootmeth_1extlinux) = {
 	.of_match	= extlinux_bootmeth_ids,
 	.ops		= &extlinux_bootmeth_ops,
 	.bind		= extlinux_bootmeth_bind,
+	.remove		= extlinux_bootmeth_remove,
 	.plat_auto	= sizeof(struct extlinux_plat),
 	.priv_auto	= sizeof(struct extlinux_priv),
 };

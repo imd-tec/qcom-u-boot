@@ -9,6 +9,8 @@
 #ifndef __VBE_ABREC_H
 #define __VBE_ABREC_H
 
+#include <pxe_utils.h>
+
 #include <vbe.h>
 #include <dm/ofnode_decl.h>
 
@@ -34,6 +36,7 @@ struct udevice;
  * @version_size: Size of the version info
  * @storage: Storage device to use, in the form <uclass><devnum>, e.g. "mmc1"
  * @oem_devicetree: true if we should read an OEM devicetree
+ * @ctx: PXE context for extlinux boot/read_all
  */
 struct abrec_priv {
 	u32 area_start;
@@ -45,6 +48,7 @@ struct abrec_priv {
 	u32 version_size;
 	const char *storage;
 	bool oem_devicetree;
+	struct pxe_context ctx;
 };
 
 /** struct abrec_state - state information read from media

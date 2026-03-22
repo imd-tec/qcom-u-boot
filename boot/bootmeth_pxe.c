@@ -193,6 +193,7 @@ U_BOOT_DRIVER(bootmeth_zpxe) = {
 	.of_match	= extlinux_bootmeth_pxe_ids,
 	.ops		= &extlinux_bootmeth_pxe_ops,
 	.bind		= extlinux_bootmeth_pxe_bind,
+	.remove		= extlinux_bootmeth_remove,
 	.plat_auto	= sizeof(struct extlinux_plat),
 	.priv_auto	= sizeof(struct extlinux_priv),
 };
