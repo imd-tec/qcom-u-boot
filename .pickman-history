@@ -46842,6 +46842,137 @@ The rebase and push completed successfully. Let me verify the final state:
 
 ### Suggested reply for MR:
 > Rebased onto latest ci/master (104c2dba3bc). No conflicts encountered. Build test passed.
+Branch: cherry-e6646b35f41
+
+Commits:
+- e6646b35f41 Revert "riscv: Add a Zalrsc-only alternative for synchronization in start.S"
+- 0ab7710a064 clk: sophgo: Fix a warning about void returns value
+- 7fa9e29a3ab Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv
+
+### Conversation log
+The repository state is clean (only untracked files). Let me create the new branch from ci/master:
+
+Now let me start cherry-picking the first commit:
+
+There's a conflict. Before aborting, let me check if this commit is already applied in ci/master:
+
+I don't see the revert in ci/master. Let me check the second and third commits as well:
+
+Let me check if the third commit (merge) was already applied:
+
+These are different merge commits with different content. Let me check what commits are brought in by the merge commit 7fa9e29a3ab:
+
+So the merge commit 7fa9e29a3ab brings in exactly the other two commits we're trying to cherry-pick. Let me check if those commits are already in ci/master:
+
+The merge commits have different content. The original merge 7fa9e29a3ab brings in commits e6646b35f41 and 0ab7710a064, while the found merge e383744126b brings in different commits. Let me check if the two specific commits we need are in ci/master by looking for similar content:
+
+I see the original commit 57e72e78788 that added the Zalrsc feature, but not the revert. Let me look at the conflict and try to resolve it:
+
+I see. The revert commit is removing the CONFIG_RISCV_ISA_ZAAMO guards and the Zalrsc alternative code. Let me check what the original commit (e6646b35f41) is supposed to do:
+
+Now let me check what's in ci/master at start.S to understand the current state:
+
+I can see the current state in ci/master has the `CONFIG_RISCV_ISA_ZAAMO` guards but the revert commit uses `CONFIG_IS_ENABLED(RISCV_ISA_ZAAMO)` which is slightly different. Also, the current state differs from the expected pre-commit state.
+
+Looking at the e974e37e427 commit that appears after the original:
+
+Now I understand. ci/master already has a fix commit (e974e37e427) that addresses the same issue that the revert (e6646b35f41) was trying to fix. The fix uses `#ifdef CONFIG_RISCV_ISA_ZAAMO` instead of reverting the entire feature.
+
+This means the revert commit is NOT appropriate to apply here since ci/master already has an alternative fix. The revert would undo both the original feature AND the fix that was already applied.
+
+Let me abort the cherry-pick and check the situation more carefully:
+
+Let me analyze the situation more carefully. The commits in us/next we're trying to cherry-pick are:
+1. e6646b35f41 - Revert the Zalrsc feature (to fix boot regression)
+2. 0ab7710a064 - clk: sophgo fix
+3. 7fa9e29a3ab - Merge commit that brings in #1 and #2
+
+In ci/master, instead of the revert, there's a fix commit (e974e37e427) that addresses the same boot regression differently. Let me verify this is truly the same fix:
+
+So commit 0ab7710a064 changes `return writel(...)` to just `writel(...)` but ci/master still has `return writel(...)`. This commit has NOT been applied.
+
+Now let me check if the first commit (the revert) is functionally equivalent to what already exists. The issue is:
+- us/next has commit e6646b35f41 which reverts the Zalrsc feature entirely
+- ci/master has commit e974e37e427 which fixes the Zalrsc feature rather than reverting it
+
+These are different approaches to the same problem. The revert would undo the alternative fix. Let me check if the revert is even needed given ci/master's fix:
+
+Now I understand the situation:
+- **us/next** has the revert commit e6646b35f41 (removes the Zalrsc feature entirely)
+- **ci/master** has the fix commit e974e37e427 (keeps the Zalrsc feature but fixes the CONFIG_IS_ENABLED issue)
+
+The revert commit should NOT be cherry-picked because:
+1. ci/master already has an alternative fix that addresses the same bug
+2. Cherry-picking the revert would undo the fix AND remove the feature
+
+For the second commit (0ab7710a064 - clk sophgo fix), this should be applied as ci/master still has the bug.
+
+For the third commit (7fa9e29a3ab - merge), it only brings in the first two commits, so since we're skipping the first, we should also skip the merge.
+
+Let me verify my understanding by looking at what the merge brings:
+
+The merge brings exactly these two commits. Since we're skipping e6646b35f41 (the revert), we should:
+1. Skip e6646b35f41 - already addressed differently in ci/master via e974e37e427
+2. Apply 0ab7710a064 - the clk sophgo fix (not yet in ci/master)
+3. Skip 7fa9e29a3ab - merge commit whose main content is already handled
+
+However, the instructions say "NEVER skip merge commits" and to use --allow-empty. But since we're skipping the first commit, the merge doesn't make sense to apply.
+
+Let me reconsider. The instructions say the commits marked "maybe already applied" should be verified. But commit 7fa9e29a3ab is different from e383744126b - they're different merges bringing different content.
+
+Given this situation, I should:
+1. Report that e6646b35f41 conflicts with ci/master which already has an alternative fix (e974e37e427)
+2. Try to apply 0ab7710a064 (the clk fix)
+3. Report on the merge situation
+
+Let me try the sophgo fix first:
+
+Now let me verify the delta:
+
+The deltas match. Now run the build test:
+
+Build passed. Now let me handle the situation with the first commit (the revert). Since ci/master already has an alternative fix (e974e37e427), the revert is not appropriate. However, I should document this properly.
+
+Let me check the git log to see current state:
+
+Now, regarding the merge commit (7fa9e29a3ab), the instructions indicate I should check if it was already applied as e383744126b. Let me compare them more carefully:
+
+These are completely different merges. e383744126b brings a different set of riscv commits (Voyager board, mpfs_icicle updates, etc.) while 7fa9e29a3ab brings the revert and clk fix. They are NOT the same commit at all.
+
+Given the analysis:
+1. **e6646b35f41** (Revert Zalrsc) - SKIP: ci/master has alternative fix e974e37e427 that addresses the same issue without reverting the feature
+2. **0ab7710a064** (clk sophgo fix) - APPLIED successfully as df44bd43611
+3. **7fa9e29a3ab** (Merge) - This merge brought both commits above. Since we skipped the revert and only applied the clk fix, we should note this.
+
+However, the instructions say to never skip merge commits. Let me try to cherry-pick the merge with --allow-empty to see what happens:
+
+The merge conflicts because it tries to bring in the revert changes. Since the revert is inappropriate for ci/master (which already has a better fix), I should abort this and report the situation:
+
+Now let me verify the final state and run the final build:
+
+Final build passed.
+
+## Summary
+
+**Cherry-pick Results for branch `cherry-e6646b35f41`:**
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | e6646b35f41 | Revert "riscv: Add a Zalrsc-only alternative for synchronization in start.S" | **SKIPPED** - ci/master already has alternative fix e974e37e427 |
+| 2 | 0ab7710a064 | clk: sophgo: Fix a warning about void returns value | **APPLIED** as df44bd43611 |
+| 3 | 7fa9e29a3ab | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv | **SKIPPED** - conflicts due to revert; NOT the same as e383744126b |
+
+**Build Result:** ✅ OK - sandbox builds successfully
+
+**Key Findings:**
+
+1. **Commit e6646b35f41** (Revert): Cannot be applied because ci/master already contains commit e974e37e427 ("riscv: Fix Zaamo/Zalrsc guards to work in SPL") which addresses the same boot regression differently. The original revert removes the Zalrsc feature entirely, while the fix in ci/master keeps the feature but corrects the CONFIG_IS_ENABLED vs #ifdef issue. Applying the revert would undo the existing fix.
+
+2. **Commit 0ab7710a064** (clk fix): Applied successfully with no delta issues.
+
+3. **Commit 7fa9e29a3ab** (Merge): This is NOT the same as e383744126b. The merge 7fa9e29a3ab brings in commits e6646b35f41 and 0ab7710a064, while e383744126b brings in completely different commits (Voyager board support, mpfs_icicle updates, etc.). The merge cannot be applied because it contains the revert changes.
+
+**Branch Status:** Branch `cherry-e6646b35f41` is ready with 1 commit (df44bd43611) on top of ci/master.
 
 ---
 
