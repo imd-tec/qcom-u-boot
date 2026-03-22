@@ -45209,3 +45209,78 @@ All 3 commits are present in the expected order. Let me run the final build test
 
 ---
 
+### Pipeline fix: 2026-03-22 (attempt 1)
+
+Branch: cherry-5e1e08549bd
+
+Failed jobs:
+- vbe (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Now I understand the situation. Let me analyze the logs:
+
+**vbe job (rk3399-generic-ddr3)**: The log shows a real boot failure:
+```
+U-Boot VPL 2026.02-ga17ad36f107a (Mar 22 2026 - 06:01:20)
+Trying to boot from vbe_abrec
+load: Firefly-RK3399 Board
+Error: -5
+VPL: failed to boot from all boot devices
+### ERROR ### Please RESET the board ###
+```
+
+**pcduino3_nano job (Linksprite_pcDuino3_Nano)**: Shows a timeout waiting for login with no U-Boot output at all - just "Timeout of 15 seconds exceeded during waiting for login".
+
+Looking at the MR description, the commits are:
+1. `5e1e08549bd` - configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot
+2. `6a22d03164c` - configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot
+3. `33b16e00433` - Merge patch series (empty)
+
+These commits only modify `verdin-am62` and `verdin-am62p` config files. They should have **no effect** on `vbe` (rk3399-generic-ddr3) or `pcduino3_nano` boards.
+
+This appears to be an **infrastructure/transient issue** - the commits in this MR don't touch any files that would affect these boards. The "VPL: failed to boot from all boot devices" error on the vbe board and the timeout on pcduino3_nano indicate hardware lab issues, not code problems.
+
+Let me verify by checking out the branch and examining the commits:
+
+As I suspected, these commits only touch:
+- `configs/verdin-am62_a53_defconfig`
+- `configs/verdin-am62p_a53_defconfig`
+
+These are completely unrelated to:
+- `vbe` (rk3399-generic-ddr3 board)
+- `pcduino3_nano` (Linksprite_pcDuino3_Nano board)
+
+The failures are **infrastructure/transient issues** with the hardware lab boards:
+
+1. **vbe job**: The rk3399 board failed with "Error: -5" and "VPL: failed to boot from all boot devices". This is a hardware boot failure on the lab board, not related to the config changes in this MR.
+
+2. **pcduino3_nano job**: The board timed out waiting for login with no U-Boot output at all. This suggests a hardware connectivity issue or the board didn't boot.
+
+Let me double-check whether the base branch (ci/master) has any recent changes that might be affecting these boards by looking at what's in the MR vs the base:
+
+Let me also verify none of these config changes would have any unexpected influence on other boards:
+
+This confirms that the only changes in this MR are:
+1. Adding `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `configs/verdin-am62_a53_defconfig`
+2. Adding `CONFIG_USB_GADGET_OS_DESCRIPTORS=y` to `configs/verdin-am62p_a53_defconfig`
+
+These changes are **completely isolated** to the verdin-am62 boards and have **zero effect** on any other board configuration including vbe (rk3399) or pcduino3_nano.
+
+## Conclusion: Infrastructure/Transient Issue
+
+**This is an infrastructure/transient issue, not a code problem.**
+
+**Root Cause Analysis:**
+- The MR only modifies two verdin-am62 config files, adding USB Gadget OS Descriptors support
+- Neither `vbe` (rk3399-generic-ddr3) nor `pcduino3_nano` are affected by these changes
+- The `vbe` failure shows "Error: -5" and "VPL: failed to boot from all boot devices" - this is a hardware boot issue on the lab's rk3399 board
+- The `pcduino3_nano` failure shows a timeout with no U-Boot output - indicating the board didn't boot or there's a connectivity issue
+
+**Recommendation:**
+- No code changes are needed for this MR
+- The jobs should be retried once the lab hardware issues are resolved
+- These appear to be transient hardware/infrastructure failures unrelated to the commits being tested
+
+---
+
