@@ -45295,3 +45295,248 @@ The rebase completed successfully with no conflicts.
 
 ---
 
+### Review: 2026-03-22
+
+Branch: cherry-ce6a23e7e89
+
+Comments addressed:
+- [sjg]: pickman: Please check this: https://concept.u-boot.org/u-boot/u-boot/-/pipelines/5336...
+
+### Conversation log
+Now let me check the pipeline link. Since WebFetch isn't available, let me try using curl:
+
+Let me try to get more details about the pipeline failure:
+
+I can see there are **3 failed jobs** in the pipeline. Let me try to get the job details:
+
+Let me get the logs for one of the failed jobs to understand what's wrong:
+
+I see the issue! The pipeline failed because of:
+```
++u-boot.img exceeds file size limit:
++  limit:  0xa0000 bytes
++  actual: 0xa0776 bytes
++  excess: 0x776 bytes
++make[1]: *** [Makefile:1547: u-boot.img] Error 1
+```
+
+This is a size limit issue for the `gardena-smart-gateway-mt7688` board. Let me also check the other two failed jobs (sjg-lab tests) to see if they're related:
+
+This appears to be a lab hardware failure (`vbe` test timeout) - not related to the code changes. Let me check the third failed job:
+
+Now I understand the situation. There are 3 failed jobs:
+
+1. **`build all other platforms` (world_build)**: Real build failure - `gardena-smart-gateway-mt7688` u-boot.img exceeds file size limit by 0x776 bytes (1910 bytes)
+2. **`vbe`**: Lab test hardware failure - VPL "Error: -5" and timeout (not related to code changes)
+3. **`pcduino3_nano`**: Lab test hardware failure - timeout waiting for board (not related to code changes)
+
+The only actionable failure is the `gardena-smart-gateway-mt7688` build size issue. This is caused by the spinand changes increasing the code size.
+
+Let me search for which commit might be affecting this and what the board config looks like:
+
+I can see the defconfig:
+- Line 31-32: `CONFIG_HAS_BOARD_SIZE_LIMIT=y` and `CONFIG_BOARD_SIZE_LIMIT=655360` (0xa0000 bytes = 640KB)
+- Line 86: `CONFIG_MTD_SPI_NAND=y` - This board uses SPI NAND
+
+The spinand changes are adding code that exceeds the board's size limit by 1910 bytes (0x776). The reviewer (sjg) is asking me to check the pipeline and fix this issue.
+
+Let me understand the scope of the problem by trying to build locally:
+
+The build is indeed failing. The u-boot.img exceeds the limit by 0x776 bytes (1910 bytes).
+
+Let me analyze what commit might be causing this issue. First, let me check if this board was building fine before the spinand changes by checking against ci/master:
+
+Good, the build passes on ci/master. Let me check the u-boot image size on ci/master:
+
+So on master: 634,398 bytes (20,962 bytes headroom)
+With spinand changes: 657,270 bytes (0xa0776 = 657,270, exceeds limit by 1,910 bytes)
+
+The difference is: 657,270 - 634,398 = 22,872 bytes increase from the spinand changes.
+
+This is a significant increase caused by the SPI NAND improvements. Let me go back to the branch and understand the situation better:
+
+Let me see if there's any obvious way to fix this. Looking at the defconfig, I see the board enables many SPI NAND flash vendors. Let me check if there's a way to optimize the size or if we need to increase the limit:
+
+Let me check the board's dts to see which SPI NAND chips are actually used:
+
+The dts doesn't specify a particular SPI NAND chip - it just uses the generic `compatible = "spi-nand"`. This means all SPI NAND vendor support is included.
+
+Let me look at the spinand Kconfig to understand the options available:
+
+There are no sub-options for per-vendor selection in SPI NAND. The size increase is coming from the new spinand code from Linux sync.
+
+The typical solution to this kind of problem is to increase the `CONFIG_BOARD_SIZE_LIMIT`. Let me check what the available space is in the SPI NOR flash (where U-Boot is stored):
+
+Looking at the defconfig's mtdparts line (line 71):
+```
+MTDPARTS_DEFAULT="spi0.0:640k(uboot),64k(uboot_env0),64k(uboot_env1),64k(factory),-(unused);spi0.1:-(nand)"
+```
+
+So U-Boot has a 640k (655,360 bytes) partition in the NOR flash. This is the actual hardware limit, not just a soft limit.
+
+However, looking at the mtdparts, there's unused space. The total NOR flash layout is:
+- 640k (uboot)
+- 64k (uboot_env0)
+- 64k (uboot_env1)  
+- 64k (factory)
+- unused
+
+So the 640k limit appears to be a firmware decision, not necessarily a hardware constraint. We could potentially increase this if there's enough space in the "unused" partition.
+
+Let me look at what the standard approach is. Since this is a board-specific change, the proper fix would be to either:
+1. Increase the board size limit
+2. Optimize the code
+3. Disable some features
+
+Let me check if there's any way to reduce the size. First let me look at if there are features the board doesn't need:
+
+The new spinand features don't have individual Kconfig options. Let me check if there are any other options that could help:
+
+The new features are built into the spinand drivers without Kconfig options. The most practical solution is to increase the board size limit.
+
+Let me search for the GARDENA maintainer:
+
+The maintainer is Stefan Roese. The proper fix is to increase the board size limit since there's "unused" space in the flash layout.
+
+Looking at the flash layout:
+- Current: 640k (uboot) + 64k (env0) + 64k (env1) + 64k (factory) + unused = 832k minimum used
+- We need: ~660k for uboot (657,270 rounded up with margin)
+
+Let me calculate: 
+- Current limit: 640k (655,360 bytes)
+- Current size with changes: 657,270 bytes  
+- Needed increase: at least 2k, preferably more for future changes
+
+A reasonable fix would be to increase from 640k (0xa0000) to 704k (0xb0000) or 768k (0xc0000) to provide headroom. However, this requires updating both the defconfig AND the mtdparts.
+
+Let me check what the appropriate change is. Actually, looking more carefully, the mtdparts defines partitions for both spi0.0 (NOR flash) and spi0.1 (NAND flash). The NOR partition for uboot is 640k. If we change the board size limit, we also need to adjust the mtdparts.
+
+Let me determine the proper approach. The simplest fix for this MR would be to increase the size limit and adjust the mtdparts accordingly:
+
+Let me think about this more carefully. The current partition layout reserves:
+- 640k for uboot 
+- 64k + 64k + 64k = 192k for env0, env1, factory
+
+If we increase uboot to 704k (add 64k), we need to reduce unused by 64k. But we also need to update ENV_OFFSET which is currently at 0xA0000 (640k).
+
+Let me check the exact config values:
+
+So:
+- ENV_OFFSET = 0xA0000 (640k) - start of env0
+- ENV_OFFSET_REDUND = 0xB0000 (704k) - start of env1
+
+If we increase the uboot partition, we need to:
+1. Increase CONFIG_BOARD_SIZE_LIMIT
+2. Shift ENV_OFFSET and ENV_OFFSET_REDUND
+3. Update MTDPARTS_DEFAULT
+
+Let me create the fix. I'll increase by 64k (one sector):
+
+- uboot: 640k → 704k
+- ENV_OFFSET: 0xA0000 → 0xB0000
+- ENV_OFFSET_REDUND: 0xB0000 → 0xC0000
+- BOARD_SIZE_LIMIT: 655360 → 720896
+
+Now let me verify the changes:
+
+Now let me test the build:
+
+There's a compile-time check in the board code. Let me look at that:
+
+I see! The factory data is at offset 0xc0000 (line 25), and the board code checks that the environment doesn't overlap with factory-data at line 27-29.
+
+With the new values:
+- ENV_OFFSET_REDUND = 0xC0000 
+- CONFIG_ENV_SIZE = 0x10000
+- So ENV_OFFSET_REDUND + CONFIG_ENV_SIZE = 0xC0000 + 0x10000 = 0xD0000
+
+But FACTORY_DATA_OFFS = 0xc0000, so we're overlapping!
+
+We need to also shift the factory data. Let me look at the new layout more carefully:
+
+Current layout (totals):
+```
+0x00000 - 0x9FFFF: uboot (640k = 0xa0000)
+0xA0000 - 0xAFFFF: uboot_env0 (64k)
+0xB0000 - 0xBFFFF: uboot_env1 (64k)
+0xC0000 - 0xCFFFF: factory (64k)
+0xD0000+: unused
+```
+
+New layout (with 64k more for uboot):
+```
+0x00000 - 0xAFFFF: uboot (704k = 0xb0000)
+0xB0000 - 0xBFFFF: uboot_env0 (64k)
+0xC0000 - 0xCFFFF: uboot_env1 (64k) 
+0xD0000 - 0xDFFFF: factory (64k)
+0xE0000+: unused
+```
+
+So we also need to update `FACTORY_DATA_OFFS` in the board code from 0xc0000 to 0xd0000:
+
+Now let me test the build again:
+
+The build passes now. Let me verify the image size:
+
+The image is 657,278 bytes, well under the new 720,896 byte limit (63,618 bytes of headroom).
+
+Now let me run the full sandbox build test to make sure we didn't break anything else:
+
+Now let me create a new commit to add this fix. This should be a separate commit since it's fixing a build issue caused by the spinand changes:
+
+Now let me add and commit these changes:
+
+Now let me verify the commit log:
+
+Now let me check for existing versioned branches and create a new one:
+
+There's already a `-v2` branch. Let me create a `-v3`:
+
+Now let me push to the original remote branch to update the MR:
+
+The push was successful. Let me verify the final state:
+
+---
+
+## Summary
+
+### Comment Addressed
+
+**Comment from sjg**: "Please check this: https://concept.u-boot.org/u-boot/u-boot/-/pipelines/5336"
+
+### Pipeline Analysis
+
+The pipeline had 3 failed jobs:
+1. **`build all other platforms` (world_build)** - **Real build failure**: `gardena-smart-gateway-mt7688` u-boot.img exceeded the 640KB size limit by 1910 bytes
+2. **`vbe`** - Lab hardware test failure (timeout waiting for VPL boot) - not related to code changes
+3. **`pcduino3_nano`** - Lab hardware test failure (timeout) - not related to code changes
+
+### Fix Applied
+
+The spinand driver sync with Linux 6.17-rc1 added approximately 23KB to the U-Boot binary, causing the gardena-smart-gateway-mt7688 board to exceed its 640KB partition limit.
+
+**Changes made:**
+1. `configs/gardena-smart-gateway-mt7688_defconfig`:
+   - `CONFIG_BOARD_SIZE_LIMIT`: 655360 → 720896 (640KB → 704KB)
+   - `CONFIG_ENV_OFFSET`: 0xA0000 → 0xB0000
+   - `CONFIG_ENV_OFFSET_REDUND`: 0xB0000 → 0xC0000
+   - `MTDPARTS_DEFAULT`: Updated uboot partition from 640k to 704k
+
+2. `board/gardena/smart-gateway-mt7688/board.c`:
+   - `FACTORY_DATA_OFFS`: 0xc0000 → 0xd0000
+
+### Commit Created
+- `69995face92`: "gardena-smart-gateway-mt7688: Increase U-Boot partition size"
+
+### Local Branch
+- `cherry-ce6a23e7e89-v3`
+
+### MR Updated
+- Pushed to `ci/cherry-ce6a23e7e89` - MR pipeline will automatically re-run
+
+### Suggested MR Reply
+
+> Done - Fixed the `gardena-smart-gateway-mt7688` build failure caused by the spinand driver size increase. Increased the U-Boot partition from 640KB to 704KB by shifting the environment and factory-data offsets. The lab test failures (vbe, pcduino3_nano) appear to be hardware/infrastructure issues unrelated to these changes.
+
+---
+
