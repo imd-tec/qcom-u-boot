@@ -46039,3 +46039,76 @@ No code changes are needed. This should be handled by:
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-ae7fea1b374
+
+Commits:
+- ae7fea1b374 sata: sata_mv: Remove always true test
+- 4b1b035e748 mmc: octeontx_hsmmc: Need parens in expression
+- bde84072d00 mmc: octeontx_hsmmc: Remove impossible test
+- 80f3568995f ARM: dts: pxa1908: convert to OF_UPSTREAM
+- b44f18923be phy: marvell: Tighten MVEBU_COMPHY_SUPPORT dependencies
+- 81598d19ca7 pci: mvebu: Unable to assign mbus windows for 2nd pcie controller
+- 66873b9ef0b SPL: Make SPL_OS depend on supported architectures
+- ec90518ee67 spl: FIT: Make SPL_LOAD_FIT_FULL depend on SPL_LOAD_FIT
+- 6822583672e global: Make REMAKE_ELF depend on !COMPILE_TEST
+- 16b0482a743 sandbox: Make SANDBOX_xPL depend on !COMPILE_TEST
+- ee7d07f9d00 global: Disable xPL phases when we have enabled COMPILE_TEST
+- 3b278dd9e66 bootstd: Fix bootflow info for efi_mgr
+- 865f6654226 cmd: sf: align erase and write on erase block boundary
+- 78406dda990 Merge tag 'u-boot-marvell-20251014' of https://source.denx.de/u-boot/custodians/u-boot-marvell
+
+### Conversation log
+The repository has some untracked files but no uncommitted changes, so it's clean for our purposes. Now let me create the new branch based on ci/master.
+
+Now let me start cherry-picking the commits one by one. Let me begin with the first commit:
+
+Good, the delta matches. Now let me run the build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta matches. Let me run the build and cherry-pick the next commit:
+
+Now cherry-picking the final commit, which is a merge commit (identified by "Merge" in the subject):
+
+The merge commit resulted in an empty commit (the changes are already included). Let me commit it with --allow-empty as instructed:
+
+The merge commit is empty as expected - all the actual changes were already cherry-picked in the earlier commits. Let me run the build test and verify all commits:
+
+All 14 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+All **14 commits** have been successfully cherry-picked from `us/next` to the new branch `cherry-ae7fea1b374` (based on `ci/master`).
+
+### Build Result
+✅ **Build OK** - sandbox builds successfully with no warnings or errors
+
+### Commits Cherry-Picked (in order)
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 9a248a17e96 | sata: sata_mv: Remove always true test | ✅ Clean |
+| 2 | 89c5076597c | mmc: octeontx_hsmmc: Need parens in expression | ✅ Clean |
+| 3 | 0a09873da3b | mmc: octeontx_hsmmc: Remove impossible test | ✅ Clean |
+| 4 | 70bd5047cf9 | ARM: dts: pxa1908: convert to OF_UPSTREAM | ✅ Auto-merged |
+| 5 | 08fa50275d5 | phy: marvell: Tighten MVEBU_COMPHY_SUPPORT dependencies | ✅ Clean |
+| 6 | fd37af2fa20 | pci: mvebu: Unable to assign mbus windows for 2nd pcie controller | ✅ Clean |
+| 7 | fec6e50d31a | SPL: Make SPL_OS depend on supported architectures | ✅ Auto-merged |
+| 8 | d22a05b7385 | spl: FIT: Make SPL_LOAD_FIT_FULL depend on SPL_LOAD_FIT | ✅ Auto-merged |
+| 9 | 1fa7d4e4a57 | global: Make REMAKE_ELF depend on !COMPILE_TEST | ✅ Auto-merged |
+| 10 | 8cdcad864c9 | sandbox: Make SANDBOX_xPL depend on !COMPILE_TEST | ✅ Auto-merged |
+| 11 | 86e5fa76455 | global: Disable xPL phases when we have enabled COMPILE_TEST | ✅ Auto-merged |
+| 12 | 9038948a3ec | bootstd: Fix bootflow info for efi_mgr | ✅ Auto-merged |
+| 13 | 590c90a89be | cmd: sf: align erase and write on erase block boundary | ✅ Clean |
+| 14 | d5ff574ca0c | Merge tag 'u-boot-marvell-20251014' | ✅ Empty (expected) |
+
+### Notes
+- **Fix-ups made:** None required
+- **Concerning deltas:** None - all commits matched their original deltas
+- The merge commit (#14) resulted in an empty commit as expected, since all its constituent changes were already cherry-picked individually
+- Branch `cherry-ae7fea1b374` is ready for pushing
+
+---
+
