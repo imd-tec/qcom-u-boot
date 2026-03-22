@@ -54,6 +54,7 @@ int extlinux_set_property(struct udevice *dev, const char *property,
  *
  * @dev: bootmeth device
  * @bflow: Bootflow to boot
+ * @ctx: PXE context to use for booting
  * @getfile: Function to use to read files
  * @allow_abs_path: true to allow absolute paths
  * @bootfile: Bootfile whose directory loaded files are relative to, NULL if
@@ -63,14 +64,15 @@ int extlinux_set_property(struct udevice *dev, const char *property,
  * Return: 0 if OK, -ve error code on failure
  */
 int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
-		  pxe_getfile_func getfile, bool allow_abs_path,
-		  const char *bootfile, bool restart);
+		  struct pxe_context *ctx, pxe_getfile_func getfile,
+		  bool allow_abs_path, const char *bootfile, bool restart);
 
 /**
  * extlinux_read_all() - read all files for a bootflow
  *
  * @dev: Bootmethod device to boot
  * @bflow: Bootflow to read
+ * @ctx: PXE context to use for reading
  * @getfile: Function to use to read files
  * @allow_abs_path: true to allow absolute paths
  * @bootfile: Bootfile whose directory loaded files are relative to, NULL if
@@ -78,7 +80,7 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
  * Return: 0 if OK, -EIO on I/O error, other -ve on other error
  */
 int extlinux_read_all(struct udevice *dev, struct bootflow *bflow,
-		      pxe_getfile_func getfile, bool allow_abs_path,
-		      const char *bootfile);
+		      struct pxe_context *ctx, pxe_getfile_func getfile,
+		      bool allow_abs_path, const char *bootfile);
 
 #endif

@@ -204,6 +204,7 @@ err_buf:
 
 static int vbe_abrec_boot(struct udevice *dev, struct bootflow *bflow)
 {
+	struct extlinux_plat *plat = dev_get_plat(dev);
 	const struct bootflow_img *img;
 	int ret;
 
@@ -230,15 +231,17 @@ static int vbe_abrec_boot(struct udevice *dev, struct bootflow *bflow)
 
 	printf("Loading OS FIT%s\n", img ? " keeping existing FDT" : "");
 
-	return extlinux_boot(dev, bflow, vbe_abrec_getfile, true, bflow->fname,
-			     img);
+	return extlinux_boot(dev, bflow, &plat->ctx, vbe_abrec_getfile, true,
+			     bflow->fname, img);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int vbe_abrec_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_read_all(dev, bflow, vbe_abrec_getfile, true,
-				 bflow->fname);
+	struct extlinux_plat *plat = dev_get_plat(dev);
+
+	return extlinux_read_all(dev, bflow, &plat->ctx, vbe_abrec_getfile,
+				 true, bflow->fname);
 }
 #endif
 

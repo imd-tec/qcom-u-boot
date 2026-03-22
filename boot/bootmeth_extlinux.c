@@ -217,15 +217,19 @@ static int extlinux_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 
 static int extlinux_local_boot(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_boot(dev, bflow, extlinux_getfile, true, bflow->fname,
-			     false);
+	struct extlinux_plat *plat = dev_get_plat(dev);
+
+	return extlinux_boot(dev, bflow, &plat->ctx, extlinux_getfile, true,
+			     bflow->fname, false);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int extlinux_local_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_read_all(dev, bflow, extlinux_getfile, true,
-				 bflow->fname);
+	struct extlinux_plat *plat = dev_get_plat(dev);
+
+	return extlinux_read_all(dev, bflow, &plat->ctx, extlinux_getfile,
+				 true, bflow->fname);
 }
 #endif
 

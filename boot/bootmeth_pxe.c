@@ -145,15 +145,19 @@ static int extlinux_pxe_read_file(struct udevice *dev, struct bootflow *bflow,
 
 static int extlinux_pxe_boot(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_boot(dev, bflow, extlinux_pxe_getfile, false,
-			     bflow->subdir, false);
+	struct extlinux_plat *plat = dev_get_plat(dev);
+
+	return extlinux_boot(dev, bflow, &plat->ctx, extlinux_pxe_getfile,
+			     false, bflow->subdir, false);
 }
 
 #if CONFIG_IS_ENABLED(BOOTSTD_FULL)
 static int extlinux_pxe_read_all(struct udevice *dev, struct bootflow *bflow)
 {
-	return extlinux_read_all(dev, bflow, extlinux_pxe_getfile, false,
-				 bflow->subdir);
+	struct extlinux_plat *plat = dev_get_plat(dev);
+
+	return extlinux_read_all(dev, bflow, &plat->ctx,
+				 extlinux_pxe_getfile, false, bflow->subdir);
 }
 #endif
 
