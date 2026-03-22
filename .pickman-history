@@ -44910,3 +44910,128 @@ Ready for push: Yes
 
 ---
 
+## 2026-03-21: us/next
+
+Branch: cherry-524d637bb93
+
+Commits:
+- 524d637bb93 crypto/rng: double the entropy delay interval for retry
+- b1ca952b488 NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A
+- e0516d3807d Merge tag 'fsl-qoriq-master-2025-10-10' of https://source.denx.de/u-boot/custodians/u-boot-fsl-qoriq
+
+### Conversation log
+The repository state is clean (only untracked files, no uncommitted changes). Now let me create and checkout the new branch based on ci/master.
+
+Branch created successfully. Now let me cherry-pick the first commit (524d637bb93 - crypto/rng: double the entropy delay interval for retry):
+
+First commit cherry-picked successfully. Let me check the delta and run the build test:
+
+Delta matches exactly (1 file, 1 insertion, 1 deletion). Now running the build test:
+
+Build passed. Now let me cherry-pick the second commit (b1ca952b488 - NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A):
+
+Second commit cherry-picked (with auto-merge). Let me check the delta:
+
+Delta matches exactly (1 file, 1 insertion). Now running the build test:
+
+Build passed. Now let me cherry-pick the third commit (e0516d3807d - Merge tag 'fsl-qoriq-master-2025-10-10'). This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The cherry-pick is empty (expected since this is a merge commit and the changes are already present). I need to commit with --allow-empty to preserve the merge commit message:
+
+Merge commit preserved as empty commit. Let me verify the delta (it should be empty on the cherry-picked side):
+
+The merge commit was cherry-picked as empty (as expected since the individual commits were already applied). The original merge shows 2 files changed, but our cherry-picked version is empty because those changes were already applied in the previous two cherry-picks. This is correct behavior. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Summary
+
+| Original Hash | Subject | Cherry-picked Hash | Status |
+|---------------|---------|-------------------|--------|
+| 524d637bb93 | crypto/rng: double the entropy delay interval for retry | 702960d589b | ✅ Applied |
+| b1ca952b488 | NXP: Make RAMBOOT_PBL only be valid for PowerPC or ls1021A | 33349da1a0e | ✅ Applied (auto-merged) |
+| e0516d3807d | Merge tag 'fsl-qoriq-master-2025-10-10' | c5a83c41e33 | ✅ Applied (empty commit, as expected) |
+
+### Build Result
+- **Status:** ✅ OK
+- All builds passed (sandbox board)
+- No warnings or errors
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- **e0516d3807d (merge commit):** Cherry-picked as empty commit. This is expected behavior because the merge commit's changes (the 2 individual commits) were already applied via the previous cherry-picks. The merge commit message was preserved for history tracking.
+
+### Branch Status
+- Branch `cherry-524d637bb93` is ready for pushing
+- Currently 3 commits ahead of `ci/master`
+
+---
+
+### Review: 2026-03-21
+
+Branch: cherry-524d637bb93
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) pcduino3_nano.
+
+Looking at the job log, I can see this...
+
+### Conversation log
+Let me find the correct working directory:
+
+Now let me analyze the review comment. The comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` states:
+
+> Pipeline fix (attempt 1): fixed failed job(s) pcduino3_nano.
+
+Looking at the context, this was an **infrastructure/transient failure** - the pcduino3_nano test board timed out. The comment is informational, not requesting code changes. The analysis in the MR description confirms:
+
+1. The failure was a `pexpect.exceptions.TIMEOUT` - the test board didn't respond within 15 seconds
+2. This is a **labgrid infrastructure failure**, not a code issue
+3. The commits in this MR don't affect the pcduino3_nano board at all (it's an Allwinner sunxi-based board, unrelated to NXP/FSL-QorIQ and crypto/RNG changes)
+4. **Action taken:** "None - no fix branch created because there is no code defect to fix"
+
+This review comment appears to be a bot comment documenting the pipeline retry analysis, not a request for code changes. There's nothing actionable to address here.
+
+Let me verify the build still passes to confirm the branch is in good state:
+
+Build passes. Let me also check if there are any existing local branches with -v2, -v3, etc.:
+
+Based on my analysis:
+
+## Summary
+
+**Review Comment Analysis:**
+
+The single review comment is from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` and documents a pipeline failure analysis for the `pcduino3_nano` job. This is **NOT an actionable comment** - it's an informational bot comment documenting that:
+
+1. The failure was an **infrastructure/transient failure** (labgrid timeout)
+2. The test board didn't respond within 15 seconds
+3. **No code changes are needed** because the failure is unrelated to the MR's commits
+4. The recommendation was to retry the pipeline
+
+**Actions Taken:**
+- None required - there are no code changes to make
+
+**Build Status:**
+- ✅ Build passes (sandbox board)
+
+**Reply to Post on MR:**
+
+Since this was an infrastructure failure and no code changes were made, an appropriate reply would be:
+
+> Acknowledged. This was correctly identified as an infrastructure/transient failure on the pcduino3_nano test board (labgrid timeout), not a code issue. The commits in this MR (crypto/rng timing change and NXP/PowerPC-specific RAMBOOT_PBL fix) do not affect the Allwinner sunxi-based pcduino3_nano board. No code changes are needed - the pipeline should be retried.
+
+---
+
+**Note:** Since there are no actionable changes to make, I did NOT create a -v2 branch or push any updates. The branch `cherry-524d637bb93` remains unchanged. If the pipeline needs to be retried, that should be done through GitLab's UI or by re-running the failed job.
+
+---
+
