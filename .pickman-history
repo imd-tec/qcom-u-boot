@@ -45616,3 +45616,84 @@ The rebase completed successfully with no significant conflicts.
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-d748154ff17
+
+Commits:
+- d748154ff17 configs: apalis-imx6: enable USB Gadget OS Descriptors for fastboot
+- 4580222b87b configs: colibri-*: enable USB Gadget OS Descriptors for fastboot
+- 86901e07492 configs: verdin-imx8m[mp]: enable USB Gadget OS Descriptors for fastboot
+- 6052e225fa0 configs: toradex-smarc-imx8mp: enable USB Gadget OS Descriptors for fastboot
+- 8c42f534d7e Merge patch series "configs: toradex: enable USB Gadget OS Descriptors"
+
+### Conversation log
+The repository has untracked files but is otherwise clean (no staged or modified tracked files). This is acceptable to proceed.
+
+Now let's cherry-pick the first commit:
+
+First cherry-pick succeeded. Let me verify the commit delta and run the build test:
+
+The deltas match exactly (1 file changed, 1 insertion). Now run the build test:
+
+Build passed. Now cherry-pick the second commit:
+
+Second cherry-pick succeeded with auto-merge. Let me verify the delta:
+
+Deltas match exactly (5 files changed, 5 insertions). Now run build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Third cherry-pick succeeded. Let me verify the delta:
+
+Deltas match exactly. Now build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Fourth cherry-pick succeeded. Let me verify the delta:
+
+Deltas match exactly. Now build test:
+
+Build passed. Now cherry-pick the fifth and final commit, which is a merge commit:
+
+The merge commit is empty (which is expected since all the individual commits were already cherry-picked), but I need to preserve it. Let me commit it as an empty commit:
+
+The merge commit was preserved. Let me verify the delta:
+
+The cherry-picked merge commit is empty as expected (since all commits were already applied individually). This is normal behavior for merge commits when cherry-picking. Now let me run the build test:
+
+Build passed. Now let me verify all 5 commits are present:
+
+All 5 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+✅ **All 5 commits successfully cherry-picked!**
+
+### Build Result: **OK** 
+- All build tests passed with no warnings or errors
+
+### Commits Cherry-picked (from ci/master):
+| New Hash | Original Hash | Subject |
+|----------|---------------|---------|
+| 180dfcd982e | d748154ff17 | configs: apalis-imx6: enable USB Gadget OS Descriptors for fastboot |
+| 83786445fef | 4580222b87b | configs: colibri-*: enable USB Gadget OS Descriptors for fastboot |
+| 02b0ffaaf53 | 86901e07492 | configs: verdin-imx8m[mp]: enable USB Gadget OS Descriptors for fastboot |
+| eae5f72796d | 6052e225fa0 | configs: toradex-smarc-imx8mp: enable USB Gadget OS Descriptors for fastboot |
+| 4f2b33d7c84 | 8c42f534d7e | Merge patch series "configs: toradex: enable USB Gadget OS Descriptors" |
+
+### Fix-ups Made:
+- None required - all cherry-picks applied cleanly
+
+### Delta Comparison:
+- All 4 regular commits had identical deltas (same files, same line counts)
+- The merge commit (8c42f534d7e) was preserved as an empty commit (expected behavior since individual commits were already applied)
+
+### Commits with Concerning Deltas:
+- None
+
+### Branch Status:
+The branch `cherry-d748154ff17` is ready for pushing, currently ahead of `ci/master` by 5 commits.
+
+---
+
