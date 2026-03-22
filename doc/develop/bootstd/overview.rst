@@ -855,6 +855,13 @@ list of scanned bootflows just for that device.
 The bootflow itself is documented in bootflow_h_. It includes various bits of
 information about the bootflow and a buffer to hold the file.
 
+The ``bootmeth_priv`` field allows a bootmeth to attach private data to each
+bootflow, such as parsed configuration state. When the bootflow is freed,
+``bootmeth_free_bootflow()`` calls the bootmeth's ``free_bootflow()`` op (if
+provided) to free internal allocations, then frees ``bootmeth_priv`` itself.
+Bootmeths that only store a flat struct in ``bootmeth_priv`` do not need to
+implement the op.
+
 
 Future
 ------

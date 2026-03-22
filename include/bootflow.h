@@ -98,7 +98,9 @@ enum bootflow_flags_t {
  * @luks_version: LUKS version (1 or 2) if BOOTFLOWF_ENCRYPTED is set, else 0
  * @cmdline: OS command line, or NULL if not known (allocated)
  * @x86_setup: Pointer to x86 setup block inside @buf, NULL if not present
- * @bootmeth_priv: Private data for the bootmeth
+ * @bootmeth_priv: Private data for the bootmeth (allocated). Freed by
+ *	bootmeth_free_bootflow() which calls the bootmeth's free_bootflow() op
+ *	for internal cleanup, then frees the pointer itself.
  * @images: List of loaded images (struct bootstd_img)
  */
 struct bootflow {

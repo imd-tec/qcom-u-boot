@@ -84,6 +84,16 @@ int bootmeth_boot(struct udevice *dev, struct bootflow *bflow)
 	return ops->boot(dev, bflow);
 }
 
+void bootmeth_free_bootflow(struct udevice *dev, struct bootflow *bflow)
+{
+	const struct bootmeth_ops *ops = bootmeth_get_ops(dev);
+
+	if (ops->free_bootflow)
+		ops->free_bootflow(dev, bflow);
+	free(bflow->bootmeth_priv);
+	bflow->bootmeth_priv = NULL;
+}
+
 int bootmeth_read_file(struct udevice *dev, struct bootflow *bflow,
 		       const char *file_path, ulong *addrp, ulong align,
 		       enum bootflow_img_t type, ulong *sizep)

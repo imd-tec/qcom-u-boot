@@ -726,7 +726,9 @@ void bootflow_free(struct bootflow *bflow)
 		free(bflow->buf);
 	free(bflow->os_name);
 	free(bflow->fdt_fname);
-	free(bflow->bootmeth_priv);
+	/* bootmeth_priv is only set when method is set */
+	if (bflow->method)
+		bootmeth_free_bootflow(bflow->method, bflow);
 
 	alist_for_each(img, &bflow->images)
 		free(img->fname);
