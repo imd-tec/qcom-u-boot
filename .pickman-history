@@ -46976,3 +46976,143 @@ Final build passed.
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-71a535c7ad0
+
+Commits:
+- 71a535c7ad0 watchdog: Tighten some watchdog driver dependencies
+- df2220c946f watchdog: Tighten dependencies on WDT_DAVINCI
+- a157a73720e Merge tag 'u-boot-watchdog-20251016' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me proceed to create the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (71a535c7ad0):
+
+First commit succeeded. Let me check the delta and run the build test:
+
+The delta looks identical (1 file changed, 10 insertions, 8 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (df2220c946f):
+
+Second commit succeeded. Let me check the delta:
+
+Delta is identical (1 file changed, 1 insertion, 1 deletion). Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (a157a73720e). This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (as expected since the commits were already applied individually). The `--allow-empty` flag is provided, but git cherry-pick requires an explicit commit. Let me commit it:
+
+Third commit (merge commit) succeeded. Let me check the delta:
+
+The merge commit is now empty (as expected since the individual commits were already cherry-picked), while the original merge commit showed changes. This is expected behavior - the merge commit is preserved for history tracking purposes but the actual changes were already applied via the first two cherry-picks.
+
+Let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build to verify everything works together:
+
+## Final Status Report
+
+### Cherry-pick completed successfully!
+
+**Branch:** `cherry-71a535c7ad0` (based on `ci/master`)
+
+**Commits cherry-picked (in order):**
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 71a535c7ad0 | a85fc309e29 | watchdog: Tighten some watchdog driver dependencies | ✅ Clean |
+| 2 | df2220c946f | f90c66623e9 | watchdog: Tighten dependencies on WDT_DAVINCI | ✅ Clean |
+| 3 | a157a73720e | 3fbe5713521 | Merge tag 'u-boot-watchdog-20251016' | ✅ Empty (expected) |
+
+**Build result:** ✅ OK - All builds passed (sandbox)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** 
+- Commit #3 (merge commit) is empty in the cherry-pick, which is expected because the actual changes were already applied via commits #1 and #2. The merge commit is preserved for history tracking purposes with the "(cherry picked from commit ...)" annotation.
+
+**Verification:**
+```
+3fbe5713521 Merge tag 'u-boot-watchdog-20251016' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+f90c66623e9 watchdog: Tighten dependencies on WDT_DAVINCI
+a85fc309e29 watchdog: Tighten some watchdog driver dependencies
+```
+
+The branch `cherry-71a535c7ad0` is ready for pushing.
+
+---
+
+### Review: 2026-03-22
+
+Branch: cherry-71a535c7ad0
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) opi_pc2, pcduino3_nano.
+
+Based on my analysis of the j...
+
+### Conversation log
+Let me find the correct directory:
+
+The repository is in `/home/sglass/dev/u-boot`. Let me proceed with the task:
+
+I can see the branch is currently 4 commits ahead of ci/master (1 pickman record commit + 3 cherry-picked commits). Let me check the merge base and prepare for rebase:
+
+Good. The merge base is `5eb2eccda52` which is the same as `ci/master`. That means the branch is already based on ci/master and doesn't need rebasing - it just needs to address the review comment.
+
+Let me re-read the review comment. The comment says this is about pipeline fix attempt 1 for failed jobs `opi_pc2` and `pcduino3_nano`, and the analysis concluded these were infrastructure/transient issues, not code problems. No code changes were needed.
+
+Since the review comment is from the bot acknowledging the pipeline fix analysis (which concluded no code changes needed), and the task is to "address 1 review comment(s)", this appears to be a case where the review comment doesn't require any code changes - it's just informational.
+
+Let me verify the current state more thoroughly:
+
+The branch is currently based on `5eb2eccda52` which is the current ci/master HEAD. So actually the branch is already up to date with ci/master - no rebase is needed.
+
+Looking at the review comment more carefully, the comment is from the bot (`project_1_bot_2541d37e7146e9c25808a380e05ebef0`) and says "Pipeline fix (attempt 1): fixed failed job(s) opi_pc2, pcduino3_nano." The body explains that these were infrastructure failures, not code issues.
+
+This comment appears to be an informational report rather than a request for changes. Since:
+1. The branch is already based on the latest ci/master
+2. The review comment is analysis/informational (no code changes requested)
+3. The pipeline failures were determined to be infrastructure issues
+
+There's nothing actionable to do here. Let me verify the build still passes and then report:
+
+Build passes. Now let me check if there's anything further to address:
+
+The branch is already on top of the latest ci/master (`5eb2eccda52`). No rebase is needed.
+
+## Summary
+
+Looking at this task:
+1. **Rebase**: Not needed - the branch `cherry-71a535c7ad0` is already based on the latest `ci/master` (`5eb2eccda52`)
+2. **Review comment**: The single review comment is from the bot analyzing pipeline failures. It concluded that the failures (`opi_pc2`, `pcduino3_nano`) were infrastructure/transient issues, not code problems. **No code changes are required.**
+3. **Build**: Verified to pass
+
+Since:
+- The branch is already up-to-date with the target branch
+- The review comment is informational and does not request any code changes
+- The build passes
+
+**There is nothing actionable to do on this MR.** The review comment is a bot-generated report explaining that pipeline failures were due to lab infrastructure issues, not code problems.
+
+## Report
+
+| Item | Status |
+|------|--------|
+| **Rebase needed** | No - branch already based on latest ci/master |
+| **Review comments addressed** | N/A - The comment is informational (pipeline infrastructure failure analysis), no code changes requested |
+| **Build status** | ✅ Passes |
+| **Action needed** | None - MR is ready as-is |
+
+**Recommended reply to post on the MR:**
+
+> The branch is already based on the latest target branch - no rebase was needed.
+>
+> Regarding the pipeline failures: As previously analyzed, both `opi_pc2` and `pcduino3_nano` failures were infrastructure/transient issues (serial connection refused and board timeout), not code problems. No code changes are required. The jobs should pass on retry when lab infrastructure is available.
+
+---
+
