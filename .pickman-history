@@ -45144,3 +45144,68 @@ All 9 commits have been cherry-picked successfully. Let me provide the final sta
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-5e1e08549bd
+
+Commits:
+- 5e1e08549bd configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot
+- 6a22d03164c configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot
+- 33b16e00433 Merge patch series "configs: verdin-am*: enable USB Gadget OS Descriptors"
+
+### Conversation log
+The repository has some untracked files but no staged or modified tracked files, so it's clean enough to proceed. Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (a regular commit):
+
+First cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The delta matches exactly - 1 file changed, 1 insertion. Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Second cherry-pick succeeded. Let me verify the delta:
+
+Delta matches exactly. Now run the build test:
+
+Build passed. Now let me cherry-pick the third commit (merge commit):
+
+The merge commit is empty (as expected since we already cherry-picked its component commits). Let me commit it with --allow-empty as instructed:
+
+The merge commit has been preserved. Let me verify the delta:
+
+The merge commit is empty as expected (the individual commits were already applied separately). The original merge commit showed 2 files changed because it was a merge that combined those changes. Now let me run the build test:
+
+Build passed. Now let me verify all commits are present with git log:
+
+All 3 commits are present in the expected order. Let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Commits Cherry-picked (in order):
+
+| # | Original Hash | New Hash | Subject |
+|---|---------------|----------|---------|
+| 1 | 5e1e08549bd | c13b6a833f1 | configs: verdin-am62: enable USB Gadget OS Descriptors for fastboot |
+| 2 | 6a22d03164c | c8482bdf51c | configs: verdin-am62p: enable USB Gadget OS Descriptors for fastboot |
+| 3 | 33b16e00433 | a17ad36f107 | Merge patch series "configs: verdin-am*: enable USB Gadget OS Descriptors" |
+
+### Build Result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Fix-ups Made: None
+- All commits applied cleanly
+
+### Delta Verification:
+- **Commit 1**: 1 file changed, 1 insertion ✅ (matches original)
+- **Commit 2**: 1 file changed, 1 insertion ✅ (matches original)
+- **Commit 3**: Empty commit ✅ (expected - the merge commit's changes were already applied by commits 1 & 2)
+
+### Branch Status:
+- Branch `cherry-5e1e08549bd` is ready for pushing
+- Currently 3 commits ahead of `ci/master`
+
+---
+
