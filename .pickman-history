@@ -46976,3 +46976,73 @@ Final build passed.
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-71a535c7ad0
+
+Commits:
+- 71a535c7ad0 watchdog: Tighten some watchdog driver dependencies
+- df2220c946f watchdog: Tighten dependencies on WDT_DAVINCI
+- a157a73720e Merge tag 'u-boot-watchdog-20251016' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me proceed to create the new branch based on ci/master:
+
+Now let me cherry-pick the first commit (71a535c7ad0):
+
+First commit succeeded. Let me check the delta and run the build test:
+
+The delta looks identical (1 file changed, 10 insertions, 8 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit (df2220c946f):
+
+Second commit succeeded. Let me check the delta:
+
+Delta is identical (1 file changed, 1 insertion, 1 deletion). Let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (a157a73720e). This is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit is empty (as expected since the commits were already applied individually). The `--allow-empty` flag is provided, but git cherry-pick requires an explicit commit. Let me commit it:
+
+Third commit (merge commit) succeeded. Let me check the delta:
+
+The merge commit is now empty (as expected since the individual commits were already cherry-picked), while the original merge commit showed changes. This is expected behavior - the merge commit is preserved for history tracking purposes but the actual changes were already applied via the first two cherry-picks.
+
+Let me run the build test:
+
+Build passed. Now let me verify all commits are present:
+
+All 3 commits are present. Let me run the final build to verify everything works together:
+
+## Final Status Report
+
+### Cherry-pick completed successfully!
+
+**Branch:** `cherry-71a535c7ad0` (based on `ci/master`)
+
+**Commits cherry-picked (in order):**
+
+| # | Original Hash | New Hash | Subject | Status |
+|---|---------------|----------|---------|--------|
+| 1 | 71a535c7ad0 | a85fc309e29 | watchdog: Tighten some watchdog driver dependencies | ✅ Clean |
+| 2 | df2220c946f | f90c66623e9 | watchdog: Tighten dependencies on WDT_DAVINCI | ✅ Clean |
+| 3 | a157a73720e | 3fbe5713521 | Merge tag 'u-boot-watchdog-20251016' | ✅ Empty (expected) |
+
+**Build result:** ✅ OK - All builds passed (sandbox)
+
+**Fix-ups made:** None required
+
+**Commits with concerning deltas:** 
+- Commit #3 (merge commit) is empty in the cherry-pick, which is expected because the actual changes were already applied via commits #1 and #2. The merge commit is preserved for history tracking purposes with the "(cherry picked from commit ...)" annotation.
+
+**Verification:**
+```
+3fbe5713521 Merge tag 'u-boot-watchdog-20251016' of https://source.denx.de/u-boot/custodians/u-boot-watchdog
+f90c66623e9 watchdog: Tighten dependencies on WDT_DAVINCI
+a85fc309e29 watchdog: Tighten some watchdog driver dependencies
+```
+
+The branch `cherry-71a535c7ad0` is ready for pushing.
+
+---
+
