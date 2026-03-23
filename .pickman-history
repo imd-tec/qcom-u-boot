@@ -47116,3 +47116,67 @@ Since:
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-5340dc6fe75
+
+Commits:
+- 5340dc6fe75 .gitignore: ignore more image files
+- 2b634a80b5c pci: pcie-rcar-gen4: Shut down controller on link down and remove
+- a1a898588c8 arm64: renesas: r8a779g3: Reset PCIe before next stage on Retronix R-Car V4H Sparrow Hawk
+- 92b779cd9f1 serial: sh: Handle HSCIF RX FIFO overflow
+- 1d94364c7f1 ARM: dts: renesas: Disable R8A779G0 V4H White Hawk RPC SPI DT node again
+- 81e050250c0 ARM: dts: renesas: Reinstate R8A779H0 V4M U-Boot DTs
+- b9efaf6729d ARM: dts: renesas: Disable RPC driver on R8A779H0 V4M Gray Hawk board
+- 64a4645c4e4 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
+
+### Conversation log
+Good, the repository is clean (untracked files are fine). Let me create the new branch and start cherry-picking.
+
+Delta looks identical. Now run the build test.
+
+Build passed. Let me continue with the second commit.
+
+Delta identical. Build test:
+
+Now the last commit - it's marked as possibly already applied. Let me first check if it's already present:
+
+The commits have different parents and merge content. Let me check what changes each merge actually introduces:
+
+The merges have completely different content - they're not the same. Let me cherry-pick the original merge commit with -m 1 --allow-empty:
+
+The merge is empty because all the changes were already cherry-picked in the previous commits. Let me commit it anyway to preserve the merge commit:
+
+Now let me verify all 8 commits are present:
+
+All 8 commits are present. Let me run the final build test:
+
+## Summary
+
+**All 8 commits successfully cherry-picked to branch `cherry-5340dc6fe75`**
+
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | 5340dc6fe75 | .gitignore: ignore more image files | ✅ OK |
+| 2 | 2b634a80b5c | pci: pcie-rcar-gen4: Shut down controller on link down and remove | ✅ OK |
+| 3 | a1a898588c8 | arm64: renesas: r8a779g3: Reset PCIe before next stage on Retronix R-Car V4H Sparrow Hawk | ✅ OK |
+| 4 | 92b779cd9f1 | serial: sh: Handle HSCIF RX FIFO overflow | ✅ OK |
+| 5 | 1d94364c7f1 | ARM: dts: renesas: Disable R8A779G0 V4H White Hawk RPC SPI DT node again | ✅ OK |
+| 6 | 81e050250c0 | ARM: dts: renesas: Reinstate R8A779H0 V4M U-Boot DTs | ✅ OK |
+| 7 | b9efaf6729d | ARM: dts: renesas: Disable RPC driver on R8A779H0 V4M Gray Hawk board | ✅ OK |
+| 8 | 64a4645c4e4 | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh | ✅ OK (empty - all changes in prior commits) |
+
+**Build result:** ✅ OK (sandbox build passed)
+
+**Fix-ups:** None needed
+
+**Concerning deltas:** None - all commits matched their originals exactly
+
+**Notes:**
+- The merge commit (64a4645c4e4) was cherry-picked as empty because all the individual commits it merged were already cherry-picked earlier in the sequence. This is expected behavior.
+- The suggested duplicate (2c7af9f97e8) was verified to be a **different** merge with different content, so the cherry-pick was correctly performed.
+
+The branch `cherry-5340dc6fe75` is ready for pushing.
+
+---
+
