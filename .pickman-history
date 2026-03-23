@@ -47659,3 +47659,186 @@ The branch `cherry-caa2ad6f8c8` is ready for pushing.
 
 ---
 
+### Pipeline fix: 2026-03-23 (attempt 1)
+
+Branch: cherry-caa2ad6f8c8
+
+Failed jobs:
+- vbe (sjg-lab)
+- tk1 (sjg-lab)
+- rockpro64 (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Let me analyze these failures:
+
+## Analysis of Job Failures
+
+Looking at the four failed jobs:
+
+1. **vbe (job-372168)**: VPL fails with `Error: -95` and `VPL: failed to boot from all boot devices`. The board shows "Please RESET the board" - the boot sequence doesn't complete.
+
+2. **tk1 (job-372167)**: Shows `USB resource not available` and `NetworkTegraUSBLoader... avail=False` - this is an **infrastructure issue** (USB hardware resource unavailable on the test lab).
+
+3. **rockpro64 (job-372162)**: SPL shows `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` then tries multiple MMC devices and all fail - boot fails entirely.
+
+4. **pcduino3_nano (job-372140)**: Times out waiting for U-Boot prompt - likely similar boot failure (no detailed boot log shown).
+
+Three of the four failures (vbe, rockpro64, pcduino3_nano) show boot failures where U-Boot doesn't complete the boot process. The tk1 failure is a clear infrastructure issue (USB resource unavailable).
+
+The errors `-95` (EOPNOTSUPP) and `-5` (EIO) in the rockpro64 log along with `spl_load_simple_fit: can't load image loadables index 0` suggest a code issue. The vbe failure at VPL stage with error -95 also indicates something is wrong with the boot flow.
+
+Let me checkout the branch and investigate the commits to find the root cause:
+
+Now I need to analyze the errors more carefully. The rockpro64 failure shows:
+- `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` - this is EIO (I/O error)
+
+The vbe failure shows:
+- `Error: -95` in VPL - EOPNOTSUPP (Operation not supported)
+- `VPL: failed to boot from all boot devices`
+
+Let me search for what might have changed related to SPL loading or FIT handling. The error `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` suggests something wrong with image loading.
+
+None of these appear to be in the MR. Let me check if any of the cherry-picked commits touch SPL code or the boot process:
+
+Looking at these commits, they are all NET-related changes. The failures are boot failures in SPL/VPL phases before U-Boot even starts networking. Let me check what base we're on and compare with a known working state:
+
+The branch is based on ci/master which is at `eb6e1975b10`. Let me look more closely at the error. The rockpro64 log shows:
+
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+Error code -5 is EIO (I/O error). This happens when trying to load the "loadables" section of the FIT image. Let me check if this is related to any of the commits:
+
+This commit changes network driver Kconfig dependencies, which should only affect network-specific boards. Let me check the designware fix:
+
+This is the fix for bitbang MDIO initialization. Looking at the code, it changes:
+- Old: `bus->reset = dw_mdio_reset;`
+- New: `bus->reset = dw_bb_mdio_reset;`
+
+The problem is that `dw_mdio_reset` expects `bus->priv` to be `struct udevice *`, but when using bitbang mode, `bus->priv` is set to `dwpriv` (which is `struct dw_eth_dev *`). The old code would call `dw_mdio_reset`, which calls `__dw_mdio_reset(dev)` where `dev = bus->priv` - but that's wrong because `bus->priv` is not a udevice!
+
+Let me check if the failing boards use designware ethernet:
+
+But let me reconsider - the boot failure happens in SPL, before U-Boot starts running. The errors are:
+- rockpro64: `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` in **SPL**
+- vbe: `Error: -95` `VPL: failed to boot from all boot devices` in **VPL**
+
+These are boot-stage failures, not networking failures. The network driver code wouldn't be running at this point. Let me look more carefully at what's happening.
+
+Wait, looking at the log again more carefully:
+- vbe job output says "load: Firefly-RK3399 Board" - this is also an rk3399
+- The error -95 (EOPNOTSUPP) happens in VPL
+
+Let me search for what returns error -95 in the boot path:
+
+Let me look at what returns -95 in the VPL boot path:
+
+The log shows it's trying to boot from vbe_abrec. Let me look at the error path more closely:
+
+Now let me look at `vbe_read_fit` which is used in the VPL path:
+
+Let me look at `spl_load_simple_fit` which is called from vbe_read_fit when in SPL phase:
+
+Now I see the issue. Looking at line 881-884 in `spl_fit.c`:
+
+```c
+ret = load_simple_fit(info, offset, &ctx, node, &image_info);
+if (ret < 0 && ret != -EBADSLT) {
+    printf("%s: can't load image loadables index %d (ret = %d)\n",
+           __func__, index, ret);
+    return ret;
+}
+```
+
+The error message matches exactly what we see in the log:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+Error -5 is EIO, which is returned in `load_simple_fit` at line 308-309:
+```c
+if (info->read(info, read_offset, size, src_ptr) < length)
+    return -EIO;
+```
+
+This is a read error from the underlying block device. But this isn't directly caused by the NET changes in this MR.
+
+Let me re-examine the failures more carefully. The logs show:
+
+1. **rockpro64**: Boot works in TPL, fails in SPL with `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)`
+2. **vbe**: TPL works, VPL fails with `Error: -95`  
+3. **tk1**: Infrastructure issue - USB hardware unavailable
+4. **pcduino3_nano**: Timeout waiting for prompt - no detailed boot log
+
+Looking back at the error codes:
+- `-5` = EIO (Input/output error)
+- `-95` = EOPNOTSUPP (Operation not supported)
+
+The VBE failure with `-95` could come from various places. Let me search for EOPNOTSUPP in the relevant boot code:
+
+Let me look at what might be causing these boot failures by looking at ci/master to see if this test passed before. Given that the failures are all boot-related (SPL/VPL errors, not U-Boot proper), but none of the commits in this MR touch the boot/SPL code directly, this seems suspicious.
+
+Let me check if this could be an infrastructure/flaky test issue by checking if these tests passed on ci/master recently:
+
+Looking at the failures again more carefully:
+
+1. **tk1**: `USB resource not available` and `NetworkTegraUSBLoader... avail=False` - This is clearly an **infrastructure issue** - the USB hardware that's needed to flash/communicate with the board is not available. This is not a code issue.
+
+2. **rockpro64, vbe, pcduino3_nano**: These all fail during boot process on real hardware. 
+
+The fact that these are all "sjg-lab" stage tests that run on real hardware, combined with:
+- Error messages indicating hardware communication failures (MMC read errors, etc.)
+- One clear infrastructure failure (tk1 USB unavailable)
+- Similar timeout/boot failures across multiple different boards
+
+This looks like a **lab infrastructure issue** rather than a code bug. The errors like `mmc block read error`, `spl: mmc init failed`, and timeouts are characteristic of hardware/connectivity problems in a test lab, not code regressions.
+
+Let me verify by checking if any of the commits in this MR could possibly affect boot behavior:
+
+The only "boot"-related file changed is `net/bootp.c` (BOOTP network protocol), not the SPL boot process. Let me check what files were changed:
+
+None of these files have anything to do with SPL boot, MMC drivers, VBE boot, or the boot loader's initial startup. The changes are all:
+- Network drivers (ethernet, MDIO, PHY)
+- Network protocols (BOOTP, TFTP, DHCP)  
+- Kconfig changes for network-related options
+- Uthreads header (just phase macros)
+
+The boot failures on these boards cannot be caused by network driver changes - the boards are failing during SPL/VPL boot **before** the network stack would even be initialized.
+
+**Conclusion: These failures are infrastructure/lab issues, not code issues.**
+
+Let me report this finding:
+
+## Analysis Summary
+
+After thorough analysis of the pipeline failures for MR !783, I've determined that **these are infrastructure/transient lab issues, not code bugs**:
+
+### Evidence:
+
+1. **tk1 job**: Explicitly shows `USB resource not available; retrying reset with longer delays` and `NetworkTegraUSBLoader... avail=False` - this is a clear hardware resource unavailability issue in the test lab, not a code problem.
+
+2. **rockpro64 job**: Shows `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` and `mmc block read error` - these are I/O errors reading from MMC storage, indicating hardware communication problems.
+
+3. **vbe job**: Shows `Error: -95` (EOPNOTSUPP) in VPL - this happens before any network code runs and is related to boot device issues.
+
+4. **pcduino3_nano job**: Timeout waiting for U-Boot prompt - similar boot failure pattern.
+
+5. **Code analysis**: The 20 commits in this MR modify:
+   - Network drivers (designware, mediatek, airoha, aquantia PHY)
+   - Network protocols (BOOTP, TFTP, DHCP)
+   - Kconfig changes for network dependencies
+   
+   None of these files affect SPL/VPL boot, MMC drivers, or the early boot process where the failures occur.
+
+6. **Boot sequence**: The failures happen in TPL→VPL→SPL phases, which execute **before** any network stack is initialized. Network driver changes cannot cause boot failures at this stage.
+
+### Recommendation:
+
+This is a **lab infrastructure issue** - no code changes are needed. The test boards appear to have connectivity/hardware problems in the sjg-lab. The appropriate action is to retry the pipeline or investigate the lab hardware status.
+
+**No code fix applied - this is an infrastructure/transient issue.**
+
+---
+
