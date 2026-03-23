@@ -47180,3 +47180,135 @@ The branch `cherry-5340dc6fe75` is ready for pushing.
 
 ---
 
+## 2026-03-22: us/next
+
+Branch: cherry-a58089ad2e4
+
+Commits:
+- a58089ad2e4 fs: semihosting: Use correct variable for error check
+- bd87ec920d2 doc: samsung: Extend E850-96 documentation to be comprehensive
+- 11a64138f5f efi_loader: Prevent leak of memory from tmp_files
+- 163f9d04fbd efi_loader: correctly check if the HTTP protocol is found
+- 38f60e16215 cmd/dma: documentation
+- a7762037d23 doc: sandbox: fix typos
+- 186b2d24075 efi_loader: Use ESRT_FW_TYPE_SYSTEMFIRMWARE instead of ESRT_FW_TYPE_UNKNOWN
+- 3e865cfffc4 doc: environment: fix links to Linux kernel documentation
+- ac59ac1b7cf efi_loader: dbginfodump: use guid definition
+- 841a68788b7 lib: uuid: add efi debug image info table guid
+- dbac24b7137 doc: ti: j722s_evm: drop outdated boot note
+- 45e02b3fc6a Merge tag 'efi-2026-01-rc1' of https://source.denx.de/u-boot/custodians/u-boot-efi
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Now let me create the new branch based on ci/master:
+
+Good. Now let me start cherry-picking the commits one by one. First commit:
+
+Cherry-pick 1 succeeded. Let me verify the delta and run build test:
+
+Delta matches (1 file, 2+/-, 1 insertion, 1 deletion). Let me run the build test:
+
+Build passed. Now cherry-pick commit 2:
+
+Delta matches exactly. Build test:
+
+Build passed. Cherry-pick commit 3:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 4:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 5:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 6:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 7:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 8:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 9:
+
+Delta matches. Build test:
+
+Build passed. Cherry-pick commit 10:
+
+Delta matches. Build test:
+
+There's a build failure. The issue is with the EFI_DEBUG_IMAGE_INFO_TABLE_GUID macro usage in lib/uuid.c. Let me look at the issue - it seems like the macro format doesn't match what's expected in the list_guid array. Let me investigate:
+
+The patches are identical. The issue is that EFI_DEBUG_IMAGE_INFO_TABLE_GUID is being used but it seems to have a different format than what's expected in list_guid. Let me check the structure and the macro:
+
+I see the issue - the structure expects `{string, guid}` but the patch is adding `{NULL, string, guid}` with 3 elements. Looking at the original source tree on us/next, they have a different structure with the extra "string" field. Let me look at both versions:
+
+I see the issue now. In us/next, the struct has 3 fields: `type`, `description`, `guid`. But in ci/master (our current branch), it only has 2 fields: `string`, `guid`. The commit 841a68788b7 was written for the newer 3-field structure. This is a dependency issue - this commit requires a prior commit that changes the struct definition.
+
+This is a significant delta issue - the commit cannot be cleanly applied because the struct definition is different. Let me reset and try to manually adapt the change:
+
+Now let me manually apply the change in the correct format for the current structure:
+
+I see the current structure at ci/master only has 2 fields (string, guid). The patch from us/next expects a 3-field structure (type, description, guid). Let me manually adapt the commit to work with the 2-field structure:
+
+Good, the manual fix is applied without the `NULL,` prefix. Now let me commit this with the original commit message and a note about the adaptation:
+
+Now let me build test this adaptation:
+
+Build passes. Now continue with commit 11:
+
+Delta matches. Build test:
+
+Build passed. Now for the final commit - this is a merge commit, so I need to use special handling:
+
+There's a conflict in lib/uuid.c due to the earlier adaptation. Let me check the conflict:
+
+The conflict is straightforward - I need to keep our version (without `NULL,`) since our tree uses the 2-field structure. Let me resolve this:
+
+The conflict is resolved. Now let me add and continue:
+
+The merge commit is empty (because all changes have already been applied by the individual commits). As instructed, I must preserve the merge commit:
+
+Now let me verify the commit delta for the merge commit:
+
+The merge commit is empty as expected (all changes came from the individual commits). Build test:
+
+Build passed. Now let me verify the final log:
+
+All 12 commits are present. Let me run a final build test:
+
+## Final Status Report
+
+**Build Result:** ✅ OK - All builds passed
+
+**All 12 commits successfully cherry-picked:**
+1. `a58089ad2e4` → `0341768ddf0` - fs: semihosting: Use correct variable for error check
+2. `bd87ec920d2` → `98b59f08c45` - doc: samsung: Extend E850-96 documentation to be comprehensive
+3. `11a64138f5f` → `62065e15630` - efi_loader: Prevent leak of memory from tmp_files
+4. `163f9d04fbd` → `e9f7fbdd3a2` - efi_loader: correctly check if the HTTP protocol is found
+5. `38f60e16215` → `986484505d0` - cmd/dma: documentation
+6. `a7762037d23` → `4d75b94a14e` - doc: sandbox: fix typos
+7. `186b2d24075` → `7f61d539ddc` - efi_loader: Use ESRT_FW_TYPE_SYSTEMFIRMWARE instead of ESRT_FW_TYPE_UNKNOWN
+8. `3e865cfffc4` → `4b349e91216` - doc: environment: fix links to Linux kernel documentation
+9. `ac59ac1b7cf` → `f328364c027` - efi_loader: dbginfodump: use guid definition
+10. `841a68788b7` → `033fe2ce803` - lib: uuid: add efi debug image info table guid
+11. `dbac24b7137` → `1b0baa68aa5` - doc: ti: j722s_evm: drop outdated boot note
+12. `45e02b3fc6a` → `b54c99d2ba4` - Merge tag 'efi-2026-01-rc1' (empty, preserved for history)
+
+**Fix-ups Made:**
+1. **Commit 10 (841a68788b7 - lib: uuid)**: Required manual adaptation. The original commit was written for a 3-field struct (`type`, `description`, `guid`) in `list_guid[]`, but ci/master uses a 2-field struct (`string`, `guid`). Removed the `NULL,` prefix from the initialization. Added note `[Adapted for 2-field struct in current tree]` to commit message.
+
+2. **Merge commit (45e02b3fc6a)**: Conflict in lib/uuid.c due to the earlier adaptation. Resolved by keeping our adapted version (2-field struct). The merge commit is empty since all changes were already applied by individual commits, but preserved with `--allow-empty` for history tracking.
+
+**Commits with No Concerning Deltas:** All commit deltas matched exactly between original and cherry-picked versions (same files modified, same line counts).
+
+**Branch Status:** `cherry-a58089ad2e4` is ready for pushing, 12 commits ahead of ci/master.
+
+---
+
