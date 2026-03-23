@@ -243,6 +243,10 @@ static const struct {
 		RISCV_EFI_BOOT_PROTOCOL_GUID,
 	},
 #endif
+	{
+		"EFI Debug Image Info Table",
+		EFI_DEBUG_IMAGE_INFO_TABLE_GUID,
+	},
 #endif /* CONFIG_CMD_EFIDEBUG */
 #ifdef CONFIG_CMD_NVEDIT_EFI
 	/* signature database */
