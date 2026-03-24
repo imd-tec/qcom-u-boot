@@ -47943,3 +47943,137 @@ The pipeline should be retried to verify the infrastructure issues have been res
 
 ---
 
+## 2026-03-23: us/next
+
+Branch: cherry-4673c8dcb48
+
+Commits:
+- 4673c8dcb48 mach-k3: use minimal memory map for all K3
+- e55e57d240e mach-k3: use custom enable_cache
+- 567a683e8ce arm: armv8: mmu: export mmu_setup
+- 9ebdbbc43e5 arm: armv8: invalidate dcache entries on dcache_enable
+- fe2647f2a0d arm: armv8: mmu: add mem_map_from_dram_banks
+- f1c694b8fdd mach-k3: map all banks using mem_map_from_dram_banks
+- 856480eef0a arm: armv8: mmu: add mmu_unmap_reserved_mem
+- 16ffcff0283 spl: split spl_board_fixups to arch/board specific
+- 859f68ed2ee mach-k3: add reserved memory fixups for next boot stage
+- 4f5285f0e64 mach-k3: add carveouts for TFA and optee
+- 342fd918b1b arm: mach-k3: reserve space for page table entries
+- 8bc918ed97b Merge patch series "Add support for dynamic MMU configuration"
+
+### Conversation log
+The repository state is clean (only untracked files, no uncommitted changes). Now let me create a new branch based on ci/master and start the cherry-pick process.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+First commit cherry-picked successfully. Let me verify the delta and run the build test.
+
+Delta matches (1 file, 10 insertions, 22 deletions). Now let me run the build test:
+
+Build passed. Moving to the second commit:
+
+Delta matches. Build test:
+
+Build passed. Third commit:
+
+Delta matches. Build test:
+
+Build passed. Fourth commit:
+
+Delta matches. Build test:
+
+Build passed. Fifth commit:
+
+Delta matches. Build test:
+
+Build passed. Sixth commit:
+
+Delta matches. Build test:
+
+Build passed. Seventh commit:
+
+Delta matches. Build test:
+
+Build passed. Eighth commit:
+
+There's a conflict. Let me investigate the conflict:
+
+The conflict is that `board/ti/am62dx/evm.c` was deleted in our branch (ci/master) but the commit is trying to modify it. Let me check what the original commit was trying to add:
+
+The file `board/ti/am62dx/evm.c` was deleted in our branch ci/master, so it doesn't exist anymore. This means the change to rename `spl_perform_fixups` to `spl_perform_board_fixups` is no longer applicable since the file is gone. I'll resolve this by removing the file from the conflict:
+
+The cherry-pick was completed with a conflict resolution. Now I need to amend the commit to add a note about the fix-up:
+
+Now let me check the delta:
+
+The delta is acceptable - we have 19 files (35 ins, 23 del) vs original 20 files (36 ins, 24 del). The difference is just the dropped `board/ti/am62dx/evm.c` file that was deleted in ci/master. This is expected. Now build test:
+
+Build passed. Ninth commit:
+
+Delta matches. Build test:
+
+Build passed. Tenth commit:
+
+Delta matches. Build test:
+
+Build passed. Eleventh commit:
+
+Delta matches. Build test:
+
+Build passed. Now the twelfth and final commit - this is a merge commit so I need to use `-m 1 --allow-empty`:
+
+Same conflict again with the deleted file. Let me resolve it:
+
+The merge commit resulted in an empty commit (which is expected since all the individual commits were already cherry-picked). I need to use `--allow-empty` to preserve the merge commit message:
+
+Let me amend the commit to add the cherry-pick reference and fix-up note:
+
+The cherry-pick reference is already there. Let me amend to add a proper fix-up note:
+
+Now let me verify with git log and run the final build test:
+
+All 12 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully for all 12 commits!**
+
+### Build Result: ✅ OK
+- All builds passed with no warnings or errors
+
+### Commits Applied:
+| # | Short Hash | Subject |
+|---|------------|---------|
+| 1 | 0c0c82c1ac5 | mach-k3: use minimal memory map for all K3 |
+| 2 | 88e7c102aa5 | mach-k3: use custom enable_cache |
+| 3 | 62a7d3c7833 | arm: armv8: mmu: export mmu_setup |
+| 4 | 74114a03d11 | arm: armv8: invalidate dcache entries on dcache_enable |
+| 5 | 6bae0141466 | arm: armv8: mmu: add mem_map_from_dram_banks |
+| 6 | 60cec1fa7b4 | mach-k3: map all banks using mem_map_from_dram_banks |
+| 7 | c970b143bd0 | arm: armv8: mmu: add mmu_unmap_reserved_mem |
+| 8 | 54fcbcafa3d | spl: split spl_board_fixups to arch/board specific |
+| 9 | 48686d150aa | mach-k3: add reserved memory fixups for next boot stage |
+| 10 | 1a5eabf4cf9 | mach-k3: add carveouts for TFA and optee |
+| 11 | 701e85f9f2f | arm: mach-k3: reserve space for page table entries |
+| 12 | f678b277444 | Merge patch series "Add support for dynamic MMU configuration" |
+
+### Fix-ups Made:
+1. **Commit 8 (16ffcff0283)** - spl: split spl_board_fixups to arch/board specific
+   - Conflict: `board/ti/am62dx/evm.c` was deleted in ci/master but modified in the commit
+   - Resolution: Dropped changes to `board/ti/am62dx/evm.c` (file deleted in ci/master)
+   - Note added to commit message
+
+2. **Commit 12 (8bc918ed97b)** - Merge patch series (merge commit)
+   - Same conflict with `board/ti/am62dx/evm.c`
+   - Resolution: Dropped changes to `board/ti/am62dx/evm.c` (file deleted in ci/master)
+   - The commit is empty (as expected for a merge commit when all individual commits were already cherry-picked)
+   - Note added to commit message
+
+### Deltas:
+- All commit deltas matched the originals, with the only exceptions being the expected omission of changes to the deleted file `board/ti/am62dx/evm.c`
+
+### Branch Status:
+The branch `cherry-4673c8dcb48` is ready for pushing, 12 commits ahead of `ci/master`.
+
+---
+
