@@ -48077,3 +48077,95 @@ The branch `cherry-4673c8dcb48` is ready for pushing, 12 commits ahead of `ci/ma
 
 ---
 
+## 2026-03-23: us/next
+
+Branch: cherry-38f40e6de60
+
+Commits:
+- 38f40e6de60 makefile: Fix recursive makes
+- 251dd6bf0e8 firmware: scmi: Conditionally compile protocol support
+- d1f1c98d846 firmware: scmi: Cleanup the SCMI MISC ID
+- cf262e16080 env: fat, ubi: Fix gd->env_valid for the first write
+- 7830ccc77a1 firmware: scmi: Support probe vendor ID 0x80 and 0x82
+- 104a0de7844 arm: armv8: Make save_boot_params simpler
+- 3f20ea3675c firmware: scmi: Add i.MX95 SCMI LMM protocol driver
+- 8506cf58ffa phy: ti: phy-j721e-wiz: Allow reinitialization when SERDES is pre-configured
+- ac9b02dd102 firmware: scmi: Add i.MX95 SCMI CPU Protocol
+- fae6c54d238 bootstd: make it possible to use tftp for netboot with standardboot
+- fd976ff3a23 Merge patch series "firmware: scmi: Support SCMI LMM/CPU protocol for i.MX95"
+
+### Conversation log
+The repository is clean (only untracked files). Let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the commits one by one, starting with the first one:
+
+Let me verify the commit delta and run the build test:
+
+Delta is identical (1 file, 4 insertions). Now run build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta matches. Build test:
+
+Let me continue with the third commit:
+
+Continuing with the fourth commit:
+
+Fifth commit:
+
+Sixth commit:
+
+Seventh commit:
+
+Eighth commit:
+
+Ninth commit:
+
+Tenth commit:
+
+Now the eleventh and final commit - this is a merge commit:
+
+The merge commit is empty because all its contents were already cherry-picked via the individual commits. As per instructions, I should use --allow-empty to preserve the merge commit for history tracking:
+
+The merge commit itself is empty (as expected since all changes were already cherry-picked) but the commit message is preserved. Now let me run the final build test:
+
+Now let me verify the git log and run the final verification:
+
+All 11 commits are present. Let me run the final build test:
+
+## Final Status Report
+
+### Summary
+All 11 commits were successfully cherry-picked from `us/next` branch to the new branch `cherry-38f40e6de60`.
+
+### Build Result: ✅ OK
+- All build tests passed without warnings or errors
+
+### Cherry-picked Commits (all successful):
+
+| # | Hash | Subject |
+|---|------|---------|
+| 1 | 05bd765a9cc | makefile: Fix recursive makes |
+| 2 | b03ea51f338 | firmware: scmi: Conditionally compile protocol support |
+| 3 | d18eb8fbc6e | firmware: scmi: Cleanup the SCMI MISC ID |
+| 4 | 845bf71ceb9 | env: fat, ubi: Fix gd->env_valid for the first write |
+| 5 | bd33456f596 | firmware: scmi: Support probe vendor ID 0x80 and 0x82 |
+| 6 | 8b383023c55 | arm: armv8: Make save_boot_params simpler |
+| 7 | 8adcf1c3cbf | firmware: scmi: Add i.MX95 SCMI LMM protocol driver |
+| 8 | 7ddbf59f4bf | phy: ti: phy-j721e-wiz: Allow reinitialization when SERDES is pre-configured |
+| 9 | 02855b42a48 | firmware: scmi: Add i.MX95 SCMI CPU Protocol |
+| 10 | 9158ea93b37 | bootstd: make it possible to use tftp for netboot with standardboot |
+| 11 | 7cf36da2472 | Merge patch series "firmware: scmi: Support SCMI LMM/CPU protocol for i.MX95" (empty commit) |
+
+### Fix-ups Made: None
+
+### Commits with Concerning Deltas: None
+All commits had identical file stats between the original and cherry-picked versions.
+
+### Notes:
+- The merge commit (fd976ff3a23) was cherry-picked as an empty commit, which is expected since all its constituent commits were already cherry-picked individually. The commit message is preserved for history tracking.
+
+The branch `cherry-38f40e6de60` is ready for pushing.
+
+---
+
