@@ -167,6 +167,7 @@ Type       distro
 Method:    extlinux
 State      ready
 Partition  2
+Encrypted  no
 Subdir     (none)
 Filename   /extlinux/extlinux.conf
 Buffer     3db7ad48
@@ -183,6 +184,11 @@ Device
 
 Block dev
     Name of the block device, if any. Network devices don't have a block device.
+
+Encrypted
+    Encryption status. Shows ``LUKSv1`` or ``LUKSv2`` if a LUKS-encrypted
+    partition was detected on the same device, or ``no`` otherwise. Only
+    shown when ``CONFIG_BLK_LUKS`` is enabled.
 
 Subdir
     Subdirectory used for retrieving files. For network bootdevs this is the
@@ -338,6 +344,7 @@ displayed and booted::
     Method:    distro
     State:     ready
     Partition: 2
+    Encrypted: no
     Subdir:    (none)
     Filename:  extlinux/extlinux.conf
     Buffer:    3db7ae88
