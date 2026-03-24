@@ -48268,261 +48268,192 @@ No code changes are required. The pipeline should pass on retry when the lab inf
 
 ## 2026-03-24: us/next
 
-Branch: cherry-4e203ee0ce1
+Branch: cherry-3cb97f92933
 
 Commits:
-- 4e203ee0ce1 sunxi: a523: Add OrangePi 4A defconfig
-- fb48e8760ed sunxi: a523: Re-use H6/H616 DRAM size detection method
-- 951c5a29644 Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage
-- bf9636ef36a sunxi: add support for NetCube Systems Kumquat
-- 8513f7e78a9 net: sun8i-emac: Remove internal PHY config default value
-- 48293ab19ab net: sun8i-emac: Add support for active-low leds with internal PHY
-- 15e158ccd97 sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM
-- 993c48bd416 sunxi: switch Allwinner A80 boards to OF_UPSTREAM
-- e828295c903 sunxi: dts: arm64: update devicetree files from Linux kernel tree
-- fa4dfe870c1 sunxi: dts: arm: update devicetree files from Linux kernel tree
-- c95334515f4 Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi
+- 3cb97f92933 doc: separate read and write command documentation
+- 419cc25aa15 efi_loader: efi_console: support editable input fields
+- e87130e0718 doc: develop: Fix typos in binman/binman.rst
+- 66f7574dddb doc: develop: Change formatting to make binman doc more readable
+- ed00d12c015 doc: Fix typos
+- c8637b74962 boot: kconfig: Fix typos
+- e9386ec1d76 image: Fix typos in image.h
+- 4661eb33a42 bootm: Fix typo in bootm.h
+- 296f9eac9ff boot: Fix typo
+- 72ec2634035 doc: Fix whitespace in devicetree example in overlay-fdt-boot.rst
+- 1f6da608c3d doc: develop: virtio: Fix qemu example (true/false -> on/off)
+- 11da3403e91 doc: usage: Add general rule for `$?`
+- ddc7a60cc77 doc: askenv: Reword and remove return value
+- dbdf60b7aa8 doc: seama: Reword return value section
+- ab9080820e0 doc: usage: Use glob for all commands
+- 5335f8d25b2 doc/usage: Add a reference to General rules for commands
+- 9094482ca75 Merge tag 'efi-2026-01-rc1-2' of https://source.denx.de/u-boot/custodians/u-boot-efi
 
 ### Conversation log
-The repository has some untracked files but is otherwise clean. Let me create and checkout the new branch based on ci/master:
+Good, the repository state is clean (only untracked files which won't affect cherry-picking). Now let me create and checkout the new branch based on ci/master.
 
-Now let me cherry-pick the first commit:
+Now let's start cherry-picking the commits one by one. First commit:
 
-First commit successful. Let me check the delta and run build test:
+The deltas match. Now run the build test:
 
-Deltas match (2 files, 37 insertions). Now let me run the build test:
+Build passed. Now cherry-pick the second commit:
 
-Build passed. Now let me cherry-pick the second commit:
+Deltas match. Run build test:
+
+Build passed. Now cherry-pick the third commit:
+
+Deltas match. Run build test:
+
+Build passed. Now cherry-pick the fourth commit:
+
+Deltas match. Run build test:
+
+Build passed. Now the fifth commit - this one is marked as "maybe already applied":
+
+The patches are significantly different - they fix different typos in different files. The original ed00d12c015 fixes doc/ files while 7252f3c16af fixes bootstd.rst typos. Let me proceed with the cherry-pick:
+
+Deltas match. Run build test:
+
+Build passed. Now cherry-pick the sixth commit:
+
+Deltas match. Run build test:
+
+Build passed. Now cherry-pick the seventh commit:
+
+There's a conflict. Let me check the conflict:
+
+I see the conflict. The original commit is making typo fixes but ci/master has different header documentation. Let me examine what the original commit is trying to do:
+
+The original commit fixes these typos:
+1. "decicated" -> "dedicated" (two places)
+2. "skiped" -> "skipped" 
+3. "Decribes" -> "Describes"
+
+Let me check if these typos exist in ci/master:
+
+Two of the typos still exist. Let me see the full context:
+
+Two of the typos (dedicated/skipped) are already fixed in the ramdisk section, but the FDT section still has "decicated" and there's still "Decribes". Let me resolve the conflict by keeping the ci/master version and applying only the remaining typo fixes:
+
+Now I can see the two typos that need fixing:
+1. Line 831: "Decribes" -> "Describes"  
+2. Line 897: "decicated" -> "dedicated"
+
+Let me apply these fixes manually:
+
+Let me try using sed via bash instead:
+
+Now let me commit this change:
+
+The delta shows 2 vs 4 lines changed - this is expected since 2 of the typos were already fixed in ci/master. Run build test:
+
+Build passed. Now cherry-pick the eighth commit:
+
+Deltas match. Run build test:
+
+Build passed. Now the ninth commit - marked as "maybe already applied":
+
+These patches are completely different - 93743d241c6 is a large kernel subtree squash, not a typo fix. Let me cherry-pick 296f9eac9ff:
 
 Deltas match. Build test:
 
-Build passed. Third commit:
+Build passed. Now cherry-pick the tenth commit:
 
 Deltas match. Build test:
 
-Build passed. Fourth commit - this one is marked as "maybe already applied as 3f36fd04c37", so I need to check first:
-
-These patches are completely different. The original bf9636ef36a is about NetCube Systems Kumquat support, but 3f36fd04c37 is a squash of device tree files. Let me search for the actual commit in ci/master:
-
-The commit is not directly applied. Let me try cherry-picking it:
+Build passed. Now cherry-pick the eleventh commit:
 
 Deltas match. Build test:
 
-Build passed. Fifth commit:
+Build passed. Now cherry-pick the twelfth commit:
+
+There are conflicts. Let me check them:
+
+I see the pattern - the original commit 11da3403e91 removes "Return value" sections from these files because it adds a general rule in cmdline.rst. However, ci/master has additional content before the "Return value" sections. Let me resolve these conflicts:
+
+I see the issue - the commit wants to remove "Return value" sections, but ci/master has additional content. I should keep ci/master content except remove the "Return value" sections. Let me resolve each conflict:
+
+Good. Now let me resolve font.rst:
+
+Now resolve wget.rst:
+
+Now add all resolved files and continue:
+
+I need to amend the commit to note the conflict resolution:
+
+The file counts match (45 files). Build test:
+
+Build passed. Now cherry-pick the thirteenth commit:
 
 Deltas match. Build test:
 
-Build passed. Sixth commit:
+Build passed. Cherry-pick fourteenth commit:
 
 Deltas match. Build test:
 
-Build passed. Seventh commit:
+Build passed. Cherry-pick fifteenth commit:
+
+The conflict is straightforward - the original commit replaces the long list with `cmd/*`. Let me resolve it:
+
+The delta differs slightly (133 vs 117 lines) because ci/master has more commands. That's fine - the result is the same (using glob). Build test:
+
+Build passed. Cherry-pick sixteenth commit:
 
 Deltas match. Build test:
 
-Build passed. Eighth commit:
+Build passed. Now the final (seventeenth) commit - this is a merge commit:
 
-Deltas match. Build test:
+Conflicts in the merge commit. Let me check what they are:
 
-Build passed. Ninth commit:
+The merge commit conflicts with the changes we already applied. Since the merge commit's purpose is to bring in all the preceding changes, and we've already applied them, we should keep our HEAD version (which already has all the changes). Let me resolve these:
 
-Deltas match. Build test:
+The merge commit is empty because all changes were already applied. As per the instructions, we need to include merge commits even if empty:
 
-Build passed. Tenth commit:
+Now let's verify the final result:
 
-Deltas match. Build test:
+All 17 commits are present (from 8cc0046b3dd to 8c0869ef1ae). Now run the final build test:
 
-Build passed. Now for the eleventh commit - this is a merge commit, marked as "maybe already applied as 661332a0744". Let me check first:
+**Final Status Report:**
 
-These are different merges (different dates, different content). I'll proceed with cherry-picking the merge commit:
+## Cherry-Pick Summary
 
-The merge commit is now empty (as expected since all individual commits are already applied). I'll commit it as an empty commit to preserve the merge message:
+**Branch:** `cherry-3cb97f92933` based on `ci/master`
 
-The merge commit was cherry-picked as an empty commit (which is expected since all individual commits have already been applied). Build test:
+### Build Result: ✅ OK
 
-Build passed. Now let me verify all 11 commits are present:
+### All 17 Commits Applied:
 
-All 11 commits are present. Let me run the final build test:
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | 8cc0046b3dd | doc: separate read and write command documentation | ✅ Clean |
+| 2 | a522893f7aa | efi_loader: efi_console: support editable input fields | ✅ Clean |
+| 3 | 0d53da28b4b | doc: develop: Fix typos in binman/binman.rst | ✅ Clean |
+| 4 | 2c5d0f2c55a | doc: develop: Change formatting to make binman doc more readable | ✅ Clean |
+| 5 | 21d2378bf1a | doc: Fix typos | ✅ Clean (verified different from 7252f3c16af) |
+| 6 | 69c05188e2e | boot: kconfig: Fix typos | ✅ Clean |
+| 7 | 2b6da53f541 | image: Fix typos in image.h | ⚠️ **Partial** - 2 of 4 typos already fixed in ci/master |
+| 8 | d9c20e9048e | bootm: Fix typo in bootm.h | ✅ Clean |
+| 9 | f633f10acec | boot: Fix typo | ✅ Clean (verified different from 93743d241c6) |
+| 10 | 66859f30b1d | doc: Fix whitespace in devicetree example in overlay-fdt-boot.rst | ✅ Clean |
+| 11 | 785ada04638 | doc: develop: virtio: Fix qemu example (true/false -> on/off) | ✅ Clean |
+| 12 | 7cb8a7321e2 | doc: usage: Add general rule for `$?` | ⚠️ **Conflict resolved** - Kept ci/master content while removing Return value sections |
+| 13 | 5daf0777760 | doc: askenv: Reword and remove return value | ✅ Clean |
+| 14 | bf17c4e3443 | doc: seama: Reword return value section | ✅ Clean |
+| 15 | 2abac0853f1 | doc: usage: Use glob for all commands | ⚠️ **Conflict resolved** - Different starting line count but same result |
+| 16 | fabb570f4ff | doc/usage: Add a reference to General rules for commands | ✅ Clean |
+| 17 | 8c0869ef1ae | Merge tag 'efi-2026-01-rc1-2' | ✅ Empty (all changes already applied) |
 
-## Final Status
+### Fix-ups Made:
+1. **Commit 7 (image.h):** Only 2 of 4 original typo fixes applied - the other 2 were already fixed in ci/master. Added note to commit message.
+2. **Commit 12 (general rule for $?):** Resolved conflicts in fdt.rst, font.rst, and wget.rst - kept ci/master's additional content while removing the Return value sections as intended. Added note to commit message.
+3. **Commit 15 (glob):** Minor conflict resolved - different number of commands being replaced but same end result.
+4. **Commit 17 (merge):** Empty merge commit preserved for history tracking.
 
-All 11 commits have been successfully cherry-picked onto branch `cherry-4e203ee0ce1`:
+### Commits Verified as NOT Already Applied:
+- **ed00d12c015** (doc: Fix typos) - verified different from 7252f3c16af (different files, different typos)
+- **296f9eac9ff** (boot: Fix typo) - verified different from 93743d241c6 (that's a large kernel subtree squash, not a typo fix)
 
-| # | Original Hash | Subject | Status |
-|---|---------------|---------|--------|
-| 1 | 4e203ee0ce1 | sunxi: a523: Add OrangePi 4A defconfig | ✓ Cherry-picked |
-| 2 | fb48e8760ed | sunxi: a523: Re-use H6/H616 DRAM size detection method | ✓ Cherry-picked |
-| 3 | 951c5a29644 | Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage | ✓ Cherry-picked |
-| 4 | bf9636ef36a | sunxi: add support for NetCube Systems Kumquat | ✓ Cherry-picked (not already applied - 3f36fd04c37 was unrelated squash commit) |
-| 5 | 8513f7e78a9 | net: sun8i-emac: Remove internal PHY config default value | ✓ Cherry-picked |
-| 6 | 48293ab19ab | net: sun8i-emac: Add support for active-low leds with internal PHY | ✓ Cherry-picked |
-| 7 | 15e158ccd97 | sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM | ✓ Cherry-picked |
-| 8 | 993c48bd416 | sunxi: switch Allwinner A80 boards to OF_UPSTREAM | ✓ Cherry-picked |
-| 9 | e828295c903 | sunxi: dts: arm64: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
-| 10 | fa4dfe870c1 | sunxi: dts: arm: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
-| 11 | c95334515f4 | Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi | ✓ Cherry-picked (empty merge - all child commits applied) |
-
-**Build Result:** ✓ OK - sandbox build passed
-
-**Fix-ups:** None required
-
-**Concerning Deltas:** None - all commit deltas matched between original and cherry-picked versions
-
-**Notes:**
-- Commit 4 (bf9636ef36a - NetCube Kumquat) was marked as "maybe already applied as 3f36fd04c37" but the comparison showed 3f36fd04c37 was a completely different commit (a squashed DTS subtree update), so the cherry-pick was performed normally.
-- Commit 11 (merge commit c95334515f4) was marked as "maybe already applied as 661332a0744" but comparison showed they were different merges from different dates (2025 vs 2023), so the cherry-pick was performed. It resulted in an empty commit since all individual commits from the merge were already applied in this branch.
-
-The branch `cherry-4e203ee0ce1` is ready for pushing.
-
----
-
-### Pipeline fix: 2026-03-24 (attempt 1)
-
-Branch: cherry-4e203ee0ce1
-
-Failed jobs:
-- vbe (sjg-lab)
-- pcduino3_nano (sjg-lab)
-
-### Conversation log
-Let me analyze the job logs:
-
-**VBE job (rk3399-generic-ddr3):**
-- The VPL boot fails with "Error: -5" 
-- "VPL: failed to boot from all boot devices"
-- "### ERROR ### Please RESET the board ###"
-- This is a boot failure on real hardware at the VPL stage
-
-**pcduino3_nano job:**
-- Times out waiting for U-Boot prompt ("Timeout of 15 seconds exceeded during waiting for login")
-- No boot output shown - the board doesn't seem to boot at all
-- "Lab failure: Marking connection bad"
-
-Both failures appear to be hardware lab infrastructure issues - the boards aren't booting properly. The VBE failure shows "Error: -5" (which is -EIO) in VPL stage, and pcduino3_nano shows no boot output at all.
-
-However, let me check out the branch and look at the commits more closely to see if any of them could have caused these boot failures on ARM boards:
-
-Looking at the logs more closely:
-
-1. **vbe job**: The VPL stage fails with "Error: -5" when trying to boot from vbe_abrec on a rk3399-generic-ddr3 board. The error happens after loading the firmware - it fails when trying to "boot from vbe_abrec" in VPL.
-
-2. **pcduino3_nano job**: No boot output at all - just times out.
-
-Both of these appear to be lab/hardware issues, not code issues from this MR:
-
-1. The vbe job failure on rk3399 is related to VBE boot mechanism, not sunxi boards
-2. The pcduino3_nano timeout with no boot output suggests a hardware/lab connectivity issue
-
-However, let me check if any of the sunxi device tree changes could affect the pcduino3_nano board:
-
-These commits are much older - the pcduino DTS files weren't touched by this MR. Let me check if there were any changes to common sunxi code that could affect the pcduino:
-
-The pcduino3_nano uses the sun7i-a20 SoC. The only sun7i change is to bananapi.dts, not pcduino. Let me check what board config is used for pcduino3_nano:
-
-No changes to the pcduino config. Let me analyze the error codes more carefully. Error -5 is -EIO. Let me look at what could cause these issues:
-
-No VBE changes. The MR is focused on sunxi boards only. Let me look at what files were changed overall:
-
-I see there's a change to `scripts/Makefile.xpl` which could affect builds. Let me check it:
-
-This change adds the KEYDIR option to sunxi-spl.bin. This shouldn't break basic boot - it's only used when KEYDIR is set. Let me also check the sun8i_emac driver changes:
-
-This is a significant change to the internal PHY initialization! Looking at the old code vs new:
-
-**Old code:**
-```c
-reg = readl(priv->sysctl_reg);  // Read existing value
-reg = sun8i_emac_set_syscon_ephy(priv, reg);  // Modify it
-```
-The old code preserved any existing bits in the syscon register.
-
-**New code:**
-```c
-u32 reg = 0;  // Start from zero
-if (priv->use_internal_phy) {
-    ...
-} else {
-    reg |= H3_EPHY_SHUTDOWN;  // Only sets shutdown bit
-}
-```
-
-The new code starts from 0 and doesn't preserve any existing bits! This is a significant change that could break boards.
-
-However, the pcduino3_nano uses an external Gigabit PHY (RTL8211E), not the internal PHY. Let me verify:
-
-The pcduino3_nano uses `gmac` (Gigabit MAC with external PHY), not `emac` with internal PHY. The sun8i_emac driver is not used by this board.
-
-Let me check if the pcduino3_nano uses sun8i_emac or a different driver:
-
-The pcduino3_nano uses `CONFIG_SUN7I_GMAC=y` and `CONFIG_ETH_DESIGNWARE=y`, not sun8i_emac. So the ethernet driver changes don't affect it.
-
-Looking back at the job logs:
-1. **pcduino3_nano** - The log shows "Writing U-Boot using method sunxi" and then immediately times out with no boot output. This is a lab infrastructure issue - no boot messages at all means the board didn't boot, which could be:
-   - Hardware issue
-   - Lab connectivity/power issue
-   - SD card write failure
-
-2. **vbe (rk3399)** - This is a Rockchip board, not a sunxi board! The MR is sunxi-focused. The VBE test fails with "Error: -5" (EIO) in VPL stage. This is completely unrelated to the sunxi changes in this MR.
-
-These failures appear to be **infrastructure/lab issues**, not code issues from this MR:
-
-1. The **vbe job** runs on rk3399-generic-ddr3 which is a Rockchip board - the sunxi changes in this MR don't affect Rockchip at all
-2. The **pcduino3_nano** shows no boot output at all - the board didn't start, suggesting a lab/hardware issue rather than a code issue
-
-Let me verify there are no common code changes that could affect all boards:
-
-All the code changes are sunxi-specific:
-- `arch/arm/mach-sunxi/` - Sunxi-specific code
-- `dram_sun55i_a523.c` - A523 SoC-specific DRAM code
-- `drivers/net/sun8i_emac.c` - Sun8i ethernet driver (not used by pcduino3_nano or rk3399)
-- `scripts/Makefile.xpl` - Only adds KEYDIR option for sunxi-spl.bin
-
-None of these changes would affect rk3399 (Rockchip) boards.
-
-Let me double-check if there's any issue that could affect pcduino3_nano specifically by building it:
-
-The pcduino3_nano builds successfully with no errors. Let me also verify sandbox builds:
-
-There's a build error, but this appears to be a pre-existing issue with the dtc parser - it's not related to the MR. Let me check if this existed before the MR:
-
-The sandbox build error exists on ci/master as well - it's a pre-existing issue, not from this MR. Let me go back to the MR branch:
-
-Based on my analysis, these are **infrastructure/lab failures**, not code issues:
-
-1. **vbe job (rk3399-generic-ddr3)**: This is a Rockchip board. The MR contains only sunxi (Allwinner) changes. The VPL boot failure with "Error: -5" is completely unrelated to the sunxi code in this MR.
-
-2. **pcduino3_nano job**: 
-   - The board builds successfully
-   - The log shows no boot output at all - the test times out waiting for the U-Boot prompt
-   - This suggests a lab connectivity/hardware issue (board didn't power up, serial connection issue, SD card write failure, etc.)
-   - The sun7i-a20 pcduino3_nano DTS was not modified by this MR
-   - The Linksprite_pcDuino3_Nano_defconfig was not modified
-   - The board uses SUN7I_GMAC (DesignWare ethernet), not sun8i_emac, so the ethernet changes don't affect it
-
-**Conclusion**: These failures are **infrastructure/transient issues** (lab hardware, connectivity, or runner problems), not code issues introduced by this MR.
-
-## Report
-
-**Analysis Summary:**
-
-Both failed jobs appear to be **infrastructure/lab issues**, not code problems from the MR:
-
-### Job: vbe (rk3399-generic-ddr3)
-- **Failure type**: Hardware lab issue
-- **Root cause**: The board (Rockchip rk3399) fails at VPL stage with "Error: -5" (EIO) when trying to "boot from vbe_abrec"
-- **Why not MR-related**: This MR contains only Allwinner/sunxi changes. The rk3399 is a Rockchip SoC - completely different architecture. None of the code in this MR could affect Rockchip boards.
-
-### Job: pcduino3_nano (Linksprite_pcDuino3_Nano)
-- **Failure type**: Hardware lab issue
-- **Root cause**: The test times out ("Timeout of 15 seconds exceeded during waiting for login") with no boot output shown at all
-- **Why not MR-related**: 
-  - The board's DTS file (`sun7i-a20-pcduino3-nano.dts`) was not modified
-  - The board's defconfig (`Linksprite_pcDuino3_Nano_defconfig`) was not modified
-  - The board uses `SUN7I_GMAC` driver, not `sun8i_emac` (which was modified)
-  - The board builds successfully with `buildman`
-  - No boot output at all suggests a lab connectivity/hardware issue
-
-**Recommendation**: No code changes are needed. These failures should be retried after confirming lab hardware is functioning properly.
+The branch `cherry-3cb97f92933` is ready for pushing.
 
 ---
 
