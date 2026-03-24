@@ -48266,3 +48266,113 @@ No code changes are required. The pipeline should pass on retry when the lab inf
 
 ---
 
+## 2026-03-24: us/next
+
+Branch: cherry-4e203ee0ce1
+
+Commits:
+- 4e203ee0ce1 sunxi: a523: Add OrangePi 4A defconfig
+- fb48e8760ed sunxi: a523: Re-use H6/H616 DRAM size detection method
+- 951c5a29644 Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage
+- bf9636ef36a sunxi: add support for NetCube Systems Kumquat
+- 8513f7e78a9 net: sun8i-emac: Remove internal PHY config default value
+- 48293ab19ab net: sun8i-emac: Add support for active-low leds with internal PHY
+- 15e158ccd97 sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM
+- 993c48bd416 sunxi: switch Allwinner A80 boards to OF_UPSTREAM
+- e828295c903 sunxi: dts: arm64: update devicetree files from Linux kernel tree
+- fa4dfe870c1 sunxi: dts: arm: update devicetree files from Linux kernel tree
+- c95334515f4 Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Let me check the delta and run build test:
+
+Deltas match (2 files, 37 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Deltas match. Build test:
+
+Build passed. Third commit:
+
+Deltas match. Build test:
+
+Build passed. Fourth commit - this one is marked as "maybe already applied as 3f36fd04c37", so I need to check first:
+
+These patches are completely different. The original bf9636ef36a is about NetCube Systems Kumquat support, but 3f36fd04c37 is a squash of device tree files. Let me search for the actual commit in ci/master:
+
+The commit is not directly applied. Let me try cherry-picking it:
+
+Deltas match. Build test:
+
+Build passed. Fifth commit:
+
+Deltas match. Build test:
+
+Build passed. Sixth commit:
+
+Deltas match. Build test:
+
+Build passed. Seventh commit:
+
+Deltas match. Build test:
+
+Build passed. Eighth commit:
+
+Deltas match. Build test:
+
+Build passed. Ninth commit:
+
+Deltas match. Build test:
+
+Build passed. Tenth commit:
+
+Deltas match. Build test:
+
+Build passed. Now for the eleventh commit - this is a merge commit, marked as "maybe already applied as 661332a0744". Let me check first:
+
+These are different merges (different dates, different content). I'll proceed with cherry-picking the merge commit:
+
+The merge commit is now empty (as expected since all individual commits are already applied). I'll commit it as an empty commit to preserve the merge message:
+
+The merge commit was cherry-picked as an empty commit (which is expected since all individual commits have already been applied). Build test:
+
+Build passed. Now let me verify all 11 commits are present:
+
+All 11 commits are present. Let me run the final build test:
+
+## Final Status
+
+All 11 commits have been successfully cherry-picked onto branch `cherry-4e203ee0ce1`:
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 4e203ee0ce1 | sunxi: a523: Add OrangePi 4A defconfig | ✓ Cherry-picked |
+| 2 | fb48e8760ed | sunxi: a523: Re-use H6/H616 DRAM size detection method | ✓ Cherry-picked |
+| 3 | 951c5a29644 | Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage | ✓ Cherry-picked |
+| 4 | bf9636ef36a | sunxi: add support for NetCube Systems Kumquat | ✓ Cherry-picked (not already applied - 3f36fd04c37 was unrelated squash commit) |
+| 5 | 8513f7e78a9 | net: sun8i-emac: Remove internal PHY config default value | ✓ Cherry-picked |
+| 6 | 48293ab19ab | net: sun8i-emac: Add support for active-low leds with internal PHY | ✓ Cherry-picked |
+| 7 | 15e158ccd97 | sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM | ✓ Cherry-picked |
+| 8 | 993c48bd416 | sunxi: switch Allwinner A80 boards to OF_UPSTREAM | ✓ Cherry-picked |
+| 9 | e828295c903 | sunxi: dts: arm64: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
+| 10 | fa4dfe870c1 | sunxi: dts: arm: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
+| 11 | c95334515f4 | Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi | ✓ Cherry-picked (empty merge - all child commits applied) |
+
+**Build Result:** ✓ OK - sandbox build passed
+
+**Fix-ups:** None required
+
+**Concerning Deltas:** None - all commit deltas matched between original and cherry-picked versions
+
+**Notes:**
+- Commit 4 (bf9636ef36a - NetCube Kumquat) was marked as "maybe already applied as 3f36fd04c37" but the comparison showed 3f36fd04c37 was a completely different commit (a squashed DTS subtree update), so the cherry-pick was performed normally.
+- Commit 11 (merge commit c95334515f4) was marked as "maybe already applied as 661332a0744" but comparison showed they were different merges from different dates (2025 vs 2023), so the cherry-pick was performed. It resulted in an empty commit since all individual commits from the merge were already applied in this branch.
+
+The branch `cherry-4e203ee0ce1` is ready for pushing.
+
+---
+
