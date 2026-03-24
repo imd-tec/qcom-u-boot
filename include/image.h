@@ -828,7 +828,7 @@ int boot_get_fdt_fit(struct bootm_headers *images, ulong addr,
  * @param bootstage_id	ID of starting bootstage to use for progress updates.
  *			This will be added to the BOOTSTAGE_SUB values when
  *			calling bootstage_mark()
- * @param load_op	Decribes what to do with the load address
+ * @param load_op	Describes what to do with the load address
  * @param datap		Returns address of loaded image
  * @param lenp		Returns length of loaded image
  * Return: node offset of image, or -ve error code on error:
@@ -894,7 +894,7 @@ int fit_get_node_from_config(struct bootm_headers *images,
  *
  * Finds a valid flat device tree image if possible, from these sources:
  *      - multicomponent kernel/ramdisk/FDT image
- *      - commandline provided address of decicated FDT image
+ *      - commandline provided address of dedicated FDT image
  *
  * @buf: Pointer to image
  * @select: FDT to select (this is normally argv[2] of the bootm command)
