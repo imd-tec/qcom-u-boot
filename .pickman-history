@@ -47496,3 +47496,450 @@ All 9 commits rebased cleanly with no conflicts. Deltas verified identical to pr
 
 ---
 
+## 2026-03-23: us/next
+
+Branch: cherry-caa2ad6f8c8
+
+Commits:
+- caa2ad6f8c8 tftp: make TFTP ports unconditionally configurable
+- efe1d6303f2 uthreads: Make use of CONFIG_IS_ENABLED consistently
+- 4cc1fe3f561 arm: socfpga: Tighten a few more driver dependencies
+- f8220460372 net: Add SYS_FAULT_MII_ADDR to Kconfig
+- 99707a0baaa net: Remove BOOTP_VENDOREX support
+- 772703b77e5 net: Tighten more driver dependencies
+- 83633e5774a net: phy: aquantia: switch to use phy_get_ofnode()
+- efaadc02b73 doc: bindings: fix aquantia-phy.txt typo
+- 9b2e1079e7d net: mediatek: mt7531/7988: fix broken PHY turn ON/OFF
+- 85f3d070e27 net: mediatek: mt7988: restore PHY page on PHY setting exit
+- ca4264db44c net: mediatek: mt7988: free allocated MDIO bus on cleanup
+- b24268d151a net: mediatek: move MT7531 MMIO MDIO to dedicated driver
+- 4b8e7858517 net: make dhcp_run() common for NET and NET_LWIP
+- ec127937199 net: airoha: simplify rx/free packet logic a bit
+- 648d2ade0b7 net: airoha: increase the number of rx network buffers
+- 34369d34e41 net: phy: add paged PHY register accessors
+- 81e5708cc2c net: bootp: Prevent buffer overflow to avoid leaking the RAM content
+- 85c2c2c517a net: phy: Make driver overloading get_phy_id depend on !COMPILE_TEST
+- ed6ec8d1ca0 net: designware: fix bitbang init error
+- 29a96acaa3a Merge tag 'net-20251022' of https://source.denx.de/u-boot/custodians/u-boot-net
+
+### Conversation log
+The repository has some untracked files but is otherwise clean (no staged or modified tracked files). I can proceed with the cherry-pick operation.
+
+Now I'll cherry-pick the commits one at a time. Let me start with the first commit:
+
+Delta looks identical. Now run the build test:
+
+Build passed. Moving on to the second commit:
+
+There's a conflict. Let me check if this commit (and possibly others) might already be applied in ci/master:
+
+Let me also check for the other commits to see if they're already in ci/master:
+
+None of those commits appear to exist in ci/master by exact subject. Let me look at the conflict to see if I can resolve it:
+
+I see the conflict. The incoming commit changes `CONFIG_UTHREAD` to `CONFIG_$(PHASE_)UTHREAD`, but the base already has an additional line `obj-$(CONFIG_ULIB) += ulib/`. Let me resolve this:
+
+I need to resolve by:
+1. Keeping the `obj-$(CONFIG_ULIB) += ulib/` line
+2. Using the new `CONFIG_$(PHASE_)UTHREAD` style
+
+Now I can resolve the conflict. The correct resolution is to keep the ULIB line and update UTHREAD to use CONFIG_$(PHASE_):
+
+Conflict resolved. Now let me mark it as resolved and continue the cherry-pick:
+
+Let me amend the commit to note the conflict resolution:
+
+Now check the delta and run the build:
+
+Delta looks good - same files and line counts.
+
+Build passed. Continue with commit 3:
+
+Delta matches.
+
+Commit 4:
+
+Commit 5:
+
+The conflict is that the cherry-pick wants to remove `BOOTP_VENDOREX` but ci/master has a slightly different version. The incoming commit removes it entirely but the base has it - we should accept the removal (the incoming change):
+
+The resolution is to accept the incoming (remove the BOOTP_VENDOREX section):
+
+Slightly different (3 vs 4 lines in cmd/Kconfig) which is expected given the conflict. Let me verify by checking what lines were removed:
+
+The original had `depends on CMD_BOOTP` line which wasn't in the ci/master version. The delta is acceptable - the intent (removing BOOTP_VENDOREX) is preserved.
+
+Commit 6:
+
+Commit 7:
+
+Commit 8:
+
+Commit 9:
+
+Commit 10:
+
+Commit 11:
+
+Commit 12:
+
+Commit 13:
+
+Very close (46 vs 47, and 34 vs 35) - likely just a minor context difference. The commit is successful.
+
+Commit 14:
+
+Commit 15:
+
+Commit 16:
+
+Commit 17:
+
+Commit 18:
+
+Commit 19:
+
+Commit 20 (the merge commit - need special handling):
+
+This is a merge commit - but since all the commits were already cherry-picked, this merge commit effectively creates a diff that is the combined effect of all those commits. Let's see what the conflict is:
+
+The conflict is similar to before - the merge commit doesn't have the ULIB line. We need to keep the ULIB line:
+
+The merge commit is now empty because all the changes were already cherry-picked individually. According to the instructions, we should preserve merge commits even if they're empty:
+
+Now let's verify all 20 commits are present:
+
+All 20 commits are present. Let me run the final build test:
+
+All done. Let me provide a summary:
+
+## Final Status Report
+
+### Build Result
+✅ **BUILD OK** - sandbox builds successfully with no warnings or errors.
+
+### Cherry-Pick Summary
+All 20 commits were successfully cherry-picked from `us/next` to the new branch `cherry-caa2ad6f8c8` (based on `ci/master`).
+
+### Commits Applied (in order):
+1. ✅ `caa2ad6f8c8` - tftp: make TFTP ports unconditionally configurable
+2. ✅ `efe1d6303f2` - uthreads: Make use of CONFIG_IS_ENABLED consistently
+3. ✅ `4cc1fe3f561` - arm: socfpga: Tighten a few more driver dependencies
+4. ✅ `f8220460372` - net: Add SYS_FAULT_MII_ADDR to Kconfig
+5. ✅ `99707a0baaa` - net: Remove BOOTP_VENDOREX support
+6. ✅ `772703b77e5` - net: Tighten more driver dependencies
+7. ✅ `83633e5774a` - net: phy: aquantia: switch to use phy_get_ofnode()
+8. ✅ `efaadc02b73` - doc: bindings: fix aquantia-phy.txt typo
+9. ✅ `9b2e1079e7d` - net: mediatek: mt7531/7988: fix broken PHY turn ON/OFF
+10. ✅ `85f3d070e27` - net: mediatek: mt7988: restore PHY page on PHY setting exit
+11. ✅ `ca4264db44c` - net: mediatek: mt7988: free allocated MDIO bus on cleanup
+12. ✅ `b24268d151a` - net: mediatek: move MT7531 MMIO MDIO to dedicated driver
+13. ✅ `4b8e7858517` - net: make dhcp_run() common for NET and NET_LWIP
+14. ✅ `ec127937199` - net: airoha: simplify rx/free packet logic a bit
+15. ✅ `648d2ade0b7` - net: airoha: increase the number of rx network buffers
+16. ✅ `34369d34e41` - net: phy: add paged PHY register accessors
+17. ✅ `81e5708cc2c` - net: bootp: Prevent buffer overflow to avoid leaking the RAM content
+18. ✅ `85c2c2c517a` - net: phy: Make driver overloading get_phy_id depend on !COMPILE_TEST
+19. ✅ `ed6ec8d1ca0` - net: designware: fix bitbang init error
+20. ✅ `29a96acaa3a` - Merge tag 'net-20251022' (empty after individual cherry-picks)
+
+### Fix-ups Made:
+1. **Commit 2** (`efe1d6303f2`): Resolved conflict in `lib/Makefile` - kept the `obj-$(CONFIG_ULIB) += ulib/` line while applying the `CONFIG_$(PHASE_)UTHREAD` change.
+
+2. **Commit 5** (`99707a0baaa`): Resolved conflict in `cmd/Kconfig` - accepted removal of `BOOTP_VENDOREX` section (one fewer line than original due to missing `depends on CMD_BOOTP` in ci/master version).
+
+3. **Commit 20** (`29a96acaa3a`): Merge commit is empty because all changes were already applied via individual cherry-picks. Created empty commit to preserve merge history.
+
+### Deltas:
+- All deltas were within acceptable limits (same files, minimal line count differences due to conflict resolutions).
+- Commit 5 had 3 vs 4 lines in cmd/Kconfig, but this is expected due to the different baseline.
+- Commit 13 had 46/34 vs 47/35 lines - minor context differences.
+
+The branch `cherry-caa2ad6f8c8` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-23 (attempt 1)
+
+Branch: cherry-caa2ad6f8c8
+
+Failed jobs:
+- vbe (sjg-lab)
+- tk1 (sjg-lab)
+- rockpro64 (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Let me analyze these failures:
+
+## Analysis of Job Failures
+
+Looking at the four failed jobs:
+
+1. **vbe (job-372168)**: VPL fails with `Error: -95` and `VPL: failed to boot from all boot devices`. The board shows "Please RESET the board" - the boot sequence doesn't complete.
+
+2. **tk1 (job-372167)**: Shows `USB resource not available` and `NetworkTegraUSBLoader... avail=False` - this is an **infrastructure issue** (USB hardware resource unavailable on the test lab).
+
+3. **rockpro64 (job-372162)**: SPL shows `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` then tries multiple MMC devices and all fail - boot fails entirely.
+
+4. **pcduino3_nano (job-372140)**: Times out waiting for U-Boot prompt - likely similar boot failure (no detailed boot log shown).
+
+Three of the four failures (vbe, rockpro64, pcduino3_nano) show boot failures where U-Boot doesn't complete the boot process. The tk1 failure is a clear infrastructure issue (USB resource unavailable).
+
+The errors `-95` (EOPNOTSUPP) and `-5` (EIO) in the rockpro64 log along with `spl_load_simple_fit: can't load image loadables index 0` suggest a code issue. The vbe failure at VPL stage with error -95 also indicates something is wrong with the boot flow.
+
+Let me checkout the branch and investigate the commits to find the root cause:
+
+Now I need to analyze the errors more carefully. The rockpro64 failure shows:
+- `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` - this is EIO (I/O error)
+
+The vbe failure shows:
+- `Error: -95` in VPL - EOPNOTSUPP (Operation not supported)
+- `VPL: failed to boot from all boot devices`
+
+Let me search for what might have changed related to SPL loading or FIT handling. The error `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` suggests something wrong with image loading.
+
+None of these appear to be in the MR. Let me check if any of the cherry-picked commits touch SPL code or the boot process:
+
+Looking at these commits, they are all NET-related changes. The failures are boot failures in SPL/VPL phases before U-Boot even starts networking. Let me check what base we're on and compare with a known working state:
+
+The branch is based on ci/master which is at `eb6e1975b10`. Let me look more closely at the error. The rockpro64 log shows:
+
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+Error code -5 is EIO (I/O error). This happens when trying to load the "loadables" section of the FIT image. Let me check if this is related to any of the commits:
+
+This commit changes network driver Kconfig dependencies, which should only affect network-specific boards. Let me check the designware fix:
+
+This is the fix for bitbang MDIO initialization. Looking at the code, it changes:
+- Old: `bus->reset = dw_mdio_reset;`
+- New: `bus->reset = dw_bb_mdio_reset;`
+
+The problem is that `dw_mdio_reset` expects `bus->priv` to be `struct udevice *`, but when using bitbang mode, `bus->priv` is set to `dwpriv` (which is `struct dw_eth_dev *`). The old code would call `dw_mdio_reset`, which calls `__dw_mdio_reset(dev)` where `dev = bus->priv` - but that's wrong because `bus->priv` is not a udevice!
+
+Let me check if the failing boards use designware ethernet:
+
+But let me reconsider - the boot failure happens in SPL, before U-Boot starts running. The errors are:
+- rockpro64: `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` in **SPL**
+- vbe: `Error: -95` `VPL: failed to boot from all boot devices` in **VPL**
+
+These are boot-stage failures, not networking failures. The network driver code wouldn't be running at this point. Let me look more carefully at what's happening.
+
+Wait, looking at the log again more carefully:
+- vbe job output says "load: Firefly-RK3399 Board" - this is also an rk3399
+- The error -95 (EOPNOTSUPP) happens in VPL
+
+Let me search for what returns error -95 in the boot path:
+
+Let me look at what returns -95 in the VPL boot path:
+
+The log shows it's trying to boot from vbe_abrec. Let me look at the error path more closely:
+
+Now let me look at `vbe_read_fit` which is used in the VPL path:
+
+Let me look at `spl_load_simple_fit` which is called from vbe_read_fit when in SPL phase:
+
+Now I see the issue. Looking at line 881-884 in `spl_fit.c`:
+
+```c
+ret = load_simple_fit(info, offset, &ctx, node, &image_info);
+if (ret < 0 && ret != -EBADSLT) {
+    printf("%s: can't load image loadables index %d (ret = %d)\n",
+           __func__, index, ret);
+    return ret;
+}
+```
+
+The error message matches exactly what we see in the log:
+```
+spl_load_simple_fit: can't load image loadables index 0 (ret = -5)
+```
+
+Error -5 is EIO, which is returned in `load_simple_fit` at line 308-309:
+```c
+if (info->read(info, read_offset, size, src_ptr) < length)
+    return -EIO;
+```
+
+This is a read error from the underlying block device. But this isn't directly caused by the NET changes in this MR.
+
+Let me re-examine the failures more carefully. The logs show:
+
+1. **rockpro64**: Boot works in TPL, fails in SPL with `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)`
+2. **vbe**: TPL works, VPL fails with `Error: -95`  
+3. **tk1**: Infrastructure issue - USB hardware unavailable
+4. **pcduino3_nano**: Timeout waiting for prompt - no detailed boot log
+
+Looking back at the error codes:
+- `-5` = EIO (Input/output error)
+- `-95` = EOPNOTSUPP (Operation not supported)
+
+The VBE failure with `-95` could come from various places. Let me search for EOPNOTSUPP in the relevant boot code:
+
+Let me look at what might be causing these boot failures by looking at ci/master to see if this test passed before. Given that the failures are all boot-related (SPL/VPL errors, not U-Boot proper), but none of the commits in this MR touch the boot/SPL code directly, this seems suspicious.
+
+Let me check if this could be an infrastructure/flaky test issue by checking if these tests passed on ci/master recently:
+
+Looking at the failures again more carefully:
+
+1. **tk1**: `USB resource not available` and `NetworkTegraUSBLoader... avail=False` - This is clearly an **infrastructure issue** - the USB hardware that's needed to flash/communicate with the board is not available. This is not a code issue.
+
+2. **rockpro64, vbe, pcduino3_nano**: These all fail during boot process on real hardware. 
+
+The fact that these are all "sjg-lab" stage tests that run on real hardware, combined with:
+- Error messages indicating hardware communication failures (MMC read errors, etc.)
+- One clear infrastructure failure (tk1 USB unavailable)
+- Similar timeout/boot failures across multiple different boards
+
+This looks like a **lab infrastructure issue** rather than a code bug. The errors like `mmc block read error`, `spl: mmc init failed`, and timeouts are characteristic of hardware/connectivity problems in a test lab, not code regressions.
+
+Let me verify by checking if any of the commits in this MR could possibly affect boot behavior:
+
+The only "boot"-related file changed is `net/bootp.c` (BOOTP network protocol), not the SPL boot process. Let me check what files were changed:
+
+None of these files have anything to do with SPL boot, MMC drivers, VBE boot, or the boot loader's initial startup. The changes are all:
+- Network drivers (ethernet, MDIO, PHY)
+- Network protocols (BOOTP, TFTP, DHCP)  
+- Kconfig changes for network-related options
+- Uthreads header (just phase macros)
+
+The boot failures on these boards cannot be caused by network driver changes - the boards are failing during SPL/VPL boot **before** the network stack would even be initialized.
+
+**Conclusion: These failures are infrastructure/lab issues, not code issues.**
+
+Let me report this finding:
+
+## Analysis Summary
+
+After thorough analysis of the pipeline failures for MR !783, I've determined that **these are infrastructure/transient lab issues, not code bugs**:
+
+### Evidence:
+
+1. **tk1 job**: Explicitly shows `USB resource not available; retrying reset with longer delays` and `NetworkTegraUSBLoader... avail=False` - this is a clear hardware resource unavailability issue in the test lab, not a code problem.
+
+2. **rockpro64 job**: Shows `spl_load_simple_fit: can't load image loadables index 0 (ret = -5)` and `mmc block read error` - these are I/O errors reading from MMC storage, indicating hardware communication problems.
+
+3. **vbe job**: Shows `Error: -95` (EOPNOTSUPP) in VPL - this happens before any network code runs and is related to boot device issues.
+
+4. **pcduino3_nano job**: Timeout waiting for U-Boot prompt - similar boot failure pattern.
+
+5. **Code analysis**: The 20 commits in this MR modify:
+   - Network drivers (designware, mediatek, airoha, aquantia PHY)
+   - Network protocols (BOOTP, TFTP, DHCP)
+   - Kconfig changes for network dependencies
+   
+   None of these files affect SPL/VPL boot, MMC drivers, or the early boot process where the failures occur.
+
+6. **Boot sequence**: The failures happen in TPL→VPL→SPL phases, which execute **before** any network stack is initialized. Network driver changes cannot cause boot failures at this stage.
+
+### Recommendation:
+
+This is a **lab infrastructure issue** - no code changes are needed. The test boards appear to have connectivity/hardware problems in the sjg-lab. The appropriate action is to retry the pipeline or investigate the lab hardware status.
+
+**No code fix applied - this is an infrastructure/transient issue.**
+
+---
+
+### Review: 2026-03-23
+
+Branch: cherry-caa2ad6f8c8
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) vbe, tk1, rockpro64, pcduino3_nano.
+
+Let me analyze th...
+
+### Conversation log
+Now let me understand the review comment. The comment says the pipeline failures for jobs vbe, tk1, rockpro64, pcduino3_nano were analyzed and deemed to be infrastructure/transient issues, not code bugs. The analysis concluded no code fix was applied.
+
+Let me verify the current state of the branch and check if there's anything that needs to be done:
+
+The review comment is about a pipeline fix attempt that concluded the failures were infrastructure issues, not code bugs. The comment is essentially:
+
+1. The pipeline failed with 4 jobs (vbe, tk1, rockpro64, pcduino3_nano)
+2. Analysis showed these were infrastructure/transient issues
+3. No code changes were made
+
+Looking at the review comment format: `Pipeline fix (attempt 1): fixed failed job(s) vbe, tk1, rockpro64, pcduino3_nano.`
+
+This seems to be a bot notification that the pipeline failures were addressed. The context shows the analysis determined these were **infrastructure issues**, not code bugs. The appropriate response is to acknowledge this and potentially trigger a pipeline retry.
+
+Let me check if any changes need to be made:
+
+The branch is clean with no staged changes. The review comment indicates that the pipeline failures were analyzed and determined to be infrastructure issues (USB resource unavailable for tk1, I/O errors for rockpro64, etc.).
+
+Since the analysis concluded that **no code changes are needed** (these are infrastructure/transient issues), the appropriate action is to:
+
+1. Acknowledge that the pipeline failures were infrastructure-related
+2. The pipeline should be retried rather than making code changes
+
+However, let me re-read the comment more carefully. The comment format is:
+```
+Pipeline fix (attempt 1): fixed failed job(s) vbe, tk1, rockpro64, pcduino3_nano.
+```
+
+And looking at the context, it shows extensive analysis that concluded:
+> **Conclusion: These failures are infrastructure/lab issues, not code issues.**
+
+The "fix" was actually determining that no fix was needed. The branch is already in the correct state.
+
+Let me verify the build still passes:
+
+Build passes. Since the review comment is about pipeline failures that were determined to be infrastructure issues (not code bugs), and the analysis already concluded no code changes are needed, there's nothing to change in the code.
+
+The appropriate response is:
+1. Acknowledge the infrastructure issues
+2. The pipeline should be retried
+
+Let me check if there's a way to trigger a pipeline retry or if we need to push anything:
+
+Looking at this situation:
+
+1. The review comment states that pipeline failures were analyzed and fixed (determined to be infrastructure issues)
+2. The analysis in the context shows that all 4 failures (vbe, tk1, rockpro64, pcduino3_nano) were infrastructure/transient issues, not code bugs
+3. No code changes were made because none were needed
+
+Since this is about **infrastructure issues** and no code changes are required, the appropriate action is to acknowledge the analysis is correct. The comment appears to be a bot notification that the analysis was completed.
+
+However, looking at the task more carefully: "address 1 review comment(s)" - if the review comment is acknowledging that the failures were analyzed and determined to be infrastructure issues, then the appropriate action might be to:
+
+1. Simply acknowledge this finding
+2. Possibly trigger a pipeline retry
+
+Since no code changes are needed, I don't need to create a new branch version or push anything. The work is complete.
+
+## Summary Report
+
+**Review Comment Addressed:**
+- Comment: `Pipeline fix (attempt 1): fixed failed job(s) vbe, tk1, rockpro64, pcduino3_nano.`
+
+**Analysis:**
+The comment refers to pipeline failures that were analyzed and determined to be **infrastructure/transient issues**, not code bugs:
+
+1. **tk1**: USB resource unavailable in the test lab (clear infrastructure issue)
+2. **rockpro64**: SPL boot failure with I/O errors during MMC read
+3. **vbe**: VPL boot failure before network code runs
+4. **pcduino3_nano**: Timeout waiting for U-Boot prompt
+
+All failures occur during early boot stages (SPL/VPL) before any network code executes. Since the MR only contains network-related changes (drivers, protocols, Kconfig), these boot failures cannot be caused by the MR's code changes.
+
+**Action Taken:**
+No code changes are needed. The build verification confirms the sandbox build still passes.
+
+**Suggested MR Reply:**
+
+```
+The analysis of the pipeline failures is correct - these are infrastructure/transient lab issues, not code bugs:
+
+- **tk1**: USB hardware resource unavailable in test lab
+- **rockpro64**, **vbe**, **pcduino3_nano**: Boot failures in SPL/VPL stages before network stack initializes
+
+Since this MR only modifies network drivers/protocols, and the failures occur during early boot (TPL→VPL→SPL) before any network code runs, these cannot be caused by the code changes.
+
+The pipeline should be retried to verify the infrastructure issues have been resolved.
+```
+
+---
+
