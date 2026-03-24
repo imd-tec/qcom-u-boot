@@ -22,13 +22,13 @@
 
 static void show_header(void)
 {
-	printf("Seq  Method       State   Uclass    Part  E  Name                      Filename\n");
-	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
+	printf("Seq  Method       State   Uclass    Part  Ent  E  Name                      Filename\n");
+	printf("---  -----------  ------  --------  ----  ---  -  ------------------------  ----------------\n");
 }
 
 static void show_footer(int count, int num_valid)
 {
-	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
+	printf("---  -----------  ------  --------  ----  ---  -  ------------------------  ----------------\n");
 	printf("(%d bootflow%s, %d valid)\n", count, count != 1 ? "s" : "",
 	       num_valid);
 }

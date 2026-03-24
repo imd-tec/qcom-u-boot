@@ -110,11 +110,22 @@ void bootflow_show(int index, struct bootflow *bflow, bool errors)
 {
 	const char *name = bootflow_guess_label(bflow);
 	char enc_mark = (bflow->flags & BOOTFLOWF_ENCRYPTED) ? 'E' : ' ';
+	char ent_str[8];
 
-	printf("%3x  %-11s  %-6s  %-9.9s %4x  %c  %-25.25s %s\n", index,
+	strcpy(ent_str, "   ");
+	if (bflow->method) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(bflow->method);
+		if (ucp->flags & BOOTMETHF_MULTI)
+			snprintf(ent_str, sizeof(ent_str), "%3d",
+				 bflow->entry);
+	}
+
+	printf("%3x  %-11s  %-6s  %-9.9s %4x  %s  %c  %-25.25s %s\n", index,
 	       bflow->method ? bflow->method->name : "(none)",
 	       bootflow_state_get_name(bflow->state), name, bflow->part,
-	       enc_mark, bflow->name, bflow->fname ?: "");
+	       ent_str, enc_mark, bflow->name, bflow->fname ?: "");
 	if (errors)
 		report_bootflow_err(bflow, bflow->err);
 }

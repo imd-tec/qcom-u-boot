@@ -682,9 +682,9 @@ To enable PXE boot:
 2. Check if ``'pxe'`` boot method is present in ``'bootflow scan -l'`` output.
    It should look like this::
 
-     Seq  Method       State   Uclass    Part  Name                      Filename
-     ---  -----------  ------  --------  ----  ------------------------  ----------------
-       5  pxe          ready   ethernet     0  smsc95xx_eth.bootdev.0    extlinux/extlinux.conf
+     Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+     ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
+       5  pxe          ready   ethernet     0    0  smsc95xx_eth.bootdev.0    extlinux/extlinux.conf
 
 3. Select and boot it:
 

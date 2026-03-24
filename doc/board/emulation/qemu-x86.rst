@@ -154,8 +154,8 @@ The output will be something like this::
           eth0: e1000#0
    Hit any key to stop autoboot:  0
    Scanning for bootflows in all bootdevs
-   Seq  Method       State   Uclass    Part  Name                      Filename
-   ---  -----------  ------  --------  ----  ------------------------  ----------------
+   Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+   ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
    Scanning global bootmeth 'efi_mgr':
    Hunting with: nvme
    Hunting with: qfw
