@@ -48935,3 +48935,92 @@ The remote branch now matches the local branch (2719c1fc154).
 
 ---
 
+### Review: 2026-03-25
+
+Branch: cherry-c01280b62c4
+
+Comments addressed:
+
+
+### Conversation log
+The branch is based on `38f5fd4e478` but ci/master has moved to `eae40e46fa1`. Let me check how many commits behind we are and perform the rebase:
+
+The branch is 2 commits behind ci/master. Let me perform the rebase:
+
+We have 20 commits to rebase (17 cherry-picked commits + 3 pickman record commits). Let me save the commit stats before rebase, then perform the rebase:
+
+Now let me perform the rebase:
+
+Rebase completed successfully. Now let me verify the commits and compare deltas:
+
+All deltas match perfectly before and after the rebase. Now let me verify the build:
+
+Build passes. Now let me check for existing -v2 branches and create the backup branch:
+
+There's already a -v2 branch, so I'll create -v3:
+
+The branch has been force-pushed. Let me verify the final state:
+
+The branch is now based on `eae40e46fa1` which is the current ci/master HEAD.
+
+## Summary Report
+
+### Task: Rebase MR !792 (branch: cherry-c01280b62c4) onto latest target branch
+
+### What Was Done:
+
+1. **Identified rebase requirement**: Branch was 2 commits behind ci/master
+   - Old base: `38f5fd4e478` 
+   - New base: `eae40e46fa1` (current ci/master)
+   - New commits on ci/master:
+     - `ebeb48fee7a` x86: qemu: Enable the bootloader-specification bootmeth
+     - `eae40e46fa1` Merge branch 'enable-bls' into 'master'
+
+2. **Performed rebase**: Successfully rebased 20 commits onto ci/master
+   - All 17 cherry-picked commits + 3 pickman record commits
+   - No conflicts encountered
+   - All deltas match before and after rebase
+
+3. **Verified build**: ✅ Sandbox build passes
+
+4. **Created backup branch**: `cherry-c01280b62c4-v3`
+
+5. **Force pushed to remote**: Updated `ci/cherry-c01280b62c4` from `2719c1fc154` to `8dede46ecf6`
+
+### Branch Status After Rebase:
+- **Local branch**: `cherry-c01280b62c4` at `8dede46ecf6`
+- **Remote branch**: `ci/cherry-c01280b62c4` at `8dede46ecf6`
+- **Base commit**: `eae40e46fa1` (ci/master HEAD)
+- **Commits ahead**: 20
+- **Build**: ✅ Passes
+
+### Commits on Branch (17 cherry-picks + 3 pickman records):
+| # | New Hash | Subject |
+|---|----------|---------|
+| 1 | cd6a25953f8 | spi: ich: Do not use uninitialised value |
+| 2 | dddaab78cc7 | spi: npcm-fiu: Remove repeated test |
+| 3 | 3fc31c7e37a | spi: fspi: Logical or used instead of logical and |
+| 4 | 8f8dfac379b | spi: spi-uclass: Use unwind goto |
+| 5 | e4433c4cd56 | ARM: renesas: Drop 'imply MULTI_DTB_FIT_USER_DEFINED_AREA' lines |
+| 6 | aeae7978cf4 | cmd: mtd: Prevent use of uninitialised variable |
+| 7 | 7ec386d2733 | mtd: nand: Prevent dereference of NULL pointer |
+| 8 | b3a4f4231ee | clk: Add missing \<dm/device.h\> to include/clk.h |
+| 9 | 5b578513891 | mtd: Add function prototype for mtd_read_oob_bf(...) |
+| 10 | fa80a65a50c | mtd: Correct dependency on SYS_FLASH_CHECKSUM |
+| 11 | ea60e6a77c2 | mtd: spi: sf_dataflash.c: Make use of 'z' for printing size_t |
+| 12 | 308ebf37746 | mtd: nvmxip: Make use of LBAF for printing lbaint_t |
+| 13 | dad8d4e5b8a | x86: Rename arch/x86/include/asm/pnp_def.h to include/pnp_def.h |
+| 14 | 932922667fe | clk: Tighten some clock driver dependencies |
+| 15 | 1cdd7bb1548 | spi: Tighten some spi driver dependencies |
+| 16 | 0a40d08d004 | spi: altera_spi: Add missing \<time.h\> to altera_spi.c |
+| 17 | 460428aff8b | MAINTAINERS: update my email address |
+| + | 429d87528ee | pickman: Record cherry-pick of 19 commits from us/next |
+| + | 97fbf3f2f37 | pickman: Record review handling for cherry-c01280b62c4 |
+| + | 8dede46ecf6 | pickman: Record review handling for cherry-c01280b62c4 |
+
+### Suggested MR Reply:
+
+> Rebased onto latest ci/master (eae40e46fa1). The branch was 2 commits behind due to the recent 'enable-bls' merge. No conflicts during rebase, all commit deltas preserved. Build verification passes. Pipeline should now run on the updated branch.
+
+---
+
