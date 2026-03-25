@@ -48457,3 +48457,179 @@ The branch `cherry-3cb97f92933` is ready for pushing.
 
 ---
 
+## 2026-03-25: us/next
+
+Branch: cherry-f17f11880a1
+
+Commits:
+- f17f11880a1 configs: Resync with savedefconfig
+- 23987e10905 Prepare v2026.01-rc1
+- 6f48f6f2a2d clk: versaclock: return value calculated by ERR_PTR
+- 2a13b59ed43 clk: versaclock: Use IS_ERR check before dereference
+- e8fd262fb3e gpio: intel_gpio: Initialise or0 and or1
+- 6e382d8fc5e mmc: owl_mmc: Do not dereference data before NULL check
+- bf09c6abfc8 Merge patch series "clk: versaclock: Fix two issues found by Smatch"
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Let me create and checkout the new branch:
+
+Now let's start cherry-picking. The first commit is marked as "maybe already applied as 64d499ec68e" and is a [QCONFIG RESYNC] commit. Let me first verify if it's already applied:
+
+The commits are significantly different - they have different authors, dates, subjects, and content. The commit 64d499ec68e is a pickman record commit, not the original defconfig resync. However, since f17f11880a1 is marked as [QCONFIG RESYNC], I should skip the cherry-pick and run qconfig.py instead.
+
+The qconfig.py ran successfully. Let me check if it created a commit:
+
+qconfig.py created the commit. Now let me verify the cherry-pick stats and run a build test:
+
+Build passed. Now let's continue with commit 2: 23987e10905 "Prepare v2026.01-rc1"
+
+There's a conflict. Let me check if this commit might already be applied in ci/master:
+
+The search didn't find this commit in ci/master. Let me look at the conflicts and try to resolve them:
+
+I see the conflict - ci/master is at 2026.02 but this commit is for 2026.01-rc1. The Makefile conflict is about PATCHLEVEL (HEAD has 02, the commit wants 01). Let me check the full release_cycle.rst conflict:
+
+This is a time-sensitive commit - it's preparing for v2026.01-rc1 which is from the past (October 2025). The ci/master is already at 2026.02. This commit doesn't make sense to apply now as the version has already moved past it. Let me check the original commit more carefully:
+
+This is a release preparation commit from October 2025 (v2026.01-rc1). Since ci/master is now at v2026.02, this commit is outdated and shouldn't be applied - it would set the version back to 2026.01-rc1 from 2026.02.
+
+However, the user explicitly requested this commit. Let me abort this cherry-pick and create an empty commit explaining why:
+
+Now let's continue with commit 3: 6f48f6f2a2d "clk: versaclock: return value calculated by ERR_PTR"
+
+Cherry-pick succeeded. Let me verify the delta and run build test:
+
+Delta matches perfectly. Let's run the build test:
+
+Build passed. Now commit 4: 2a13b59ed43 "clk: versaclock: Use IS_ERR check before dereference"
+
+Excellent! Delta matches, build passed. Now commit 5: e8fd262fb3e "gpio: intel_gpio: Initialise or0 and or1"
+
+Delta matches, build passed. Now commit 6: 6e382d8fc5e "mmc: owl_mmc: Do not dereference data before NULL check"
+
+Delta matches, build passed. Now the final commit 7: bf09c6abfc8 "Merge patch series 'clk: versaclock: Fix two issues found by Smatch'" - this is a merge commit:
+
+The merge commit is empty because the individual commits were already cherry-picked. We still need to commit it to preserve the history as instructed:
+
+Let me verify all commits are present:
+
+All 7 commits are present. Let me run the final build test:
+
+**Final Status Report:**
+
+## Cherry-pick Summary for branch `cherry-f17f11880a1`
+
+### Build Result: ✅ OK
+All builds passed without warnings or errors.
+
+### Commits Applied (7 total):
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | f17f11880a1 | configs: Resync with savedefconfig [QCONFIG RESYNC] | ✅ Applied via qconfig.py (regenerated defconfigs) |
+| 2 | 23987e10905 | Prepare v2026.01-rc1 | ⏭️ SKIPPED - ci/master is at v2026.02, would revert version |
+| 3 | 6f48f6f2a2d | clk: versaclock: return value calculated by ERR_PTR | ✅ Applied cleanly |
+| 4 | 2a13b59ed43 | clk: versaclock: Use IS_ERR check before dereference | ✅ Applied cleanly |
+| 5 | e8fd262fb3e | gpio: intel_gpio: Initialise or0 and or1 | ✅ Applied cleanly |
+| 6 | 6e382d8fc5e | mmc: owl_mmc: Do not dereference data before NULL check | ✅ Applied cleanly |
+| 7 | bf09c6abfc8 | Merge patch series "clk: versaclock: Fix two issues..." | ✅ Applied (empty - content already in prior commits) |
+
+### Fix-ups Made:
+1. **f17f11880a1**: Used `qconfig.py -s -Cy` instead of cherry-pick (as per QCONFIG RESYNC instructions)
+2. **23987e10905**: Created empty commit marked [SKIPPED] because applying this version bump would set version back from v2026.02 to v2026.01-rc1
+
+### Delta Verification:
+All cherry-picked commits matched the original commits exactly in terms of files changed and line counts.
+
+### Commits with Concerning Deltas:
+None - all deltas were verified as matching.
+
+The branch `cherry-f17f11880a1` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-25 (attempt 1)
+
+Branch: cherry-f17f11880a1
+
+Failed jobs:
+- vbe (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Let me analyze the job logs:
+
+**vbe job failure:**
+- Board: rk3399-generic-ddr3
+- Error at VPL stage: `Error: -5` followed by `VPL: failed to boot from all boot devices`
+- The board fails to boot, timing out waiting for U-Boot prompt
+
+**pcduino3_nano job failure:**
+- Board: Linksprite_pcDuino3_Nano
+- Similar timeout: `Timeout of 15 seconds exceeded during waiting for login`
+- No boot messages visible in the log
+
+Both failures show timeouts waiting for U-Boot to boot on physical hardware. The vbe job shows the board starting to boot (TPL, VPL stages) but failing with "Error: -5" in VPL. The pcduino3_nano job shows no boot output at all - just a timeout.
+
+These look like **infrastructure/hardware lab issues**, not code bugs:
+1. The pcduino3_nano board appears unresponsive (no boot output)
+2. The vbe board (rk3399) boots partially but fails in VPL with a generic error code
+
+However, let me check if this MR introduced any changes that could affect these boards. Let me checkout the branch and look at the commits:
+
+Looking at the commits on this branch, none of them appear directly related to rk3399, vbe boot, or pcduino3_nano. Let me check what files were modified by the defconfig resync commit, which could potentially affect board configs:
+
+The defconfig resync doesn't touch any rk3399 or pcduino3 configs. Let me check if any of the other commits affect these boards:
+
+No commits in this MR touch rk3399 or pcduino configs. Let me look at what the "vbe" job actually tests and what code it runs, looking at the error more closely:
+
+The MR has only minor changes - clk/versaclock fixes, gpio init fixes, mmc null check, and defconfig resync. None of these should affect the vbe boot flow or pcduino3_nano.
+
+Let me look more at what "vbe" tests - looking at the error which shows `Error: -5` in VPL stage with vbe_abrec bootmethod:
+
+No VBE-related changes. Let me check if the failures occur on the base branch (ci/master) to verify if this is an infrastructure issue:
+
+The changes are:
+1. Defconfig resync - removing unused config options
+2. drivers/clk/clk_versaclock.c - IS_ERR/ERR_PTR fixes
+3. drivers/gpio/intel_gpio.c - initialization fix
+4. drivers/mmc/owl_mmc.c - NULL check fix
+
+None of these drivers are used by rk3399 or pcduino3_nano boards. Let me verify:
+
+As I suspected, none of the modified drivers are used by the failing boards. The failures are unrelated to this MR's code changes.
+
+Let me also verify this is a hardware infrastructure issue by checking if these jobs have been flaky or failing on other MRs recently:
+
+The evidence shows this is an **infrastructure/lab hardware issue**, not a code bug:
+
+1. **vbe job (rk3399-generic-ddr3)**: The board boots partially (TPL, VPL stages) but then fails with `Error: -5` in VPL when trying to boot from `vbe_abrec`. This is a runtime boot failure on physical hardware, not a build error.
+
+2. **pcduino3_nano job**: The board doesn't respond at all - timeout waiting for any boot output. This is a hardware connectivity/responsiveness issue.
+
+3. **No related code changes**: This MR modifies:
+   - `clk_versaclock.c` - not used by rk3399 or pcduino3
+   - `intel_gpio.c` - not used by rk3399 or pcduino3
+   - `owl_mmc.c` - not used by rk3399 or pcduino3
+   - Defconfig resync - doesn't touch rk3399 or pcduino3 configs
+
+4. **Both failures are hardware-level timeouts**: The boards either don't respond (pcduino3) or fail during boot on physical hardware (vbe/rk3399), which indicates lab infrastructure issues rather than code problems.
+
+## Summary Report
+
+**This is an infrastructure/transient lab hardware issue, not a code bug.**
+
+**Root cause analysis:**
+- The `vbe` job runs on an rk3399-generic-ddr3 physical board that fails during VPL boot stage with `Error: -5` (EIO - I/O error), indicating hardware/flash communication issues
+- The `pcduino3_nano` job runs on a Linksprite pcDuino3 Nano physical board that doesn't respond at all (no boot output)
+- Neither failure is related to the code changes in this MR - the modified drivers (versaclock, intel_gpio, owl_mmc) are not used by these boards
+- The defconfig resync also doesn't affect these boards' configurations
+
+**Recommendation:**
+- Retry the pipeline - these appear to be transient hardware/lab infrastructure failures
+- No code changes are needed
+
+I will not make any changes to the branch since this is an infrastructure issue, not a code problem.
+
+---
+
