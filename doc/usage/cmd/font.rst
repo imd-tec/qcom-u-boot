@@ -95,9 +95,3 @@ Complex glyphs (CJK, emoji) or very large font sizes may need 64KB or more.
 Allocations exceeding the buffer size fall back to malloc transparently.
 
 CONFIG_VIDEO_GLYPH_STATS enables tracking of glyph-rendering statistics.
-
-Return value
-------------
-
-The return value $? is 0 (true) if the command completes.
-The return value is 1 (false) if the command fails.
