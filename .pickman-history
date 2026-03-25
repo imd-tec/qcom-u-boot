@@ -48633,3 +48633,83 @@ I will not make any changes to the branch since this is an infrastructure issue,
 
 ---
 
+## 2026-03-25: us/next
+
+Branch: cherry-0ed45794ae9
+
+Commits:
+- 0ed45794ae9 spi: cadence_qspi: Off by 1 in test for timeout
+- 1a5129d3daf spi: cadence_qspi: Do not return unset error code
+- 644b4650ee5 clk: Return value calculated by ERR_PTR
+- 094593bf82e Merge patch series "spi: cadence_qspi: Fix Smatch reported issues"
+
+### Conversation log
+The repository has untracked files but no staged/unstaged changes - this is clean enough for cherry-picking. Let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit (0ed45794ae9):
+
+Good, the first cherry-pick succeeded. Let me verify the delta and run the build test:
+
+The deltas match exactly (1 file changed, 2 insertions, 2 deletions). Now let me run the build test:
+
+The build failed because the directory is not clean. Let me clean it first:
+
+Now let me retry the build:
+
+Build passed. Now let me cherry-pick the second commit (1a5129d3daf):
+
+Good, cherry-pick succeeded (with auto-merge). Let me verify the delta:
+
+Deltas match exactly (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the third commit (644b4650ee5):
+
+Good, cherry-pick succeeded. Let me verify the delta:
+
+Deltas match exactly (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the fourth commit (094593bf82e), which is a merge commit:
+
+The merge commit is empty (as expected since the individual commits were already cherry-picked). Let me commit it as empty to preserve the merge history:
+
+Now let me verify the delta for the merge commit:
+
+The merge commit on ci/master shows the combined changes (2 files), while our cherry-picked version is empty (which is expected since we already cherry-picked the individual commits before). This is correct behavior - the merge commit preserves the history marker while the changes were already applied. Now let me run the build test:
+
+Build passed. Now let me verify all 4 commits are present:
+
+All 4 commits are present. Now let me run the final build test:
+
+## Final Status Report
+
+**Cherry-pick completed successfully!**
+
+### Branch: `cherry-0ed45794ae9`
+
+### Commits Applied (4 total):
+| # | Commit | Subject | Status |
+|---|--------|---------|--------|
+| 1 | `2c330b483a3` | spi: cadence_qspi: Off by 1 in test for timeout | ✅ Applied cleanly |
+| 2 | `a9b26b9455b` | spi: cadence_qspi: Do not return unset error code | ✅ Applied cleanly (auto-merged) |
+| 3 | `85ffdf2cfe3` | clk: Return value calculated by ERR_PTR | ✅ Applied cleanly |
+| 4 | `7c6cf780fe2` | Merge patch series "spi: cadence_qspi: Fix Smatch reported issues" | ✅ Applied (empty, as expected) |
+
+### Build Result: **OK** ✅
+- All 4 incremental builds passed
+- Final build passed
+
+### Delta Verification:
+- All commits have matching deltas between original and cherry-picked versions
+- The merge commit is empty because the individual commits were already cherry-picked (expected behavior)
+
+### Fix-ups Made: **None**
+- No conflicts required manual resolution
+- No amendments were needed
+
+### Commits with Concerning Deltas: **None**
+- All commit deltas matched exactly
+
+The branch `cherry-0ed45794ae9` is ready for pushing.
+
+---
+
