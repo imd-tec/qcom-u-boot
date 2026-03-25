@@ -48635,232 +48635,132 @@ I will not make any changes to the branch since this is an infrastructure issue,
 
 ## 2026-03-25: us/next
 
-Branch: cherry-0ed45794ae9
+Branch: cherry-c01280b62c4
 
 Commits:
-- 0ed45794ae9 spi: cadence_qspi: Off by 1 in test for timeout
-- 1a5129d3daf spi: cadence_qspi: Do not return unset error code
-- 644b4650ee5 clk: Return value calculated by ERR_PTR
-- 094593bf82e Merge patch series "spi: cadence_qspi: Fix Smatch reported issues"
+- c01280b62c4 spi: ich: Do not use uninitialised value
+- 9a6411daed4 spi: npcm-fiu: Remove repeated test
+- 1e2de3ce615 spi: fspi: Logical or used instead of logical and
+- f12ca3e2b81 spi: spi-uclass: Use unwind goto
+- 4c41735ecaa ARM: renesas: Drop 'imply MULTI_DTB_FIT_USER_DEFINED_AREA' lines
+- ce1bdedd2f4 cmd: mtd: Prevent use of uninitialised variable
+- a5c83da3ccb mtd: nand: Prevent dereference of NULL pointer
+- e15dd01422e clk: Add missing <dm/device.h> to include/clk.h
+- 9465ca3d455 mtd: Add function prototype for mtd_read_oob_bf(...)
+- bd7bf693de4 mtd: Correct dependency on SYS_FLASH_CHECKSUM
+- ba05f1a8d7d mtd: spi: sf_dataflash.c: Make use of 'z' for printing size_t
+- ddc28ad0f2a mtd: nvmxip: Make use of LBAF for printing lbaint_t
+- b901d8f15c3 x86: Rename arch/x86/include/asm/pnp_def.h to include/pnp_def.h
+- f30b6d12da1 clk: Tighten some clock driver dependencies
+- a5e6bc86ab5 spi: Tighten some spi driver dependencies
+- 80a3c2fda24 spi: altera_spi: Add missing <time.h> to altera_spi.c
+- 9ed8fafbcde Revert "clk: Return value calculated by ERR_PTR"
+- 4cad9faf8d2 MAINTAINERS: update my email address
+- ceb3ef1404a Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-sh
 
 ### Conversation log
-The repository has untracked files but no staged/unstaged changes - this is clean enough for cherry-picking. Let me create and checkout the new branch based on ci/master.
+The repository has untracked files but is otherwise clean. Let me create and checkout the new branch based on ci/master.
 
-Now let me cherry-pick the first commit (0ed45794ae9):
+Now let me start cherry-picking the commits one by one. First commit:
 
-Good, the first cherry-pick succeeded. Let me verify the delta and run the build test:
+Deltas match. Let me run the build test:
 
-The deltas match exactly (1 file changed, 2 insertions, 2 deletions). Now let me run the build test:
+Build passed. Now cherry-pick the second commit:
 
-The build failed because the directory is not clean. Let me clean it first:
+Build passed. Third commit:
 
-Now let me retry the build:
+Fourth commit:
 
-Build passed. Now let me cherry-pick the second commit (1a5129d3daf):
+Fifth commit:
 
-Good, cherry-pick succeeded (with auto-merge). Let me verify the delta:
+Sixth commit:
 
-Deltas match exactly (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+Seventh commit:
 
-Build passed. Now let me cherry-pick the third commit (644b4650ee5):
+Eighth commit:
 
-Good, cherry-pick succeeded. Let me verify the delta:
+Ninth commit:
 
-Deltas match exactly (1 file changed, 1 insertion, 1 deletion). Now let me run the build test:
+Tenth commit:
 
-Build passed. Now let me cherry-pick the fourth commit (094593bf82e), which is a merge commit:
+Eleventh commit:
 
-The merge commit is empty (as expected since the individual commits were already cherry-picked). Let me commit it as empty to preserve the merge history:
+Twelfth commit:
 
-Now let me verify the delta for the merge commit:
+Thirteenth commit:
 
-The merge commit on ci/master shows the combined changes (2 files), while our cherry-picked version is empty (which is expected since we already cherry-picked the individual commits before). This is correct behavior - the merge commit preserves the history marker while the changes were already applied. Now let me run the build test:
+Fourteenth commit:
 
-Build passed. Now let me verify all 4 commits are present:
+Fifteenth commit:
 
-All 4 commits are present. Now let me run the final build test:
+Sixteenth commit:
+
+Seventeenth commit:
+
+The commit is empty because it's already applied. Let me check if this is already in ci/master:
+
+Let me check the original content of the commit and its effect:
+
+The change is a revert. Let me look at what the file looks like in ci/master currently:
+
+The change is already in ci/master. Let me skip this commit since it's already applied:
+
+Eighteenth commit:
+
+Now the last commit - the merge commit. Let me check it first as it's marked as potentially already applied:
+
+The patches differ - this is a similar merge commit that was previously cherry-picked via a different path (the pickman MR!777). The commit subjects are similar. Let me check if the merge itself would be empty if I cherry-pick it:
+
+The merge commit is empty because all its changes were already applied (via 2c4f480ae24). Since the user marked this as "maybe already applied", and the compare shows it has different hash but same purpose (just different merge resolution), I'll skip this:
+
+Now let me verify the log and run final build:
+
+We have 17 commits cherry-picked. Two commits were skipped because they were already applied:
+- `9ed8fafbcde` - Revert "clk: Return value calculated by ERR_PTR" (already applied in ci/master)
+- `ceb3ef1404a` - Merge branch 'master' of u-boot-sh (already applied as 2c4f480ae24)
+
+Let me run the final build:
 
 ## Final Status Report
 
-**Cherry-pick completed successfully!**
-
-### Branch: `cherry-0ed45794ae9`
-
-### Commits Applied (4 total):
-| # | Commit | Subject | Status |
-|---|--------|---------|--------|
-| 1 | `2c330b483a3` | spi: cadence_qspi: Off by 1 in test for timeout | ✅ Applied cleanly |
-| 2 | `a9b26b9455b` | spi: cadence_qspi: Do not return unset error code | ✅ Applied cleanly (auto-merged) |
-| 3 | `85ffdf2cfe3` | clk: Return value calculated by ERR_PTR | ✅ Applied cleanly |
-| 4 | `7c6cf780fe2` | Merge patch series "spi: cadence_qspi: Fix Smatch reported issues" | ✅ Applied (empty, as expected) |
-
-### Build Result: **OK** ✅
-- All 4 incremental builds passed
-- Final build passed
-
-### Delta Verification:
-- All commits have matching deltas between original and cherry-picked versions
-- The merge commit is empty because the individual commits were already cherry-picked (expected behavior)
-
-### Fix-ups Made: **None**
-- No conflicts required manual resolution
-- No amendments were needed
-
-### Commits with Concerning Deltas: **None**
-- All commit deltas matched exactly
-
-The branch `cherry-0ed45794ae9` is ready for pushing.
-
----
-
-### Pipeline fix: 2026-03-25 (attempt 1)
-
-Branch: cherry-0ed45794ae9
-
-Failed jobs:
-- sandbox test.py (test.py)
-- sandbox with clang test.py (test.py)
-- sandbox64 with clang test.py (test.py)
-- sandbox64_lwip test.py (test.py)
-- sandbox_flattree test.py (test.py)
-- sandbox64 test.py (test.py)
-- play (sjg-lab)
-- vbe (sjg-lab)
-- vf2 (sjg-lab)
-- jerry (sjg-lab)
-- pcduino3_nano (sjg-lab)
-- Check make qcheck (test.py)
-- Check make check (test.py)
-
-### Conversation log
-Now I can analyze the failures. Let me summarize what I've found:
-
-**Test Failures Analysis:**
-
-1. **sandbox test.py, sandbox with clang test.py, sandbox64 test.py, sandbox64 with clang test.py, sandbox64_lwip test.py, sandbox_flattree test.py** - All failing on `dm_test_clk` and `dm_test_clk_base` tests:
-   - `test/dm/clk.c:44, dm_test_clk_base(): 0 == uclass_get_device_by_name(UCLASS_MISC, "clk-test4", &dev): Expected 0x0 (0), got 0xfffffffe (-2)`
-   - `test/dm/clk.c:92, dm_test_clk(): 321 == sandbox_clk_test_get_rate(dev_test, SANDBOX_CLK_TEST_ID_DEVM1): Expected 0x141 (321), got 0x0 (0)`
-
-2. **play, vbe, vf2, jerry, pcduino3_nano** - These are lab/hardware test failures with timeouts and boot issues - these appear to be infrastructure issues unrelated to the MR code.
-
-3. **Check make qcheck, Check make check** - These fail because binman code coverage is 99% instead of 100% - this is a pre-existing infrastructure/CI issue, not related to the MR.
-
-The core issue is in the clock tests. The MR contains commit `644b4650ee5 clk: Return value calculated by ERR_PTR` which touches clock code. Let me checkout the branch and investigate.
-
-The failing commit is `85ffdf2cfe3 clk: Return value calculated by ERR_PTR`. Let me look at that commit:
-
-Now let me look at the file to understand the context:
-
-The fix looks correct - it was missing a `return` before `ERR_PTR(ret)`. Now let me check the test file to understand what's happening:
-
-Now I need to check the sandbox test device trees to see what "clk-test4" device is:
-
-The test is failing with error -2 (`-ENOENT`) when looking up "clk-test4". Let me check what's happening with the CCF (Common Clock Framework):
-
-Let me understand the issue better. The error is that when `clk_set_defaults()` is called on "clk-test4", it now returns an error where before it didn't. Let me look at what `clk_set_defaults` does:
-
-Now I see the flow. The test "clk-test4" has:
-- `assigned-clock-rates = <654>, <321>;`
-- `assigned-clocks = <&clk_sandbox 1>;`
-
-Only one clock is specified but two rates - this might be a test case issue, but let me see where the error is coming from.
-
-The issue is at line 355-357. When `clk_set_default_get_by_id()` returns an error pointer, it now propagates properly (because of the fix), but this reveals a real issue. Let me look more closely:
-
-The issue is: with `CONFIG_IS_ENABLED(CLK_CCF)`, the function tries to look up the clock by ID and if it's not found, returns an error. Before the fix, the function would not return the error, it would fall through and return `c` (which was still the original `clk` parameter).
-
-But returning the error might not be the right behavior in all cases - sometimes the clock might not be registered in the CCF yet but still be valid. Let me check if sandbox has CLK_CCF enabled:
-
-So `SANDBOX_CLK_CCF` selects `CLK_CCF`. This means that when sandbox is built with CLK_CCF, the `clk_set_default_get_by_id()` function will try to look up the clock by ID in the CCF.
-
-The issue is: the original code without the fix was basically ignoring the error from `clk_get_by_id()` and returning the original `clk` pointer anyway. The "fix" to return the error now breaks tests because it exposes that the clk_get_by_id lookup was failing for test devices.
-
-Let me think about this:
-1. The original code had `ERR_PTR(ret);` without `return`, which is a bug (dead code - computed value never used)
-2. The fix adds `return ERR_PTR(ret);` which is now propagating the error
-3. But this breaks tests because the CCF lookup legitimately fails for some clocks that don't have global IDs
-
-Let me check the original commit on ci/master to see if there's a related fix:
-
-That's a different fix. Let me check if there's a related fix for the ERR_PTR issue:
-
-Let me check what the current state of the function is on ci/master:
-
-I see! On ci/master, the function still has `ERR_PTR(ret);` without the `return`. This means the cherry-picked commit has introduced a regression. The fix is technically correct (it was dead code before), but it exposes that the error path was never actually meant to fail - it was just logging the error and continuing.
-
-Looking at the original intent of the code: when `clk_get_by_id` fails (returns non-zero), the code logs a debug message and then... was supposed to continue using `c = clk` (the original clock pointer). The `ERR_PTR(ret)` without return was likely a mistake that turned into a feature (effectively a no-op that let the code continue).
-
-The correct fix is likely to NOT return the error but instead continue with the original clock. Or - the return should be conditional. Let me check if there's any indication of what the right behavior should be:
-
-The commit message says "This is confirmed by the code around where this function is called." - but actually, it seems like the callers *do* check for `IS_ERR()`, but in practice the function never actually returned an error before, so the existing tests were passing.
-
-Looking at this more carefully, I think the issue is that:
-1. The clk_get_by_id() is only meant to find clocks registered in the CCF global list
-2. Not all clocks are registered there (esp. test clocks in sandbox)
-3. When not found, the original behavior was to just use the passed-in clock pointer
-4. This was probably intentional - the CCF lookup is a "nice to have" optimization
-
-The fix is probably wrong - we should NOT return the error but instead fall through to use the original clock. Let me verify by checking what happens for the test case:
-
-The test device "clk-test4" has `assigned-clocks = <&clk_sandbox 1>;` - this refers to clock ID 1 from the sandbox clock provider. When `clk_get_by_id(1, &c)` is called, it looks through all UCLASS_CLK devices to find one with that ID. If it's not found (which is the case for sandbox), it returns -ENOENT.
-
-I think the right fix is to remove the `return` that was added, leaving the code as before (which is admittedly a dead statement, but functionally correct). But that would be reverting the Smatch fix entirely.
-
-A better fix might be to simply remove the ERR_PTR line entirely, since it's never used. Let me verify this is the right approach by building and testing:
-
-Now let me look at the current state of the file:
-
-The issue is: the Smatch fix added `return ERR_PTR(ret)` but this breaks functionality because the error from `clk_get_by_id()` is not meant to be fatal - it just means the clock isn't in the global CCF list, so we should use the local `clk` pointer instead.
-
-The correct fix is to simply remove the entire `if (ret)` block (including the now-incorrect `return ERR_PTR(ret)`), since when `clk_get_by_id()` fails, we want to fall through and return the original `c = clk`.
-
-Actually wait - `c` is set to the result of `clk_get_by_id()` on success, so we need to preserve the logic. Let me think about this more carefully:
-
-1. `c = clk` (initially set to input)
-2. `clk_get_by_id(clk->id, &c)` - if successful, `c` is updated to the found clock
-3. If not successful, the debug message is printed and we should continue with `c = clk` (original)
-
-So the fix should be to just remove the ERR_PTR line entirely, leaving only the debug message:
-
-Now let me verify the change:
-
-Now let me build and test sandbox:
-
-The build didn't make the dtb. Let me use the proper test command:
-
-The tests pass now. Let me amend the commit with the fix:
-
-Now continue the rebase:
-
-Now let's build and verify all the affected boards:
-
-The tests pass. Now let me build the affected boards to verify:
-
-The failure for `am62x_beagleplay_a53` is a pre-existing issue with missing external blobs and a symlink conflict, not related to our fix. All other boards built successfully (warnings about missing external blobs like ATF, OP-TEE are expected for boards that need them).
-
-Let me create the fix branch:
-
-The fix is now in place. Let me verify the branch is in the correct state:
-
-## Summary
-
-**Root Cause:**
-The commit `644b4650ee5 clk: Return value calculated by ERR_PTR` (cherry-picked as `85ffdf2cfe3`) was a Smatch fix that added `return ERR_PTR(ret)` to the `clk_set_default_get_by_id()` function. However, this was incorrect - when `clk_get_by_id()` fails to find a clock in the CCF global list, the intended behavior is to fall through and use the original clock pointer (`c = clk`), not to return an error. The original code had `ERR_PTR(ret);` without `return` which was effectively dead code, but the "fix" that added `return` exposed test failures.
-
-**Failed Tests:**
-- `dm_test_clk_base` - Failed when trying to get device "clk-test4" because `clk_set_defaults()` now returned -ENOENT (-2)
-- `dm_test_clk` - Failed because `sandbox_clk_test_get_rate()` returned 0 instead of 321 for `SANDBOX_CLK_TEST_ID_DEVM1`
-
-**Fix Applied:**
-Removed the incorrect `return ERR_PTR(ret)` and the now-unnecessary braces, leaving only the debug message. When `clk_get_by_id()` fails, the function now correctly falls through to return the original clock pointer.
-
-**Commit Fixed:** `85ffdf2cfe3 clk: Return value calculated by ERR_PTR` (originally `644b4650ee5`)
-
-**Other Failures (Infrastructure/Transient):**
-- play, vbe, vf2, jerry, pcduino3_nano - Lab hardware timeouts and boot failures (not code-related)
-- Check make qcheck, Check make check - Binman code coverage at 99% instead of 100% (pre-existing infrastructure issue)
-
-**Fix Branch:** `cherry-0ed45794ae9-fix1` is ready (not pushed as instructed).
+**Build result:** ✅ OK (sandbox build passes)
+
+### Summary of Cherry-Picked Commits (17 of 19)
+
+| # | Hash | Subject | Status |
+|---|------|---------|--------|
+| 1 | f819219e7c8 | spi: ich: Do not use uninitialised value | ✅ Applied |
+| 2 | 289317da603 | spi: npcm-fiu: Remove repeated test | ✅ Applied |
+| 3 | 241f9cfbae1 | spi: fspi: Logical or used instead of logical and | ✅ Applied |
+| 4 | 945f301f343 | spi: spi-uclass: Use unwind goto | ✅ Applied |
+| 5 | adaff8f787b | ARM: renesas: Drop 'imply MULTI_DTB_FIT_USER_DEFINED_AREA' lines | ✅ Applied |
+| 6 | 9374d6148ea | cmd: mtd: Prevent use of uninitialised variable | ✅ Applied |
+| 7 | e9b327a1a8d | mtd: nand: Prevent dereference of NULL pointer | ✅ Applied |
+| 8 | a4083930921 | clk: Add missing <dm/device.h> to include/clk.h | ✅ Applied |
+| 9 | 94915eeb2bc | mtd: Add function prototype for mtd_read_oob_bf(...) | ✅ Applied |
+| 10 | c2cae69f474 | mtd: Correct dependency on SYS_FLASH_CHECKSUM | ✅ Applied |
+| 11 | 393b907f636 | mtd: spi: sf_dataflash.c: Make use of 'z' for printing size_t | ✅ Applied |
+| 12 | 133f9e1fc1a | mtd: nvmxip: Make use of LBAF for printing lbaint_t | ✅ Applied |
+| 13 | badb8a36491 | x86: Rename arch/x86/include/asm/pnp_def.h to include/pnp_def.h | ✅ Applied |
+| 14 | b71d304f361 | clk: Tighten some clock driver dependencies | ✅ Applied |
+| 15 | 1535a62ee0b | spi: Tighten some spi driver dependencies | ✅ Applied |
+| 16 | 5e6d2a772fd | spi: altera_spi: Add missing <time.h> to altera_spi.c | ✅ Applied |
+| 17 | 9ed8fafbcde | Revert "clk: Return value calculated by ERR_PTR" | ⏭️ **Skipped** - already applied in ci/master |
+| 18 | dd72e600e68 | MAINTAINERS: update my email address | ✅ Applied |
+| 19 | ceb3ef1404a | Merge branch 'master' of u-boot-sh | ⏭️ **Skipped** - already applied as 2c4f480ae24 |
+
+### Fix-ups Made
+- None required
+
+### Commits with Concerning Deltas
+- None - all deltas matched between original and cherry-picked commits
+
+### Skipped Commits Details
+1. **9ed8fafbcde** (Revert "clk: Return value calculated by ERR_PTR"): The change was already present in ci/master (`ERR_PTR(ret);` vs `return ERR_PTR(ret);`). The commit became empty during cherry-pick.
+
+2. **ceb3ef1404a** (Merge branch u-boot-sh): This merge commit was marked as "maybe already applied as 2c4f480ae24". Verification confirmed it was indeed already applied via MR!777 with a different hash but the same purpose. The commit became empty during cherry-pick.
+
+**Branch `cherry-c01280b62c4` is ready for pushing.**
 
 ---
 
