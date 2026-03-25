@@ -48266,3 +48266,263 @@ No code changes are required. The pipeline should pass on retry when the lab inf
 
 ---
 
+## 2026-03-24: us/next
+
+Branch: cherry-4e203ee0ce1
+
+Commits:
+- 4e203ee0ce1 sunxi: a523: Add OrangePi 4A defconfig
+- fb48e8760ed sunxi: a523: Re-use H6/H616 DRAM size detection method
+- 951c5a29644 Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage
+- bf9636ef36a sunxi: add support for NetCube Systems Kumquat
+- 8513f7e78a9 net: sun8i-emac: Remove internal PHY config default value
+- 48293ab19ab net: sun8i-emac: Add support for active-low leds with internal PHY
+- 15e158ccd97 sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM
+- 993c48bd416 sunxi: switch Allwinner A80 boards to OF_UPSTREAM
+- e828295c903 sunxi: dts: arm64: update devicetree files from Linux kernel tree
+- fa4dfe870c1 sunxi: dts: arm: update devicetree files from Linux kernel tree
+- c95334515f4 Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi
+
+### Conversation log
+The repository has some untracked files but is otherwise clean. Let me create and checkout the new branch based on ci/master:
+
+Now let me cherry-pick the first commit:
+
+First commit successful. Let me check the delta and run build test:
+
+Deltas match (2 files, 37 insertions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Deltas match. Build test:
+
+Build passed. Third commit:
+
+Deltas match. Build test:
+
+Build passed. Fourth commit - this one is marked as "maybe already applied as 3f36fd04c37", so I need to check first:
+
+These patches are completely different. The original bf9636ef36a is about NetCube Systems Kumquat support, but 3f36fd04c37 is a squash of device tree files. Let me search for the actual commit in ci/master:
+
+The commit is not directly applied. Let me try cherry-picking it:
+
+Deltas match. Build test:
+
+Build passed. Fifth commit:
+
+Deltas match. Build test:
+
+Build passed. Sixth commit:
+
+Deltas match. Build test:
+
+Build passed. Seventh commit:
+
+Deltas match. Build test:
+
+Build passed. Eighth commit:
+
+Deltas match. Build test:
+
+Build passed. Ninth commit:
+
+Deltas match. Build test:
+
+Build passed. Tenth commit:
+
+Deltas match. Build test:
+
+Build passed. Now for the eleventh commit - this is a merge commit, marked as "maybe already applied as 661332a0744". Let me check first:
+
+These are different merges (different dates, different content). I'll proceed with cherry-picking the merge commit:
+
+The merge commit is now empty (as expected since all individual commits are already applied). I'll commit it as an empty commit to preserve the merge message:
+
+The merge commit was cherry-picked as an empty commit (which is expected since all individual commits have already been applied). Build test:
+
+Build passed. Now let me verify all 11 commits are present:
+
+All 11 commits are present. Let me run the final build test:
+
+## Final Status
+
+All 11 commits have been successfully cherry-picked onto branch `cherry-4e203ee0ce1`:
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | 4e203ee0ce1 | sunxi: a523: Add OrangePi 4A defconfig | ✓ Cherry-picked |
+| 2 | fb48e8760ed | sunxi: a523: Re-use H6/H616 DRAM size detection method | ✓ Cherry-picked |
+| 3 | 951c5a29644 | Makefile: pass KEYDIR when set to sunxi-spl.bin mkimage | ✓ Cherry-picked |
+| 4 | bf9636ef36a | sunxi: add support for NetCube Systems Kumquat | ✓ Cherry-picked (not already applied - 3f36fd04c37 was unrelated squash commit) |
+| 5 | 8513f7e78a9 | net: sun8i-emac: Remove internal PHY config default value | ✓ Cherry-picked |
+| 6 | 48293ab19ab | net: sun8i-emac: Add support for active-low leds with internal PHY | ✓ Cherry-picked |
+| 7 | 15e158ccd97 | sunxi: switch the Allwinner T113 SoC to OF_UPSTREAM | ✓ Cherry-picked |
+| 8 | 993c48bd416 | sunxi: switch Allwinner A80 boards to OF_UPSTREAM | ✓ Cherry-picked |
+| 9 | e828295c903 | sunxi: dts: arm64: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
+| 10 | fa4dfe870c1 | sunxi: dts: arm: update devicetree files from Linux kernel tree | ✓ Cherry-picked |
+| 11 | c95334515f4 | Merge https://source.denx.de/u-boot/custodians/u-boot-sunxi | ✓ Cherry-picked (empty merge - all child commits applied) |
+
+**Build Result:** ✓ OK - sandbox build passed
+
+**Fix-ups:** None required
+
+**Concerning Deltas:** None - all commit deltas matched between original and cherry-picked versions
+
+**Notes:**
+- Commit 4 (bf9636ef36a - NetCube Kumquat) was marked as "maybe already applied as 3f36fd04c37" but the comparison showed 3f36fd04c37 was a completely different commit (a squashed DTS subtree update), so the cherry-pick was performed normally.
+- Commit 11 (merge commit c95334515f4) was marked as "maybe already applied as 661332a0744" but comparison showed they were different merges from different dates (2025 vs 2023), so the cherry-pick was performed. It resulted in an empty commit since all individual commits from the merge were already applied in this branch.
+
+The branch `cherry-4e203ee0ce1` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-24 (attempt 1)
+
+Branch: cherry-4e203ee0ce1
+
+Failed jobs:
+- vbe (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Let me analyze the job logs:
+
+**VBE job (rk3399-generic-ddr3):**
+- The VPL boot fails with "Error: -5" 
+- "VPL: failed to boot from all boot devices"
+- "### ERROR ### Please RESET the board ###"
+- This is a boot failure on real hardware at the VPL stage
+
+**pcduino3_nano job:**
+- Times out waiting for U-Boot prompt ("Timeout of 15 seconds exceeded during waiting for login")
+- No boot output shown - the board doesn't seem to boot at all
+- "Lab failure: Marking connection bad"
+
+Both failures appear to be hardware lab infrastructure issues - the boards aren't booting properly. The VBE failure shows "Error: -5" (which is -EIO) in VPL stage, and pcduino3_nano shows no boot output at all.
+
+However, let me check out the branch and look at the commits more closely to see if any of them could have caused these boot failures on ARM boards:
+
+Looking at the logs more closely:
+
+1. **vbe job**: The VPL stage fails with "Error: -5" when trying to boot from vbe_abrec on a rk3399-generic-ddr3 board. The error happens after loading the firmware - it fails when trying to "boot from vbe_abrec" in VPL.
+
+2. **pcduino3_nano job**: No boot output at all - just times out.
+
+Both of these appear to be lab/hardware issues, not code issues from this MR:
+
+1. The vbe job failure on rk3399 is related to VBE boot mechanism, not sunxi boards
+2. The pcduino3_nano timeout with no boot output suggests a hardware/lab connectivity issue
+
+However, let me check if any of the sunxi device tree changes could affect the pcduino3_nano board:
+
+These commits are much older - the pcduino DTS files weren't touched by this MR. Let me check if there were any changes to common sunxi code that could affect the pcduino:
+
+The pcduino3_nano uses the sun7i-a20 SoC. The only sun7i change is to bananapi.dts, not pcduino. Let me check what board config is used for pcduino3_nano:
+
+No changes to the pcduino config. Let me analyze the error codes more carefully. Error -5 is -EIO. Let me look at what could cause these issues:
+
+No VBE changes. The MR is focused on sunxi boards only. Let me look at what files were changed overall:
+
+I see there's a change to `scripts/Makefile.xpl` which could affect builds. Let me check it:
+
+This change adds the KEYDIR option to sunxi-spl.bin. This shouldn't break basic boot - it's only used when KEYDIR is set. Let me also check the sun8i_emac driver changes:
+
+This is a significant change to the internal PHY initialization! Looking at the old code vs new:
+
+**Old code:**
+```c
+reg = readl(priv->sysctl_reg);  // Read existing value
+reg = sun8i_emac_set_syscon_ephy(priv, reg);  // Modify it
+```
+The old code preserved any existing bits in the syscon register.
+
+**New code:**
+```c
+u32 reg = 0;  // Start from zero
+if (priv->use_internal_phy) {
+    ...
+} else {
+    reg |= H3_EPHY_SHUTDOWN;  // Only sets shutdown bit
+}
+```
+
+The new code starts from 0 and doesn't preserve any existing bits! This is a significant change that could break boards.
+
+However, the pcduino3_nano uses an external Gigabit PHY (RTL8211E), not the internal PHY. Let me verify:
+
+The pcduino3_nano uses `gmac` (Gigabit MAC with external PHY), not `emac` with internal PHY. The sun8i_emac driver is not used by this board.
+
+Let me check if the pcduino3_nano uses sun8i_emac or a different driver:
+
+The pcduino3_nano uses `CONFIG_SUN7I_GMAC=y` and `CONFIG_ETH_DESIGNWARE=y`, not sun8i_emac. So the ethernet driver changes don't affect it.
+
+Looking back at the job logs:
+1. **pcduino3_nano** - The log shows "Writing U-Boot using method sunxi" and then immediately times out with no boot output. This is a lab infrastructure issue - no boot messages at all means the board didn't boot, which could be:
+   - Hardware issue
+   - Lab connectivity/power issue
+   - SD card write failure
+
+2. **vbe (rk3399)** - This is a Rockchip board, not a sunxi board! The MR is sunxi-focused. The VBE test fails with "Error: -5" (EIO) in VPL stage. This is completely unrelated to the sunxi changes in this MR.
+
+These failures appear to be **infrastructure/lab issues**, not code issues from this MR:
+
+1. The **vbe job** runs on rk3399-generic-ddr3 which is a Rockchip board - the sunxi changes in this MR don't affect Rockchip at all
+2. The **pcduino3_nano** shows no boot output at all - the board didn't start, suggesting a lab/hardware issue rather than a code issue
+
+Let me verify there are no common code changes that could affect all boards:
+
+All the code changes are sunxi-specific:
+- `arch/arm/mach-sunxi/` - Sunxi-specific code
+- `dram_sun55i_a523.c` - A523 SoC-specific DRAM code
+- `drivers/net/sun8i_emac.c` - Sun8i ethernet driver (not used by pcduino3_nano or rk3399)
+- `scripts/Makefile.xpl` - Only adds KEYDIR option for sunxi-spl.bin
+
+None of these changes would affect rk3399 (Rockchip) boards.
+
+Let me double-check if there's any issue that could affect pcduino3_nano specifically by building it:
+
+The pcduino3_nano builds successfully with no errors. Let me also verify sandbox builds:
+
+There's a build error, but this appears to be a pre-existing issue with the dtc parser - it's not related to the MR. Let me check if this existed before the MR:
+
+The sandbox build error exists on ci/master as well - it's a pre-existing issue, not from this MR. Let me go back to the MR branch:
+
+Based on my analysis, these are **infrastructure/lab failures**, not code issues:
+
+1. **vbe job (rk3399-generic-ddr3)**: This is a Rockchip board. The MR contains only sunxi (Allwinner) changes. The VPL boot failure with "Error: -5" is completely unrelated to the sunxi code in this MR.
+
+2. **pcduino3_nano job**: 
+   - The board builds successfully
+   - The log shows no boot output at all - the test times out waiting for the U-Boot prompt
+   - This suggests a lab connectivity/hardware issue (board didn't power up, serial connection issue, SD card write failure, etc.)
+   - The sun7i-a20 pcduino3_nano DTS was not modified by this MR
+   - The Linksprite_pcDuino3_Nano_defconfig was not modified
+   - The board uses SUN7I_GMAC (DesignWare ethernet), not sun8i_emac, so the ethernet changes don't affect it
+
+**Conclusion**: These failures are **infrastructure/transient issues** (lab hardware, connectivity, or runner problems), not code issues introduced by this MR.
+
+## Report
+
+**Analysis Summary:**
+
+Both failed jobs appear to be **infrastructure/lab issues**, not code problems from the MR:
+
+### Job: vbe (rk3399-generic-ddr3)
+- **Failure type**: Hardware lab issue
+- **Root cause**: The board (Rockchip rk3399) fails at VPL stage with "Error: -5" (EIO) when trying to "boot from vbe_abrec"
+- **Why not MR-related**: This MR contains only Allwinner/sunxi changes. The rk3399 is a Rockchip SoC - completely different architecture. None of the code in this MR could affect Rockchip boards.
+
+### Job: pcduino3_nano (Linksprite_pcDuino3_Nano)
+- **Failure type**: Hardware lab issue
+- **Root cause**: The test times out ("Timeout of 15 seconds exceeded during waiting for login") with no boot output shown at all
+- **Why not MR-related**: 
+  - The board's DTS file (`sun7i-a20-pcduino3-nano.dts`) was not modified
+  - The board's defconfig (`Linksprite_pcDuino3_Nano_defconfig`) was not modified
+  - The board uses `SUN7I_GMAC` driver, not `sun8i_emac` (which was modified)
+  - The board builds successfully with `buildman`
+  - No boot output at all suggests a lab connectivity/hardware issue
+
+**Recommendation**: No code changes are needed. These failures should be retried after confirming lab hardware is functioning properly.
+
+---
+
