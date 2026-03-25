@@ -721,7 +721,7 @@ config BOOTMETH_BLS
 	bool "Bootdev support for Boot Loader Specification (BLS) Type #1"
 	select PXE_UTILS
 	select PXE_INITRD_LIST
-	default y if SANDBOX
+	default y if SANDBOX || MACH_QEMU
 	help
 	  Enables support for Boot Loader Specification (BLS) Type #1 entries.
 	  This makes bootdevs look for '*.conf' files in 'loader/entries/'
