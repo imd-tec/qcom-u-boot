@@ -48457,3 +48457,94 @@ The branch `cherry-3cb97f92933` is ready for pushing.
 
 ---
 
+## 2026-03-25: us/next
+
+Branch: cherry-f17f11880a1
+
+Commits:
+- f17f11880a1 configs: Resync with savedefconfig
+- 23987e10905 Prepare v2026.01-rc1
+- 6f48f6f2a2d clk: versaclock: return value calculated by ERR_PTR
+- 2a13b59ed43 clk: versaclock: Use IS_ERR check before dereference
+- e8fd262fb3e gpio: intel_gpio: Initialise or0 and or1
+- 6e382d8fc5e mmc: owl_mmc: Do not dereference data before NULL check
+- bf09c6abfc8 Merge patch series "clk: versaclock: Fix two issues found by Smatch"
+
+### Conversation log
+The repository is clean (untracked files don't affect cherry-picking). Let me create and checkout the new branch:
+
+Now let's start cherry-picking. The first commit is marked as "maybe already applied as 64d499ec68e" and is a [QCONFIG RESYNC] commit. Let me first verify if it's already applied:
+
+The commits are significantly different - they have different authors, dates, subjects, and content. The commit 64d499ec68e is a pickman record commit, not the original defconfig resync. However, since f17f11880a1 is marked as [QCONFIG RESYNC], I should skip the cherry-pick and run qconfig.py instead.
+
+The qconfig.py ran successfully. Let me check if it created a commit:
+
+qconfig.py created the commit. Now let me verify the cherry-pick stats and run a build test:
+
+Build passed. Now let's continue with commit 2: 23987e10905 "Prepare v2026.01-rc1"
+
+There's a conflict. Let me check if this commit might already be applied in ci/master:
+
+The search didn't find this commit in ci/master. Let me look at the conflicts and try to resolve them:
+
+I see the conflict - ci/master is at 2026.02 but this commit is for 2026.01-rc1. The Makefile conflict is about PATCHLEVEL (HEAD has 02, the commit wants 01). Let me check the full release_cycle.rst conflict:
+
+This is a time-sensitive commit - it's preparing for v2026.01-rc1 which is from the past (October 2025). The ci/master is already at 2026.02. This commit doesn't make sense to apply now as the version has already moved past it. Let me check the original commit more carefully:
+
+This is a release preparation commit from October 2025 (v2026.01-rc1). Since ci/master is now at v2026.02, this commit is outdated and shouldn't be applied - it would set the version back to 2026.01-rc1 from 2026.02.
+
+However, the user explicitly requested this commit. Let me abort this cherry-pick and create an empty commit explaining why:
+
+Now let's continue with commit 3: 6f48f6f2a2d "clk: versaclock: return value calculated by ERR_PTR"
+
+Cherry-pick succeeded. Let me verify the delta and run build test:
+
+Delta matches perfectly. Let's run the build test:
+
+Build passed. Now commit 4: 2a13b59ed43 "clk: versaclock: Use IS_ERR check before dereference"
+
+Excellent! Delta matches, build passed. Now commit 5: e8fd262fb3e "gpio: intel_gpio: Initialise or0 and or1"
+
+Delta matches, build passed. Now commit 6: 6e382d8fc5e "mmc: owl_mmc: Do not dereference data before NULL check"
+
+Delta matches, build passed. Now the final commit 7: bf09c6abfc8 "Merge patch series 'clk: versaclock: Fix two issues found by Smatch'" - this is a merge commit:
+
+The merge commit is empty because the individual commits were already cherry-picked. We still need to commit it to preserve the history as instructed:
+
+Let me verify all commits are present:
+
+All 7 commits are present. Let me run the final build test:
+
+**Final Status Report:**
+
+## Cherry-pick Summary for branch `cherry-f17f11880a1`
+
+### Build Result: ✅ OK
+All builds passed without warnings or errors.
+
+### Commits Applied (7 total):
+
+| # | Original Hash | Subject | Status |
+|---|---------------|---------|--------|
+| 1 | f17f11880a1 | configs: Resync with savedefconfig [QCONFIG RESYNC] | ✅ Applied via qconfig.py (regenerated defconfigs) |
+| 2 | 23987e10905 | Prepare v2026.01-rc1 | ⏭️ SKIPPED - ci/master is at v2026.02, would revert version |
+| 3 | 6f48f6f2a2d | clk: versaclock: return value calculated by ERR_PTR | ✅ Applied cleanly |
+| 4 | 2a13b59ed43 | clk: versaclock: Use IS_ERR check before dereference | ✅ Applied cleanly |
+| 5 | e8fd262fb3e | gpio: intel_gpio: Initialise or0 and or1 | ✅ Applied cleanly |
+| 6 | 6e382d8fc5e | mmc: owl_mmc: Do not dereference data before NULL check | ✅ Applied cleanly |
+| 7 | bf09c6abfc8 | Merge patch series "clk: versaclock: Fix two issues..." | ✅ Applied (empty - content already in prior commits) |
+
+### Fix-ups Made:
+1. **f17f11880a1**: Used `qconfig.py -s -Cy` instead of cherry-pick (as per QCONFIG RESYNC instructions)
+2. **23987e10905**: Created empty commit marked [SKIPPED] because applying this version bump would set version back from v2026.02 to v2026.01-rc1
+
+### Delta Verification:
+All cherry-picked commits matched the original commits exactly in terms of files changed and line counts.
+
+### Commits with Concerning Deltas:
+None - all deltas were verified as matching.
+
+The branch `cherry-f17f11880a1` is ready for pushing.
+
+---
+
