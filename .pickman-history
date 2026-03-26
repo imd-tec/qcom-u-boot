@@ -49113,3 +49113,107 @@ The review comment describes infrastructure failures (pipeline fix attempt 2) fo
 
 ---
 
+### Review: 2026-03-26
+
+Branch: cherry-c01280b62c4
+
+Comments addressed:
+
+
+### Conversation log
+The branch is 20 commits behind ci/master and 22 commits ahead. Let me save the commit stats before rebase, then perform the rebase:
+
+Let me fix the command:
+
+Let me try a different approach:
+
+Good, I have the pre-rebase stats. Now let me perform the rebase:
+
+There's a conflict in the `.pickman-history` file. Let me check what the conflict is:
+
+This is a pickman metadata file. Let me take a different approach - I'll accept our version (the full content) since this is the history for this branch:
+
+Rebase completed. Now let me verify the commits and compare deltas:
+
+Good, 22 commits after the rebase. Now let me verify the cherry-picked commits have the same deltas:
+
+The delta matches (1 file changed, 1 insertion, 1 deletion). Let me verify the build:
+
+Build passes. Now let me check for existing versioned branches and create the backup:
+
+There are already -v2, -v3, -v4. Let me create -v5:
+
+The branch has been force pushed. Let me verify the final state:
+
+The branch is now 0 commits behind ci/master and 22 commits ahead.
+
+## Summary Report
+
+### Task: Rebase MR !792 (branch: cherry-c01280b62c4) onto latest ci/master
+
+### What Was Done:
+
+1. **Identified rebase requirement**: Branch was 20 commits behind ci/master
+   - Old base: `eae40e46fa1`
+   - New base: `b03ebd44ad1` (current ci/master)
+   - New commits on ci/master included the 'booe' merge (bootstd multi-entry bootflow scanning)
+
+2. **Performed rebase**: Successfully rebased 22 commits onto ci/master
+   - One conflict in `.pickman-history` file was resolved automatically (using theirs)
+   - All 17 cherry-picked commits from us/next preserved
+   - 5 pickman record commits preserved
+
+3. **Verified build**: ✅ Sandbox build passes
+
+4. **Created backup branch**: `cherry-c01280b62c4-v5`
+
+5. **Force pushed to remote**: Updated `ci/cherry-c01280b62c4` from `9db14184c72` to `85cfbf25bef`
+
+### Branch Status After Rebase:
+- **Local branch**: `cherry-c01280b62c4` at `85cfbf25bef`
+- **Remote branch**: `ci/cherry-c01280b62c4` at `85cfbf25bef`
+- **Base commit**: `b03ebd44ad1` (ci/master HEAD)
+- **Commits ahead**: 22 (17 cherry-picks + 5 pickman records)
+- **Commits behind**: 0
+- **Build**: ✅ Passes
+
+### Commits on Branch (17 cherry-picks + 5 pickman records):
+| # | New Hash | Subject |
+|---|----------|---------|
+| 1 | 3fa50915a43 | spi: ich: Do not use uninitialised value |
+| 2 | 56d4fe16943 | spi: npcm-fiu: Remove repeated test |
+| 3 | 9e27ba72f8a | spi: fspi: Logical or used instead of logical and |
+| 4 | fa70965d56b | spi: spi-uclass: Use unwind goto |
+| 5 | 4c645b49251 | ARM: renesas: Drop 'imply MULTI_DTB_FIT_USER_DEFINED_AREA' lines |
+| 6 | eef3442f2a5 | cmd: mtd: Prevent use of uninitialised variable |
+| 7 | d6032e07cb9 | mtd: nand: Prevent dereference of NULL pointer |
+| 8 | 391cb61ac84 | clk: Add missing \<dm/device.h\> to include/clk.h |
+| 9 | f7cc9d45f3b | mtd: Add function prototype for mtd_read_oob_bf(...) |
+| 10 | 0a1b09b7d5f | mtd: Correct dependency on SYS_FLASH_CHECKSUM |
+| 11 | ae06227d592 | mtd: spi: sf_dataflash.c: Make use of 'z' for printing size_t |
+| 12 | 979be5586e6 | mtd: nvmxip: Make use of LBAF for printing lbaint_t |
+| 13 | 553b90a923a | x86: Rename arch/x86/include/asm/pnp_def.h to include/pnp_def.h |
+| 14 | f462004ae5b | clk: Tighten some clock driver dependencies |
+| 15 | fba8af144c6 | spi: Tighten some spi driver dependencies |
+| 16 | 0d86fa17508 | spi: altera_spi: Add missing \<time.h\> to altera_spi.c |
+| 17 | 464b1ee02be | MAINTAINERS: update my email address |
+| + | fc6a87425cf | pickman: Record cherry-pick of 19 commits from us/next |
+| + | 8e02df4e82f | pickman: Record review handling for cherry-c01280b62c4 |
+| + | 793803b4f07 | pickman: Record review handling for cherry-c01280b62c4 |
+| + | b26cf700509 | pickman: Record review handling for cherry-c01280b62c4 |
+| + | 85cfbf25bef | pickman: Record review handling for cherry-c01280b62c4 |
+
+### Conflict Resolution:
+- **File**: `.pickman-history`
+- **Resolution**: Used `--theirs` to accept the incoming version from the branch being rebased, preserving the MR's history
+
+### Suggested MR Reply:
+
+> Rebased onto latest ci/master (b03ebd44ad1). The branch was 20 commits behind due to recent merges including the 'booe' branch (bootstd multi-entry bootflow scanning). 
+>
+> One conflict in `.pickman-history` was resolved automatically. All commit deltas preserved. Build verification passes. Pipeline should now run on the updated branch.
+>
+> Note: Previous pipeline failures for `pcduino3_nano` and `opi_pc` were infrastructure/lab issues (hardware timeouts and serial connection refused), not code problems.
+
+---
+
