@@ -71,12 +71,6 @@ define build_template
 	  CROSS_COMPILE=$(or $($(platform)_CROSS_COMPILE),$(CROSS_COMPILE)) \
 	  $($(platform)_assigns)
 
-    ifneq (,$(filter uboot.elf,$($(platform)_targets)))
-	cp -u debian/build/$(platform)/u-boot debian/build/$(platform)/uboot.elf
-	# Strip the ELF binary
-	$($(platform)_CROSS_COMPILE)strip --remove-section=.comment --remove-section=.note \
-	  debian/build/$(platform)/uboot.elf
-    endif
 	# Upstream generates executable targets (last checked with 2020-10).
 	chmod -x $(addprefix debian/build/$(platform)/,$($(platform)_targets))
 
