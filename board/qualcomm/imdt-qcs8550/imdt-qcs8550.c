@@ -124,11 +124,6 @@ int ft_system_setup(void *blob, struct bd_info *bd)
 	const char * const *cpu_map;
 	int cpus_off, i, ret;
 	u32 fuse_val;
-#if 0 
-	ret = efi_ft_system_setup(blob, bd);
-	if (ret)
-		return ret;
-#endif
 
 	ret = read_cpu_fuse_value(&fuse_val);
 	if (ret || !fuse_val)
@@ -156,7 +151,7 @@ int ft_system_setup(void *blob, struct bd_info *bd)
 			continue;
 
 		fdt_setprop_string(blob, off, "enable-method", "none");
-		fdt_setprop_string(blob, off, "status", "fail");
+		fdt_set_node_status(blob, off, FDT_STATUS_FAIL);
 		log_info("Disabled partial-goods CPU: %s\n", cpu_map[i]);
 	}
 

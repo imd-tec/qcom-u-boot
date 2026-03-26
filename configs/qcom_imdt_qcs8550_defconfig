@@ -5,6 +5,8 @@ CONFIG_TARGET_IMDT_QCS8550=y
 CONFIG_VIDEO=n
 CONFIG_CHID=n
 CONFIG_RUST_EXAMPLES=n
+# Prevent serial terminals pausing the boot process due to unexpected input
 CONFIG_AUTOBOOT_KEYED=y
 CONFIG_AUTOBOOT_DELAY_STR="d"
 CONFIG_AUTOBOOT_STOP_STR=" "
+CONFIG_DEFAULT_FDT_FILE="qcom/qcs8550-imdt-sbc.dtb"
