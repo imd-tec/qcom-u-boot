@@ -17,15 +17,15 @@
 
   u-boot-concept-qemu_platforms += qemu-x86
   qemu-x86_CROSS_COMPILE := i686-linux-gnu-
-  qemu-x86_targets := u-boot.bin u-boot.rom
+  qemu-x86_targets := u-boot.rom
 
   u-boot-concept-qemu_platforms += qemu-x86_64
   qemu-x86_64_CROSS_COMPILE := x86_64-linux-gnu-
-  qemu-x86_64_targets := u-boot.bin u-boot.rom
+  qemu-x86_64_targets := u-boot.rom
 
   u-boot-concept-qemu_platforms += qemu-x86_64_nospl
   qemu-x86_64_nospl_CROSS_COMPILE := x86_64-linux-gnu-
-  qemu-x86_64_nospl_targets := u-boot.bin u-boot.rom
+  qemu-x86_64_nospl_targets := u-boot.rom
 
   u-boot-concept-qemu_platforms += qemu_arm
   qemu_arm_CROSS_COMPILE := arm-linux-gnueabihf-
