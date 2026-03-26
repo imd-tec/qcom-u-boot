@@ -49308,206 +49308,235 @@ No code changes are required. The pipeline should be retried. If the same failur
 
 ## 2026-03-26: us/next
 
-Branch: cherry-e41e6feb3d3
+Branch: cherry-157938a220c
 
 Commits:
-- e41e6feb3d3 usb: ehci: exynos: variable node should be signed
-- 76d3b665310 usb: fsl-dt-fixup: Return an error code on error
-- 08f4c52c97a usb: ohci-hcd: Null check lurb_priv before dereference
-- dd01b0541be usb: ulpi: Incorrect operator used
-- adcec085e0d usb: xhci: exynos: variable node should be signed
-- 6ea91bf8055 usb: musb-new: Null check before dereference
-- d5de67c57e7 usb: musb-new: Limit check array index before use
-- 41fd18219fb usb: musb-new: Cannot test unsigned member to be negative
-- 96b95a05b7a Merge branch 'master' of git://source.denx.de/u-boot-usb
+- 157938a220c timer: sifive_clint: Add GHRTv2 compaible string
+- 417ad9b0c71 riscv: dts: starfive: jh7110-common: drop no-sdio property from mmc1
+- 2b26cda14f8 riscv: dts: starfive: jh7110: add DMC memory controller
+- e085b7b7316 riscv: dts: starfive: jh7110: bootph-pre-ram hinting needed by boot loader
+- b1b5079c7e0 riscv: dts: starfive: jh7110-common: drop no-mmc property from mmc1
+- 926319bd337 riscv: dts: starfive: jh7110-common: drop mmc post-power-on-delay-ms
+- d1c3f46f8ba riscv: dts: starfive: add common board dtsi for Milk-V Mars CM variants
+- 625e6125afd dt-bindings: riscv: starfive: add milkv,marscm-emmc
+- 1c08c042f0c riscv: dts: starfive: add Milk-V Mars CM system-on-module
+- 6ba84ad72fc dt-bindings: riscv: starfive: add milkv,marscm-lite
+- f9e83e75929 riscv: dts: starfive: add Milk-V Mars CM Lite system-on-module
+- e599023f310 riscv: dts: starfive: prune redundant jh7110 overrides
+- 6674ffb51bb board: starfive: visionfive2: Add Milk-V Mars CM and Mars CM Lite selection by product_id
+- b827e673916 configs: starfive: Add Milk-V Mars CM and Mars CM Lite to visionfive2
+- e1c05c00696 board: starfive: Add initial Milk-V Mars CM and Mars CM Lite user documentation
+- 75253c89857 Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv
 
 ### Conversation log
-The repository is clean (only untracked files). Now let me create the cherry-pick branch based on ci/master:
+The repository state is clean (untracked files are okay). Now let me create and checkout the new branch based on ci/master:
 
-Good, branch created. Now let me start cherry-picking the commits. First commit:
+Now let me start cherry-picking each commit in order. First commit:
 
-First commit cherry-picked. Let me verify the delta and run the build test:
+Build succeeded. Now let's continue with the second commit:
 
-Delta matches. Now let me run the build test:
+Now the third commit:
 
-Build passed. Continuing with commit 2:
+Now the fourth commit:
 
-Delta matches. Build test:
+Fifth commit:
 
-Build passed. Commit 3:
+Sixth commit:
 
-Delta matches. Build test:
+Seventh commit:
 
-Build passed. Commit 4:
+Eighth commit:
 
-Delta matches. Build test:
+Ninth commit:
 
-Build passed. Commit 5:
+Tenth commit:
 
-Delta matches. Build test:
+Eleventh commit:
 
-Build passed. Commit 6:
+Twelfth commit:
 
-Delta matches. Build test:
+There's a conflict. Let me examine it:
 
-Build passed. Commit 7:
+I can see the conflict. The HEAD has a more extensive version that includes the DMC node with all its properties and other bootph-pre-ram hints, while the commit being cherry-picked (e599023f310) is trying to prune to just the clock-frequency fixme comment. Let me look at the original commit to understand what it intended:
 
-Delta matches. Build test:
+I see. The original commit is trying to remove the "redundant" overrides because they're now in upstream. But our ci/master has a slightly different structure - it has the bootph-pre-ram properties added through the jh7110.dtsi, and they're included differently.
 
-Build passed. Commit 8:
+Let me see the current state better:
 
-Delta matches. Build test:
+Now let me look at what the original commit (e599023f310) expected as input:
 
-Build passed. Now the last commit - commit 9, which is a merge commit and may already be applied as 0e76dff28ef. Let me verify this first:
+I see the issue. The original commit's parent version had a different structure. The file in ci/master has already been restructured. The intent of e599023f310 was to remove the redundant bootph-pre-ram hints that were duplicates of what's already in upstream jh7110.dtsi. But our ci/master version has a different structure altogether - the bootph-pre-ram properties are still present but in a different location (added via the jh7110.dtsi changes from earlier commits).
 
-The merge commits are different - 0e76dff28ef is a pickman merge that applied the same USB fixes. Let me compare what files/changes they contain:
+Looking at the changes, the key point is: 
+- Original commit wanted to remove redundant items that were in blocks marked with "BEGIN/END" comments
+- Our ci/master doesn't have those comments or that structure - it appears the bootph-pre-ram hints were added differently
 
-Let me examine the original merge commit more closely to understand its content:
+Let me see what the expected output from the e599023f310 commit is:
 
-The merge commit is essentially a merge of the same USB fixes we just cherry-picked. Since all the commits (1-8) have already been cherry-picked, this merge commit would be empty. Let me proceed with the merge commit cherry-pick using --allow-empty:
+So the target file is very minimal after the pruning. But our ci/master version has additional content that we need to preserve - like the timer node, cpus/gmac0 bootph-pre-ram properties, etc. 
 
-As expected, the merge commit is empty because all its changes are already included. Let me complete this with an empty commit:
+The original commit's goal is to remove redundant overrides now that they are in upstream jh7110.dtsi. In our ci/master, the bootph-pre-ram properties are in jh7110.dtsi now (from the earlier cherry-picked commits e085b7b7316). So we should also remove the duplicates from this -u-boot.dtsi file.
 
-The merge commit has been preserved with an empty commit. Now let me verify the commit history and run the final build test:
+Let me check what's in our jh7110.dtsi after the cherry-picks:
 
-All 9 commits are present. Now let me run the final build test:
+The jh7110.dtsi now has all the bootph-pre-ram annotations. So the goal of e599023f310 - to remove the redundant ones from the -u-boot.dtsi file - should be achieved.
 
-All builds passed. Here's the final status:
+However, our ci/master has some additional things in the -u-boot.dtsi that aren't in the original:
+1. A timer node
+2. gmac0_* bootph-pre-ram (not just gmac1)
+3. aoncrg, stgcrg, cpus nodes
+4. The dmc node structure is different (has label `dmc:` and different clock-names)
 
-## Cherry-pick Summary
+I need to resolve this conflict by keeping the intent of e599023f310 (pruning redundant overrides) while maintaining any ci/master specific additions that aren't redundant.
 
-**Branch:** `cherry-e41e6feb3d3` (based on `ci/master`)
+Let me check what nodes in our -u-boot.dtsi are now redundant vs what needs to stay:
 
-**All 9 commits cherry-picked successfully:**
+The jh7110.dtsi now has the memory-controller. Let me see the full DMC node:
+
+The upstream jh7110.dtsi now has the full DMC node. The only thing we need to preserve in the -u-boot.dtsi is:
+1. The `clock-frequency = <2133>` property for the DMC (since that's board-specific)
+2. The timer node (this seems board-specific and not in jh7110.dtsi)
+3. The `assigned-clock-rates = <0>` for syscrg
+4. The `#include "starfive-visionfive2-binman.dtsi"` at the end (but let me check if it exists)
+
+Let me check what's already included vs. what the original target has. The timer node in our ci/master seems board-specific:
+
+The timer isn't in the upstream jh7110.dtsi, so it needs to stay. Now let me construct the proper resolution. We need to keep:
+
+1. Timer node (not in upstream)
+2. clock-frequency for DMC (board-specific override)
+3. assigned-clock-rates for syscrg (board-specific)
+4. Include binman dtsi
+
+Let me also check if there's something about gmac0 that we need to preserve (since the original only had gmac1 bootph-pre-ram in the parent of e599023f310):
+
+The gmac0 clocks exist but don't have bootph-pre-ram. So our ci/master added gmac0 bootph-pre-ram hints. Let me check if gmac0 bootph-pre-ram is in the original -u-boot.dtsi of e599023f310's output:
+
+The target output doesn't have gmac0 overrides. Let me check if the gmac0_rgmii_rxin has bootph-pre-ram in upstream jh7110.dtsi:
+
+Interesting - gmac1 has bootph-pre-ram but gmac0 doesn't. So our ci/master's gmac0 bootph-pre-ram overrides in -u-boot.dtsi are actually necessary (they weren't redundant). Similarly, let me check aoncrg, stgcrg:
+
+Neither aoncrg nor stgcrg has bootph-pre-ram in the upstream. So our ci/master's overrides for those are not redundant.
+
+Let me also check cpus:
+
+cpus doesn't have bootph-pre-ram either. And sys_syscon:
+
+No bootph-pre-ram for sys_syscon either.
+
+Now I understand the full picture. The goal of e599023f310 was to prune the redundant overrides that were added in us/next branch because they're now in upstream jh7110.dtsi. But our ci/master has additional overrides (for gmac0, aoncrg, stgcrg, cpus, sys_syscon, timer node) that are NOT redundant.
+
+So the resolution should:
+1. Remove what's now in upstream: cpu*_intc, clint, osc, gmac1_*, syscrg(bootph-pre-ram only, keep assigned-clock-rates), pllclk, dmc definition (keep only clock-frequency override)
+2. Keep what's NOT in upstream: timer node, gmac0_*, aoncrg, stgcrg, cpus, sys_syscon, soc bootph-pre-ram
+
+Wait, let me also check soc bootph-pre-ram:
+
+No bootph-pre-ram on soc in upstream. Now I'll construct the resolved file. The result should keep all the ci/master specific stuff that's not redundant with upstream:
+
+Now I'll resolve the conflict. The resolution should:
+1. Remove items now in upstream jh7110.dtsi: clint, cpu*_intc, osc, gmac1_*, syscrg(bootph-pre-ram), pllclk, dmc full definition
+2. Keep items NOT in upstream: timer, soc bootph-pre-ram, gmac0_*, aoncrg, stgcrg, cpus, sys_syscon
+3. Add the clock-frequency override for memory-controller and assigned-clock-rates for syscrg
+
+Now let me amend the commit to add a note about the conflict resolution:
+
+There's a significant difference in the stats. The original removed 68 lines, ours removed 51 (but +2). This is expected because our ci/master had different content to start with, and we needed to keep the ci/master specific additions (timer, gmac0, etc.). Let me verify the build:
+
+Build passes. Now thirteenth commit:
+
+Two conflicts. Let me examine them:
+
+This conflict is simple - just need to add the new Mars CM cases and fix the pine64-star64 condition (removing the double parentheses). Let me view the other conflict:
+
+This conflict is more complex. The original commit wants to restructure the set_fdtfile function. Let me look at the full original commit:
+
+I see. The original commit assumes a different structure in starfive_visionfive2.c. Let me check what the parent of the original commit had:
+
+Now I understand. The original commit parent had a simplified set_fdtfile() without the macros and using "VF7110A/VF7110B" checks. Our ci/master has the more traditional version with FDTFILE_* macros and the "VF7110" + version character checks.
+
+The goal is to add Mars CM detection. For spl.c I can simply add the new clauses. For starfive_visionfive2.c, I need to add the MARC detection with the ci/master style (using macros).
+
+Let me resolve spl.c first:
+
+Now resolve starfive_visionfive2.c - I need to add the Mars CM detection in our ci/master's style:
+
+Let me amend with a note about the conflict resolution:
+
+The delta is slightly different (18 insertions vs 14) due to the addition of new macros in our version. That's expected. Let me verify the build:
+
+Now fourteenth commit:
+
+Fifteenth commit:
+
+Now the last commit - the merge commit. I need to check if it's maybe already applied as 958807ce75d:
+
+The subject doesn't quite match. Let me search more specifically:
+
+OK so 958807ce75d is already a pickman-created merge. Let me check the original 75253c89857:
+
+Now let me compare the patches as instructed:
+
+These are both merge commits. The original 75253c89857 is a merge of e1c05c00696 (one of the commits we just cherry-picked). The found 958807ce75d is a pickman merge. Let me check what commits 958807ce75d included:
+
+The 958807ce75d is a different set of commits. Let me check the parents of the original merge commit to understand what it was actually merging:
+
+So the original merge 75253c89857 is merging exactly these 15 commits we just cherry-picked. Since we've already cherry-picked all of these commits, cherry-picking the merge itself will result in an empty merge. Let me try it with --allow-empty:
+
+There are conflicts. Let me view them:
+
+This conflict is about the timer node which we added in our ci/master. The merge commit doesn't have it. Since we already resolved this in the e599023f310 cherry-pick (keeping the timer node and other ci/master additions), we should keep our version:
+
+This conflict is the same as before - our ci/master macro-based style vs us/next inline string style. We should keep our version (HEAD):
+
+Now let me verify the log:
+
+All 16 commits are present (16 shown, commit 17 is the ci/master base). Now let me run the final build:
+
+Build passes. Let me verify the branch final status:
+
+All 16 commits are present and the branch is ready for pushing.
+
+## Summary
+
+**Branch:** `cherry-157938a220c` (based on `ci/master`)
+
+**Build Result:** OK - all builds pass
+
+**Commits Applied:** 16 (all requested commits successfully cherry-picked)
 
 | # | Original Hash | Subject | Status |
 |---|--------------|---------|--------|
-| 1 | e41e6feb3d3 | usb: ehci: exynos: variable node should be signed | ✅ Applied |
-| 2 | 76d3b665310 | usb: fsl-dt-fixup: Return an error code on error | ✅ Applied |
-| 3 | 08f4c52c97a | usb: ohci-hcd: Null check lurb_priv before dereference | ✅ Applied |
-| 4 | dd01b0541be | usb: ulpi: Incorrect operator used | ✅ Applied |
-| 5 | adcec085e0d | usb: xhci: exynos: variable node should be signed | ✅ Applied |
-| 6 | 6ea91bf8055 | usb: musb-new: Null check before dereference | ✅ Applied |
-| 7 | d5de67c57e7 | usb: musb-new: Limit check array index before use | ✅ Applied |
-| 8 | 41fd18219fb | usb: musb-new: Cannot test unsigned member to be negative | ✅ Applied |
-| 9 | 96b95a05b7a | Merge branch 'master' of git://source.denx.de/u-boot-usb | ✅ Applied (empty - changes already included) |
+| 1 | 157938a220c | timer: sifive_clint: Add GHRTv2 compaible string | Clean |
+| 2 | 417ad9b0c71 | riscv: dts: starfive: jh7110-common: drop no-sdio property from mmc1 | Clean |
+| 3 | 2b26cda14f8 | riscv: dts: starfive: jh7110: add DMC memory controller | Clean |
+| 4 | e085b7b7316 | riscv: dts: starfive: jh7110: bootph-pre-ram hinting needed by boot loader | Clean |
+| 5 | b1b5079c7e0 | riscv: dts: starfive: jh7110-common: drop no-mmc property from mmc1 | Clean |
+| 6 | 926319bd337 | riscv: dts: starfive: jh7110-common: drop mmc post-power-on-delay-ms | Clean |
+| 7 | d1c3f46f8ba | riscv: dts: starfive: add common board dtsi for Milk-V Mars CM variants | Clean |
+| 8 | 625e6125afd | dt-bindings: riscv: starfive: add milkv,marscm-emmc | Clean |
+| 9 | 1c08c042f0c | riscv: dts: starfive: add Milk-V Mars CM system-on-module | Clean |
+| 10 | 6ba84ad72fc | dt-bindings: riscv: starfive: add milkv,marscm-lite | Clean |
+| 11 | f9e83e75929 | riscv: dts: starfive: add Milk-V Mars CM Lite system-on-module | Clean |
+| 12 | e599023f310 | riscv: dts: starfive: prune redundant jh7110 overrides | **Conflict resolved** |
+| 13 | 6674ffb51bb | board: starfive: visionfive2: Add Milk-V Mars CM and Mars CM Lite selection by product_id | **Conflict resolved** |
+| 14 | b827e673916 | configs: starfive: Add Milk-V Mars CM and Mars CM Lite to visionfive2 | Clean |
+| 15 | e1c05c00696 | board: starfive: Add initial Milk-V Mars CM and Mars CM Lite user documentation | Clean |
+| 16 | 75253c89857 | Merge branch 'master' of https://source.denx.de/u-boot/custodians/u-boot-riscv | **Conflict resolved** |
 
-**Build Result:** ✅ OK - sandbox build passes
+**Fix-ups Made:**
 
-**Fix-ups:** None required
+1. **e599023f310** - Conflict in `arch/riscv/dts/starfive-visionfive2-u-boot.dtsi`: The original commit removed redundant bootph-pre-ram overrides now in upstream jh7110.dtsi. However, ci/master had additional non-redundant items (timer node, gmac0, aoncrg, stgcrg, cpus, sys_syscon). Resolution kept ci/master-specific additions while pruning items now available in upstream.
 
-**Delta Verification:** All commits matched their originals exactly
+2. **6674ffb51bb** - Conflicts in `board/starfive/visionfive2/spl.c` and `starfive_visionfive2.c`: The original commit used inline string style, while ci/master uses macro-based style (FDTFILE_* macros). Resolution added Mars CM detection using ci/master's macro style for consistency.
 
-**Notes:**
-- The merge commit (96b95a05b7a) resulted in an empty commit because all 8 preceding USB fix commits were successfully cherry-picked, making the merge's changes already present. The merge commit was preserved with `--allow-empty` to maintain history tracking.
-- The suggested alternate hash 0e76dff28ef was a different pickman merge with different content (included cdns3 fixes), so we applied the original merge commit.
+3. **75253c89857** - Same conflicts as above for the merge commit. Resolution kept ci/master's style (timer node, macro-based fdtfile selection).
 
-The branch `cherry-e41e6feb3d3` is ready for pushing.
+**Commits with Notable Deltas:**
+- e599023f310: Original removed 68 lines, ours removed 51+2 (expected due to ci/master having different content)
+- 6674ffb51bb: Original +14 lines, ours +17 lines (expected due to macro additions)
 
----
-
-### Review: 2026-03-26
-
-Branch: cherry-e41e6feb3d3
-
-Comments addressed:
-- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) vbe, bpi, pcduino3_nano.
-
-Now I have all the informati...
-
-### Conversation log
-Based on the context, this is the third pipeline failure (attempt 2 in the review comment). The previous attempts concluded these were infrastructure/lab failures, not code issues. Let me analyze the current situation:
-
-Let me look at the OHCI change more carefully since that's the only generic USB driver change that could potentially affect the failing Sunxi boards:
-
-Looking at the code, I can see the issue. The variable `urb_len` is declared on line 1044 but only initialized if `lurb_priv` is non-NULL (lines 1046-1047). However, it's used later in the code (lines 1056, 1058, 1062) only within a condition that checks `if (lurb_priv && ...)`, so due to short-circuit evaluation, `urb_len` would only be accessed when `lurb_priv` is valid.
-
-The code is logically correct, but this might cause compiler warnings about potentially uninitialized variables. However, this shouldn't cause boot failures.
-
-Let me check what the original commit changed:
-
-The code change is correct and can't cause the boot failures observed. The failures show:
-1. **VBE (rk3399)**: Error in VPL stage (before USB is used)
-2. **BPI/pcduino3_nano**: No output at all (board didn't boot)
-
-These are clearly infrastructure issues. Let me verify the build passes and prepare the response:
-
-Build passes. Now let me check if there are existing -v2, -v3 branches:
-
-There's already -v2. Let me create -v3:
-
-Now let me verify that the remote branch needs to be updated and push:
-
-The remote is already at the same commit. Since there are no code changes needed (these are infrastructure failures), I should push to trigger a new pipeline:
-
-The remote is already up to date. Let me try with `--force-with-lease`:
-
-The branch is already pushed and up-to-date. Since no code changes are needed (infrastructure issues), I'll provide the report.
-
----
-
-## Report: MR !794 - Pipeline Fix Attempt 3
-
-**Branch:** `cherry-e41e6feb3d3`  
-**Local tracking branch:** `cherry-e41e6feb3d3-v3`
-
-### Review Comment Analysis
-
-The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` states:
-> "Pipeline fix (attempt 2): fixed failed job(s) vbe, bpi, pcduino3_nano."
-
-This is an automated notification about the second pipeline fix attempt. The failed jobs are:
-
-1. **vbe (rk3399-generic-ddr3)** - VPL fails with `Error: -5` (EIO) when trying to boot from `vbe_abrec`
-2. **bpi (Bananapi - Sunxi)** - No boot output at all, timeout
-3. **pcduino3_nano (Sunxi)** - No boot output at all, timeout
-
-### Analysis Conclusion
-
-All three failures are **infrastructure/lab issues**, NOT caused by the USB commits in this MR:
-
-| Job | Symptom | Why Not Code-Related |
-|-----|---------|---------------------|
-| vbe | VPL stage Error: -5 in vbe_abrec | USB not used in VPL boot; rk3399 uses DWC3/XHCI generic (not Exynos) |
-| bpi | Zero output, timeout | Board failed before any code ran (power/serial/flash issue) |
-| pcduino3_nano | Zero output, timeout | Same as bpi - infrastructure failure |
-
-The USB changes only affect:
-- EHCI/XHCI Exynos drivers (Samsung Exynos boards only)
-- FSL DT fixup (Freescale/NXP boards only)
-- MUSB drivers (TI OMAP/AM35x boards only)
-- OHCI HCD (generic, but only called during USB enumeration - long after boot)
-- ULPI interface (USB PHY, not boot-critical)
-
-**None of the failing boards use these specific drivers**, and the failures occur either before U-Boot starts (no output) or in VPL stage (before USB initialization).
-
-### Action Taken
-
-- ✅ Build verified: `buildman -L --board sandbox` passes
-- ✅ Created local branch: `cherry-e41e6feb3d3-v3`
-- ℹ️ Remote already up-to-date (no code changes needed)
-
-### Suggested Reply to MR
-
----
-
-**Reply to post on MR:**
-
-The pipeline failures for `vbe`, `bpi`, and `pcduino3_nano` have been analyzed. These are **infrastructure/lab issues**, not caused by the USB commits in this MR.
-
-**vbe (rk3399-generic-ddr3):**
-- Fails in VPL stage with `Error: -5` (EIO) when trying `vbe_abrec` boot method
-- USB is not initialized at VPL stage
-- rk3399 uses DWC3/XHCI generic drivers, not the Exynos drivers modified here
-
-**bpi & pcduino3_nano (Sunxi):**
-- Both produce zero boot output - not even SPL startup messages
-- USB is not enabled in SPL for these boards
-- Indicates hardware/infrastructure issue (board connectivity, power, or serial)
-
-The USB changes in this MR only affect Exynos, Freescale, and TI MUSB drivers - none of which are used by these boards. The OHCI change is generic but only affects USB enumeration, which occurs long after the point of failure.
-
-**Recommendation:** Retry the pipeline. These appear to be persistent lab/hardware issues requiring infrastructure investigation.
+The cherry-pick branch is ready for pushing.
 
 ---
 
