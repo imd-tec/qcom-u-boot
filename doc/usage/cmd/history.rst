@@ -34,16 +34,16 @@ itself is added to the list.
 
     => bootflow scan -l
     Scanning for bootflows in all bootdevs
-    Seq  Method       State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     Scanning global bootmeth 'firmware0':
     Hunting with: simple_bus
     Found 2 extension board(s).
     Scanning bootdev 'mmc2.bootdev':
     Scanning bootdev 'mmc1.bootdev':
-      0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf
+      0  extlinux     ready   mmc          1    0  mmc1.bootdev.part_1       /extlinux/extlinux.conf
     No more bootdevs
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     (1 bootflow, 1 valid)
     => bootflow select 0
     => bootflow info

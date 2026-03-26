@@ -9,6 +9,7 @@
 #include <bootdev.h>
 #include <bootflow.h>
 #include <bootm.h>
+#include <bootmeth.h>
 #include <bootstd.h>
 #include <command.h>
 #include <console.h>
@@ -21,13 +22,13 @@
 
 static void show_header(void)
 {
-	printf("Seq  Method       State   Uclass    Part  E  Name                      Filename\n");
-	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
+	printf("Seq  Method       State   Uclass    Part  Ent  E  Name                      Filename\n");
+	printf("---  -----------  ------  --------  ----  ---  -  ------------------------  ----------------\n");
 }
 
 static void show_footer(int count, int num_valid)
 {
-	printf("---  -----------  ------  --------  ----  -  ------------------------  ----------------\n");
+	printf("---  -----------  ------  --------  ----  ---  -  ------------------------  ----------------\n");
 	printf("(%d bootflow%s, %d valid)\n", count, count != 1 ? "s" : "",
 	       num_valid);
 }
@@ -371,6 +372,14 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	printf("Method:    %s\n", bflow->method ? bflow->method->name : "(none)");
 	printf("State:     %s\n", bootflow_state_get_name(bflow->state));
 	printf("Partition: %d\n", bflow->part);
+	if (bflow->method) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(bflow->method);
+		if (ucp->flags & BOOTMETHF_MULTI)
+			printf("Entry:     %d: %s\n", bflow->entry,
+			       bflow->entry_name);
+	}
 
 	/* Show encryption status with LUKS version if applicable */
 	if (IS_ENABLED(CONFIG_BLK_LUKS)) {

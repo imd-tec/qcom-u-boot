@@ -654,19 +654,32 @@ sets it to zero and increments the second counter. You can think of all the
 counters together as a number with three digits which increment in order, with
 the least-sigificant digit on the right, counting like this:
 
-   ========    =======    =======
-   bootdev     part       method
-   ========    =======    =======
-   0           0          0
-   0           0          1
-   0           0          2
-   0           1          0
-   0           1          1
-   0           1          2
-   1           0          0
-   1           0          1
+   ========    =======    =======   =======
+   bootdev     part       method    entry
+   ========    =======    =======   =======
+   0           0          0         0
+   0           0          0         1
+   0           0          0         2
+   0           0          1         0
+   0           0          2         0
+   0           1          0         0
+   0           1          0         1
+   0           1          0         2
+   0           1          1         0
+   0           1          2         0
+   1           0          0         0
+   1           0          0         1
    ...
-   ========    =======    =======
+   ========    =======    =======   =======
+
+If a bootmeth sets the ``BOOTMETHF_MULTI`` flag, it can produce multiple
+bootflows from a single partition. Each bootflow is called an `entry`. In the
+table above, the `entry` column shows how the iterator tries entry 0, 1, 2, ...
+for such a bootmeth before moving to the next method. For bootmeths without
+``BOOTMETHF_MULTI``, the entry is always 0 and the column can be ignored. The
+entry index is passed to the bootmeth via ``bflow->entry``. Each bootflow also
+stores an ``entry_name`` (e.g. the extlinux label or BLS title) which is shown
+in ``bootflow info`` alongside the entry number.
 
 The maximum value for `method` is `num_methods - 1` so when it exceeds that, it
 goes back to 0 and the next `part` is considered. The maximum value for that is

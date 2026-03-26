@@ -129,17 +129,36 @@ int extlinux_boot(struct udevice *dev, struct bootflow *bflow,
 	if (ctx->label) {
 		ctx->fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
 		ret = pxe_boot(ctx);
+		if (ret)
+			return log_msg_ret("pxb", -EFAULT);
+		return 0;
+	}
+
+	/*
+	 * If the config was cached during scanning, update the callback fields
+	 * for file loading. Otherwise set up the context from scratch.
+	 */
+	if (ctx->cfg) {
+		struct extlinux_plat *plat = dev_get_plat(dev);
+
+		plat->info.dev = dev;
+		plat->info.bflow = bflow;
+		ctx->getfile = getfile;
+		ctx->userdata = &plat->info;
+		ctx->bflow = bflow;
 	} else {
 		ret = extlinux_setup(dev, bflow, getfile, allow_abs_path,
 				     bootfile, ctx);
 		if (ret)
 			return log_msg_ret("elb", ret);
-		ctx->restart = restart;
-		addr = map_to_sysmem(bflow->buf);
-		ret = pxe_process_str(ctx, addr, false);
 	}
+	ctx->restart = restart;
+	ctx->fake_go = bflow->flags & BOOTFLOWF_FAKE_GO;
+	addr = map_to_sysmem(bflow->buf);
+
+	ret = pxe_boot_entry(ctx, addr, bflow->entry);
 	if (ret)
-		return log_msg_ret("elb", -EFAULT);
+		return log_msg_ret("ent", -EFAULT);
 
 	return 0;
 }

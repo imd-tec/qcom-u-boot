@@ -110,11 +110,22 @@ void bootflow_show(int index, struct bootflow *bflow, bool errors)
 {
 	const char *name = bootflow_guess_label(bflow);
 	char enc_mark = (bflow->flags & BOOTFLOWF_ENCRYPTED) ? 'E' : ' ';
+	char ent_str[8];
 
-	printf("%3x  %-11s  %-6s  %-9.9s %4x  %c  %-25.25s %s\n", index,
+	strcpy(ent_str, "   ");
+	if (bflow->method) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(bflow->method);
+		if (ucp->flags & BOOTMETHF_MULTI)
+			snprintf(ent_str, sizeof(ent_str), "%3d",
+				 bflow->entry);
+	}
+
+	printf("%3x  %-11s  %-6s  %-9.9s %4x  %s  %c  %-25.25s %s\n", index,
 	       bflow->method ? bflow->method->name : "(none)",
 	       bootflow_state_get_name(bflow->state), name, bflow->part,
-	       enc_mark, bflow->name, bflow->fname ?: "");
+	       ent_str, enc_mark, bflow->name, bflow->fname ?: "");
 	if (errors)
 		report_bootflow_err(bflow, bflow->err);
 }
@@ -363,6 +374,23 @@ static int iter_incr(struct bootflow_iter *iter)
 		log_debug("-> err: no more devices1\n");
 		return BF_NO_MORE_DEVICES;
 	}
+
+	/*
+	 * If the current method supports multiple entries and the last call
+	 * succeeded, try the next entry before advancing the method
+	 */
+	if (iter->method && !iter->err) {
+		struct bootmeth_uc_plat *ucp;
+
+		ucp = dev_get_uclass_plat(iter->method);
+		if (ucp->flags & BOOTMETHF_MULTI) {
+			iter->entry++;
+			log_debug("-> next entry %d for method '%s'\n",
+				  iter->entry, iter->method->name);
+			return 0;
+		}
+	}
+	iter->entry = 0;
 
 	/* Get the next boothmethod */
 	for (iter->cur_method++; iter->cur_method < iter->num_methods;
@@ -721,6 +749,7 @@ void bootflow_free(struct bootflow *bflow)
 	struct bootflow_img *img;
 
 	free(bflow->name);
+	free(bflow->entry_name);
 	free(bflow->subdir);
 	free(bflow->fname);
 	if (!(bflow->flags & BOOTFLOWF_STATIC_BUF))

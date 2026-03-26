@@ -156,8 +156,8 @@ The output will be something like this::
     Net:   eth0: virtio-net#32
     Hit any key to stop autoboot:  0
     Scanning for bootflows in all bootdevs
-    Seq  Method       State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     Scanning global bootmeth 'efi_mgr':
     Scanning bootdev 'fw-cfg@9020000.bootdev':
     fatal: no kernel available

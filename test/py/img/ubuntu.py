@@ -51,13 +51,16 @@ label l0
 
 	append root=/dev/disk/by-uuid/bcfdda4a-8249-4f40-9f0f-7c1a76b6cbe8 ro earlycon
 
-label l0r
+include rescue.conf
+''' % (version, vmlinux, initrd)
+    rescue = '''label l0r
 	menu label Ubuntu %s 6.8.0-53-generic (rescue target)
 	linux /boot/%s
 	initrd /boot/%s
-''' % ((version, vmlinux, initrd) * 2)
+''' % (version, vmlinux, initrd)
     setup_extlinux_image(config, log, devnum, basename, vmlinux, initrd, dtbdir,
                          script, part2_size=60 if use_fde else 1,
                          use_fde=use_fde, luks_kdf=luks_kdf,
                          encrypt_keyfile=encrypt_keyfile,
-                         master_keyfile=master_keyfile)
+                         master_keyfile=master_keyfile,
+                         extra_conf={'rescue.conf': rescue})

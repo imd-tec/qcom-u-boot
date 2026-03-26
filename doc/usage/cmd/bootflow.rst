@@ -103,12 +103,12 @@ those errors.
 
 The list looks something like this:
 
-===  ======  ======  ========  ====  ===============================   ================
-Seq  Method  State   Uclass    Part  Name                              Filename
-===  ======  ======  ========  ====  ===============================   ================
-  0  distro  ready   mmc          2  mmc\@7e202000.bootdev.part_2      /boot/extlinux/extlinux.conf
-  1  pxe     ready   ethernet     0  smsc95xx_eth.bootdev.0            rpi.pxe/extlinux/extlinux.conf
-===  ======  ======  ========  ====  ===============================   ================
+===  ======  ======  ========  ====  ===  ===============================   ================
+Seq  Method  State   Uclass    Part  Ent  Name                              Filename
+===  ======  ======  ========  ====  ===  ===============================   ================
+  0  distro  ready   mmc          2    0  mmc\@7e202000.bootdev.part_2      /boot/extlinux/extlinux.conf
+  1  pxe     ready   ethernet     0    0  smsc95xx_eth.bootdev.0            rpi.pxe/extlinux/extlinux.conf
+===  ======  ======  ========  ====  ===  ===============================   ================
 
 The fields are as follows:
 
@@ -131,6 +131,12 @@ Part:
     Partition number being accesseed, numbered from 1. Normally a device will
     have a partition table with a small number of partitions. For devices
     without partition tables (e.g. network) this field is 0.
+
+Ent:
+    Entry index within this partition, for boot methods that support multiple
+    entries (``BOOTMETHF_MULTI``). For example, an extlinux config with
+    several labels shows 0, 1, 2, etc. Blank for boot methods that produce
+    only one bootflow per partition.
 
 Name:
     Name of the bootflow. This is generated from the bootdev appended with
@@ -167,6 +173,8 @@ Type       distro
 Method:    extlinux
 State      ready
 Partition  2
+Entry      0: l0
+Encrypted  no
 Subdir     (none)
 Filename   /extlinux/extlinux.conf
 Buffer     3db7ad48
@@ -183,6 +191,17 @@ Device
 
 Block dev
     Name of the block device, if any. Network devices don't have a block device.
+
+Entry
+    Entry number and name for boot methods that support multiple entries
+    (``BOOTMETHF_MULTI``). For example, an extlinux config with several
+    labels shows the entry index and label name. Only shown when
+    the boot method supports multi-entry.
+
+Encrypted
+    Encryption status. Shows ``LUKSv1`` or ``LUKSv2`` if a LUKS-encrypted
+    partition was detected on the same device, or ``no`` otherwise. Only
+    shown when ``CONFIG_BLK_LUKS`` is enabled.
 
 Subdir
     Subdirectory used for retrieving files. For network bootdevs this is the
@@ -282,10 +301,10 @@ Here is an example of scanning for bootflows, then listing them::
 
     U-Boot> bootflow scan -l
     Scanning for bootflows in all bootdevs
-    Seq  Type         State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Type         State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     Scanning bootdev 'mmc@7e202000.bootdev':
-      0  distro       ready   mmc          2  mmc@7e202000.bootdev.p    /extlinux/extlinux.conf
+      0  distro       ready   mmc          2    0  mmc@7e202000.bootdev.p    /extlinux/extlinux.conf
     Scanning bootdev 'sdhci@7e300000.bootdev':
     Card did not respond to voltage select! : -110
     Scanning bootdev 'smsc95xx_eth.bootdev':
@@ -311,17 +330,17 @@ Here is an example of scanning for bootflows, then listing them::
     	 45.9 KiB/s
     done
     Bytes transferred = 566 (236 hex)
-      1  distro       ready   ethernet     0  smsc95xx_eth.bootdev.0 rpi.pxe/extlinux/extlinux.conf
+      1  distro       ready   ethernet     0    0  smsc95xx_eth.bootdev.0 rpi.pxe/extlinux/extlinux.conf
     No more bootdevs
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     (2 bootflows, 2 valid)
     U-Boot> bootflow l
     Showing all bootflows
-    Seq  Type         State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
-      0  distro       ready   mmc          2  mmc@7e202000.bootdev.p    /extlinux/extlinux.conf
-      1  pxe          ready   ethernet     0  smsc95xx_eth.bootdev.0     rpi.pxe/extlinux/extlinux.conf
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Type         State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
+      0  distro       ready   mmc          2    0  mmc@7e202000.bootdev.p    /extlinux/extlinux.conf
+      1  pxe          ready   ethernet     0    0  smsc95xx_eth.bootdev.0     rpi.pxe/extlinux/extlinux.conf
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     (2 bootflows, 2 valid)
 
 
@@ -338,6 +357,8 @@ displayed and booted::
     Method:    distro
     State:     ready
     Partition: 2
+    Entry:     0: Fedora-Workstation-armhfp-31-1.9 (5.3.7-301.fc31.armv7hl)
+    Encrypted: no
     Subdir:    (none)
     Filename:  extlinux/extlinux.conf
     Buffer:    3db7ae88
@@ -348,8 +369,7 @@ displayed and booted::
     FDT:       <NULL>
     Error:     0
     U-Boot> bootflow boot
-    ** Booting bootflow 'smsc95xx_eth.bootdev.0'
-    Ignoring unknown command: ui
+    ** Booting bootflow 'mmc@7e202000.bootdev.part_2'
     Ignoring malformed menu command:  autoboot
     Ignoring malformed menu command:  hidden
     Ignoring unknown command: totaltimeout
@@ -406,10 +426,10 @@ Here we scan for bootflows and boot the first one found::
 
     U-Boot> bootflow scan -bl
     Scanning for bootflows in all bootdevs
-    Seq  Method       State   Uclass    Part  Name                    Filename
-    ---  -----------  ------  --------  ----  ----------------------  ----------------
+    Seq  Method       State   Uclass    Part  Ent  Name                    Filename
+    ---  -----------  ------  --------  ----  ---  ----------------------  ----------------
     Scanning bootdev 'mmc@7e202000.bootdev':
-      0  distro       ready   mmc          2  mmc@7e202000.bootdev.p  /extlinux/extlinux.conf
+      0  distro       ready   mmc          2    0  mmc@7e202000.bootdev.p  /extlinux/extlinux.conf
     ** Booting bootflow 'mmc@7e202000.bootdev.part_2'
     Ignoring unknown command: ui
     Ignoring malformed menu command:  autoboot
@@ -461,49 +481,49 @@ Here is am example using the -e flag to see all errors::
     Bytes transferred = 566 (236 hex)
     U-Boot> bootflow l -e
     Showing all bootflows
-    Seq  Type         State   Uclass    Part  Name                   Filename
-    ---  -----------  ------  --------  ----  ---------------------  ----------------
-      0  distro       fs      mmc          1  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
+    Seq  Type         State   Uclass    Part  Ent  Name                   Filename
+    ---  -----------  ------  --------  ----  ---  ---------------------  ----------------
+      0  distro       fs      mmc          1    0  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
          ** File not found, err=-2
-      1  distro       ready   mmc          2  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
-      2  distro       fs      mmc          3  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
+      1  distro       ready   mmc          2    0  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
+      2  distro       fs      mmc          3    0  mmc@7e202000.bootdev.p /extlinux/extlinux.conf
          ** File not found, err=-1
-      3  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      3  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      4  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      4  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      5  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      5  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      6  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      6  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      7  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      7  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      8  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      8  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      9  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      9  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      a  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      a  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      b  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      b  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      c  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      c  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      d  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      d  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      e  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      e  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-      f  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+      f  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-     10  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+     10  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-     11  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+     11  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-     12  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+     12  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-     13  distro       media   mmc          0  mmc@7e202000.bootdev.p <NULL>
+     13  distro       media   mmc          0    0  mmc@7e202000.bootdev.p <NULL>
          ** No partition found, err=-2
-     14  distro       ready   ethernet     0  smsc95xx_eth.bootdev.0 rpi.pxe/extlinux/extlinux.conf
-    ---  -----------  ------  --------  ----  ---------------------  ----------------
+     14  distro       ready   ethernet     0    0  smsc95xx_eth.bootdev.0 rpi.pxe/extlinux/extlinux.conf
+    ---  -----------  ------  --------  ----  ---  ---------------------  ----------------
     (21 bootflows, 2 valid)
     U-Boot>
 
@@ -512,12 +532,12 @@ the cmdline is word-wrapped here and some parts of the command line are elided::
 
     => bootfl list
     Showing all bootflows
-    Seq  Method       State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
-    0  cros         ready   nvme         0  5.10.153-20434-g98da1eb2c <NULL>
-    1  efi          ready   nvme         c  nvme#0.blk#1.bootdev.part efi/boot/bootia32.efi
-    2  efi          ready   usb_mass_    2  usb_mass_storage.lun0.boo efi/boot/bootia32.efi
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
+    0    cros         ready   nvme         0       5.10.153-20434-g98da1eb2c <NULL>
+    1    efi          ready   nvme         c       nvme#0.blk#1.bootdev.part efi/boot/bootia32.efi
+    2    efi          ready   usb_mass_    2       usb_mass_storage.lun0.boo efi/boot/bootia32.efi
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     (3 bootflows, 3 valid)
     => bootfl sel 0
     => bootfl inf

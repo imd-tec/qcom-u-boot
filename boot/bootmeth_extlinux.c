@@ -115,48 +115,109 @@ static int extlinux_check_luks(struct bootflow *bflow)
 }
 
 /**
+ * extlinux_parse_config() - Parse the extlinux config and cache the result
+ *
+ * Parses the configuration file including any include directives, and caches
+ * the result in plat->ctx.cfg. The filesystem must still be accessible for
+ * loading includes.
+ *
+ * @dev: Bootmeth device (needed for file-loading callback)
+ * @bflow: Bootflow containing the config buffer
+ * Return: 0 if OK, -ve on error
+ */
+static int extlinux_parse_config(struct udevice *dev, struct bootflow *bflow,
+				 struct pxe_context *ctx)
+{
+	struct extlinux_plat *plat = dev_get_plat(dev);
+	struct abuf buf;
+	ulong addr;
+	int ret;
+
+	plat->info.dev = dev;
+	plat->info.bflow = bflow;
+	ret = pxe_setup_ctx(ctx, extlinux_getfile, &plat->info, true,
+			    bflow->fname, false, plat->use_fallback, bflow);
+	if (ret)
+		return log_msg_ret("ctx", ret);
+	ctx->quiet = true;
+	ctx->pxe_file_size = bflow->size;
+
+	addr = map_to_sysmem(bflow->buf);
+	abuf_init_addr(&buf, addr, bflow->size);
+	ctx->cfg = parse_pxefile(ctx, &buf);
+	if (!ctx->cfg) {
+		pxe_destroy_ctx(ctx);
+		return log_msg_ret("prs", -EINVAL);
+	}
+
+	ret = pxe_process_includes(ctx, ctx->cfg, addr);
+	if (ret) {
+		pxe_menu_uninit(ctx->cfg);
+		ctx->cfg = NULL;
+		pxe_destroy_ctx(ctx);
+		return log_msg_ret("inc", ret);
+	}
+
+	return 0;
+}
+
+/**
  * extlinux_fill_info() - Decode the extlinux file to find out its info
  *
- * @bflow: Bootflow to process
- * @return 0 if OK, -ve on error
+ * On the first call (entry 0), calls extlinux_parse_config() to parse
+ * into a context from the alist. For entry > 0, reuses the cached
+ * context.
+ *
+ * @dev: Bootmeth device (needed for file-loading callback)
+ * @bflow: Bootflow to process (entry selects which label)
+ * Return: 0 if OK, -ENOENT if entry index exceeds available labels, other
+ * -ve on error
  */
-static int extlinux_fill_info(struct bootflow *bflow)
+static int extlinux_fill_info(struct udevice *dev, struct bootflow *bflow)
 {
-	struct membuf mb;
-	char line[200];
-	char *data;
-	int len;
+	struct extlinux_priv *priv = dev_get_priv(dev);
+	struct pxe_context *ctx;
+	struct pxe_label *label;
+	const char *name;
+	int i;
 
-	log_debug("parsing bflow file size %x\n", bflow->size);
-	membuf_init(&mb, bflow->buf, bflow->size);
-	membuf_putraw(&mb, bflow->size, true, &data);
-	while (len = membuf_readline(&mb, line, sizeof(line) - 1, 0, true), len) {
-		char *tok, *p = line;
-		const char *name = NULL;
+	log_debug("parsing bflow file size %x entry %d\n", bflow->size,
+		  bflow->entry);
 
-		if (*p == '#')
-			continue;
-		while (*p == ' ' || *p == '\t')
-			p++;
-		tok = strsep(&p, " ");
-		if (p) {
-			if (!strcmp("label", tok)) {
-				name = p;
-				if (bflow->os_name)
-					break;	/* just find the first */
-			} else if (!strcmp("menu", tok)) {
-				tok = strsep(&p, " ");
-				if (!strcmp("label", tok)) {
-					name = p;
-				}
-			}
-			if (name) {
-				free(bflow->os_name);
-				bflow->os_name = strdup(name);
-				if (!bflow->os_name)
-					return log_msg_ret("os", -ENOMEM);
-			}
-		}
+	ctx = extlinux_get_ctx(priv, bflow);
+	if (!ctx)
+		return log_msg_ret("ctx", -ENOMEM);
+
+	/* Parse the config on first entry; reuse the cached result after */
+	if (!ctx->cfg) {
+		int ret;
+
+		ret = extlinux_parse_config(dev, bflow, ctx);
+		if (ret)
+			return log_msg_ret("prs", ret);
+	}
+
+	/* Walk to the requested label */
+	i = 0;
+	list_for_each_entry(label, &ctx->cfg->labels, list) {
+		if (i == bflow->entry)
+			goto found;
+		i++;
+	}
+
+	return -ENOENT;
+
+found:
+	name = label->menu ? label->menu : label->name;
+	if (name) {
+		bflow->os_name = strdup(name);
+		if (!bflow->os_name)
+			return log_msg_ret("osn", -ENOMEM);
+	}
+	if (label->name) {
+		bflow->entry_name = strdup(label->name);
+		if (!bflow->entry_name)
+			return log_msg_ret("ent", -ENOMEM);
 	}
 
 	return 0;
@@ -204,7 +265,7 @@ static int extlinux_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 	if (ret)
 		return log_msg_ret("read", ret);
 
-	ret = extlinux_fill_info(bflow);
+	ret = extlinux_fill_info(dev, bflow);
 	if (ret)
 		return log_msg_ret("inf", ret);
 
@@ -273,6 +334,7 @@ static int extlinux_bootmeth_bind(struct udevice *dev)
 
 	plat->desc = IS_ENABLED(CONFIG_BOOTSTD_FULL) ?
 		"Extlinux boot from a block device" : "extlinux";
+	plat->flags = BOOTMETHF_MULTI;
 
 	return 0;
 }

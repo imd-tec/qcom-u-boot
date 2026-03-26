@@ -36,13 +36,13 @@ content of a few of them::
     => bootflow scan
     => bootflow list
     Showing all bootflows
-    Seq  Method       State   Uclass    Part  Name                      Filename
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
-      0  extlinux     ready   mmc          1  mmc1.bootdev.part_1       /extlinux/extlinux.conf
-      1  script       ready   mmc          1  mmc4.bootdev.part_1       /boot/boot.scr
-      2  cros         ready   mmc          2  mmc5.bootdev.part_2
-      3  cros         ready   mmc          4  mmc5.bootdev.part_4
-    ---  -----------  ------  --------  ----  ------------------------  ----------------
+    Seq  Method       State   Uclass    Part  Ent  Name                      Filename
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
+      0  extlinux     ready   mmc          1    0  mmc1.bootdev.part_1       /extlinux/extlinux.conf
+      1  script       ready   mmc          1       mmc4.bootdev.part_1       /boot/boot.scr
+      2  cros         ready   mmc          2       mmc5.bootdev.part_2
+      3  cros         ready   mmc          4       mmc5.bootdev.part_4
+    ---  -----------  ------  --------  ----  ---  ------------------------  ----------------
     (4 bootflows, 4 valid)
     =>
     => bootstd images
