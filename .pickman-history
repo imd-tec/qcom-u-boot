@@ -49306,3 +49306,208 @@ No code changes are required. The pipeline should be retried. If the same failur
 
 ---
 
+## 2026-03-26: us/next
+
+Branch: cherry-e41e6feb3d3
+
+Commits:
+- e41e6feb3d3 usb: ehci: exynos: variable node should be signed
+- 76d3b665310 usb: fsl-dt-fixup: Return an error code on error
+- 08f4c52c97a usb: ohci-hcd: Null check lurb_priv before dereference
+- dd01b0541be usb: ulpi: Incorrect operator used
+- adcec085e0d usb: xhci: exynos: variable node should be signed
+- 6ea91bf8055 usb: musb-new: Null check before dereference
+- d5de67c57e7 usb: musb-new: Limit check array index before use
+- 41fd18219fb usb: musb-new: Cannot test unsigned member to be negative
+- 96b95a05b7a Merge branch 'master' of git://source.denx.de/u-boot-usb
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create the cherry-pick branch based on ci/master:
+
+Good, branch created. Now let me start cherry-picking the commits. First commit:
+
+First commit cherry-picked. Let me verify the delta and run the build test:
+
+Delta matches. Now let me run the build test:
+
+Build passed. Continuing with commit 2:
+
+Delta matches. Build test:
+
+Build passed. Commit 3:
+
+Delta matches. Build test:
+
+Build passed. Commit 4:
+
+Delta matches. Build test:
+
+Build passed. Commit 5:
+
+Delta matches. Build test:
+
+Build passed. Commit 6:
+
+Delta matches. Build test:
+
+Build passed. Commit 7:
+
+Delta matches. Build test:
+
+Build passed. Commit 8:
+
+Delta matches. Build test:
+
+Build passed. Now the last commit - commit 9, which is a merge commit and may already be applied as 0e76dff28ef. Let me verify this first:
+
+The merge commits are different - 0e76dff28ef is a pickman merge that applied the same USB fixes. Let me compare what files/changes they contain:
+
+Let me examine the original merge commit more closely to understand its content:
+
+The merge commit is essentially a merge of the same USB fixes we just cherry-picked. Since all the commits (1-8) have already been cherry-picked, this merge commit would be empty. Let me proceed with the merge commit cherry-pick using --allow-empty:
+
+As expected, the merge commit is empty because all its changes are already included. Let me complete this with an empty commit:
+
+The merge commit has been preserved with an empty commit. Now let me verify the commit history and run the final build test:
+
+All 9 commits are present. Now let me run the final build test:
+
+All builds passed. Here's the final status:
+
+## Cherry-pick Summary
+
+**Branch:** `cherry-e41e6feb3d3` (based on `ci/master`)
+
+**All 9 commits cherry-picked successfully:**
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | e41e6feb3d3 | usb: ehci: exynos: variable node should be signed | ✅ Applied |
+| 2 | 76d3b665310 | usb: fsl-dt-fixup: Return an error code on error | ✅ Applied |
+| 3 | 08f4c52c97a | usb: ohci-hcd: Null check lurb_priv before dereference | ✅ Applied |
+| 4 | dd01b0541be | usb: ulpi: Incorrect operator used | ✅ Applied |
+| 5 | adcec085e0d | usb: xhci: exynos: variable node should be signed | ✅ Applied |
+| 6 | 6ea91bf8055 | usb: musb-new: Null check before dereference | ✅ Applied |
+| 7 | d5de67c57e7 | usb: musb-new: Limit check array index before use | ✅ Applied |
+| 8 | 41fd18219fb | usb: musb-new: Cannot test unsigned member to be negative | ✅ Applied |
+| 9 | 96b95a05b7a | Merge branch 'master' of git://source.denx.de/u-boot-usb | ✅ Applied (empty - changes already included) |
+
+**Build Result:** ✅ OK - sandbox build passes
+
+**Fix-ups:** None required
+
+**Delta Verification:** All commits matched their originals exactly
+
+**Notes:**
+- The merge commit (96b95a05b7a) resulted in an empty commit because all 8 preceding USB fix commits were successfully cherry-picked, making the merge's changes already present. The merge commit was preserved with `--allow-empty` to maintain history tracking.
+- The suggested alternate hash 0e76dff28ef was a different pickman merge with different content (included cdns3 fixes), so we applied the original merge commit.
+
+The branch `cherry-e41e6feb3d3` is ready for pushing.
+
+---
+
+### Review: 2026-03-26
+
+Branch: cherry-e41e6feb3d3
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) vbe, bpi, pcduino3_nano.
+
+Now I have all the informati...
+
+### Conversation log
+Based on the context, this is the third pipeline failure (attempt 2 in the review comment). The previous attempts concluded these were infrastructure/lab failures, not code issues. Let me analyze the current situation:
+
+Let me look at the OHCI change more carefully since that's the only generic USB driver change that could potentially affect the failing Sunxi boards:
+
+Looking at the code, I can see the issue. The variable `urb_len` is declared on line 1044 but only initialized if `lurb_priv` is non-NULL (lines 1046-1047). However, it's used later in the code (lines 1056, 1058, 1062) only within a condition that checks `if (lurb_priv && ...)`, so due to short-circuit evaluation, `urb_len` would only be accessed when `lurb_priv` is valid.
+
+The code is logically correct, but this might cause compiler warnings about potentially uninitialized variables. However, this shouldn't cause boot failures.
+
+Let me check what the original commit changed:
+
+The code change is correct and can't cause the boot failures observed. The failures show:
+1. **VBE (rk3399)**: Error in VPL stage (before USB is used)
+2. **BPI/pcduino3_nano**: No output at all (board didn't boot)
+
+These are clearly infrastructure issues. Let me verify the build passes and prepare the response:
+
+Build passes. Now let me check if there are existing -v2, -v3 branches:
+
+There's already -v2. Let me create -v3:
+
+Now let me verify that the remote branch needs to be updated and push:
+
+The remote is already at the same commit. Since there are no code changes needed (these are infrastructure failures), I should push to trigger a new pipeline:
+
+The remote is already up to date. Let me try with `--force-with-lease`:
+
+The branch is already pushed and up-to-date. Since no code changes are needed (infrastructure issues), I'll provide the report.
+
+---
+
+## Report: MR !794 - Pipeline Fix Attempt 3
+
+**Branch:** `cherry-e41e6feb3d3`  
+**Local tracking branch:** `cherry-e41e6feb3d3-v3`
+
+### Review Comment Analysis
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` states:
+> "Pipeline fix (attempt 2): fixed failed job(s) vbe, bpi, pcduino3_nano."
+
+This is an automated notification about the second pipeline fix attempt. The failed jobs are:
+
+1. **vbe (rk3399-generic-ddr3)** - VPL fails with `Error: -5` (EIO) when trying to boot from `vbe_abrec`
+2. **bpi (Bananapi - Sunxi)** - No boot output at all, timeout
+3. **pcduino3_nano (Sunxi)** - No boot output at all, timeout
+
+### Analysis Conclusion
+
+All three failures are **infrastructure/lab issues**, NOT caused by the USB commits in this MR:
+
+| Job | Symptom | Why Not Code-Related |
+|-----|---------|---------------------|
+| vbe | VPL stage Error: -5 in vbe_abrec | USB not used in VPL boot; rk3399 uses DWC3/XHCI generic (not Exynos) |
+| bpi | Zero output, timeout | Board failed before any code ran (power/serial/flash issue) |
+| pcduino3_nano | Zero output, timeout | Same as bpi - infrastructure failure |
+
+The USB changes only affect:
+- EHCI/XHCI Exynos drivers (Samsung Exynos boards only)
+- FSL DT fixup (Freescale/NXP boards only)
+- MUSB drivers (TI OMAP/AM35x boards only)
+- OHCI HCD (generic, but only called during USB enumeration - long after boot)
+- ULPI interface (USB PHY, not boot-critical)
+
+**None of the failing boards use these specific drivers**, and the failures occur either before U-Boot starts (no output) or in VPL stage (before USB initialization).
+
+### Action Taken
+
+- ✅ Build verified: `buildman -L --board sandbox` passes
+- ✅ Created local branch: `cherry-e41e6feb3d3-v3`
+- ℹ️ Remote already up-to-date (no code changes needed)
+
+### Suggested Reply to MR
+
+---
+
+**Reply to post on MR:**
+
+The pipeline failures for `vbe`, `bpi`, and `pcduino3_nano` have been analyzed. These are **infrastructure/lab issues**, not caused by the USB commits in this MR.
+
+**vbe (rk3399-generic-ddr3):**
+- Fails in VPL stage with `Error: -5` (EIO) when trying `vbe_abrec` boot method
+- USB is not initialized at VPL stage
+- rk3399 uses DWC3/XHCI generic drivers, not the Exynos drivers modified here
+
+**bpi & pcduino3_nano (Sunxi):**
+- Both produce zero boot output - not even SPL startup messages
+- USB is not enabled in SPL for these boards
+- Indicates hardware/infrastructure issue (board connectivity, power, or serial)
+
+The USB changes in this MR only affect Exynos, Freescale, and TI MUSB drivers - none of which are used by these boards. The OHCI change is generic but only affects USB enumeration, which occurs long after the point of failure.
+
+**Recommendation:** Retry the pipeline. These appear to be persistent lab/hardware issues requiring infrastructure investigation.
+
+---
+
