@@ -49598,3 +49598,145 @@ The branch has been pushed. Let me verify the final state:
 
 ---
 
+## 2026-03-26: us/next
+
+Branch: cherry-6defecd943e
+
+Commits:
+- 6defecd943e ufs: ti-j721e: Correct error detection
+- d0dfb8c635a ufs: Fix wrong bitfield usage for Data Direction in Transfer Request
+- ae0872e9c38 ufs: Add support for sending UFS attribute requests
+- c7327ac2959 ufs: Add bRefClkFreq attribute setting
+- 84919722e6a ufs: core: Add ufshcd_dme_enable() and ufshcd_dme_reset()
+- 76465ce21ee ufs: rockchip: Add initial support
+- 200e3f893fb ufs: unipro: Add PA_SCRAMBLING property
+- 6cca3db2bd9 ufs: Add MediaTek UFS driver
+- 928269494c8 MAINTAINERS: Add UFS to MediaTek section
+- 9b37b600175 ufs: core: Keep Makefile and Kconfig list sorted
+- ea97b856179 ufs: core: Fold ufs-uclass into ufs
+- 1de63f1be48 ufs: core: Rename ufs.c to ufs-uclass.c
+- 6104ae290ef ufs: amd-versal2: Fix indent
+- 067c1b03328 ufs: Call ufs_scsi_bind() from uclass .post_bind
+- 4ced7e72649 ufs: renesas: Update Kconfig entry help text
+- 3351fe7ecc1 ufs: Add UFS driver for Renesas R-Car X5H
+- e34d01d23e4 Merge tag 'u-boot-ufs-20251029' of https://source.denx.de/u-boot/custodians/u-boot-ufs
+
+### Conversation log
+The repository state has untracked files but is otherwise clean (no staged or modified tracked files). This is acceptable for cherry-picking. Let me create the new branch and start the cherry-pick process.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks identical. Now build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta looks identical. Build test:
+
+Build passed. Continuing with commit 3:
+
+Delta identical. Build test:
+
+Build passed. Commit 4:
+
+Delta identical. Build test:
+
+Build passed. Commit 5:
+
+Delta identical. Build test:
+
+Build passed. Commit 6:
+
+Delta identical. Build test:
+
+Build passed. Commit 7:
+
+Delta identical. Build test:
+
+Build passed. Commit 8:
+
+Delta identical. Build test:
+
+Build passed. Commit 9:
+
+Delta identical. Build test:
+
+Build passed. Commit 10:
+
+Delta identical. Build test:
+
+Build passed. Commit 11:
+
+Delta identical. Build test:
+
+Build passed. Commit 12:
+
+Delta identical. Build test:
+
+Build passed. Commit 13:
+
+Delta identical. Build test:
+
+Build passed. Commit 14:
+
+Delta identical. Build test:
+
+Build passed. Commit 15:
+
+Delta identical. Build test:
+
+Build passed. Commit 16:
+
+Delta identical. Build test:
+
+Build passed. Now the final commit - this is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (as expected since we already cherry-picked all the individual commits). I need to create the empty commit as instructed:
+
+The merge commit is now an empty commit (as expected since all changes were already cherry-picked as individual commits). Build test:
+
+Now let's verify the log shows all 17 commits:
+
+All 17 commits are present. Now let's run the final build verification:
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+### Final Status:
+
+**Build result:** ✅ OK (no warnings or errors)
+
+**Commits cherry-picked:** All 17 commits successfully applied
+
+| # | Hash (original) | Subject |
+|---|-----------------|---------|
+| 1 | 6defecd943e | ufs: ti-j721e: Correct error detection |
+| 2 | d0dfb8c635a | ufs: Fix wrong bitfield usage for Data Direction in Transfer Request |
+| 3 | ae0872e9c38 | ufs: Add support for sending UFS attribute requests |
+| 4 | c7327ac2959 | ufs: Add bRefClkFreq attribute setting |
+| 5 | 84919722e6a | ufs: core: Add ufshcd_dme_enable() and ufshcd_dme_reset() |
+| 6 | 76465ce21ee | ufs: rockchip: Add initial support |
+| 7 | 200e3f893fb | ufs: unipro: Add PA_SCRAMBLING property |
+| 8 | 6cca3db2bd9 | ufs: Add MediaTek UFS driver |
+| 9 | 928269494c8 | MAINTAINERS: Add UFS to MediaTek section |
+| 10 | 9b37b600175 | ufs: core: Keep Makefile and Kconfig list sorted |
+| 11 | ea97b856179 | ufs: core: Fold ufs-uclass into ufs |
+| 12 | 1de63f1be48 | ufs: core: Rename ufs.c to ufs-uclass.c |
+| 13 | 6104ae290ef | ufs: amd-versal2: Fix indent |
+| 14 | 067c1b03328 | ufs: Call ufs_scsi_bind() from uclass .post_bind |
+| 15 | 4ced7e72649 | ufs: renesas: Update Kconfig entry help text |
+| 16 | 3351fe7ecc1 | ufs: Add UFS driver for Renesas R-Car X5H |
+| 17 | e34d01d23e4 | Merge tag 'u-boot-ufs-20251029' (empty - as expected for merge commit) |
+
+**Fix-ups made:** None - all commits applied cleanly
+
+**Commits with concerning deltas:** None - all commit deltas matched exactly
+
+**Notes:**
+- MAINTAINERS file had auto-merge on commits 6 and 9 but resolved cleanly
+- The merge commit (e34d01d23e4) was applied as an empty commit using `--allow-empty` to preserve the merge history/message
+
+The branch `cherry-6defecd943e` is ready for pushing.
+
+---
+
