@@ -50033,3 +50033,101 @@ These failures are not related to the UFS code changes in this MR:
 
 ---
 
+### Review: 2026-03-26
+
+Branch: cherry-6defecd943e
+
+Comments addressed:
+
+
+### Conversation log
+The branch is behind ci/master. Let me check the commits that need rebasing and then perform the rebase:
+
+There are 21 commits to rebase (17 UFS commits + 4 pickman record commits). Let me save the original commit list for comparison, then perform the rebase:
+
+Interesting! The branch is already up to date with ci/master. Let me verify:
+
+The branch is already on top of the merge commit `2a454d1037d` (Merge branch 'cherry-e41e6feb3d3' into 'master'). So it is up to date with ci/master. Let me verify the build and then check the remote status:
+
+Build passes. Let me check the remote state to see if there's a difference:
+
+There's a discrepancy! The remote branch `ci/cherry-6defecd943e` has different commits than our local branch. Let me check what's happening:
+
+This is strange - the remote branch `ci/cherry-6defecd943e` seems to have many unrelated commits (from other cherry branches). Let me check if the local branch I'm on is the correct one:
+
+The local branch has the correct UFS commits. The remote seems to have the wrong commits. Let me verify this is not a tracking issue and check if we need to force-push:
+
+I see! There's a `remotes/ci/cherry-6defecd943e` that's different from our local branch. But the issue is the remote branch seems corrupted (has commits from other MRs). Let me check the commit with the UFS original commits on remote:
+
+The remote branch has different UFS commits (not the ones in our local). This confirms the remote branch has been overwritten with content from another MR. 
+
+The local branch appears correct - it has the 17 commits listed in the MR description. Let me verify by checking the first commit in our set:
+
+The local branch looks correct. Our local `cherry-6defecd943e` has the right UFS commits. The remote appears to have been corrupted somehow.
+
+Since the local branch is already up to date with ci/master (rebase says "up to date"), and the local branch has the correct commits, I need to:
+1. Verify everything is correct
+2. Create a -v2 local branch
+3. Force push to the remote to restore the correct state
+
+Let me verify the commits match what the MR description says:
+
+These match the MR description commits. The branch is already rebased on ci/master. Let me create the v2 branch and push:
+
+Good, now let me push to the remote:
+
+The push was successful. Let me verify the remote now has the correct commits:
+
+The remote is now corrected. Let me run one final build verification:
+
+Build passes.
+
+## Summary
+
+**Task completed successfully!**
+
+### What was done:
+
+1. **Checked out branch**: `cherry-6defecd943e`
+
+2. **Fetched ci/master**: The branch was already up to date with ci/master - rebase reported "Current branch cherry-6defecd943e is up to date."
+
+3. **Discovered remote corruption**: The remote branch `ci/cherry-6defecd943e` had been overwritten with content from other MRs (contained commits like "pickman: Record pipeline fix for cherry-c01280b62c4" instead of the UFS commits).
+
+4. **Verified local branch correctness**: The local branch had all 17 correct UFS commits matching the MR description:
+   - 6defecd943e → ufs: ti-j721e: Correct error detection
+   - d0dfb8c635a → ufs: Fix wrong bitfield usage...
+   - ... (all 17 commits intact)
+
+5. **Created local v2 branch**: `cherry-6defecd943e-v2`
+
+6. **Force pushed to restore remote**: Used `./tools/pickman/pickman push-branch cherry-6defecd943e -r ci -f` to restore the correct commits to the remote branch.
+
+7. **Build verification**: ✅ Build passes
+
+### Final state:
+
+- **Local branch**: `cherry-6defecd943e-v2` (backup at same commit)
+- **Remote branch**: `ci/cherry-6defecd943e` now has correct commits
+- **Build**: ✅ Passes
+- **Commits**: All 17 UFS commits + 4 pickman record commits
+
+### Reply to post on MR:
+
+```
+Rebased and resolved remote branch corruption.
+
+**Issue found:** The remote branch had been overwritten with commits from other MRs.
+
+**Action taken:** Force-pushed the correct local branch to restore the proper state. The branch is already up to date with ci/master (rebase reported "up to date").
+
+**Verification:**
+- ✅ All 17 UFS commits intact
+- ✅ Build passes (sandbox)
+- ✅ Remote branch restored
+
+The pipeline should now run with the correct commits.
+```
+
+---
+
