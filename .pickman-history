@@ -49306,3 +49306,103 @@ No code changes are required. The pipeline should be retried. If the same failur
 
 ---
 
+## 2026-03-26: us/next
+
+Branch: cherry-e41e6feb3d3
+
+Commits:
+- e41e6feb3d3 usb: ehci: exynos: variable node should be signed
+- 76d3b665310 usb: fsl-dt-fixup: Return an error code on error
+- 08f4c52c97a usb: ohci-hcd: Null check lurb_priv before dereference
+- dd01b0541be usb: ulpi: Incorrect operator used
+- adcec085e0d usb: xhci: exynos: variable node should be signed
+- 6ea91bf8055 usb: musb-new: Null check before dereference
+- d5de67c57e7 usb: musb-new: Limit check array index before use
+- 41fd18219fb usb: musb-new: Cannot test unsigned member to be negative
+- 96b95a05b7a Merge branch 'master' of git://source.denx.de/u-boot-usb
+
+### Conversation log
+The repository is clean (only untracked files). Now let me create the cherry-pick branch based on ci/master:
+
+Good, branch created. Now let me start cherry-picking the commits. First commit:
+
+First commit cherry-picked. Let me verify the delta and run the build test:
+
+Delta matches. Now let me run the build test:
+
+Build passed. Continuing with commit 2:
+
+Delta matches. Build test:
+
+Build passed. Commit 3:
+
+Delta matches. Build test:
+
+Build passed. Commit 4:
+
+Delta matches. Build test:
+
+Build passed. Commit 5:
+
+Delta matches. Build test:
+
+Build passed. Commit 6:
+
+Delta matches. Build test:
+
+Build passed. Commit 7:
+
+Delta matches. Build test:
+
+Build passed. Commit 8:
+
+Delta matches. Build test:
+
+Build passed. Now the last commit - commit 9, which is a merge commit and may already be applied as 0e76dff28ef. Let me verify this first:
+
+The merge commits are different - 0e76dff28ef is a pickman merge that applied the same USB fixes. Let me compare what files/changes they contain:
+
+Let me examine the original merge commit more closely to understand its content:
+
+The merge commit is essentially a merge of the same USB fixes we just cherry-picked. Since all the commits (1-8) have already been cherry-picked, this merge commit would be empty. Let me proceed with the merge commit cherry-pick using --allow-empty:
+
+As expected, the merge commit is empty because all its changes are already included. Let me complete this with an empty commit:
+
+The merge commit has been preserved with an empty commit. Now let me verify the commit history and run the final build test:
+
+All 9 commits are present. Now let me run the final build test:
+
+All builds passed. Here's the final status:
+
+## Cherry-pick Summary
+
+**Branch:** `cherry-e41e6feb3d3` (based on `ci/master`)
+
+**All 9 commits cherry-picked successfully:**
+
+| # | Original Hash | Subject | Status |
+|---|--------------|---------|--------|
+| 1 | e41e6feb3d3 | usb: ehci: exynos: variable node should be signed | ✅ Applied |
+| 2 | 76d3b665310 | usb: fsl-dt-fixup: Return an error code on error | ✅ Applied |
+| 3 | 08f4c52c97a | usb: ohci-hcd: Null check lurb_priv before dereference | ✅ Applied |
+| 4 | dd01b0541be | usb: ulpi: Incorrect operator used | ✅ Applied |
+| 5 | adcec085e0d | usb: xhci: exynos: variable node should be signed | ✅ Applied |
+| 6 | 6ea91bf8055 | usb: musb-new: Null check before dereference | ✅ Applied |
+| 7 | d5de67c57e7 | usb: musb-new: Limit check array index before use | ✅ Applied |
+| 8 | 41fd18219fb | usb: musb-new: Cannot test unsigned member to be negative | ✅ Applied |
+| 9 | 96b95a05b7a | Merge branch 'master' of git://source.denx.de/u-boot-usb | ✅ Applied (empty - changes already included) |
+
+**Build Result:** ✅ OK - sandbox build passes
+
+**Fix-ups:** None required
+
+**Delta Verification:** All commits matched their originals exactly
+
+**Notes:**
+- The merge commit (96b95a05b7a) resulted in an empty commit because all 8 preceding USB fix commits were successfully cherry-picked, making the merge's changes already present. The merge commit was preserved with `--allow-empty` to maintain history tracking.
+- The suggested alternate hash 0e76dff28ef was a different pickman merge with different content (included cdns3 fixes), so we applied the original merge commit.
+
+The branch `cherry-e41e6feb3d3` is ready for pushing.
+
+---
+
