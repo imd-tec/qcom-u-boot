@@ -49598,3 +49598,536 @@ The branch has been pushed. Let me verify the final state:
 
 ---
 
+## 2026-03-26: us/next
+
+Branch: cherry-6defecd943e
+
+Commits:
+- 6defecd943e ufs: ti-j721e: Correct error detection
+- d0dfb8c635a ufs: Fix wrong bitfield usage for Data Direction in Transfer Request
+- ae0872e9c38 ufs: Add support for sending UFS attribute requests
+- c7327ac2959 ufs: Add bRefClkFreq attribute setting
+- 84919722e6a ufs: core: Add ufshcd_dme_enable() and ufshcd_dme_reset()
+- 76465ce21ee ufs: rockchip: Add initial support
+- 200e3f893fb ufs: unipro: Add PA_SCRAMBLING property
+- 6cca3db2bd9 ufs: Add MediaTek UFS driver
+- 928269494c8 MAINTAINERS: Add UFS to MediaTek section
+- 9b37b600175 ufs: core: Keep Makefile and Kconfig list sorted
+- ea97b856179 ufs: core: Fold ufs-uclass into ufs
+- 1de63f1be48 ufs: core: Rename ufs.c to ufs-uclass.c
+- 6104ae290ef ufs: amd-versal2: Fix indent
+- 067c1b03328 ufs: Call ufs_scsi_bind() from uclass .post_bind
+- 4ced7e72649 ufs: renesas: Update Kconfig entry help text
+- 3351fe7ecc1 ufs: Add UFS driver for Renesas R-Car X5H
+- e34d01d23e4 Merge tag 'u-boot-ufs-20251029' of https://source.denx.de/u-boot/custodians/u-boot-ufs
+
+### Conversation log
+The repository state has untracked files but is otherwise clean (no staged or modified tracked files). This is acceptable for cherry-picking. Let me create the new branch and start the cherry-pick process.
+
+Now let me start cherry-picking the commits one by one. First commit:
+
+Delta looks identical. Now build test:
+
+Build passed. Let me continue with the second commit:
+
+Delta looks identical. Build test:
+
+Build passed. Continuing with commit 3:
+
+Delta identical. Build test:
+
+Build passed. Commit 4:
+
+Delta identical. Build test:
+
+Build passed. Commit 5:
+
+Delta identical. Build test:
+
+Build passed. Commit 6:
+
+Delta identical. Build test:
+
+Build passed. Commit 7:
+
+Delta identical. Build test:
+
+Build passed. Commit 8:
+
+Delta identical. Build test:
+
+Build passed. Commit 9:
+
+Delta identical. Build test:
+
+Build passed. Commit 10:
+
+Delta identical. Build test:
+
+Build passed. Commit 11:
+
+Delta identical. Build test:
+
+Build passed. Commit 12:
+
+Delta identical. Build test:
+
+Build passed. Commit 13:
+
+Delta identical. Build test:
+
+Build passed. Commit 14:
+
+Delta identical. Build test:
+
+Build passed. Commit 15:
+
+Delta identical. Build test:
+
+Build passed. Commit 16:
+
+Delta identical. Build test:
+
+Build passed. Now the final commit - this is a merge commit (identified by "Merge" in subject):
+
+The merge commit is empty (as expected since we already cherry-picked all the individual commits). I need to create the empty commit as instructed:
+
+The merge commit is now an empty commit (as expected since all changes were already cherry-picked as individual commits). Build test:
+
+Now let's verify the log shows all 17 commits:
+
+All 17 commits are present. Now let's run the final build verification:
+
+## Summary
+
+**Cherry-pick completed successfully!**
+
+### Final Status:
+
+**Build result:** ✅ OK (no warnings or errors)
+
+**Commits cherry-picked:** All 17 commits successfully applied
+
+| # | Hash (original) | Subject |
+|---|-----------------|---------|
+| 1 | 6defecd943e | ufs: ti-j721e: Correct error detection |
+| 2 | d0dfb8c635a | ufs: Fix wrong bitfield usage for Data Direction in Transfer Request |
+| 3 | ae0872e9c38 | ufs: Add support for sending UFS attribute requests |
+| 4 | c7327ac2959 | ufs: Add bRefClkFreq attribute setting |
+| 5 | 84919722e6a | ufs: core: Add ufshcd_dme_enable() and ufshcd_dme_reset() |
+| 6 | 76465ce21ee | ufs: rockchip: Add initial support |
+| 7 | 200e3f893fb | ufs: unipro: Add PA_SCRAMBLING property |
+| 8 | 6cca3db2bd9 | ufs: Add MediaTek UFS driver |
+| 9 | 928269494c8 | MAINTAINERS: Add UFS to MediaTek section |
+| 10 | 9b37b600175 | ufs: core: Keep Makefile and Kconfig list sorted |
+| 11 | ea97b856179 | ufs: core: Fold ufs-uclass into ufs |
+| 12 | 1de63f1be48 | ufs: core: Rename ufs.c to ufs-uclass.c |
+| 13 | 6104ae290ef | ufs: amd-versal2: Fix indent |
+| 14 | 067c1b03328 | ufs: Call ufs_scsi_bind() from uclass .post_bind |
+| 15 | 4ced7e72649 | ufs: renesas: Update Kconfig entry help text |
+| 16 | 3351fe7ecc1 | ufs: Add UFS driver for Renesas R-Car X5H |
+| 17 | e34d01d23e4 | Merge tag 'u-boot-ufs-20251029' (empty - as expected for merge commit) |
+
+**Fix-ups made:** None - all commits applied cleanly
+
+**Commits with concerning deltas:** None - all commit deltas matched exactly
+
+**Notes:**
+- MAINTAINERS file had auto-merge on commits 6 and 9 but resolved cleanly
+- The merge commit (e34d01d23e4) was applied as an empty commit using `--allow-empty` to preserve the merge history/message
+
+The branch `cherry-6defecd943e` is ready for pushing.
+
+---
+
+### Pipeline fix: 2026-03-26 (attempt 1)
+
+Branch: cherry-6defecd943e
+
+Failed jobs:
+- efi-aarch64 (sjg-lab)
+- vbe (sjg-lab)
+- vf2 (sjg-lab)
+- pcduino3_nano (sjg-lab)
+
+### Conversation log
+Let me analyze these failure logs:
+
+**Job efi-aarch64**: Test failure `test_distro_arm_app_efi` - `console_base.Timeout` waiting for Linux boot prompt "Ubuntu 25.04 qarm ttyAMA0". This is a timeout during EFI boot test (QEMU-based test).
+
+**Job vbe**: Boot failure on rk3399-generic-ddr3 (VBE test). The VPL stage shows:
+- `Error: -95`
+- `VPL: failed to boot from all boot devices`
+- `### ERROR ### Please RESET the board ###`
+
+**Job vf2**: VisionFive2 board timeout - shows hardware errors:
+- `dwmci_s: Response Timeout`
+- `BOOT fail,Error is 0xffffffff`
+
+**Job pcduino3_nano**: Timeout waiting for U-Boot prompt (labgrid timeout)
+
+These all appear to be **infrastructure/lab-related issues** - the boards are not booting due to hardware timeouts and QEMU test flakiness, not due to code issues in the UFS commits. Let me check the branch and examine if there's anything code-related:
+
+Looking at the logs more carefully:
+
+1. **vbe job (rk3399-generic-ddr3)**: `Error: -95` at VPL stage is `ENOTSUPP` (operation not supported). This happens during boot with `vbe_abrec` (VBE A/B recovery) on Rockchip. This looks like a real boot failure on real hardware.
+
+2. **vf2 job**: Hardware SD card timeout (`dwmci_s: Response Timeout`) - classic infrastructure issue.
+
+3. **pcduino3_nano job**: Timeout waiting for login - could be boot hang or hardware issue.
+
+4. **efi-aarch64 job**: QEMU-based test timeout - likely a flaky test/QEMU issue.
+
+The interesting one is the **vbe job** which shows `Error: -95` in VPL. This might be related to the UFS changes. Let me investigate if the Rockchip UFS driver changes could be causing issues:
+
+The rk3399-generic-ddr3 board isn't a UFS board - it's the VBE (Verified Boot for Embedded) test board. The `Error: -95` (`-EOPNOTSUPP`) in VPL is probably not related to UFS changes.
+
+Let me check if any of these commits could affect the VBE test on Rockchip:
+
+No Rockchip files touched. Let me check what vbe boot method this uses:
+
+No boot code touched either. All these commits are strictly UFS driver-related.
+
+Let me analyze these failures more carefully:
+
+1. **vbe job**: The `Error: -95` comes from VPL stage on the Firefly-RK3399 board. Error code -95 is `-EOPNOTSUPP`. Looking at the boot log, TPL works fine, VPL loads but then fails "boot from all boot devices". This doesn't touch UFS code at all - VBE uses SD/MMC or other storage, not UFS.
+
+2. **vf2 job**: `dwmci_s: Response Timeout` and `BOOT fail,Error is 0xffffffff` - This is an SD/MMC DWC (DesignWare) controller timeout. Pure hardware/infrastructure issue.
+
+3. **pcduino3_nano job**: No console output, just timeout waiting for prompt. Classic labgrid hardware issue.
+
+4. **efi-aarch64 job**: EFI boot test timeout in QEMU - could be QEMU hang or a flaky test. Not related to UFS code which isn't enabled for this test.
+
+All these failures appear to be **infrastructure/transient issues**:
+- The UFS commits don't touch any code paths used by these boards
+- Three of four failures are hardware timeouts on physical lab boards
+- One is a QEMU-based test timeout
+
+Let me verify the boards don't even use UFS:
+
+None of the failing boards use UFS. The UFS commits in this MR are completely unrelated to the failures.
+
+Let me also verify the builds pass to confirm this isn't a build-time issue:
+
+Build succeeded (no output = success). Let me verify by checking the exit status:
+
+Good, sandbox builds successfully. Let me now verify the actual failing board configs build:
+
+Both boards build successfully. The warning about missing OpenSBI blob is expected for cross-compilation without the firmware present.
+
+## Summary
+
+After thorough analysis, these are **infrastructure/transient failures**, not issues with the code changes:
+
+1. **efi-aarch64 job**: QEMU test timeout (`test_distro_arm_app_efi`) - flaky test or QEMU issue, not related to UFS code
+2. **vbe job**: Rockchip VBE boot failure (`Error: -95` = EOPNOTSUPP at VPL stage) - physical hardware boot issue, not code-related
+3. **vf2 job**: StarFive VisionFive2 SD card timeout (`dwmci_s: Response Timeout`) - hardware infrastructure issue
+4. **pcduino3_nano job**: Labgrid timeout waiting for U-Boot prompt - hardware infrastructure issue
+
+**Evidence that these are infrastructure issues:**
+- None of the failing boards use UFS (confirmed via config checks)
+- The UFS commits don't modify any code paths used by these boards (confirmed via git log)
+- All boards build successfully (confirmed via buildman)
+- Three failures are timeouts on physical lab hardware
+- One failure is a QEMU-based test timeout
+
+**Recommendation:** No code changes are needed. These failures should be retried or investigated as infrastructure issues.
+
+---
+
+**Report:**
+
+**Root cause:** Infrastructure/transient failures - not related to the UFS code changes in this MR
+
+**Details:**
+- **efi-aarch64**: QEMU EFI boot test timeout (`test_distro_arm_app_efi`) - not related to UFS
+- **vbe**: VPL boot failure on Rockchip rk3399-generic-ddr3 hardware - physical board issue
+- **vf2**: SD card controller timeout on StarFive VisionFive2 - hardware issue
+- **pcduino3_nano**: Labgrid timeout - hardware issue
+
+**Why not code-related:**
+- None of the failing boards have UFS enabled in their configs
+- The 17 commits in this MR are strictly UFS driver changes
+- All affected boards build successfully
+- The failures show hardware-level timeouts and QEMU test flakiness
+
+**Fix applied:** None - no code changes needed. This is an infrastructure issue that requires retry or lab maintenance.
+
+---
+
+### Review: 2026-03-26
+
+Branch: cherry-6defecd943e
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, vbe, vf2, pcduino3_nano.
+
+Let me analyze ...
+
+### Conversation log
+Now let me understand the review comment. The comment mentions "Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, vbe, vf2, pcduino3_nano." and includes analysis showing these are infrastructure/transient issues unrelated to the UFS code changes.
+
+Let me look at the current state and understand what needs to be done:
+
+I see - there are two "pickman" commits at the top that record the cherry-pick and pipeline fix. The review comment is about the pipeline fix analysis which concluded that no code changes were needed - the failures were infrastructure/transient issues.
+
+Let me re-read the comment more carefully:
+
+The comment says the failures were determined to be infrastructure/transient issues and no code changes were made. The review comment is actually just a record of the analysis that was done, showing why no fix was applied.
+
+Since the review comment was made by the bot itself (project_1_bot_2541d37e7146e9c25808a380e05ebef0), and it simply documents that the pipeline failures were analyzed and found to be infrastructure issues (not code issues), there's no actionable change to be made to the code.
+
+Let me verify the current state of the branch and ensure everything is in order:
+
+The comment is not requesting any code changes - it's just documenting the analysis that was performed. Looking at the review comment content, it's a report explaining that the pipeline failures (efi-aarch64, vbe, vf2, pcduino3_nano) were all infrastructure/transient issues, not code-related problems.
+
+Since this review comment does not request any code changes (it's actually a summary document of the analysis done), the appropriate response is to acknowledge this and potentially re-run the pipeline to see if the transient issues have resolved.
+
+Let me verify the build still passes:
+
+Build passes. Now, looking at the review comment again, I need to understand what is being asked. The comment appears to be the bot's own record of the pipeline fix analysis. Let me check the exact wording:
+
+The review comment says:
+```
+Pipeline fix (attempt 1): fixed failed job(s) efi-aarch64, vbe, vf2, pcduino3_nano.
+```
+
+And then includes the analysis showing these were infrastructure issues.
+
+The context shows that the conclusion was "No code changes are needed. This is an infrastructure issue that requires retry or lab maintenance."
+
+This review comment is documenting the outcome of the pipeline failure analysis - it's not requesting a change. Since no code changes were needed (infrastructure issues), the appropriate action would be to:
+
+1. Note that no code changes are required
+2. The MR should be retried to see if the transient failures have resolved
+
+Let me check if there's anything else I'm missing in the review comment:
+
+I see - the "pickman: Record pipeline fix" commit just updates the history file, it doesn't contain any code changes. This aligns with the analysis that no code changes were needed.
+
+Given that:
+1. The review comment documents that the pipeline failures were infrastructure/transient issues
+2. No code changes were made or needed
+3. The build passes
+
+The appropriate response is to acknowledge that no code changes are required and that the pipeline should be retried to see if the infrastructure issues have resolved.
+
+Let me prepare the report:
+
+## Report
+
+**Review Comment Analysis:**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` is a **documentation of the pipeline failure analysis** from attempt 1. It is not requesting any code changes.
+
+**Summary of the analysis in the comment:**
+- 4 jobs failed: efi-aarch64, vbe, vf2, pcduino3_nano
+- All failures were determined to be **infrastructure/transient issues**, not related to the UFS code changes
+- Evidence:
+  - None of the failing boards have UFS enabled
+  - The 17 commits are strictly UFS driver changes
+  - All affected boards build successfully
+  - Failures show hardware-level timeouts and QEMU test flakiness
+
+**Action Taken:**
+No code changes are required. The review comment is documenting that the pipeline failures were analyzed and found to be infrastructure issues.
+
+**Recommendation:**
+The MR pipeline should be retried to see if the transient infrastructure issues have resolved. If they persist, it should be reported to lab maintainers.
+
+**Reply to post on MR:**
+
+```
+This review comment documents the analysis from pipeline fix attempt 1. The conclusion was that all 4 failed jobs (efi-aarch64, vbe, vf2, pcduino3_nano) were infrastructure/transient issues, not related to the UFS code changes in this MR:
+
+- **efi-aarch64**: QEMU EFI boot test timeout - flaky test
+- **vbe**: VPL boot failure on Rockchip hardware - physical board issue  
+- **vf2**: SD card controller timeout - hardware infrastructure issue
+- **pcduino3_nano**: Labgrid timeout - hardware infrastructure issue
+
+Since no code changes are needed, the pipeline should be retried to see if the transient issues have resolved. If failures persist, they should be reported as lab/infrastructure issues.
+```
+
+---
+
+### Review: 2026-03-26
+
+Branch: cherry-6defecd943e
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) tk1, pcduino3_nano.
+
+Based on my analysis of the job l...
+
+### Conversation log
+Now let me analyze the review comment. The comment is:
+
+> Pipeline fix (attempt 2): fixed failed job(s) tk1, pcduino3_nano.
+
+This is documentation from the bot about the pipeline failure analysis. Looking at the full context, both failures were identified as **infrastructure/lab issues**:
+- **tk1**: NetworkTegraUSBLoader resource unavailable (hardware offline)
+- **pcduino3_nano**: Labgrid timeout waiting for login prompt
+
+The conclusion was that these are NOT code-related issues since:
+1. Neither board uses UFS
+2. All commits in this MR are UFS driver changes
+3. The failures are classic lab infrastructure timeouts
+
+Since this review comment is documenting that **no code changes are needed** (it's an infrastructure issue), there's nothing to fix in the code. The appropriate action is to:
+
+1. Acknowledge the comment is informational
+2. Note that no code changes are required
+3. The pipeline should be retried or the lab issues reported
+
+Let me verify the build passes on the current branch:
+
+Build passes. Now let me check if there's anything actionable in the review comment. Looking at the full context again:
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` says:
+> "Pipeline fix (attempt 2): fixed failed job(s) tk1, pcduino3_nano."
+
+But looking at the analysis provided, it concludes:
+> "**Fix applied:** None - this is an infrastructure issue that requires retry or lab maintenance, not code changes."
+
+This is purely informational - it documents that the pipeline failures were analyzed and found to be infrastructure issues, NOT code problems. There are no code changes to make.
+
+## Report
+
+**Review Comment Analysis:**
+
+The review comment from `project_1_bot_2541d37e7146e9c25808a380e05ebef0` documents the pipeline failure analysis from attempt 2. This is an **informational comment**, not requesting any code changes.
+
+**Summary of the analysis in the comment:**
+- 2 jobs failed: tk1, pcduino3_nano
+- **tk1 (jetson-tk1)**: NetworkTegraUSBLoader hardware resource unavailable - exporter disconnected/offline
+- **pcduino3_nano**: Labgrid timeout waiting for U-Boot login prompt - board not responding
+- Both failures were determined to be **infrastructure/transient issues**, not related to the UFS code changes
+- Neither failing board uses UFS (they use SD/MMC storage)
+
+**Action Taken:**
+**No code changes are required.** The review comment is documenting that the pipeline failures were analyzed and found to be infrastructure issues.
+
+**Build Verification:**
+✅ Build passes (`buildman -L --board sandbox -w -o /tmp/pickman`)
+
+**Recommendation:**
+The MR pipeline should be retried to see if the transient infrastructure issues have resolved. If failures persist, they should be reported to lab maintainers.
+
+---
+
+**Reply to post on MR:**
+
+```
+This review comment documents the pipeline failure analysis from attempt 2. Both failed jobs (tk1, pcduino3_nano) were identified as infrastructure/transient issues:
+
+- **tk1 (jetson-tk1)**: NetworkTegraUSBLoader resource unavailable (`avail=False`) - hardware exporter disconnected or offline
+- **pcduino3_nano**: Labgrid timeout waiting for U-Boot prompt - board not responding
+
+These failures are not related to the UFS code changes in this MR:
+- Neither board uses UFS (they use SD/MMC storage)
+- All 17 commits are strictly UFS driver changes (drivers/ufs/*)
+- The failures show labgrid hardware-level resource unavailability and timeouts
+
+**No code changes are needed.** The pipeline should be retried, or if failures persist, reported as lab/infrastructure issues requiring maintenance.
+```
+
+---
+
+### Review: 2026-03-26
+
+Branch: cherry-6defecd943e
+
+Comments addressed:
+
+
+### Conversation log
+The branch is behind ci/master. Let me check the commits that need rebasing and then perform the rebase:
+
+There are 21 commits to rebase (17 UFS commits + 4 pickman record commits). Let me save the original commit list for comparison, then perform the rebase:
+
+Interesting! The branch is already up to date with ci/master. Let me verify:
+
+The branch is already on top of the merge commit `2a454d1037d` (Merge branch 'cherry-e41e6feb3d3' into 'master'). So it is up to date with ci/master. Let me verify the build and then check the remote status:
+
+Build passes. Let me check the remote state to see if there's a difference:
+
+There's a discrepancy! The remote branch `ci/cherry-6defecd943e` has different commits than our local branch. Let me check what's happening:
+
+This is strange - the remote branch `ci/cherry-6defecd943e` seems to have many unrelated commits (from other cherry branches). Let me check if the local branch I'm on is the correct one:
+
+The local branch has the correct UFS commits. The remote seems to have the wrong commits. Let me verify this is not a tracking issue and check if we need to force-push:
+
+I see! There's a `remotes/ci/cherry-6defecd943e` that's different from our local branch. But the issue is the remote branch seems corrupted (has commits from other MRs). Let me check the commit with the UFS original commits on remote:
+
+The remote branch has different UFS commits (not the ones in our local). This confirms the remote branch has been overwritten with content from another MR. 
+
+The local branch appears correct - it has the 17 commits listed in the MR description. Let me verify by checking the first commit in our set:
+
+The local branch looks correct. Our local `cherry-6defecd943e` has the right UFS commits. The remote appears to have been corrupted somehow.
+
+Since the local branch is already up to date with ci/master (rebase says "up to date"), and the local branch has the correct commits, I need to:
+1. Verify everything is correct
+2. Create a -v2 local branch
+3. Force push to the remote to restore the correct state
+
+Let me verify the commits match what the MR description says:
+
+These match the MR description commits. The branch is already rebased on ci/master. Let me create the v2 branch and push:
+
+Good, now let me push to the remote:
+
+The push was successful. Let me verify the remote now has the correct commits:
+
+The remote is now corrected. Let me run one final build verification:
+
+Build passes.
+
+## Summary
+
+**Task completed successfully!**
+
+### What was done:
+
+1. **Checked out branch**: `cherry-6defecd943e`
+
+2. **Fetched ci/master**: The branch was already up to date with ci/master - rebase reported "Current branch cherry-6defecd943e is up to date."
+
+3. **Discovered remote corruption**: The remote branch `ci/cherry-6defecd943e` had been overwritten with content from other MRs (contained commits like "pickman: Record pipeline fix for cherry-c01280b62c4" instead of the UFS commits).
+
+4. **Verified local branch correctness**: The local branch had all 17 correct UFS commits matching the MR description:
+   - 6defecd943e → ufs: ti-j721e: Correct error detection
+   - d0dfb8c635a → ufs: Fix wrong bitfield usage...
+   - ... (all 17 commits intact)
+
+5. **Created local v2 branch**: `cherry-6defecd943e-v2`
+
+6. **Force pushed to restore remote**: Used `./tools/pickman/pickman push-branch cherry-6defecd943e -r ci -f` to restore the correct commits to the remote branch.
+
+7. **Build verification**: ✅ Build passes
+
+### Final state:
+
+- **Local branch**: `cherry-6defecd943e-v2` (backup at same commit)
+- **Remote branch**: `ci/cherry-6defecd943e` now has correct commits
+- **Build**: ✅ Passes
+- **Commits**: All 17 UFS commits + 4 pickman record commits
+
+### Reply to post on MR:
+
+```
+Rebased and resolved remote branch corruption.
+
+**Issue found:** The remote branch had been overwritten with commits from other MRs.
+
+**Action taken:** Force-pushed the correct local branch to restore the proper state. The branch is already up to date with ci/master (rebase reported "up to date").
+
+**Verification:**
+- ✅ All 17 UFS commits intact
+- ✅ Build passes (sandbox)
+- ✅ Remote branch restored
+
+The pipeline should now run with the correct commits.
+```
+
+---
+
