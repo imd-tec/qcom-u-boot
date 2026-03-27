@@ -50521,3 +50521,106 @@ The cherry-pick branch is ready for pushing.
 
 ---
 
+Branch: cherry-d6737daa206
+
+Commits:
+- d6737daa206 board: toradex: fix aquila imx95 0098 pid4
+- 8690133debf thermal: imx_tmu: Always set thermal trips from fuses
+- 4772cf97f08 liebherr: btt: shrink spl_board_init
+- f6f319f035c arm: imx8: select ARCH_MISC_INIT if FSL_CAAM is enabled
+- ff0540fcfe4 board: toradex: add Toradex SMARC iMX95
+- f7a0afb544c imx: Revert "imx: mx6ull: fix REFTOP_VBGADJ setting" and fix comments
+- 087277fc76b imx8mp_evk: Fix typo on maintainer's name
+- 2ab70b3b488 bus: ti-sysc: select CLK driver
+- 62b45e82bdb Merge tag 'u-boot-imx-master-20251030' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository has some untracked files but no uncommitted changes. Let me create the new branch based on ci/master.
+
+Branch created. Now let me cherry-pick the first commit:
+
+First commit successful. Let me check the delta and run build test:
+
+Delta matches (2 files, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Let me cherry-pick the second commit:
+
+Second commit successful (auto-merged). Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick third commit:
+
+Third commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick fourth commit:
+
+Fourth commit successful (auto-merged). Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick fifth commit:
+
+Fifth commit successful. Let me check delta:
+
+Delta matches (14 files, 2139 insertions). Run build test:
+
+Build passed. Cherry-pick sixth commit:
+
+Sixth commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick seventh commit:
+
+Seventh commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick eighth commit:
+
+Eighth commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Now cherry-pick the ninth and final commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (which is expected since all the actual commits were cherry-picked individually above). Let me commit it with --allow-empty as instructed:
+
+The merge commit was preserved. Let me check delta:
+
+The merge commit is now an empty commit (which is correct because all the individual commits were already cherry-picked). Run build test:
+
+All cherry-picks complete and build passed. Now let me verify all 9 commits are present:
+
+All 9 commits are present. Now let me run the final build test:
+
+## Summary
+
+**All 9 commits have been successfully cherry-picked to branch `cherry-d6737daa206`**
+
+### Commits Applied:
+
+| # | Hash (new) | Original Hash | Subject |
+|---|------------|---------------|---------|
+| 1 | 349f0337857 | d6737daa206 | board: toradex: fix aquila imx95 0098 pid4 |
+| 2 | 5065b6b2c52 | 8690133debf | thermal: imx_tmu: Always set thermal trips from fuses |
+| 3 | 396cc76f02a | 4772cf97f08 | liebherr: btt: shrink spl_board_init |
+| 4 | 72012fe68b8 | f6f319f035c | arm: imx8: select ARCH_MISC_INIT if FSL_CAAM is enabled |
+| 5 | d5498d3f91a | ff0540fcfe4 | board: toradex: add Toradex SMARC iMX95 |
+| 6 | f0e79234685 | f7a0afb544c | imx: Revert "imx: mx6ull: fix REFTOP_VBGADJ setting" and fix comments |
+| 7 | 1a652938691 | 087277fc76b | imx8mp_evk: Fix typo on maintainer's name |
+| 8 | ce22dfc70ca | 2ab70b3b488 | bus: ti-sysc: select CLK driver |
+| 9 | e8458562657 | 62b45e82bdb | Merge tag 'u-boot-imx-master-20251030' (empty) |
+
+### Final Status:
+- **Build result**: OK (sandbox builds successfully)
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None
+- **Notes**: 
+  - Commits #2 and #4 had auto-merges (minor context changes) but deltas matched exactly
+  - Commit #9 (merge commit) resulted in an empty commit as expected, since all individual commits were already cherry-picked before it
+
+The branch `cherry-d6737daa206` is ready for pushing.
