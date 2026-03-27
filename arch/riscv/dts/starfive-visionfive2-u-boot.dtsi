@@ -49,3 +49,7 @@
 &sys_syscon {
 	bootph-pre-ram;
 };
+
+&pllclk {
+	/delete-property/ bootph-pre-ram;
+};
