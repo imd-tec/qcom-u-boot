@@ -50521,3 +50521,176 @@ The cherry-pick branch is ready for pushing.
 
 ---
 
+Branch: cherry-d6737daa206
+
+Commits:
+- d6737daa206 board: toradex: fix aquila imx95 0098 pid4
+- 8690133debf thermal: imx_tmu: Always set thermal trips from fuses
+- 4772cf97f08 liebherr: btt: shrink spl_board_init
+- f6f319f035c arm: imx8: select ARCH_MISC_INIT if FSL_CAAM is enabled
+- ff0540fcfe4 board: toradex: add Toradex SMARC iMX95
+- f7a0afb544c imx: Revert "imx: mx6ull: fix REFTOP_VBGADJ setting" and fix comments
+- 087277fc76b imx8mp_evk: Fix typo on maintainer's name
+- 2ab70b3b488 bus: ti-sysc: select CLK driver
+- 62b45e82bdb Merge tag 'u-boot-imx-master-20251030' of https://gitlab.denx.de/u-boot/custodians/u-boot-imx
+
+### Conversation log
+The repository has some untracked files but no uncommitted changes. Let me create the new branch based on ci/master.
+
+Branch created. Now let me cherry-pick the first commit:
+
+First commit successful. Let me check the delta and run build test:
+
+Delta matches (2 files, 2 insertions, 2 deletions). Now let me run the build test:
+
+Build passed. Let me cherry-pick the second commit:
+
+Second commit successful (auto-merged). Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick third commit:
+
+Third commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick fourth commit:
+
+Fourth commit successful (auto-merged). Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick fifth commit:
+
+Fifth commit successful. Let me check delta:
+
+Delta matches (14 files, 2139 insertions). Run build test:
+
+Build passed. Cherry-pick sixth commit:
+
+Sixth commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick seventh commit:
+
+Seventh commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Cherry-pick eighth commit:
+
+Eighth commit successful. Let me check delta:
+
+Delta matches. Run build test:
+
+Build passed. Now cherry-pick the ninth and final commit - this is a merge commit, so I need to use `-m 1 --allow-empty`:
+
+The merge commit resulted in an empty commit (which is expected since all the actual commits were cherry-picked individually above). Let me commit it with --allow-empty as instructed:
+
+The merge commit was preserved. Let me check delta:
+
+The merge commit is now an empty commit (which is correct because all the individual commits were already cherry-picked). Run build test:
+
+All cherry-picks complete and build passed. Now let me verify all 9 commits are present:
+
+All 9 commits are present. Now let me run the final build test:
+
+## Summary
+
+**All 9 commits have been successfully cherry-picked to branch `cherry-d6737daa206`**
+
+### Commits Applied:
+
+| # | Hash (new) | Original Hash | Subject |
+|---|------------|---------------|---------|
+| 1 | 349f0337857 | d6737daa206 | board: toradex: fix aquila imx95 0098 pid4 |
+| 2 | 5065b6b2c52 | 8690133debf | thermal: imx_tmu: Always set thermal trips from fuses |
+| 3 | 396cc76f02a | 4772cf97f08 | liebherr: btt: shrink spl_board_init |
+| 4 | 72012fe68b8 | f6f319f035c | arm: imx8: select ARCH_MISC_INIT if FSL_CAAM is enabled |
+| 5 | d5498d3f91a | ff0540fcfe4 | board: toradex: add Toradex SMARC iMX95 |
+| 6 | f0e79234685 | f7a0afb544c | imx: Revert "imx: mx6ull: fix REFTOP_VBGADJ setting" and fix comments |
+| 7 | 1a652938691 | 087277fc76b | imx8mp_evk: Fix typo on maintainer's name |
+| 8 | ce22dfc70ca | 2ab70b3b488 | bus: ti-sysc: select CLK driver |
+| 9 | e8458562657 | 62b45e82bdb | Merge tag 'u-boot-imx-master-20251030' (empty) |
+
+### Final Status:
+- **Build result**: OK (sandbox builds successfully)
+- **Fix-ups made**: None required
+- **Commits with concerning deltas**: None
+- **Notes**: 
+  - Commits #2 and #4 had auto-merges (minor context changes) but deltas matched exactly
+  - Commit #9 (merge commit) resulted in an empty commit as expected, since all individual commits were already cherry-picked before it
+
+The branch `cherry-d6737daa206` is ready for pushing.
+
+---
+
+### Review: 2026-03-27
+
+Branch: cherry-d6737daa206
+
+Comments addressed:
+- [project_1_bot_2541d37e7146e9c25808a380e05ebef0]: Pipeline fix (attempt 2): fixed failed job(s) vbe, pcduino3_nano.
+
+Now I have the full context. Let ...
+
+### Conversation log
+Now I understand the situation. Looking at the review comment:
+
+> "Pipeline fix (attempt 2): fixed failed job(s) vbe, pcduino3_nano."
+
+This is a **bot notification** confirming that the pipeline fix attempt 2 was successful - the jobs `vbe` and `pcduino3_nano` now passed. This is the same pattern as the previous bot notification about attempt 1.
+
+This is an **informational status update**, not an actionable code review comment. The bot is confirming that the infrastructure issues have been resolved and the pipeline is now passing.
+
+Let me verify the current branch state and build:
+
+Build passes. Since this is a bot notification confirming the pipeline fix was successful (not a request for code changes), no code modifications are needed.
+
+## Summary Report
+
+### Review Comment Analysis
+
+**Comment from:** `project_1_bot_2541d37e7146e9c25808a380e05ebef0`
+
+**Comment Content:** 
+> "Pipeline fix (attempt 2): fixed failed job(s) vbe, pcduino3_nano."
+
+**Nature:** This is a **bot status notification**, not an actionable code review comment.
+
+### What This Means
+
+The bot is confirming that the pipeline fix attempt 2 was successful. The jobs `vbe` and `pcduino3_nano` which previously failed due to infrastructure/hardware lab issues have now passed on retry.
+
+This follows the same pattern as the previous attempt 1 notification about jobs `vbe`, `bpi`, and `pcduino3_nano`.
+
+### Action Required
+
+**None.** No code changes are needed because:
+1. This is an informational notification confirming a previous fix worked
+2. The original failures were infrastructure/hardware issues (as documented extensively in the MR description)
+3. The pipeline is now passing
+
+### Build Verification
+
+✅ Build passes: `buildman -L --board sandbox -w -o /tmp/pickman`
+
+### Branch Status
+
+The branch `cherry-d6737daa206` is already at the correct state with all 9 cherry-picked commits. No changes needed.
+
+### Suggested MR Reply
+
+Since this is a bot notification confirming the pipeline fix worked, no reply is necessary. The MR is ready for merge review.
+
+If a reply is needed for tracking purposes:
+> "Acknowledged. Pipeline fix attempt 2 for infrastructure-related failures confirmed successful. Ready for merge."
+
+---
+
+**Note:** Since no code changes are required for this informational bot notification, I have not pushed any changes to the branch. The branch `cherry-d6737daa206` remains at its current state with all commits, and the pipeline should now be passing.
+
+---
+
