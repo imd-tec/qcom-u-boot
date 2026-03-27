@@ -50133,131 +50133,73 @@ The pipeline should now run with the correct commits.
 
 ## 2026-03-26: us/next
 
-Branch: cherry-5d23810c3c6
+Branch: cherry-9ffbce80df0
 
 Commits:
-- 5d23810c3c6 mmc: exynos_dw_mmc: Add compatible string for Exynos5250
-- 02d7aa88214 mmc: dw_mmc: export dwmci_send_cmd() and dwmci_set_ios()
-- 3a5b187b5c0 mmc: dw_mmc: do not skip dwmci_setup_bus() for same non-zero clock frequency
-- ae460195920 mmc: dw_mmc: properly address command completion in dwmci_control_clken()
-- e6b66e9f338 mmc: dw_mmc: add voltage switch command flag
-- 0b75109b6aa mmc: dw_mmc: return error for invalid voltage setting
-- 0f425edd10f mmc: enable/disable VQMMC regulator only during MMC power cycle
-- bbe3b9fa092 mmc: exynos_dw_mmc: add support for MMC HS200 and HS400 modes
-- bc707c576c4 mmc: exynos_dw_mmc: add support for SD UHS mode
-- 07d2aa783cd mmc: exynos_dw_mmc: add compatible for exynos7870-dw-mshc-smu
-- 86f793120ca power: pmic: s2mps11: change the probe function to bind
-- 73a85502bd2 power: pmic: s2mps11: add support for allowing multiple device variants
-- 2d49a7e75ce power: regulator: s2mps11: declaratively define LDOs and BUCKs
-- 3d4143ac3ae power: regulator: s2mps11: declaratively get/set regulator mode
-- defe12f306e power: regulator: s2mps11: add support for S2MPU05 PMIC
-- bf8f1a984d6 power: pmic: s2mps11: add support for Samsung S2MPU05 PMIC
-- 906ee6785b1 mmc: sd: Handle UHS-I voltage signaling without power cycle
-- f896f5c2523 sdhci: Reorder interrupt flags in SDHCI_INT_DATA_MASK definition
-- d805a18ec60 power: regulator: Remove duplicate include of regulator_common.h
-- e16018f6b22 mmc: exynos_dw_mmc: guard execute_tuning
-- 5b14ff3a0ee Merge tag 'mmc-power-2025-10-30' of https://source.denx.de/u-boot/custodians/u-boot-mmc
+- 9ffbce80df0 i2c: add support for the MT7621 I2C controller
+- fc7d8683274 i2c: rcar_i2c: Add R-Car Gen5 support
+- 55760696864 Merge tag 'i2c-updates-for-2026.01-rc2' of https://source.denx.de/u-boot/custodians/u-boot-i2c
 
 ### Conversation log
-The repository state is clean (only untracked files, nothing staged). Now let me create and checkout the new branch based on ci/master.
+The repository has some untracked files but is otherwise clean. Let me proceed with creating the cherry-pick branch.
 
-Now let me start cherry-picking the commits in order. First commit:
+Now let me cherry-pick the first commit:
 
-First commit successful. Let me check the delta and run build test:
+First commit applied successfully. Let me check the delta and run the build test:
 
-Delta matches perfectly (1 file, 3 insertions). Now run the build test:
+The delta is identical (3 files, 382 insertions). Now let me run the build test:
 
-Build passed. Now cherry-pick commit 2:
+Build passed. Now let me cherry-pick the second commit:
 
-Delta matches. Build test:
+Second commit applied. Let me check the delta:
 
-Build passed. Continue with commit 3:
+Delta is identical (1 file, 1 insertion). Now let me run the build test:
 
-Delta matches, build passed. Continue with commit 4:
+Build passed. Now let me cherry-pick the third commit, which is a merge commit (noted by "Merge" in the subject):
 
-Delta matches, build passed. Continue with commit 5:
+The merge commit is empty (because the commits it merged are already in our branch). I need to commit it with --allow-empty to preserve the merge commit message:
 
-Delta matches, build passed. Continue with commit 6:
+The merge commit was preserved. Let me check the delta:
 
-Delta matches, build passed. Continue with commit 7:
+The cherry-picked merge commit is empty as expected (the individual commits were already applied). The original merge commit shows 4 files changed (which is the aggregate of the two commits it merged). This is expected behavior because we already applied the individual commits.
 
-Delta matches, build passed. Continue with commit 8:
+Now let me run the build test:
 
-Delta matches, build passed. Continue with commit 9:
+Build passed. Now let me verify all commits are present:
 
-Delta matches, build passed. Continue with commit 10:
+All 3 commits are present:
+1. `08c66292fae` - i2c: add support for the MT7621 I2C controller
+2. `a6e1aee87fc` - i2c: rcar_i2c: Add R-Car Gen5 support  
+3. `ac8622c2753` - Merge tag 'i2c-updates-for-2026.01-rc2' of https://source.denx.de/u-boot/custodians/u-boot-i2c
 
-Delta matches, build passed. Continue with commit 11:
+Now let me run the final build test:
 
-Delta matches, build passed. Continue with commit 12:
+## Final Status Report
 
-Delta matches, build passed. Continue with commit 13:
+**Cherry-pick completed successfully!**
 
-Delta matches, build passed. Continue with commit 14:
+### Commits Applied (3 of 3):
+| Original Hash | New Hash | Subject |
+|---------------|----------|---------|
+| `9ffbce80df0` | `08c66292fae` | i2c: add support for the MT7621 I2C controller |
+| `fc7d8683274` | `a6e1aee87fc` | i2c: rcar_i2c: Add R-Car Gen5 support |
+| `55760696864` | `ac8622c2753` | Merge tag 'i2c-updates-for-2026.01-rc2' of https://source.denx.de/u-boot/custodians/u-boot-i2c |
 
-Delta matches, build passed. Continue with commit 15:
+### Build Result: ✅ OK
+- No warnings or errors
+- All build tests passed (after each cherry-pick and final)
 
-Delta matches, build passed. Continue with commit 16:
-
-Delta matches, build passed. Continue with commit 17:
-
-Delta matches, build passed. Continue with commit 18:
-
-Delta matches, build passed. Continue with commit 19:
-
-Delta matches, build passed. Continue with commit 20:
-
-Delta matches, build passed. Now for the final commit 21 - this is a merge commit:
-
-The merge commit results in an empty commit (all changes already applied via the individual commits). I need to commit it as an empty commit to preserve history:
-
-All 21 commits have been cherry-picked. Let me now verify with the git log and run the final build test:
-
-All 21 commits are present and the final build passes.
-
-## Summary
-
-**Final Status: SUCCESS ✓**
-
-All 21 commits have been successfully cherry-picked from `us/next` branch onto the new `cherry-5d23810c3c6` branch.
-
-### Build Result
-- **OK** - Build passes with no errors or warnings
-
-### Cherry-picked Commits (in order)
-1. `845bef8c86c` - mmc: exynos_dw_mmc: Add compatible string for Exynos5250
-2. `89c7db717fd` - mmc: dw_mmc: export dwmci_send_cmd() and dwmci_set_ios()
-3. `e694c3828ea` - mmc: dw_mmc: do not skip dwmci_setup_bus() for same non-zero clock frequency
-4. `e4328bbe1cd` - mmc: dw_mmc: properly address command completion in dwmci_control_clken()
-5. `0e25595bb32` - mmc: dw_mmc: add voltage switch command flag
-6. `10e60dae2bf` - mmc: dw_mmc: return error for invalid voltage setting
-7. `0589caf2050` - mmc: enable/disable VQMMC regulator only during MMC power cycle
-8. `8e2f3e5ba2e` - mmc: exynos_dw_mmc: add support for MMC HS200 and HS400 modes
-9. `e65521d5152` - mmc: exynos_dw_mmc: add support for SD UHS mode
-10. `87c88632691` - mmc: exynos_dw_mmc: add compatible for exynos7870-dw-mshc-smu
-11. `5e9fc55d05a` - power: pmic: s2mps11: change the probe function to bind
-12. `1c2fdfff1c2` - power: pmic: s2mps11: add support for allowing multiple device variants
-13. `09384300702` - power: regulator: s2mps11: declaratively define LDOs and BUCKs
-14. `3b87f6cfe8a` - power: regulator: s2mps11: declaratively get/set regulator mode
-15. `c966f9d365f` - power: regulator: s2mps11: add support for S2MPU05 PMIC
-16. `ff354c6149c` - power: pmic: s2mps11: add support for Samsung S2MPU05 PMIC
-17. `4747b55a6b9` - mmc: sd: Handle UHS-I voltage signaling without power cycle
-18. `e996494912d` - sdhci: Reorder interrupt flags in SDHCI_INT_DATA_MASK definition
-19. `5c84f11d5f3` - power: regulator: Remove duplicate include of regulator_common.h
-20. `6d7786dbb4e` - mmc: exynos_dw_mmc: guard execute_tuning
-21. `3d735a7c1e1` - Merge tag 'mmc-power-2025-10-30' (empty - all content already applied)
-
-### Fix-ups Made
+### Fix-ups Made:
 - None required
 
-### Commits with Concerning Deltas
-- None - all deltas matched perfectly
+### Delta Notes:
+- Commit 1 (`9ffbce80df0`): Delta identical - 3 files, 382 insertions
+- Commit 2 (`fc7d8683274`): Delta identical - 1 file, 1 insertion
+- Commit 3 (`55760696864`): Empty commit as expected (merge commit whose contents were already applied via commits 1 and 2)
 
-### Notes
-- Commit 21 (the merge commit) resulted in an empty commit as expected, since all the individual commits that make up the merge were already cherry-picked. The commit was preserved with `--allow-empty` to maintain history tracking.
-- All 20 regular commits had identical deltas between the cherry-picked version and original.
-
-The branch `cherry-5d23810c3c6` is now ready for pushing.
+### Branch Status:
+- Branch `cherry-9ffbce80df0` is ready for pushing
+- Branch is 3 commits ahead of `ci/master`
 
 ---
 
