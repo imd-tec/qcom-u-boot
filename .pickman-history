@@ -50282,3 +50282,63 @@ No code changes were required as these I2C driver changes don't affect the faili
 
 ---
 
+### Review: 2026-03-27
+
+Branch: cherry-9ffbce80df0
+
+Comments addressed:
+
+
+### Conversation log
+The branch is 2 commits behind ci/master. Let me capture the commit info before rebase and then rebase:
+
+Now let me start the rebase:
+
+Rebase completed successfully. Now let me verify the commits and check deltas:
+
+All deltas are identical:
+- Commit 1: 3 files, 382 insertions ✅
+- Commit 2: 1 file, 1 insertion ✅
+- Commit 3: Empty merge commit ✅
+
+Now let me run the build test:
+
+Build passed. Now let me check for existing version branches and create the new local branch:
+
+The branch has been successfully rebased and pushed. Let me verify the final state:
+
+## Summary Report
+
+**MR:** !800  
+**Branch:** `cherry-9ffbce80df0`  
+**Task:** Rebase onto latest target branch
+
+### Actions Completed
+
+1. **Checked out branch** `cherry-9ffbce80df0`
+2. **Rebased onto** `ci/master` (was 2 commits behind)
+3. **Verified deltas** for all rebased commits (all identical):
+   - `4273c62fdd0` - i2c: add support for the MT7621 I2C controller (3 files, 382 insertions) ✅
+   - `2e2b7b5f0e4` - i2c: rcar_i2c: Add R-Car Gen5 support (1 file, 1 insertion) ✅
+   - `ddac5caedbb` - Merge tag 'i2c-updates-for-2026.01-rc2' (empty merge commit) ✅
+4. **Build test passed** - `buildman -L --board sandbox -w -o /tmp/pickman` ✅
+5. **Created local branch** `cherry-9ffbce80df0-v2`
+6. **Force pushed** to remote branch `cherry-9ffbce80df0` to update MR
+
+### Commits (After Rebase)
+| Hash | Subject |
+|------|---------|
+| `4273c62fdd0` | i2c: add support for the MT7621 I2C controller |
+| `2e2b7b5f0e4` | i2c: rcar_i2c: Add R-Car Gen5 support |
+| `ddac5caedbb` | Merge tag 'i2c-updates-for-2026.01-rc2' of https://source.denx.de/u-boot/custodians/u-boot-i2c |
+| `37b50841289` | pickman: Record cherry-pick of 3 commits from us/next |
+| `4ab37807894` | pickman: Record review handling for cherry-9ffbce80df0 |
+
+### Suggested Reply to MR
+
+```
+Rebased onto latest ci/master. No conflicts encountered. Build verified.
+```
+
+---
+
