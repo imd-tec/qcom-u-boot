@@ -41,18 +41,11 @@ since no ``make`` subprocesses or cross-compiler toolchains are needed.
 Defconfig files containing ``#include`` directives are preprocessed with the
 C preprocessor before loading, matching the behaviour of the build system.
 
-There are two known cosmetic differences compared with the old make-based
-approach:
-
-- ``CONFIG_GCC_VERSION`` reflects the host compiler rather than each board's
-  cross-compiler, since no cross-compiler is invoked.
-
-- Backslash escape sequences in string values (e.g. ``\n``, ``\x1b``) may
-  differ slightly due to kconfiglib's unescape/escape round-trip. This affects
-  a handful of string CONFIGs such as ``CONFIG_AUTOBOOT_PROMPT``.
-
-Neither difference affects the usefulness of the database for finding CONFIG
-combinations or computing imply relationships.
+There is one known cosmetic difference compared with the old make-based
+approach: ``CONFIG_GCC_VERSION`` reflects the host compiler rather than each
+board's cross-compiler, since no cross-compiler is invoked. This does not
+affect the usefulness of the database for finding CONFIG combinations or
+computing imply relationships.
 
 Resyncing defconfigs
 ~~~~~~~~~~~~~~~~~~~~
