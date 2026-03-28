@@ -292,6 +292,15 @@ config MMC_DW_ROCKCHIP
 	  SD 3.0, SDIO 3.0 and MMC 4.5 and supports common eMMC chips as well
 	  as removeable SD and micro-SD cards.
 
+config MMC_DW_ROCKCHIP_CLK_HANDOFF
+	bool "Pass MMC clock rate between boot phases via bloblist"
+	depends on MMC_DW_ROCKCHIP && BLOBLIST
+	help
+	  When enabled, the DW MMC source clock rate is saved to the
+	  bloblist after being configured. A later boot phase that lacks
+	  CLK support can read this rate and use it to calculate the
+	  correct clock divider, rather than assuming bypass mode.
+
 config MMC_SDHCI_ADI
 	bool "ADI SD/MMC controller support"
 	depends on ARCH_SC5XX
