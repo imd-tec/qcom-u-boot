@@ -64,6 +64,7 @@ static struct tag_name {
 	{ BLOBLISTT_VBE, "VBE" },
 	{ BLOBLISTT_U_BOOT_VIDEO, "SPL video handoff" },
 	{ BLOBLISTT_EFI_LOG, "EFI-call log" },
+	{ BLOBLISTT_U_BOOT_MMC_CLK, "MMC clock" },
 
 	/* BLOBLISTT_VENDOR_AREA */
 };
