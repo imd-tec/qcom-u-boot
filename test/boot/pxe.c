@@ -465,6 +465,10 @@ static int pxe_test_sysboot_norun(struct unit_test_state *uts)
 	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
 	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
 	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("Retrieving file: /overlay0.dtbo");
+	ut_assert_nextline("Failed loading overlay /overlay0.dtbo");
+	ut_assert_nextline("Retrieving file: /overlay1.dtbo");
+	ut_assert_nextline("Failed loading overlay /overlay1.dtbo");
 	ut_assert_nextline("append: root=/dev/sda1 quiet");
 
 	/* Boot fails on sandbox */
@@ -1123,6 +1127,10 @@ static int pxe_test_label_override_norun(struct unit_test_state *uts)
 	ut_assert_nextline("Retrieving file: /dtb/board.dtb");
 	ut_assert_nextline("Retrieving file: /dtb/overlay1.dtbo");
 	ut_assert_nextline("Retrieving file: /dtb/overlay2.dtbo");
+	ut_assert_nextline("Retrieving file: /overlay0.dtbo");
+	ut_assert_nextline("Failed loading overlay /overlay0.dtbo");
+	ut_assert_nextline("Retrieving file: /overlay1.dtbo");
+	ut_assert_nextline("Failed loading overlay /overlay1.dtbo");
 	ut_assert_nextline("append: root=/dev/sda1 quiet");
 	ut_assert_nextline("Unrecognized zImage");
 	ut_assert_console_end();
