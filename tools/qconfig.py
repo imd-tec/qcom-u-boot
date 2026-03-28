@@ -18,13 +18,11 @@ import fnmatch
 import glob
 import multiprocessing
 import os
-import queue
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 import unittest
 
@@ -714,32 +712,6 @@ class KconfigParser:
         return arch
 
 
-class DatabaseThread(threading.Thread):
-    """This thread processes results from Slot threads.
-
-    It collects the data in the master config directary. There is only one
-    result thread, and this helps to serialise the build output.
-    """
-    def __init__(self, config_db, db_queue):
-        """Set up a new result thread
-
-        Args:
-            builder: Builder which will be sent each result
-        """
-        threading.Thread.__init__(self)
-        self.config_db = config_db
-        self.db_queue= db_queue
-
-    def run(self):
-        """Called to start up the result thread.
-
-        We collect the next result job and pass it on to the build.
-        """
-        while True:
-            defconfig, configs = self.db_queue.get()
-            self.config_db[defconfig] = configs
-            self.db_queue.task_done()
-
 
 class Slot:
 
@@ -751,19 +723,18 @@ class Slot:
     """
 
     def __init__(self, toolchains, args, progress, devnull, make_cmd,
-                 reference_src_dir, db_queue):
+                 reference_src_dir):
         """Create a new process slot.
 
         Args:
           toolchains: Toolchains object containing toolchains.
-          args: Program arguments; this class uses build_db, verbose,
+          args: Program arguments; this class uses verbose,
                 force_sync, dry_run, exit_on_error
           progress: A progress indicator.
           devnull: A file object of '/dev/null'.
           make_cmd: command name of GNU Make.
           reference_src_dir: Determine the true starting config state from this
                              source tree.
-          db_queue: output queue to write config info for the database
           col (terminal.Color): Colour object
         """
         self.toolchains = toolchains
@@ -773,7 +744,6 @@ class Slot:
         self.devnull = devnull
         self.make_cmd = (make_cmd, 'O=' + self.build_dir)
         self.reference_src_dir = reference_src_dir
-        self.db_queue = db_queue
         self.col = progress.col
         self.parser = KconfigParser(self.build_dir)
         self.state = STATE_IDLE
@@ -853,8 +823,6 @@ class Slot:
             if self.current_src_dir:
                 self.current_src_dir = None
                 self.do_defconfig()
-            elif self.args.build_db:
-                self.do_add_to_db()
             else:
                 self.do_savedefconfig()
         elif self.state == STATE_SAVEDEFCONFIG:
@@ -907,16 +875,6 @@ class Slot:
                                      stderr=subprocess.PIPE,
                                      cwd=self.current_src_dir)
         self.state = STATE_AUTOCONF
-
-    def do_add_to_db(self):
-        """Add the board to the database"""
-        configs = {}
-        for line in read_file(os.path.join(self.build_dir, AUTO_CONF_PATH)):
-            if line.startswith('CONFIG'):
-                config, value = line.split('=', 1)
-                configs[config] = value.rstrip()
-        self.db_queue.put([self.defconfig, configs])
-        self.finish(True)
 
     def do_savedefconfig(self):
         """Update the .config and run 'make savedefconfig'."""
@@ -995,17 +953,16 @@ class Slot:
 class Slots:
     """Controller of the array of subprocess slots."""
 
-    def __init__(self, toolchains, args, progress, reference_src_dir, db_queue):
+    def __init__(self, toolchains, args, progress, reference_src_dir):
         """Create a new slots controller.
 
         Args:
             toolchains (Toolchains): Toolchains object containing toolchains
-            args (Namespace): Program arguments; this class uses build_db,
+            args (Namespace): Program arguments; this class uses
                 verbose, force_sync, dry_run, exit_on_error, jobs,
             progress (Progress): A progress indicator.
             reference_src_dir (str): Determine the true starting config state
                 from this source tree (None for none)
-            db_queue (Queue): output queue to write config info for the database
         """
         self.args = args
         self.slots = []
@@ -1015,7 +972,7 @@ class Slots:
         make_cmd = get_make_cmd()
         for _ in range(args.jobs):
             self.slots.append(Slot(toolchains, args, progress, devnull,
-                                   make_cmd, reference_src_dir, db_queue))
+                                   make_cmd, reference_src_dir))
 
     def add(self, defconfig):
         """Add a new subprocess if a vacant slot is found.
@@ -1102,27 +1059,22 @@ class ReferenceSource:
         return self.src_dir
 
 def move_config(args):
-    """Build database or sync config options to defconfig files.
+    """Sync config options to defconfig files using make (legacy path).
+
+    This is only used with -r (git-ref), which needs to build against a
+    different source tree. The normal -s path uses do_sync_defconfigs().
 
     Args:
-        args (Namespace): Program arguments; this class uses build_db,
+        args (Namespace): Program arguments; this class uses
             verbose, force_sync, dry_run, exit_on_error, jobs, git_ref,
             defconfigs, defconfiglist, nocolour
 
     Returns:
         tuple:
-            config_db (dict of configs for each defconfig):
-                key: defconfig name, e.g. "MPC8548CDS_legacy_defconfig"
-                value: dict:
-                    key: CONFIG option
-                    value: Value of option
+            config_db (dict): Always empty (database build uses do_build_db())
             Progress: Progress indicator
     """
     config_db = {}
-    db_queue = queue.Queue()
-    dbt = DatabaseThread(config_db, db_queue)
-    dbt.daemon = True
-    dbt.start()
 
     check_clean_directory()
     bsettings.setup('')
@@ -1148,7 +1100,7 @@ def move_config(args):
     col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
                          else terminal.COLOR_IF_TERMINAL)
     progress = Progress(col, len(defconfigs))
-    slots = Slots(toolchains, args, progress, reference_src_dir, db_queue)
+    slots = Slots(toolchains, args, progress, reference_src_dir)
 
     # Main loop to process defconfig files:
     #  Add a new subprocess into a vacant slot.
@@ -1164,7 +1116,6 @@ def move_config(args):
         time.sleep(SLEEP_TIME)
 
     slots.write_failed_boards()
-    db_queue.join()
     progress.completed()
     return config_db, progress
 
