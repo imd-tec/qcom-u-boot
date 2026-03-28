@@ -406,6 +406,138 @@ def do_build_db(args):
     return config_db, progress
 
 
+def _sync_defconfigs_worker(srcdir, defconfigs, result_queue, error_queue,
+                            dry_run):
+    """Worker process that syncs defconfigs using kconfiglib
+
+    For each defconfig, loads it via kconfiglib and writes a minimal config
+    (equivalent to 'make savedefconfig'), then compares with the original.
+
+    Args:
+        srcdir (str): Source-tree directory
+        defconfigs (list of str): Defconfig filenames to process
+        result_queue (multiprocessing.Queue): Output queue for
+            (defconfig, updated) tuples
+        error_queue (multiprocessing.Queue): Output queue for failed defconfigs
+        dry_run (bool): If True, do not update defconfig files
+    """
+    os.environ['srctree'] = srcdir
+    os.environ['UBOOTVERSION'] = 'dummy'
+    os.environ['KCONFIG_OBJDIR'] = ''
+    os.environ['CC'] = 'gcc'
+    kconf = kconfiglib.Kconfig(warn=False)
+
+    for defconfig in defconfigs:
+        orig = os.path.join(srcdir, 'configs', defconfig)
+        try:
+            # Skip defconfigs with #include — savedefconfig mangles them
+            if b'#include' in tools.read_file(orig):
+                result_queue.put((defconfig, False, 'has #include'))
+                continue
+
+            kconf.load_config(orig)
+
+            tmp = tempfile.NamedTemporaryFile(
+                mode='w', prefix='qconfig-', suffix='_defconfig',
+                dir=os.path.join(srcdir, 'configs'), delete=False)
+            tmp.close()
+            kconf.write_min_config(tmp.name)
+
+            updated = not filecmp.cmp(orig, tmp.name)
+            if updated and not dry_run:
+                shutil.move(tmp.name, orig)
+            else:
+                os.unlink(tmp.name)
+            result_queue.put((defconfig, updated, None))
+        except Exception as exc:
+            error_queue.put((defconfig, str(exc)))
+
+
+def do_sync_defconfigs(args):
+    """Sync defconfig files using kconfiglib instead of make
+
+    Evaluates each defconfig through kconfiglib and writes a minimal config
+    (equivalent to 'make savedefconfig'), updating the original if it differs.
+
+    Args:
+        args (Namespace): Program arguments (uses jobs, defconfigs,
+            defconfiglist, nocolour, dry_run, force_sync)
+
+    Returns:
+        Progress: progress indicator
+    """
+    srcdir = os.getcwd()
+
+    if args.defconfigs:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfigs)]
+    elif args.defconfiglist:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfiglist)]
+    else:
+        defconfigs = get_all_defconfigs()
+
+    col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
+                         else terminal.COLOR_IF_TERMINAL)
+    progress = Progress(col, len(defconfigs))
+
+    jobs = args.jobs
+    total = len(defconfigs)
+    result_queue = multiprocessing.Queue()
+    error_queue = multiprocessing.Queue()
+    processes = []
+    for i in range(jobs):
+        chunk = defconfigs[total * i // jobs:total * (i + 1) // jobs]
+        if not chunk:
+            continue
+        proc = multiprocessing.Process(
+            target=_sync_defconfigs_worker,
+            args=(srcdir, chunk, result_queue, error_queue, args.dry_run))
+        proc.start()
+        processes.append(proc)
+
+    remaining = total
+    updated_count = 0
+    while remaining:
+        found = False
+        while not result_queue.empty():
+            defconfig, updated, msg = result_queue.get()
+            if updated:
+                updated_count += 1
+                name = defconfig[:-len('_defconfig')]
+                log = col.build(col.BLUE, 'defconfig updated', bright=True)
+                if args.dry_run:
+                    log = col.build(col.YELLOW, 'would update', bright=True)
+                print(f'{name.ljust(20)} {log}')
+            elif msg:
+                name = defconfig[:-len('_defconfig')]
+                log = col.build(col.RED, f'ignored: {msg}', bright=True)
+                print(f'{name.ljust(20)} {log}')
+            progress.inc(True)
+            progress.show()
+            remaining -= 1
+            found = True
+        while not error_queue.empty():
+            defconfig, msg = error_queue.get()
+            print(col.build(col.RED, f'{defconfig}: {msg}', bright=True),
+                  file=sys.stderr)
+            progress.inc(False)
+            progress.show()
+            remaining -= 1
+            found = True
+        if not found:
+            time.sleep(SLEEP_TIME)
+
+    for proc in processes:
+        proc.join()
+
+    progress.completed()
+    if updated_count:
+        print(col.build(col.BLUE,
+                         f'{updated_count} defconfig(s) updated', bright=True))
+    return progress
+
+
 # pylint: disable=R0903
 class KconfigParser:
     """A parser of .config and include/autoconf.mk."""
@@ -1927,6 +2059,12 @@ def main():
     if args.build_db:
         config_db, progress = do_build_db(args)
         return write_db(config_db, progress)
+
+    if args.force_sync and not args.git_ref:
+        progress = do_sync_defconfigs(args)
+        if args.commit:
+            add_commit(args.configs)
+        return move_done(progress)
 
     config_db, progress = move_config(args)
 
