@@ -1289,8 +1289,10 @@ def find_config(dbase, config_list):
 
     return result
 
-def do_find_config(config_list, list_format):
+def do_find_config(config_list, list_format, jobs):
     """Find boards with a given combination of CONFIGs
+
+    Rebuilds the database automatically if it is missing or stale.
 
     Args:
         config_list (list of str): List of CONFIG options to check (each a regex
@@ -1299,11 +1301,12 @@ def do_find_config(config_list, list_format):
             otherwise it must be true)
         list_format (bool): True to write in 'list' format, one board name per
             line
+        jobs (int): Number of threads to use if the database needs rebuilding
 
     Returns:
         int: exit code (0 for success)
     """
-    dbase = read_database()
+    dbase = ensure_database(jobs)
     out = find_config(dbase, config_list)
     if not list_format:
         print(f'{len(out)} matches')
@@ -1840,11 +1843,37 @@ def do_tests():
     return 0
 
 
-def ensure_database(threads):
-    """Return a qconfig database so that Kconfig options can be queried
+def db_is_current():
+    """Check if the CONFIG database is up to date
 
-    If a database exists, it is assumed to be up-to-date. If not, one is built,
-    which can take a few minutes.
+    Returns:
+        bool: True if the database exists and is newer than all Kconfig and
+            defconfig files
+    """
+    if not os.path.exists(CONFIG_DATABASE):
+        return False
+
+    db_time = os.path.getctime(CONFIG_DATABASE)
+
+    for dirpath, _, filenames in os.walk('configs'):
+        for fname in fnmatch.filter(filenames, '*_defconfig'):
+            if db_time < os.path.getctime(os.path.join(dirpath, fname)):
+                return False
+
+    for dirpath, _, filenames in os.walk('.'):
+        for fname in filenames:
+            if fname.startswith('Kconfig'):
+                if db_time < os.path.getctime(os.path.join(dirpath, fname)):
+                    return False
+
+    return True
+
+
+def ensure_database(threads):
+    """Return a qconfig database, rebuilding it if stale or missing
+
+    Checks whether the database is newer than all Kconfig and defconfig files.
+    If not, it is rebuilt automatically.
 
     Args:
         threads (int): Number of threads to use when processing
@@ -1862,8 +1891,8 @@ def ensure_database(threads):
                 key: CONFIG option
                 value: set of boards using that option
     """
-    if not os.path.exists(CONFIG_DATABASE):
-        print('Building qconfig.db database')
+    if not db_is_current():
+        print('Building qconfig.db database...')
         args = Namespace(build_db=True, verbose=False, force_sync=False,
                          dry_run=False, exit_on_error=False, jobs=threads,
                          git_ref=None, defconfigs=None, defconfiglist=None,
@@ -1893,7 +1922,7 @@ def main():
             sys.exit(1)
         return 0
     if args.find:
-        return do_find_config(args.configs, args.list)
+        return do_find_config(args.configs, args.list, args.jobs)
 
     if args.build_db:
         config_db, progress = do_build_db(args)
