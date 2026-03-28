@@ -41,39 +41,34 @@ since no ``make`` subprocesses or cross-compiler toolchains are needed.
 Defconfig files containing ``#include`` directives are preprocessed with the
 C preprocessor before loading, matching the behaviour of the build system.
 
-There is one known cosmetic difference compared with the old make-based
-approach: ``CONFIG_GCC_VERSION`` reflects the host compiler rather than each
-board's cross-compiler, since no cross-compiler is invoked. This does not
-affect the usefulness of the database for finding CONFIG combinations or
-computing imply relationships.
-
 Resyncing defconfigs
 ~~~~~~~~~~~~~~~~~~~~
 
-When resyncing defconfigs (`-s`) the .config is synced by "make savedefconfig"
-and the defconfig is updated with it. This path still uses ``make``
-subprocesses and therefore requires appropriate cross-compiler toolchains (see
-below).
+When resyncing defconfigs (`-s`), the tool also uses kconfiglib.  It loads
+each defconfig with ``load_config()`` and writes a minimal config with
+``write_min_config()`` (equivalent to ``make savedefconfig``).  Defconfigs
+that use ``#include`` directives are handled by computing the delta between
+the full expanded config and the base provided by the included files, so the
+include structure is preserved.
 
-For faster processing, this tool is multi-threaded.  It creates
-separate build directories where the out-of-tree build is run.  The
-temporary build directories are automatically created and deleted as
-needed.  The number of threads are chosen based on the number of the CPU
-cores of your system although you can change it via -j (--jobs) option.
-
-Note that `*.config` fragments are not supported.
+The ``-r`` (git-ref) option still uses the old make-based path, since it
+needs to build against a different source tree.
 
 Toolchains
 ----------
 
-Toolchains are **not** needed for building the database (`-b`), since it
-uses kconfiglib to evaluate Kconfig files directly in Python.
+Toolchains are **not** needed for ``-b`` or ``-s``, since both use
+kconfiglib to evaluate Kconfig files directly in Python.  The only
+difference from using a real toolchain is that ``CONFIG_GCC_VERSION``
+reflects the host compiler rather than each board's cross-compiler.
+This does not affect database queries, imply analysis, or defconfig
+sync, since ``CONFIG_GCC_VERSION`` is a build-time value that never
+appears in defconfig files or influences Kconfig defaults.
 
-For resyncing defconfigs (`-s`), appropriate toolchains are necessary to run
-``make savedefconfig`` for all the architectures supported by U-Boot.  Most of
-them are available at the kernel.org site. This tool uses the same tools as
-:doc:`../build/buildman`, so you can use `buildman --fetch-arch` to fetch
-toolchains.
+The ``-r`` (git-ref) option still requires toolchains, as it falls back
+to the make-based path.  Most toolchains are available at the kernel.org
+site. This tool uses the same tools as :doc:`../build/buildman`, so you
+can use ``buildman --fetch-arch`` to fetch them.
 
 
 Examples

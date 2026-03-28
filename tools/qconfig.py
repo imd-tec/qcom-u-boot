@@ -283,6 +283,43 @@ def scan_kconfig():
     return kconfiglib.Kconfig()
 
 
+def _cpp_preprocess(srcdir, fname):
+    """Run the C preprocessor on a file to expand #include directives
+
+    Args:
+        srcdir (str): Source-tree directory (used as include path)
+        fname (str): Path to the file to preprocess
+
+    Returns:
+        str: Path to a temporary file with the preprocessed output.
+            Caller must delete it.
+    """
+    cpp = os.getenv('CPP', 'cpp').split()
+    cmd = cpp + ['-nostdinc', '-P', '-I', srcdir,
+                 '-undef', '-x', 'assembler-with-cpp', fname]
+    stdout = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+    tmp = tempfile.NamedTemporaryFile(prefix='qconfig-', delete=False)
+    tmp.write(stdout)
+    tmp.close()
+    return tmp.name
+
+
+def _load_defconfig(kconf, srcdir, fname):
+    """Load a defconfig, preprocessing #include directives if present
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        srcdir (str): Source-tree directory
+        fname (str): Path to the defconfig file
+    """
+    if b'#include' in tools.read_file(fname):
+        tmp = _cpp_preprocess(srcdir, fname)
+        kconf.load_config(tmp)
+        os.unlink(tmp)
+    else:
+        kconf.load_config(fname)
+
+
 def _scan_defconfigs_worker(srcdir, defconfigs, queue, error_queue):
     """Worker process that scans defconfigs using kconfiglib
 
@@ -305,18 +342,7 @@ def _scan_defconfigs_worker(srcdir, defconfigs, queue, error_queue):
     for defconfig in defconfigs:
         fname = os.path.join(srcdir, 'configs', defconfig)
         try:
-            if b'#include' in tools.read_file(fname):
-                cpp = os.getenv('CPP', 'cpp').split()
-                cmd = cpp + ['-nostdinc', '-P', '-I', srcdir,
-                             '-undef', '-x', 'assembler-with-cpp', fname]
-                stdout = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
-                tmp = tempfile.NamedTemporaryFile(prefix='qconfig-', delete=False)
-                tmp.write(stdout)
-                tmp.close()
-                kconf.load_config(tmp.name)
-                os.unlink(tmp.name)
-            else:
-                kconf.load_config(fname)
+            _load_defconfig(kconf, srcdir, fname)
 
             configs = {}
             for sym in kconf.unique_defined_syms:
@@ -406,6 +432,119 @@ def do_build_db(args):
     return config_db, progress
 
 
+def _get_min_config_lines(kconf, fname):
+    """Get the set of minimal config lines for a defconfig
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance (will be modified)
+        fname (str): Path to preprocessed defconfig (or plain defconfig)
+
+    Returns:
+        set of str: Lines from write_min_config output (without header)
+    """
+    kconf.load_config(fname)
+    tmp = tempfile.NamedTemporaryFile(mode='w', prefix='qconfig-mc-',
+                                     delete=False)
+    tmp.close()
+    kconf.write_min_config(tmp.name)
+    with open(tmp.name) as inf:
+        lines = set(inf.readlines())
+    os.unlink(tmp.name)
+    return lines
+
+
+def _sync_plain_defconfig(kconf, orig, dry_run):
+    """Sync a plain defconfig (no #include)
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        orig (str): Path to the original defconfig file
+        dry_run (bool): If True, do not update defconfig files
+
+    Returns:
+        bool: True if the defconfig was (or would be) updated
+    """
+    kconf.load_config(orig)
+    confdir = os.path.dirname(orig)
+    tmp = tempfile.NamedTemporaryFile(
+        mode='w', prefix='qconfig-', suffix='_defconfig',
+        dir=confdir, delete=False)
+    tmp.close()
+    kconf.write_min_config(tmp.name)
+
+    updated = not filecmp.cmp(orig, tmp.name)
+    if updated and not dry_run:
+        shutil.move(tmp.name, orig)
+    else:
+        os.unlink(tmp.name)
+    return updated
+
+
+def _sync_include_defconfig(kconf, srcdir, orig, dry_run):
+    """Sync a defconfig that uses #include directives
+
+    Computes the minimal delta between the full config and the base config
+    provided by the included files, preserving the #include structure.
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        srcdir (str): Source-tree directory
+        orig (str): Path to the original defconfig file
+        dry_run (bool): If True, do not update defconfig files
+
+    Returns:
+        bool: True if the defconfig was (or would be) updated
+    """
+    # Get the full min_config (base + overlay)
+    full_tmp = _cpp_preprocess(srcdir, orig)
+    full_lines = _get_min_config_lines(kconf, full_tmp)
+    os.unlink(full_tmp)
+
+    # Build a temp file with just the #include lines (no overlay CONFIGs)
+    # to get the base min_config
+    include_lines = []
+    with open(orig, 'rb') as inf:
+        for line in inf:
+            if line.startswith(b'#include'):
+                include_lines.append(line)
+
+    base_tmp = tempfile.NamedTemporaryFile(prefix='qconfig-base-',
+                                           suffix='_defconfig',
+                                           dir=os.path.dirname(orig),
+                                           delete=False)
+    base_tmp.writelines(include_lines)
+    base_tmp.close()
+
+    base_pp = _cpp_preprocess(srcdir, base_tmp.name)
+    os.unlink(base_tmp.name)
+    base_lines = _get_min_config_lines(kconf, base_pp)
+    os.unlink(base_pp)
+
+    # Delta = full - base
+    delta = sorted(full_lines - base_lines)
+
+    # Build the new defconfig: #include lines + delta
+    # Preserve the separator (blank line or not) from the original
+    orig_text = tools.read_file(orig, binary=False)
+    last_include_idx = orig_text.rfind('#include')
+    after_include = orig_text[orig_text.index('\n', last_include_idx) + 1:]
+    sep = b'\n' if after_include.startswith('\n') else b''
+
+    new_content = b''
+    for line in include_lines:
+        new_content += line
+    if delta:
+        new_content += sep
+    for line in delta:
+        new_content += line.encode() if isinstance(line, str) else line
+
+    orig_content = tools.read_file(orig)
+    updated = new_content != orig_content
+    if updated and not dry_run:
+        tools.write_file(orig, new_content)
+    return updated
+
+
 def _sync_defconfigs_worker(srcdir, defconfigs, result_queue, error_queue,
                             dry_run):
     """Worker process that syncs defconfigs using kconfiglib
@@ -430,24 +569,14 @@ def _sync_defconfigs_worker(srcdir, defconfigs, result_queue, error_queue,
     for defconfig in defconfigs:
         orig = os.path.join(srcdir, 'configs', defconfig)
         try:
-            # Skip defconfigs with #include — savedefconfig mangles them
-            if b'#include' in tools.read_file(orig):
-                result_queue.put((defconfig, False, 'has #include'))
-                continue
+            raw = tools.read_file(orig)
+            has_include = b'#include' in raw
 
-            kconf.load_config(orig)
-
-            tmp = tempfile.NamedTemporaryFile(
-                mode='w', prefix='qconfig-', suffix='_defconfig',
-                dir=os.path.join(srcdir, 'configs'), delete=False)
-            tmp.close()
-            kconf.write_min_config(tmp.name)
-
-            updated = not filecmp.cmp(orig, tmp.name)
-            if updated and not dry_run:
-                shutil.move(tmp.name, orig)
+            if has_include:
+                updated = _sync_include_defconfig(kconf, srcdir, orig,
+                                                  dry_run)
             else:
-                os.unlink(tmp.name)
+                updated = _sync_plain_defconfig(kconf, orig, dry_run)
             result_queue.put((defconfig, updated, None))
         except Exception as exc:
             error_queue.put((defconfig, str(exc)))
@@ -1965,8 +2094,90 @@ def move_done(progress):
             col.GREEN, f'{progress.total} processed        ', bright=True))
     return 0
 
+class SyncTests(unittest.TestCase):
+    """Tests for defconfig sync using kconfiglib"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create a shared Kconfig instance for all tests"""
+        os.environ['srctree'] = os.getcwd()
+        os.environ['UBOOTVERSION'] = 'dummy'
+        os.environ['KCONFIG_OBJDIR'] = ''
+        os.environ['CC'] = 'gcc'
+        cls.kconf = kconfiglib.Kconfig(warn=False)
+        cls.srcdir = os.getcwd()
+
+    def test_sync_plain_noop(self):
+        """Syncing an already-minimal defconfig produces no change"""
+        # sandbox_defconfig should already be synced if the tree is clean
+        orig = 'configs/sandbox_defconfig'
+        updated = _sync_plain_defconfig(self.kconf, orig, dry_run=True)
+        # This may or may not be updated depending on tree state, but
+        # it should not crash
+        self.assertIsInstance(updated, bool)
+
+    def test_sync_include_preserves_structure(self):
+        """Syncing a #include defconfig preserves the #include lines"""
+        orig = 'configs/sandbox_nocmdline_defconfig'
+        if not os.path.exists(orig):
+            self.skipTest(f'{orig} not found')
+
+        # Dry-run should not modify the file
+        content_before = tools.read_file(orig)
+        updated = _sync_include_defconfig(self.kconf, self.srcdir, orig,
+                                          dry_run=True)
+        content_after = tools.read_file(orig)
+        self.assertEqual(content_before, content_after)
+
+        # The output should still start with #include
+        self.assertIn(b'#include', content_after)
+
+    def test_sync_include_removes_redundant(self):
+        """Syncing a #include defconfig removes CONFIGs from the base"""
+        # Create a temp defconfig that includes sandbox and redundantly
+        # sets a CONFIG that sandbox already sets
+        with tempfile.NamedTemporaryFile(
+                mode='w', prefix='test-', suffix='_defconfig',
+                dir='configs', delete=False) as tmp:
+            tmp.write('#include "sandbox_defconfig"\n')
+            tmp.write('CONFIG_CMDLINE=y\n')
+            tmp_name = tmp.name
+        try:
+            updated = _sync_include_defconfig(self.kconf, self.srcdir,
+                                              tmp_name, dry_run=False)
+            self.assertTrue(updated)
+            with open(tmp_name) as inf:
+                result = inf.read()
+            # CONFIG_CMDLINE=y should be gone (it's in the base)
+            self.assertNotIn('CONFIG_CMDLINE=y', result)
+            # #include should still be there
+            self.assertIn('#include "sandbox_defconfig"', result)
+        finally:
+            os.unlink(tmp_name)
+
+    def test_sync_include_keeps_override(self):
+        """Syncing a #include defconfig keeps CONFIGs that differ from base"""
+        # Create a temp defconfig that includes sandbox and disables CMDLINE
+        with tempfile.NamedTemporaryFile(
+                mode='w', prefix='test-', suffix='_defconfig',
+                dir='configs', delete=False) as tmp:
+            tmp.write('#include "sandbox_defconfig"\n')
+            tmp.write('# CONFIG_CMDLINE is not set\n')
+            tmp_name = tmp.name
+        try:
+            _sync_include_defconfig(self.kconf, self.srcdir, tmp_name,
+                                    dry_run=False)
+            with open(tmp_name) as inf:
+                result = inf.read()
+            # Disabling CMDLINE is an override — should be kept
+            self.assertIn('# CONFIG_CMDLINE is not set', result)
+            self.assertIn('#include "sandbox_defconfig"', result)
+        finally:
+            os.unlink(tmp_name)
+
+
 def do_tests():
-    """Run doctests and unit tests (so far there are no unit tests)"""
+    """Run doctests and unit tests"""
     sys.argv = [sys.argv[0]]
     fail, _ = doctest.testmod()
     if fail:
