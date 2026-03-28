@@ -24,14 +24,43 @@ You may need to install 'python3-asteval' for the 'asteval' module.
 How does it work?
 -----------------
 
-When building a database (`-b`), this tool runs configuration and builds
-include/autoconf.mk for every defconfig.  The config options defined in Kconfig
-appear in the .config file (unless they are hidden because of unmet dependency.)
-On the other hand, the config options defined by board headers are seen
-in include/autoconf.mk.
+Building a database
+~~~~~~~~~~~~~~~~~~~
+
+When building a database (`-b`), this tool evaluates the Kconfig tree directly
+using kconfiglib (a pure-Python Kconfig implementation). For each defconfig, it
+loads the file with ``kconf.load_config()``, resolves all symbol dependencies,
+and collects the resulting CONFIG values. This is the same approach used by
+``buildman`` when scanning board parameters.
+
+Multiple worker processes run in parallel (one per CPU core by default,
+adjustable with ``-j``), each parsing the Kconfig tree once and then processing
+its share of defconfigs. This completes in a few seconds for all ~1500 boards,
+since no ``make`` subprocesses or cross-compiler toolchains are needed.
+
+Defconfig files containing ``#include`` directives are preprocessed with the
+C preprocessor before loading, matching the behaviour of the build system.
+
+There are two known cosmetic differences compared with the old make-based
+approach:
+
+- ``CONFIG_GCC_VERSION`` reflects the host compiler rather than each board's
+  cross-compiler, since no cross-compiler is invoked.
+
+- Backslash escape sequences in string values (e.g. ``\n``, ``\x1b``) may
+  differ slightly due to kconfiglib's unescape/escape round-trip. This affects
+  a handful of string CONFIGs such as ``CONFIG_AUTOBOOT_PROMPT``.
+
+Neither difference affects the usefulness of the database for finding CONFIG
+combinations or computing imply relationships.
+
+Resyncing defconfigs
+~~~~~~~~~~~~~~~~~~~~
 
 When resyncing defconfigs (`-s`) the .config is synced by "make savedefconfig"
-and the defconfig is updated with it.
+and the defconfig is updated with it. This path still uses ``make``
+subprocesses and therefore requires appropriate cross-compiler toolchains (see
+below).
 
 For faster processing, this tool is multi-threaded.  It creates
 separate build directories where the out-of-tree build is run.  The
@@ -44,9 +73,12 @@ Note that `*.config` fragments are not supported.
 Toolchains
 ----------
 
-Appropriate toolchains are necessary to generate include/autoconf.mk
-for all the architectures supported by U-Boot.  Most of them are available
-at the kernel.org site. This tool uses the same tools as
+Toolchains are **not** needed for building the database (`-b`), since it
+uses kconfiglib to evaluate Kconfig files directly in Python.
+
+For resyncing defconfigs (`-s`), appropriate toolchains are necessary to run
+``make savedefconfig`` for all the architectures supported by U-Boot.  Most of
+them are available at the kernel.org site. This tool uses the same tools as
 :doc:`../build/buildman`, so you can use `buildman --fetch-arch` to fetch
 toolchains.
 

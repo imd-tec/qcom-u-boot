@@ -283,6 +283,129 @@ def scan_kconfig():
     return kconfiglib.Kconfig()
 
 
+def _scan_defconfigs_worker(srcdir, defconfigs, queue, error_queue):
+    """Worker process that scans defconfigs using kconfiglib
+
+    Each worker creates its own Kconfig instance (parsing is done once per
+    process) then loads each defconfig in turn, collecting all CONFIG values.
+
+    Args:
+        srcdir (str): Source-tree directory
+        defconfigs (list of str): Defconfig filenames to process, e.g.
+            ['sandbox_defconfig', 'snow_defconfig']
+        queue (multiprocessing.Queue): Output queue for (defconfig, configs)
+        error_queue (multiprocessing.Queue): Output queue for failed defconfigs
+    """
+    os.environ['srctree'] = srcdir
+    os.environ['UBOOTVERSION'] = 'dummy'
+    os.environ['KCONFIG_OBJDIR'] = ''
+    os.environ['CC'] = 'gcc'
+    kconf = kconfiglib.Kconfig(warn=False)
+
+    for defconfig in defconfigs:
+        fname = os.path.join(srcdir, 'configs', defconfig)
+        try:
+            if b'#include' in tools.read_file(fname):
+                cpp = os.getenv('CPP', 'cpp').split()
+                cmd = cpp + ['-nostdinc', '-P', '-I', srcdir,
+                             '-undef', '-x', 'assembler-with-cpp', fname]
+                stdout = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+                tmp = tempfile.NamedTemporaryFile(prefix='qconfig-', delete=False)
+                tmp.write(stdout)
+                tmp.close()
+                kconf.load_config(tmp.name)
+                os.unlink(tmp.name)
+            else:
+                kconf.load_config(fname)
+
+            configs = {}
+            for sym in kconf.unique_defined_syms:
+                conf = sym.config_string
+                if not conf or conf.startswith('#'):
+                    continue
+                config, value = conf.rstrip('\n').split('=', 1)
+                configs[config] = value
+            queue.put((defconfig, configs))
+        except Exception as exc:
+            error_queue.put((defconfig, str(exc)))
+
+
+def do_build_db(args):
+    """Build the CONFIG database using kconfiglib instead of make
+
+    This evaluates the Kconfig tree directly in Python for each defconfig,
+    avoiding the overhead of spawning make subprocesses and the need for
+    cross-compiler toolchains.
+
+    Args:
+        args (Namespace): Program arguments (uses jobs, defconfigs,
+            defconfiglist, nocolour)
+
+    Returns:
+        tuple:
+            config_db (dict): configs for each defconfig
+            Progress: progress indicator
+    """
+    srcdir = os.getcwd()
+
+    if args.defconfigs:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfigs)]
+    elif args.defconfiglist:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfiglist)]
+    else:
+        defconfigs = get_all_defconfigs()
+
+    col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
+                         else terminal.COLOR_IF_TERMINAL)
+    progress = Progress(col, len(defconfigs))
+
+    jobs = args.jobs
+    total = len(defconfigs)
+    result_queue = multiprocessing.Queue()
+    error_queue = multiprocessing.Queue()
+    processes = []
+    for i in range(jobs):
+        chunk = defconfigs[total * i // jobs:total * (i + 1) // jobs]
+        if not chunk:
+            continue
+        proc = multiprocessing.Process(
+            target=_scan_defconfigs_worker,
+            args=(srcdir, chunk, result_queue, error_queue))
+        proc.start()
+        processes.append(proc)
+
+    config_db = {}
+    remaining = total
+    while remaining:
+        # Drain both queues without blocking forever
+        found = False
+        while not result_queue.empty():
+            defconfig, configs = result_queue.get()
+            config_db[defconfig] = configs
+            progress.inc(True)
+            progress.show()
+            remaining -= 1
+            found = True
+        while not error_queue.empty():
+            defconfig, msg = error_queue.get()
+            print(col.build(col.RED, f'{defconfig}: {msg}', bright=True),
+                  file=sys.stderr)
+            progress.inc(False)
+            progress.show()
+            remaining -= 1
+            found = True
+        if not found:
+            time.sleep(SLEEP_TIME)
+
+    for proc in processes:
+        proc.join()
+
+    progress.completed()
+    return config_db, progress
+
+
 # pylint: disable=R0903
 class KconfigParser:
     """A parser of .config and include/autoconf.mk."""
@@ -1745,7 +1868,7 @@ def ensure_database(threads):
                          dry_run=False, exit_on_error=False, jobs=threads,
                          git_ref=None, defconfigs=None, defconfiglist=None,
                          nocolour=False)
-        config_db, progress = move_config(args)
+        config_db, progress = do_build_db(args)
 
         write_db(config_db, progress)
 
@@ -1772,13 +1895,14 @@ def main():
     if args.find:
         return do_find_config(args.configs, args.list)
 
+    if args.build_db:
+        config_db, progress = do_build_db(args)
+        return write_db(config_db, progress)
+
     config_db, progress = move_config(args)
 
     if args.commit:
         add_commit(args.configs)
-
-    if args.build_db:
-        return write_db(config_db, progress)
     return move_done(progress)
 
 
