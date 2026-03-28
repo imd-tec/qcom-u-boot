@@ -51,24 +51,20 @@ that use ``#include`` directives are handled by computing the delta between
 the full expanded config and the base provided by the included files, so the
 include structure is preserved.
 
-The ``-r`` (git-ref) option still uses the old make-based path, since it
-needs to build against a different source tree.
+The ``-r`` (git-ref) option also uses kconfiglib: it clones the reference
+commit, creates a Kconfig instance from that tree, loads each defconfig
+against it, then normalises the result against the current tree's Kconfig.
+No toolchains are needed.
 
 Toolchains
 ----------
 
-Toolchains are **not** needed for ``-b`` or ``-s``, since both use
-kconfiglib to evaluate Kconfig files directly in Python.  The only
+Toolchains are **not** needed for any qconfig operation. The only
 difference from using a real toolchain is that ``CONFIG_GCC_VERSION``
 reflects the host compiler rather than each board's cross-compiler.
 This does not affect database queries, imply analysis, or defconfig
 sync, since ``CONFIG_GCC_VERSION`` is a build-time value that never
 appears in defconfig files or influences Kconfig defaults.
-
-The ``-r`` (git-ref) option still requires toolchains, as it falls back
-to the make-based path.  Most toolchains are available at the kernel.org
-site. This tool uses the same tools as :doc:`../build/buildman`, so you
-can use ``buildman --fetch-arch`` to fetch them.
 
 
 Examples
@@ -256,12 +252,12 @@ Available options
    the number of threads is the same as the number of CPU cores.
 
  -r, --git-ref
-   Specify the git ref to clone for building the autoconf.mk. If unspecified
-   use the CWD. This is useful for when changes to the Kconfig affect the
-   default values and you want to capture the state of the defconfig from
+   Specify the git ref to clone for evaluating the Kconfig tree. If
+   unspecified, use the CWD. This is useful when changes to Kconfig affect
+   default values and you want to capture the state of defconfigs from
    before that change was in effect. If in doubt, specify a ref pre-Kconfig
-   changes (use HEAD if Kconfig changes are not committed). Worst case it will
-   take a bit longer to run, but will always do the right thing.
+   changes (use HEAD if Kconfig changes are not committed). Worst case it
+   will take a bit longer to run, but will always do the right thing.
 
  -v, --verbose
    Show any build errors as boards are built
