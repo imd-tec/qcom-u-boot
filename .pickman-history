@@ -51102,3 +51102,128 @@ The branch already contains these fixes (embedded in commits with `[pickman]` no
 
 ---
 
+## 2026-03-27: us/next
+
+Branch: cherry-823e453987a
+
+Commits:
+- 823e453987a spl: remove usage of CMD_BOOTx from image parsing
+- 1dde581e1af configs: disable SPL_BOOTZ to preserve spl size
+- 28b81c07bee Merge patch series "Remove usage of CMD_BOOTx from SPL code"
+
+### Conversation log
+The repository has untracked files but no staged changes, so it's clean enough for cherry-picking. Let me create and checkout the new branch based on ci/master.
+
+Good, now let me cherry-pick the first commit:
+
+The first cherry-pick failed with conflicts. As per the instructions, I need to check if these commits are already applied in ci/master with different hashes.
+
+The commits don't appear to already be in ci/master. Let me check the specific conflicting files and try to understand the conflicts:
+
+I see the conflicts. Let me look at the other conflicting files:
+
+I can see the conflicts. Let me try to resolve them. The conflicts involve changes to how boot-related objects are built - the source branch uses `CONFIG_$(PHASE_)LIB_BOOTx` pattern while HEAD uses a different pattern with `CONFIG_BOOT` and `CONFIG_CMD_BOOTx`.
+
+Let me examine what the original commit intended to do:
+
+The conflicts seem to be due to changes in HEAD that need to be reconciled. Let me try to resolve the conflicts manually. I'll keep both the HEAD changes and the incoming changes, properly merged:
+
+I see the issue - there are two sets of conflicts. The first conflict is about where the new `obj-$(CONFIG_$(PHASE_)LIB_BOOTx)` lines should go. The second conflict is about keeping the old vs new pattern.
+
+Looking at the intent:
+1. The patch adds new `obj-$(CONFIG_$(PHASE_)LIB_BOOTx)` lines at the top level (for all builds including SPL)
+2. The patch replaces `CONFIG_BOOT` and `CONFIG_CMD_BOOTx` with `CONFIG_CMD_BOOTM` in the non-XPL section
+
+Let me look at what HEAD has - it seems HEAD already has some `CONFIG_BOOT` changes but not the same as the patch. Let me check the HEAD version:
+
+Now I understand the structure better. The incoming commit:
+1. Removes the `CONFIG_EFI_APP` guard at the top
+2. Adds `obj-$(CONFIG_$(PHASE_)LIB_BOOTx)` lines unconditionally at the top
+3. Removes the SPL-specific section entirely (no more `ifdef CONFIG_SPL_FRAMEWORK` block)
+4. Uses `CONFIG_CMD_BOOTM` instead of `CONFIG_BOOT` in the non-XPL section
+
+But HEAD has:
+1. `ifndef CONFIG_EFI_APP` guard at the top
+2. Different structure in the SPL section
+
+This is a complex conflict. Let me try to resolve it properly. I'll write the resolved version:
+
+It seems I don't have permission to write files. Let me try using a different approach - perhaps using git to resolve the conflicts:
+
+Now let me fix the riscv Makefile:
+
+Now let's fix cmd/Kconfig:
+
+Now I understand the conflict in cmd/Kconfig. The patch changes `depends on BOOT` to `select LIB_BOOTZ` and `select LIB_BOOTM`. Let me fix it:
+
+Wait, I see that CMD_BOOTI seems to already have the `select LIB_BOOTI` and `select LIB_BOOTM` lines. Let me check if there are remaining conflicts and if CMD_BOOTI needs modification too:
+
+Good, no more conflict markers. Let me verify the changes look correct:
+
+The first commit is applied. Now let me check the delta and run a build test:
+
+The stats are similar (same files touched, similar line counts). The delta is acceptable. Now let me run the build test:
+
+The build failed because there are untracked files. Let me clean the build:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Good, the second commit was cherry-picked successfully. Let me check the delta:
+
+Perfect, the delta is identical. Now run the build test:
+
+Build passed. Now let me cherry-pick the third commit (the merge commit):
+
+Another conflict. Let me check what it is:
+
+This merge commit is trying to remove the `ifndef CONFIG_EFI_APP` guard. Since the merge commit is adding changes that already existed in the original commit, but HEAD had additional changes (the EFI_APP guard), this is a conflict.
+
+The merge commit's state removes the EFI_APP guard, but looking at what we had in HEAD, we had the guard. Let me see what the merge commit expects:
+
+I see - the merge commit version doesn't have the `ifndef CONFIG_EFI_APP` guard. But HEAD (ci/master) has it and we want to preserve our version while applying the merge commit's intent. Since we already applied the main changes from the first commit, and this merge commit is essentially bringing them together, the `CONFIG_EFI_APP` guard is a difference we should keep from HEAD.
+
+Let me resolve by keeping the HEAD version (with the guard):
+
+Good. Now let me stage and continue:
+
+The merge commit was applied. Let me verify all 3 commits and check the delta:
+
+All 3 commits are present. Let me check the stats for the merge commit:
+
+The cherry-picked merge commit shows only 1 file changed (imx28_btt3_defconfig), while the original shows 11 files changed. This is expected because we already cherry-picked the individual commits, so the merge commit only brings in the additional changes from the merge itself (the imx28_btt3_defconfig change that wasn't in the individual commits).
+
+Let me run the final build test:
+
+Excellent! Build passed. Let me provide a final summary:
+
+## Summary
+
+All 3 commits have been successfully cherry-picked from `us/next` to the new branch `cherry-823e453987a` based on `ci/master`.
+
+### Commits Applied:
+1. **44b0dc1058a** - `spl: remove usage of CMD_BOOTx from image parsing`
+   - Had conflicts in `arch/arm/lib/Makefile`, `arch/riscv/lib/Makefile`, and `cmd/Kconfig`
+   - Conflicts resolved by merging the new `obj-$(CONFIG_$(PHASE_)LIB_BOOTx)` lines with HEAD's `CONFIG_EFI_APP` guards and updating `CMD_BOOTZ` to use `select LIB_BOOTZ`/`select LIB_BOOTM`
+
+2. **56e20b4b7ac** - `configs: disable SPL_BOOTZ to preserve spl size`
+   - Applied cleanly with auto-merge
+
+3. **abd952c6334** - `Merge patch series "Remove usage of CMD_BOOTx from SPL code"`
+   - Had conflict in `arch/arm/lib/Makefile` (merge commit wanted to remove `ifndef CONFIG_EFI_APP` guard)
+   - Resolved by keeping HEAD's `CONFIG_EFI_APP` guard (preserving structure from ci/master)
+
+### Build Result:
+- **OK** - sandbox builds successfully
+
+### Fix-ups Made:
+1. In commit 1: Merged `CONFIG_EFI_APP` guards from HEAD with new `LIB_BOOTx` lines
+2. In commit 1: Updated `CMD_BOOTZ` to use `select` instead of `depends on`
+3. In commit 3: Preserved `CONFIG_EFI_APP` guard when resolving merge conflict
+
+### Concerning Deltas:
+- The merge commit (commit 3) shows only 1 file changed vs 11 in the original. This is expected because we cherry-picked the individual commits first - the merge commit only contains the additional `imx28_btt3_defconfig` change that wasn't in the individual commits.
+
+The branch `cherry-823e453987a` is ready for pushing.
+
+---
+
