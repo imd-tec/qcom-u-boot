@@ -365,6 +365,8 @@ def do_workflow(args, test_db=None):
                 workflow.todo(cser, args.series, args.days)
         elif args.subcmd == 'todo-list':
             workflow.todo_list(cser, args.show_all)
+        elif args.subcmd in ['list', 'wl', 'ls']:
+            workflow.list_entries(cser, args.show_all)
         else:
             raise ValueError(f"Unknown workflow subcommand '{args.subcmd}'")
     finally:

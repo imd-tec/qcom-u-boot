@@ -15,6 +15,34 @@ class Wtype(str, enum.Enum):
     TODO = 'todo'
 
 
+def friendly_time(now, when):
+    """Format a timestamp in a human-friendly way
+
+    Args:
+        now (datetime): Current time
+        when (datetime): Timestamp to format
+
+    Return:
+        str: Friendly string, e.g. 'Tue 15:34', '3d ago', '2w ago'
+    """
+    delta = now - when
+    days = delta.days
+    if days < 0:
+        days = -days
+        if days >= 14:
+            return f'in {days // 7}w'
+        if days >= 7:
+            return f'in {days}d'
+        return when.strftime('%a %H:%M')
+    if days == 0:
+        return when.strftime('%H:%M')
+    if days < 7:
+        return when.strftime('%a %H:%M')
+    if days < 14:
+        return f'{days}d ago'
+    return f'{days // 7}w ago'
+
+
 def sent(cser, series_id):
     """Record that a series was sent and create a follow-up todo
 
@@ -92,3 +120,34 @@ def todo_list(cser, show_all):
         else:
             due = f'in {days}d'
         print(f"{name:17}  {due:>14}  {desc}")
+
+
+def list_entries(cser, show_all):
+    """List all workflow entries
+
+    Args:
+        cser (CseriesHelper): Series helper with open database
+        show_all (bool): True to include archived entries
+    """
+    entries = cser.db.workflow_list(include_archived=show_all)
+    if not entries:
+        print('No workflow entries')
+        return
+    hdr = f"{'Type':6}  {'Series':17}  {'When':>10}"
+    div = f"{'-' * 6}  {'-' * 17}  {'-' * 10}"
+    if show_all:
+        hdr += '  A'
+        div += '  -'
+    hdr += '  Description'
+    div += '  ' + '-' * 30
+    print(hdr)
+    print(div)
+    now = cser.get_now()
+    for wtype, name, desc, ts, archived in entries:
+        when = datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
+        friendly = friendly_time(now, when)
+        line = f"{wtype:6}  {name:17}  {friendly:>10}"
+        if show_all:
+            line += f"  {'*' if archived else ' '}"
+        line += f"  {desc}"
+        print(line)

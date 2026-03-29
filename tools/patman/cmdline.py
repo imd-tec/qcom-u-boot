@@ -37,6 +37,7 @@ ALIASES = {
     'progress': ['p', 'pr', 'prog'],
     'rm-version': ['rmv'],
     'todo-list': ['tl'],
+    'workflow-list': ['wl'],
     'unarchive': ['unar'],
     }
 
@@ -501,6 +502,12 @@ def add_workflow_subparser(subparsers):
                                            aliases=ALIASES['todo-list'])
     tlist.add_argument('--all', action='store_true', dest='show_all',
                        help='Show all scheduled todos, not just due ones')
+
+    wlist = workflow_subparsers.add_parser('list',
+                                           aliases=[*ALIASES['workflow-list'],
+                                                    'ls'])
+    wlist.add_argument('-a', '--all', action='store_true', dest='show_all',
+                       help='Include archived entries')
     return workflow
 
 

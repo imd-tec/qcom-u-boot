@@ -1130,3 +1130,26 @@ class Database:  # pylint:disable=R0904
         query += ' ORDER BY w.timestamp'
         res = self.execute(query, params)
         return res.fetchall()
+
+    def workflow_list(self, include_archived=False):
+        """Get workflow entries joined with series info
+
+        Args:
+            include_archived (bool): True to include archived entries
+
+        Return:
+            list of tuple:
+                str: workflow type
+                str: series name
+                str: series description
+                str: timestamp
+                int: archived flag (0 or 1)
+        """
+        query = ('SELECT w.type, s.name, s.desc, w.timestamp, w.archived '
+                 'FROM workflow w '
+                 'JOIN series s ON w.series_id = s.id')
+        if not include_archived:
+            query += ' WHERE w.archived = 0'
+        query += ' ORDER BY w.timestamp'
+        res = self.execute(query)
+        return res.fetchall()

@@ -4323,3 +4323,75 @@ Date:   .*
 
         ts = cser.db.workflow_get('todo', ser.idnum)
         self.assertEqual('2025-03-12 12:00:00', ts)
+
+    def test_workflow_list(self):
+        """Test listing all workflow entries"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        cser.fake_now = datetime(2025, 3, 1, 12, 0, 0)
+
+        # Record a send (creates SENT + TODO)
+        ser = cser.get_series_by_name('first')
+        wf.sent(cser, ser.idnum)
+
+        # Default list shows only active entries
+        with terminal.capture() as (out, _):
+            wf.list_entries(cser, show_all=False)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(4, len(lines))
+        self.assertIn('sent', lines[2])
+        self.assertIn('todo', lines[3])
+
+        # Archive the todo
+        wf.todo_clear(cser, 'first')
+
+        # Without --all, only SENT is active; no 'A' column
+        with terminal.capture() as (out, _):
+            wf.list_entries(cser, show_all=False)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(3, len(lines))
+        self.assertIn('sent', lines[2])
+        self.assertNotIn('A', lines[0])
+
+        # With --all, archived entries appear with '*' marker
+        with terminal.capture() as (out, _):
+            wf.list_entries(cser, show_all=True)
+        lines = out.getvalue().splitlines()
+        self.assertGreater(len(lines), 3)
+        self.assertIn('  A  ', lines[0])
+        has_archived = any('*' in line for line in lines[2:])
+        self.assertTrue(has_archived)
+
+    def test_friendly_time(self):
+        """Test friendly timestamp formatting"""
+        now = datetime(2025, 3, 10, 15, 0, 0)  # Monday
+
+        # Same day
+        when = datetime(2025, 3, 10, 9, 30, 0)
+        self.assertEqual('09:30', wf.friendly_time(now, when))
+
+        # Earlier this week (3 days ago = Friday)
+        when = datetime(2025, 3, 7, 14, 20, 0)
+        self.assertEqual('Fri 14:20', wf.friendly_time(now, when))
+
+        # 10 days ago
+        when = datetime(2025, 2, 28, 10, 0, 0)
+        self.assertEqual('10d ago', wf.friendly_time(now, when))
+
+        # 3 weeks ago
+        when = datetime(2025, 2, 17, 10, 0, 0)
+        self.assertEqual('3w ago', wf.friendly_time(now, when))
+
+        # Future within a week (3 days from now = Thursday)
+        when = datetime(2025, 3, 13, 16, 0, 0)
+        self.assertEqual('Thu 16:00', wf.friendly_time(now, when))
+
+        # Future 10 days
+        when = datetime(2025, 3, 20, 10, 0, 0)
+        self.assertEqual('in 10d', wf.friendly_time(now, when))
+
+        # Future 3 weeks
+        when = datetime(2025, 3, 31, 10, 0, 0)
+        self.assertEqual('in 3w', wf.friendly_time(now, when))
