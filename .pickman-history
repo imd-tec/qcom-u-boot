@@ -51683,3 +51683,76 @@ The branch has been force pushed to update the MR. Let me verify the final state
 
 ---
 
+### Review: 2026-03-29
+
+Branch: cherry-823e453987a
+
+Comments addressed:
+
+
+### Conversation log
+The branch is 5 commits behind ci/master. Let me save the current state of the cherry-picked commits before rebasing:
+
+Good. I've recorded the stats before rebase:
+- First commit (be487e87ce6): 6 files changed, 49 insertions(+), 12 deletions(-)
+- Second commit (c7afd10da59): 4 files changed, 4 insertions(+)
+- Third commit (d2234542cc1): 1 file changed, 1 insertion(+)
+
+Now let me perform the rebase:
+
+Rebase completed successfully without conflicts. Now let me verify the commits and check the delta:
+
+The deltas are identical after rebase:
+- First commit: 6 files changed, 49 insertions(+), 12 deletions(-) ✓
+- Second commit: 4 files changed, 4 insertions(+) ✓
+- Third commit: 1 file changed, 1 insertion(+) ✓
+
+Now let me build to verify:
+
+Build passed. Now let me check existing version branches and create the next one:
+
+Now let me force push to update the MR:
+
+## Summary Report
+
+### Task Completed: Rebase onto latest target branch
+
+**Merge Request:** !806 (branch: cherry-823e453987a)
+
+### Actions Performed:
+
+1. **Checked out branch:** `cherry-823e453987a`
+
+2. **Fetched latest from ci remote**
+
+3. **Rebased onto ci/master:** Successfully rebased 7 commits. The branch was 5 commits behind ci/master (VBE and MMC clock-rate handoff changes).
+
+4. **Verified delta after rebase:** All cherry-picked commits have identical stats:
+   - `32ea519b94e` (spl: remove usage of CMD_BOOTx): 6 files, +49/-12 ✓
+   - `ab0be1d19be` (configs: disable SPL_BOOTZ): 4 files, +4 ✓
+   - `e9158fbe967` (Merge patch series): 1 file, +1 ✓
+
+5. **Build verified:** sandbox builds successfully
+
+6. **Created local branch:** `cherry-823e453987a-v6`
+
+7. **Force pushed to remote:** Updated `ci/cherry-823e453987a` (MR !806)
+
+### Rebase Details:
+
+- **Commits rebased over:** 5 commits (VBE abrec improvements, MMC clock-rate handoff for rk3399-generic-ddr3)
+- **Conflicts:** None
+- **Build status:** ✓ Pass
+
+### Suggested Reply to MR:
+
+> Rebased onto latest ci/master (5 commits - VBE and MMC clock-rate handoff improvements).
+> 
+> - No conflicts during rebase
+> - All commit deltas verified identical
+> - sandbox build passes ✓
+> 
+> Note: The MMC clock-rate handoff changes (`mmc: rockchip_dw_mmc: Pass clock rate via bloblist` and `rk3399-generic-ddr3: Enable MMC clock-rate handoff`) may help with the transient VBE/rockpro64 boot failures that were seen in previous CI runs.
+
+---
+
