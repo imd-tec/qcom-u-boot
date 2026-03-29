@@ -28,6 +28,7 @@ from patman.database import Database, Pcommit, SerVer
 from patman import patchwork
 from patman.series import Series
 from patman import status
+from patman.workflow import Wtype
 
 
 # Tag to use for Change IDs
@@ -1552,7 +1553,11 @@ class CseriesHelper:
             if val in states:
                 state = val
         state_str, pad = self._build_col(state, base_str=name)
-        print(f"{state_str}{pad}  {stats.rjust(6)}  {desc}")
+        marker = ''
+        ts = self.db.workflow_get(Wtype.TODO, ser.idnum)
+        if ts and ts <= self.get_now().strftime('%Y-%m-%d %H:%M:%S'):
+            marker = ' [todo]'
+        print(f"{state_str}{pad}  {stats.rjust(6)}  {desc}{marker}")
 
     def _series_max_version(self, idnum):
         """Find the latest version of a series

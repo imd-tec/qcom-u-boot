@@ -7,7 +7,6 @@
 
 import asyncio
 from collections import OrderedDict, defaultdict
-
 import pygit2
 
 from u_boot_pylib import cros_subprocess

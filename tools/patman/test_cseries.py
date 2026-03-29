@@ -4176,3 +4176,100 @@ Date:   .*
             'SELECT archived FROM workflow WHERE series_id = ?',
             (ser.idnum,))
         self.assertEqual(1, res.fetchone()[0])
+
+    def test_workflow_todo(self):
+        """Test setting and clearing a todo"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        cser.fake_now = datetime(2025, 3, 1, 12, 0, 0)
+        ser = cser.get_series_by_name('first')
+
+        # Set a todo for 7 days
+        with terminal.capture() as (out, _):
+            wf.todo(cser,'first', 7)
+        self.assertIn('2025-03-08 12:00:00', out.getvalue())
+
+        # Check the DB entry
+        ts = cser.db.workflow_get('todo', ser.idnum)
+        self.assertEqual('2025-03-08 12:00:00', ts)
+
+        # Replacing the todo should work
+        with terminal.capture() as (out, _):
+            wf.todo(cser,'first', 14)
+        self.assertIn('2025-03-15 12:00:00', out.getvalue())
+        ts = cser.db.workflow_get('todo', ser.idnum)
+        self.assertEqual('2025-03-15 12:00:00', ts)
+
+        # Clear it
+        with terminal.capture() as (out, _):
+            wf.todo_clear(cser,'first')
+        self.assertIn('Todo cleared', out.getvalue())
+        self.assertIsNone(cser.db.workflow_get('todo', ser.idnum))
+
+    def test_workflow_todo_list(self):
+        """Test listing todos"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+            cser.add('second', 'board stuff', allow_unmarked=True)
+
+        cser.fake_now = datetime(2025, 3, 10, 12, 0, 0)
+
+        # Set todos: first is due, second is in the future
+        with terminal.capture():
+            wf.todo(cser,'first', 0)
+            wf.todo(cser,'second', 7)
+
+        # Default list shows only due entries
+        with terminal.capture() as (out, _):
+            wf.todo_list(cser,show_all=False)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(3, len(lines))
+        self.assertIn('first', lines[2])
+        self.assertIn('today', lines[2])
+
+        # --all shows all entries
+        with terminal.capture() as (out, _):
+            wf.todo_list(cser,show_all=True)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(4, len(lines))
+        self.assertIn('first', lines[2])
+        self.assertIn('today', lines[2])
+        self.assertIn('second', lines[3])
+        self.assertIn('in 7d', lines[3])
+
+        # No todos
+        with terminal.capture():
+            wf.todo_clear(cser,'first')
+            wf.todo_clear(cser,'second')
+        with terminal.capture() as (out, _):
+            wf.todo_list(cser,show_all=False)
+        self.assertIn('No todos due', out.getvalue())
+
+    def test_workflow_summary_marker(self):
+        """Test that [todo] shows in series summary"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        cser.fake_now = datetime(2025, 3, 10, 12, 0, 0)
+
+        # Set a todo that is already due
+        with terminal.capture():
+            wf.todo(cser,'first', 0)
+
+        # Summary should show [todo]
+        with terminal.capture() as (out, _):
+            cser.summary(None)
+        self.assertIn('[todo]', out.getvalue())
+
+        # Set a todo in the future
+        with terminal.capture():
+            wf.todo(cser,'first', 14)
+
+        # Summary should NOT show [todo]
+        with terminal.capture() as (out, _):
+            cser.summary(None)
+        self.assertNotIn('[todo]', out.getvalue())
