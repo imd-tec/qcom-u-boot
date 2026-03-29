@@ -117,7 +117,10 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
         elif stdin_data:
             kwargs['stdin'] = cros_subprocess.PIPE
         if pipeline or capture:
-            kwargs['stdout'] = cros_subprocess.PIPE
+            if output_func:
+                kwargs['stdout'] = cros_subprocess.PIPE_PTY
+            else:
+                kwargs['stdout'] = cros_subprocess.PIPE
         elif outfile:
             kwargs['stdout'] = open(outfile, 'wb')
         if capture_stderr:
