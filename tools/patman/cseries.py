@@ -990,7 +990,8 @@ class Cseries(cser_helper.CseriesHelper):
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
 
         if likely_sent:
-            workflow.sent(self, ser.idnum)
+            svid = self.get_series_svid(ser.idnum, version)
+            workflow.sent(self, ser.idnum, ser_ver_id=svid)
 
         if likely_sent and autolink:
             tout.notice(f'Autolinking with Patchwork ({autolink_wait} seconds)')

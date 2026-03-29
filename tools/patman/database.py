@@ -19,7 +19,7 @@ from u_boot_pylib import tout
 from patman.series import Series
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 6
+LATEST = 7
 
 # Information about a series/version record
 SerVer = namedtuple(
@@ -213,6 +213,16 @@ class Database:  # pylint:disable=R0904
             'type, series_id INTEGER, timestamp, archived BIT,'
             'FOREIGN KEY (series_id) REFERENCES series (id))')
 
+    def _migrate_to_v7(self):
+        """Add ser_ver_id to workflow table for tracking which version was sent
+
+        Fields:
+            ser_ver_id: Foreign key referencing ser_ver.id, or NULL for
+                entries not tied to a specific version (e.g. todo)
+        """
+        self.cur.execute(
+            'ALTER TABLE workflow ADD COLUMN ser_ver_id INTEGER')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -243,6 +253,8 @@ class Database:  # pylint:disable=R0904
                 self._migrate_to_v5()
             elif version == 6:
                 self._migrate_to_v6()
+            elif version == 7:
+                self._migrate_to_v7()
 
             # Save the new version if we have a schema_version table
             if version > 1:
@@ -1061,17 +1073,20 @@ class Database:  # pylint:disable=R0904
 
     # workflow functions
 
-    def workflow_add(self, wtype, series_id, timestamp):
+    def workflow_add(self, wtype, series_id, timestamp, ser_ver_id=None):
         """Add a workflow entry
 
         Args:
             wtype (str): Workflow type, e.g. 'todo'
             series_id (int): ID of the series
             timestamp (str): Timestamp string, e.g. '2025-01-15 10:30:00'
+            ser_ver_id (int or None): ID of the ser_ver record, if applicable
         """
         self.execute(
-            'INSERT INTO workflow (type, series_id, timestamp, archived) '
-            'VALUES (?, ?, ?, 0)', (wtype, series_id, timestamp))
+            'INSERT INTO workflow '
+            '(type, series_id, timestamp, archived, ser_ver_id) '
+            'VALUES (?, ?, ?, 0, ?)',
+            (wtype, series_id, timestamp, ser_ver_id))
 
     def workflow_archive(self, wtype, series_id):
         """Archive active workflow entries for a given type and series
@@ -1144,10 +1159,13 @@ class Database:  # pylint:disable=R0904
                 str: series description
                 str: timestamp
                 int: archived flag (0 or 1)
+                int or None: version number from ser_ver, if applicable
         """
-        query = ('SELECT w.type, s.name, s.desc, w.timestamp, w.archived '
+        query = ('SELECT w.type, s.name, s.desc, w.timestamp, w.archived,'
+                 'sv.version '
                  'FROM workflow w '
-                 'JOIN series s ON w.series_id = s.id')
+                 'JOIN series s ON w.series_id = s.id '
+                 'LEFT JOIN ser_ver sv ON w.ser_ver_id = sv.id')
         if not include_archived:
             query += ' WHERE w.archived = 0'
         query += ' ORDER BY w.timestamp'

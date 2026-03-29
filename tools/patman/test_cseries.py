@@ -3557,7 +3557,7 @@ Date:   .*
             self.assertEqual(f'Update database to v{version}',
                              out.getvalue().strip())
             self.assertEqual(version, db.get_schema_version())
-        self.assertEqual(6, database.LATEST)
+        self.assertEqual(7, database.LATEST)
 
     def test_migrate_future_version(self):
         """Test that a database newer than patman is rejected"""
@@ -4303,20 +4303,29 @@ Date:   .*
         cser.fake_now = datetime(2025, 3, 1, 12, 0, 0)
         ser = cser.get_series_by_name('first')
 
-        # Record a send
-        wf.sent(cser, ser.idnum)
+        svid = cser.get_series_svid(ser.idnum, 1)
+
+        # Record a send with ser_ver_id
+        wf.sent(cser, ser.idnum, ser_ver_id=svid)
 
         # Should have a SENT entry with current time
         ts = cser.db.workflow_get('sent', ser.idnum)
         self.assertEqual('2025-03-01 12:00:00', ts)
 
-        # Should have a TODO entry 7 days out
+        # The SENT entry should have the ser_ver_id
+        res = cser.db.execute(
+            'SELECT ser_ver_id FROM workflow '
+            'WHERE type = ? AND series_id = ? AND archived = 0',
+            ('sent', ser.idnum))
+        self.assertEqual(svid, res.fetchone()[0])
+
+        # Should have a TODO entry 7 days out (no ser_ver_id)
         ts = cser.db.workflow_get('todo', ser.idnum)
         self.assertEqual('2025-03-08 12:00:00', ts)
 
         # Sending again should archive old entries and create new ones
         cser.fake_now = datetime(2025, 3, 5, 12, 0, 0)
-        wf.sent(cser, ser.idnum)
+        wf.sent(cser, ser.idnum, ser_ver_id=svid)
 
         ts = cser.db.workflow_get('sent', ser.idnum)
         self.assertEqual('2025-03-05 12:00:00', ts)

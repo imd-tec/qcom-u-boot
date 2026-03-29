@@ -43,16 +43,17 @@ def friendly_time(now, when):
     return f'{days // 7}w ago'
 
 
-def sent(cser, series_id):
+def sent(cser, series_id, ser_ver_id=None):
     """Record that a series was sent and create a follow-up todo
 
     Args:
         cser (CseriesHelper): Series helper with open database
         series_id (int): ID of the series that was sent
+        ser_ver_id (int or None): ID of the ser_ver record that was sent
     """
     ts = cser.get_now().strftime('%Y-%m-%d %H:%M:%S')
     cser.db.workflow_archive(Wtype.SENT, series_id)
-    cser.db.workflow_add(Wtype.SENT, series_id, ts)
+    cser.db.workflow_add(Wtype.SENT, series_id, ts, ser_ver_id=ser_ver_id)
     when = cser.get_now() + timedelta(days=7)
     todo_ts = when.strftime('%Y-%m-%d %H:%M:%S')
     cser.db.workflow_archive(Wtype.TODO, series_id)
@@ -133,8 +134,8 @@ def list_entries(cser, show_all):
     if not entries:
         print('No workflow entries')
         return
-    hdr = f"{'Type':6}  {'Series':17}  {'When':>10}"
-    div = f"{'-' * 6}  {'-' * 17}  {'-' * 10}"
+    hdr = f"{'Type':6}  {'Series':17}  {'Ver':>3}  {'When':>10}"
+    div = f"{'-' * 6}  {'-' * 17}  {'-' * 3}  {'-' * 10}"
     if show_all:
         hdr += '  A'
         div += '  -'
@@ -143,10 +144,11 @@ def list_entries(cser, show_all):
     print(hdr)
     print(div)
     now = cser.get_now()
-    for wtype, name, desc, ts, archived in entries:
+    for wtype, name, desc, ts, archived, version in entries:
         when = datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
         friendly = friendly_time(now, when)
-        line = f"{wtype:6}  {name:17}  {friendly:>10}"
+        ver = f'v{version}' if version else ''
+        line = f"{wtype:6}  {name:17}  {ver:>3}  {friendly:>10}"
         if show_all:
             line += f"  {'*' if archived else ' '}"
         line += f"  {desc}"
