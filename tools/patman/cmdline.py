@@ -26,6 +26,7 @@ ALIASES = {
     'status': ['st'],
     'patchwork': ['pw'],
     'upstream': ['us'],
+    'workflow': ['wf'],
 
     # Subcommand aliases
     'archive': ['ar'],
@@ -35,6 +36,7 @@ ALIASES = {
     'open': ['o'],
     'progress': ['p', 'pr', 'prog'],
     'rm-version': ['rmv'],
+    'todo-list': ['tl'],
     'unarchive': ['unar'],
     }
 
@@ -476,6 +478,32 @@ def add_upstream_subparser(subparsers):
     return upstream
 
 
+def add_workflow_subparser(subparsers):
+    """Add the 'workflow' subparser
+
+    Args:
+        subparsers (argparse action): Subparser parent
+
+    Return:
+        ArgumentParser: workflow subparser
+    """
+    workflow = subparsers.add_parser('workflow', aliases=ALIASES['workflow'],
+                                     help='Manage workflow items')
+    workflow_subparsers = workflow.add_subparsers(dest='subcmd')
+    todo = workflow_subparsers.add_parser('todo')
+    todo.add_argument('-s', '--series', help='Name of series')
+    todo.add_argument('days', nargs='?', type=int, default=14,
+                      help='Number of days until due (default: 14)')
+    todo.add_argument('--clear', action='store_true',
+                      help='Clear the todo marker instead of setting it')
+
+    tlist = workflow_subparsers.add_parser('todo-list',
+                                           aliases=ALIASES['todo-list'])
+    tlist.add_argument('--all', action='store_true', dest='show_all',
+                       help='Show all scheduled todos, not just due ones')
+    return workflow
+
+
 def setup_parser():
     """Set up command-line parser
 
@@ -518,6 +546,7 @@ def setup_parser():
     series = add_series_subparser(subparsers)
     add_status_subparser(subparsers)
     upstream = add_upstream_subparser(subparsers)
+    workflow = add_workflow_subparser(subparsers)
 
     # Only add the 'test' action if the test data files are available.
     if HAS_TESTS:
@@ -530,6 +559,7 @@ def setup_parser():
         'series': series,
         'patchwork': patchwork,
         'upstream': upstream,
+        'workflow': workflow,
         }
     return parsers
 
@@ -578,7 +608,7 @@ def parse_args(argv=None, config_fname=None, parsers=None):
             args.cmd = full
         if 'subcmd' in args and args.subcmd in aliases:
             args.subcmd = full
-    if args.cmd in ['series', 'upstream', 'patchwork'] and not args.subcmd:
+    if args.cmd in ['series', 'upstream', 'patchwork', 'workflow'] and not args.subcmd:
         parser.parse_args([args.cmd, '--help'])
 
     return args

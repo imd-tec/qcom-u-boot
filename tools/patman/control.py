@@ -344,6 +344,33 @@ def patchwork(args, test_db=None, pwork=None):
     finally:
         cser.close_database()
 
+def do_workflow(args, test_db=None):
+    """Process a 'workflow' subcommand
+
+    Args:
+        args (Namespace): Arguments to process
+        test_db (str or None): Directory containing the test database, None to
+            use the normal one
+    """
+    from patman import cseries
+    from patman import workflow
+
+    cser = cseries.Cseries(test_db)
+    try:
+        cser.open_database()
+        if args.subcmd == 'todo':
+            if args.clear:
+                workflow.todo_clear(cser, args.series)
+            else:
+                workflow.todo(cser, args.series, args.days)
+        elif args.subcmd == 'todo-list':
+            workflow.todo_list(cser, args.show_all)
+        else:
+            raise ValueError(f"Unknown workflow subcommand '{args.subcmd}'")
+    finally:
+        cser.close_database()
+
+
 def do_patman(args, test_db=None, pwork=None, cser=None):
     """Process a patman command
 
@@ -392,6 +419,8 @@ def do_patman(args, test_db=None, pwork=None, cser=None):
             upstream(args, test_db)
         elif args.cmd == 'patchwork':
             patchwork(args, test_db, pwork)
+        elif args.cmd == 'workflow':
+            do_workflow(args, test_db)
     except Exception as exc:
         terminal.tprint(f'patman: {type(exc).__name__}: {exc}',
                         colour=terminal.Color.RED)

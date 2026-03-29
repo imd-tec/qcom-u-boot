@@ -4273,3 +4273,23 @@ Date:   .*
         with terminal.capture() as (out, _):
             cser.summary(None)
         self.assertNotIn('[todo]', out.getvalue())
+
+    def test_workflow_todo_cmdline(self):
+        """Test todo via the command line"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        # Test via command line
+        self.db_close()
+        with terminal.capture() as (out, _):
+            self.run_args('workflow', 'todo', '-s', 'first', '7')
+        self.assertIn('marked for todo', out.getvalue())
+
+        with terminal.capture() as (out, _):
+            self.run_args('workflow', 'todo', '-s', 'first', '--clear')
+        self.assertIn('Todo cleared', out.getvalue())
+
+        with terminal.capture() as (out, _):
+            self.run_args('wf', 'todo-list')
+        self.assertIn('No todos due', out.getvalue())
