@@ -230,7 +230,7 @@ class TestFunctional(unittest.TestCase, TestCommon):
             cc_file = series.MakeCcFile(process_tags, cover_fname,
                                         not ignore_bad_tags, add_maintainers,
                                         None, get_maintainer_script, alias)
-            cmd = gitutil.email_patches(
+            cmd, _ = gitutil.email_patches(
                 series, cover_fname, args, dry_run, not ignore_bad_tags,
                 cc_file, alias, in_reply_to=in_reply_to, thread=None)
             series.ShowActions(args, cmd, process_tags, alias)

@@ -66,7 +66,8 @@ class CommandResult:
 
 def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
              capture_stderr=False, oneline=False, raise_on_error=True, cwd=None,
-             binary=False, output_func=None, stdin_data=None, **kwargs):
+             binary=False, output_func=None, stdin_data=None,
+             merge_stderr=False, **kwargs):
     """
     Perform a command pipeline, with optional input/output filenames.
 
@@ -87,6 +88,9 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
         output_func (function): Output function to call with each output
             fragment (if it returns True the function terminates)
         stdin_data (str or None): Data to send to the first command's stdin
+        merge_stderr (bool): True to redirect stderr to stdout so that both
+            streams are interleaved in order. Use this for interactive
+            processes where output ordering matters.
         **kwargs: Additional keyword arguments to cros_subprocess.Popen()
     Returns:
         CommandResult object
@@ -117,10 +121,15 @@ def run_pipe(pipe_list, infile=None, outfile=None, capture=False,
         elif stdin_data:
             kwargs['stdin'] = cros_subprocess.PIPE
         if pipeline or capture:
-            kwargs['stdout'] = cros_subprocess.PIPE
+            if output_func:
+                kwargs['stdout'] = cros_subprocess.PIPE_PTY
+            else:
+                kwargs['stdout'] = cros_subprocess.PIPE
         elif outfile:
             kwargs['stdout'] = open(outfile, 'wb')
-        if capture_stderr:
+        if merge_stderr:
+            kwargs['stderr'] = cros_subprocess.STDOUT
+        elif capture_stderr:
             kwargs['stderr'] = cros_subprocess.PIPE
 
         try:

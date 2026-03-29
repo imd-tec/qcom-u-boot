@@ -99,8 +99,9 @@ def email_patches(col, series, cover_fname, patch_files, process_tags, its_a_go,
 
     # Email the patches out (giving the user time to check / cancel)
     cmd = ''
+    num_sent = 0
     if its_a_go:
-        cmd = gitutil.email_patches(
+        cmd, num_sent = gitutil.email_patches(
             series, cover_fname, patch_files, dry_run, not ignore_bad_tags,
             cc_file, alias=settings.alias, in_reply_to=in_reply_to,
             thread=thread, smtp_server=smtp_server, identity=identity,
@@ -115,7 +116,7 @@ def email_patches(col, series, cover_fname, patch_files, process_tags, its_a_go,
             print(col.build(col.RED, "Email would not be sent"))
 
     os.remove(cc_file)
-    return cmd
+    return cmd, num_sent
 
 
 def prepare_patches(col, branch, count, start, end, ignore_binary, signoff,
@@ -206,11 +207,11 @@ def send(args, git_dir=None, cwd=None):
         print(f"Using sendemail identity '{identity}'")
 
     its_a_go = ok or args.ignore_errors
-    cmd = email_patches(
+    cmd, num_sent = email_patches(
         col, series, cover_fname, patch_files, args.process_tags,
         its_a_go, args.ignore_bad_tags, args.add_maintainers,
         args.get_maintainer_script, args.limit, args.dry_run,
         args.in_reply_to, args.thread, args.smtp_server,
         identity=identity, cwd=cwd)
 
-    return cmd and its_a_go and not args.dry_run
+    return num_sent > 0

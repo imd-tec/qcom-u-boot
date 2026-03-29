@@ -7,7 +7,6 @@
 
 import asyncio
 from collections import OrderedDict, defaultdict
-
 import pygit2
 
 from u_boot_pylib import cros_subprocess
@@ -21,6 +20,7 @@ from patman import cser_helper
 from patman.cser_helper import AUTOLINK, oid
 from patman import send
 from patman import status
+from patman import workflow
 
 
 class Cseries(cser_helper.CseriesHelper):
@@ -988,6 +988,10 @@ class Cseries(cser_helper.CseriesHelper):
 
         args.branch = self._get_branch_name(ser.name, version)
         likely_sent = send.send(args, git_dir=self.gitdir, cwd=self.topdir)
+
+        if likely_sent:
+            svid = self.get_series_svid(ser.idnum, version)
+            workflow.sent(self, ser.idnum, ser_ver_id=svid)
 
         if likely_sent and autolink:
             tout.notice(f'Autolinking with Patchwork ({autolink_wait} seconds)')
