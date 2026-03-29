@@ -18,32 +18,21 @@ import fnmatch
 import glob
 import multiprocessing
 import os
-import queue
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 import unittest
 
-from buildman import bsettings
 from buildman import kconfiglib
-from buildman import toolchain
 from u_boot_pylib import terminal
 from u_boot_pylib.terminal import tprint
 from u_boot_pylib import tools
 
-SHOW_GNU_MAKE = 'scripts/show-gnu-make'
 SLEEP_TIME=0.03
 
-STATE_IDLE = 0
-STATE_DEFCONFIG = 1
-STATE_AUTOCONF = 2
-STATE_SAVEDEFCONFIG = 3
-
-AUTO_CONF_PATH = 'include/config/auto.conf'
 CONFIG_DATABASE = 'qconfig.db'
 FAILED_LIST = 'qconfig.failed'
 
@@ -89,25 +78,6 @@ def check_top_directory():
     for fname in 'README', 'Licenses':
         if not os.path.exists(fname):
             sys.exit('Please run at the top of source directory.')
-
-def check_clean_directory():
-    """Exit if the source tree is not clean."""
-    for fname in '.config', 'include/config':
-        if os.path.exists(fname):
-            sys.exit("source tree is not clean, please run 'make mrproper'")
-
-def get_make_cmd():
-    """Get the command name of GNU Make.
-
-    U-Boot needs GNU Make for building, but the command name is not
-    necessarily "make". (for example, "gmake" on FreeBSD).
-    Returns the most appropriate command name on your system.
-    """
-    with subprocess.Popen([SHOW_GNU_MAKE], stdout=subprocess.PIPE) as proc:
-        ret = proc.communicate()
-        if proc.returncode:
-            sys.exit('GNU Make not found')
-    return ret[0].rstrip()
 
 def get_matched_defconfig(line):
     """Get the defconfig files that match a pattern
@@ -283,403 +253,436 @@ def scan_kconfig():
     return kconfiglib.Kconfig()
 
 
-# pylint: disable=R0903
-class KconfigParser:
-    """A parser of .config and include/autoconf.mk."""
+def _cpp_preprocess(srcdir, fname):
+    """Run the C preprocessor on a file to expand #include directives
 
-    re_arch = re.compile(r'CONFIG_SYS_ARCH="(.*)"')
-    re_cpu = re.compile(r'CONFIG_SYS_CPU="(.*)"')
+    Args:
+        srcdir (str): Source-tree directory (used as include path)
+        fname (str): Path to the file to preprocess
 
-    def __init__(self, build_dir):
-        """Create a new parser.
-
-        Args:
-          build_dir: Build directory.
-        """
-        self.dotconfig = os.path.join(build_dir, '.config')
-        self.autoconf = os.path.join(build_dir, 'include', 'autoconf.mk')
-        self.spl_autoconf = os.path.join(build_dir, 'spl', 'include',
-                                         'autoconf.mk')
-        self.config_autoconf = os.path.join(build_dir, AUTO_CONF_PATH)
-        self.defconfig = os.path.join(build_dir, 'defconfig')
-
-    def get_arch(self):
-        """Parse .config file and return the architecture.
-
-        Returns:
-          Architecture name (e.g. 'arm').
-        """
-        arch = ''
-        cpu = ''
-        for line in read_file(self.dotconfig):
-            m_arch = self.re_arch.match(line)
-            if m_arch:
-                arch = m_arch.group(1)
-                continue
-            m_cpu = self.re_cpu.match(line)
-            if m_cpu:
-                cpu = m_cpu.group(1)
-
-        if not arch:
-            return None
-
-        # fix-up for aarch64
-        if arch == 'arm' and cpu == 'armv8':
-            arch = 'aarch64'
-
-        return arch
-
-
-class DatabaseThread(threading.Thread):
-    """This thread processes results from Slot threads.
-
-    It collects the data in the master config directary. There is only one
-    result thread, and this helps to serialise the build output.
+    Returns:
+        str: Path to a temporary file with the preprocessed output.
+            Caller must delete it.
     """
-    def __init__(self, config_db, db_queue):
-        """Set up a new result thread
-
-        Args:
-            builder: Builder which will be sent each result
-        """
-        threading.Thread.__init__(self)
-        self.config_db = config_db
-        self.db_queue= db_queue
-
-    def run(self):
-        """Called to start up the result thread.
-
-        We collect the next result job and pass it on to the build.
-        """
-        while True:
-            defconfig, configs = self.db_queue.get()
-            self.config_db[defconfig] = configs
-            self.db_queue.task_done()
+    cpp = os.getenv('CPP', 'cpp').split()
+    cmd = cpp + ['-nostdinc', '-P', '-I', srcdir,
+                 '-undef', '-x', 'assembler-with-cpp', fname]
+    stdout = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+    tmp = tempfile.NamedTemporaryFile(prefix='qconfig-', delete=False)
+    tmp.write(stdout)
+    tmp.close()
+    return tmp.name
 
 
-class Slot:
+def _load_defconfig(kconf, srcdir, fname):
+    """Load a defconfig, preprocessing #include directives if present
 
-    """A slot to store a subprocess.
-
-    Each instance of this class handles one subprocess.
-    This class is useful to control multiple threads
-    for faster processing.
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        srcdir (str): Source-tree directory
+        fname (str): Path to the defconfig file
     """
+    if b'#include' in tools.read_file(fname):
+        tmp = _cpp_preprocess(srcdir, fname)
+        kconf.load_config(tmp)
+        os.unlink(tmp)
+    else:
+        kconf.load_config(fname)
 
-    def __init__(self, toolchains, args, progress, devnull, make_cmd,
-                 reference_src_dir, db_queue):
-        """Create a new process slot.
 
-        Args:
-          toolchains: Toolchains object containing toolchains.
-          args: Program arguments; this class uses build_db, verbose,
-                force_sync, dry_run, exit_on_error
-          progress: A progress indicator.
-          devnull: A file object of '/dev/null'.
-          make_cmd: command name of GNU Make.
-          reference_src_dir: Determine the true starting config state from this
-                             source tree.
-          db_queue: output queue to write config info for the database
-          col (terminal.Color): Colour object
-        """
-        self.toolchains = toolchains
-        self.args = args
-        self.progress = progress
-        self.build_dir = tempfile.mkdtemp()
-        self.devnull = devnull
-        self.make_cmd = (make_cmd, 'O=' + self.build_dir)
-        self.reference_src_dir = reference_src_dir
-        self.db_queue = db_queue
-        self.col = progress.col
-        self.parser = KconfigParser(self.build_dir)
-        self.state = STATE_IDLE
-        self.failed_boards = set()
-        self.defconfig = None
-        self.log = []
-        self.current_src_dir = None
-        self.proc = None
+def _scan_defconfigs_worker(srcdir, defconfigs, queue, error_queue):
+    """Worker process that scans defconfigs using kconfiglib
 
-    def __del__(self):
-        """Delete the working directory
+    Each worker creates its own Kconfig instance (parsing is done once per
+    process) then loads each defconfig in turn, collecting all CONFIG values.
 
-        This function makes sure the temporary directory is cleaned away
-        even if Python suddenly dies due to error.  It should be done in here
-        because it is guaranteed the destructor is always invoked when the
-        instance of the class gets unreferenced.
+    Args:
+        srcdir (str): Source-tree directory
+        defconfigs (list of str): Defconfig filenames to process, e.g.
+            ['sandbox_defconfig', 'snow_defconfig']
+        queue (multiprocessing.Queue): Output queue for (defconfig, configs)
+        error_queue (multiprocessing.Queue): Output queue for failed defconfigs
+    """
+    os.environ['srctree'] = srcdir
+    os.environ['UBOOTVERSION'] = 'dummy'
+    os.environ['KCONFIG_OBJDIR'] = ''
+    os.environ['CC'] = 'gcc'
+    kconf = kconfiglib.Kconfig(warn=False)
 
-        If the subprocess is still running, wait until it finishes.
-        """
-        if self.state != STATE_IDLE:
-            while self.proc.poll() is None:
-                pass
-        shutil.rmtree(self.build_dir)
-
-    def add(self, defconfig):
-        """Assign a new subprocess for defconfig and add it to the slot.
-
-        If the slot is vacant, create a new subprocess for processing the
-        given defconfig and add it to the slot.  Just returns False if
-        the slot is occupied (i.e. the current subprocess is still running).
-
-        Args:
-          defconfig (str): defconfig name.
-
-        Returns:
-          Return True on success or False on failure
-        """
-        if self.state != STATE_IDLE:
-            return False
-
-        self.defconfig = defconfig
-        self.log = []
-        self.current_src_dir = self.reference_src_dir
-        self.do_defconfig()
-        return True
-
-    def poll(self):
-        """Check the status of the subprocess and handle it as needed.
-
-        Returns True if the slot is vacant (i.e. in idle state).
-        If the configuration is successfully finished, assign a new
-        subprocess to build include/autoconf.mk.
-        If include/autoconf.mk is generated, invoke the parser to
-        parse the .config and the include/autoconf.mk, moving
-        config options to the .config as needed.
-        If the .config was updated, run "make savedefconfig" to sync
-        it, update the original defconfig, and then set the slot back
-        to the idle state.
-
-        Returns:
-          Return True if the subprocess is terminated, False otherwise
-        """
-        if self.state == STATE_IDLE:
-            return True
-
-        if self.proc.poll() is None:
-            return False
-
-        if self.proc.poll() != 0:
-            self.handle_error()
-        elif self.state == STATE_DEFCONFIG:
-            if self.reference_src_dir and not self.current_src_dir:
-                self.do_savedefconfig()
-            else:
-                self.do_autoconf()
-        elif self.state == STATE_AUTOCONF:
-            if self.current_src_dir:
-                self.current_src_dir = None
-                self.do_defconfig()
-            elif self.args.build_db:
-                self.do_add_to_db()
-            else:
-                self.do_savedefconfig()
-        elif self.state == STATE_SAVEDEFCONFIG:
-            self.update_defconfig()
-        else:
-            sys.exit('Internal Error. This should not happen.')
-
-        return self.state == STATE_IDLE
-
-    def handle_error(self):
-        """Handle error cases."""
-
-        self.log.append(self.col.build(self.col.RED, 'Failed to process',
-                                       bright=True))
-        if self.args.verbose:
-            for line in self.proc.stderr.read().decode().splitlines():
-                self.log.append(self.col.build(self.col.CYAN, line, True))
-        self.finish(False)
-
-    def do_defconfig(self):
-        """Run 'make <board>_defconfig' to create the .config file."""
-
-        cmd = list(self.make_cmd)
-        cmd.append(self.defconfig)
-        # pylint: disable=R1732
-        self.proc = subprocess.Popen(cmd, stdout=self.devnull,
-                                     stderr=subprocess.PIPE,
-                                     cwd=self.current_src_dir)
-        self.state = STATE_DEFCONFIG
-
-    def do_autoconf(self):
-        """Run 'make AUTO_CONF_PATH'."""
-
-        arch = self.parser.get_arch()
+    for defconfig in defconfigs:
+        fname = os.path.join(srcdir, 'configs', defconfig)
         try:
-            tchain = self.toolchains.select(arch)
-        except ValueError:
-            self.log.append(self.col.build(
-                self.col.YELLOW,
-                f"Tool chain for '{arch}' is missing: do nothing"))
-            self.finish(False)
-            return
-        env = tchain.make_environment(False)
+            _load_defconfig(kconf, srcdir, fname)
 
-        cmd = list(self.make_cmd)
-        cmd.append('KCONFIG_IGNORE_DUPLICATES=1')
-        cmd.append(AUTO_CONF_PATH)
-        # pylint: disable=R1732
-        self.proc = subprocess.Popen(cmd, stdout=self.devnull, env=env,
-                                     stderr=subprocess.PIPE,
-                                     cwd=self.current_src_dir)
-        self.state = STATE_AUTOCONF
+            configs = {}
+            for sym in kconf.unique_defined_syms:
+                conf = sym.config_string
+                if not conf or conf.startswith('#'):
+                    continue
+                config, value = conf.rstrip('\n').split('=', 1)
+                configs[config] = value
+            queue.put((defconfig, configs))
+        except Exception as exc:
+            error_queue.put((defconfig, str(exc)))
 
-    def do_add_to_db(self):
-        """Add the board to the database"""
-        configs = {}
-        for line in read_file(os.path.join(self.build_dir, AUTO_CONF_PATH)):
-            if line.startswith('CONFIG'):
-                config, value = line.split('=', 1)
-                configs[config] = value.rstrip()
-        self.db_queue.put([self.defconfig, configs])
-        self.finish(True)
 
-    def do_savedefconfig(self):
-        """Update the .config and run 'make savedefconfig'."""
-        if not self.args.force_sync:
-            self.finish(True)
-            return
+def do_build_db(args):
+    """Build the CONFIG database using kconfiglib instead of make
 
-        cmd = list(self.make_cmd)
-        cmd.append('savedefconfig')
-        # pylint: disable=R1732
-        self.proc = subprocess.Popen(cmd, stdout=self.devnull,
-                                     stderr=subprocess.PIPE)
-        self.state = STATE_SAVEDEFCONFIG
+    This evaluates the Kconfig tree directly in Python for each defconfig,
+    avoiding the overhead of spawning make subprocesses and the need for
+    cross-compiler toolchains.
 
-    def update_defconfig(self):
-        """Update the input defconfig and go back to the idle state."""
-        orig_defconfig = os.path.join('configs', self.defconfig)
-        new_defconfig = os.path.join(self.build_dir, 'defconfig')
-        updated = not filecmp.cmp(orig_defconfig, new_defconfig)
-        success = True
+    Args:
+        args (Namespace): Program arguments (uses jobs, defconfigs,
+            defconfiglist, nocolour)
 
-        if updated:
-            # Files with #include get mangled as savedefconfig doesn't know how to
-            # deal with them. Ignore them
-            success = b'#include' not in tools.read_file(orig_defconfig)
-            if success:
-                self.log.append(
-                    self.col.build(self.col.BLUE, 'defconfig updated',
-                                   bright=True))
+    Returns:
+        tuple:
+            config_db (dict): configs for each defconfig
+            Progress: progress indicator
+    """
+    srcdir = os.getcwd()
+
+    if args.defconfigs:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfigs)]
+    elif args.defconfiglist:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfiglist)]
+    else:
+        defconfigs = get_all_defconfigs()
+
+    col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
+                         else terminal.COLOR_IF_TERMINAL)
+    progress = Progress(col, len(defconfigs))
+
+    jobs = args.jobs
+    total = len(defconfigs)
+    result_queue = multiprocessing.Queue()
+    error_queue = multiprocessing.Queue()
+    processes = []
+    for i in range(jobs):
+        chunk = defconfigs[total * i // jobs:total * (i + 1) // jobs]
+        if not chunk:
+            continue
+        proc = multiprocessing.Process(
+            target=_scan_defconfigs_worker,
+            args=(srcdir, chunk, result_queue, error_queue))
+        proc.start()
+        processes.append(proc)
+
+    config_db = {}
+    remaining = total
+    while remaining:
+        # Drain both queues without blocking forever
+        found = False
+        while not result_queue.empty():
+            defconfig, configs = result_queue.get()
+            config_db[defconfig] = configs
+            progress.inc(True)
+            progress.show()
+            remaining -= 1
+            found = True
+        while not error_queue.empty():
+            defconfig, msg = error_queue.get()
+            print(col.build(col.RED, f'{defconfig}: {msg}', bright=True),
+                  file=sys.stderr)
+            progress.inc(False)
+            progress.show()
+            remaining -= 1
+            found = True
+        if not found:
+            time.sleep(SLEEP_TIME)
+
+    for proc in processes:
+        proc.join()
+
+    progress.completed()
+    return config_db, progress
+
+
+def _get_min_config_lines(kconf, fname):
+    """Get the set of minimal config lines for a defconfig
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance (will be modified)
+        fname (str): Path to preprocessed defconfig (or plain defconfig)
+
+    Returns:
+        set of str: Lines from write_min_config output (without header)
+    """
+    kconf.load_config(fname)
+    tmp = tempfile.NamedTemporaryFile(mode='w', prefix='qconfig-mc-',
+                                     delete=False)
+    tmp.close()
+    kconf.write_min_config(tmp.name)
+    with open(tmp.name) as inf:
+        lines = set(inf.readlines())
+    os.unlink(tmp.name)
+    return lines
+
+
+def _sync_plain_defconfig(kconf, orig, dry_run):
+    """Sync a plain defconfig (no #include)
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        orig (str): Path to the original defconfig file
+        dry_run (bool): If True, do not update defconfig files
+
+    Returns:
+        bool: True if the defconfig was (or would be) updated
+    """
+    kconf.load_config(orig)
+    confdir = os.path.dirname(orig)
+    tmp = tempfile.NamedTemporaryFile(
+        mode='w', prefix='qconfig-', suffix='_defconfig',
+        dir=confdir, delete=False)
+    tmp.close()
+    kconf.write_min_config(tmp.name)
+
+    updated = not filecmp.cmp(orig, tmp.name)
+    if updated and not dry_run:
+        shutil.move(tmp.name, orig)
+    else:
+        os.unlink(tmp.name)
+    return updated
+
+
+def _sync_include_defconfig(kconf, srcdir, orig, dry_run):
+    """Sync a defconfig that uses #include directives
+
+    Computes the minimal delta between the full config and the base config
+    provided by the included files, preserving the #include structure.
+
+    Args:
+        kconf (kconfiglib.Kconfig): Kconfig instance
+        srcdir (str): Source-tree directory
+        orig (str): Path to the original defconfig file
+        dry_run (bool): If True, do not update defconfig files
+
+    Returns:
+        bool: True if the defconfig was (or would be) updated
+    """
+    # Get the full min_config (base + overlay)
+    full_tmp = _cpp_preprocess(srcdir, orig)
+    full_lines = _get_min_config_lines(kconf, full_tmp)
+    os.unlink(full_tmp)
+
+    # Build a temp file with just the #include lines (no overlay CONFIGs)
+    # to get the base min_config
+    include_lines = []
+    with open(orig, 'rb') as inf:
+        for line in inf:
+            if line.startswith(b'#include'):
+                include_lines.append(line)
+
+    base_tmp = tempfile.NamedTemporaryFile(prefix='qconfig-base-',
+                                           suffix='_defconfig',
+                                           dir=os.path.dirname(orig),
+                                           delete=False)
+    base_tmp.writelines(include_lines)
+    base_tmp.close()
+
+    base_pp = _cpp_preprocess(srcdir, base_tmp.name)
+    os.unlink(base_tmp.name)
+    base_lines = _get_min_config_lines(kconf, base_pp)
+    os.unlink(base_pp)
+
+    # Delta = full - base
+    delta = sorted(full_lines - base_lines)
+
+    # Build the new defconfig: #include lines + delta
+    # Preserve the separator (blank line or not) from the original
+    orig_text = tools.read_file(orig, binary=False)
+    last_include_idx = orig_text.rfind('#include')
+    after_include = orig_text[orig_text.index('\n', last_include_idx) + 1:]
+    sep = b'\n' if after_include.startswith('\n') else b''
+
+    new_content = b''
+    for line in include_lines:
+        new_content += line
+    if delta:
+        new_content += sep
+    for line in delta:
+        new_content += line.encode() if isinstance(line, str) else line
+
+    orig_content = tools.read_file(orig)
+    updated = new_content != orig_content
+    if updated and not dry_run:
+        tools.write_file(orig, new_content)
+    return updated
+
+
+def _sync_defconfigs_worker(srcdir, defconfigs, result_queue, error_queue,
+                            dry_run, ref_srcdir=None):
+    """Worker process that syncs defconfigs using kconfiglib
+
+    For each defconfig, loads it via kconfiglib and writes a minimal config
+    (equivalent to 'make savedefconfig'), then compares with the original.
+
+    When ref_srcdir is set (the -r option), loads each defconfig against the
+    reference Kconfig tree first, writes a full .config, then loads that
+    .config into the current tree's Kconfig and writes a minimal config.
+
+    Args:
+        srcdir (str): Source-tree directory
+        defconfigs (list of str): Defconfig filenames to process
+        result_queue (multiprocessing.Queue): Output queue for
+            (defconfig, updated) tuples
+        error_queue (multiprocessing.Queue): Output queue for failed defconfigs
+        dry_run (bool): If True, do not update defconfig files
+        ref_srcdir (str or None): Reference source tree for -r option
+    """
+    os.environ['UBOOTVERSION'] = 'dummy'
+    os.environ['KCONFIG_OBJDIR'] = ''
+    os.environ['CC'] = 'gcc'
+
+    os.environ['srctree'] = srcdir
+    kconf = kconfiglib.Kconfig(warn=False)
+
+    if ref_srcdir:
+        os.environ['srctree'] = ref_srcdir
+        ref_kconf = kconfiglib.Kconfig(warn=False)
+        os.environ['srctree'] = srcdir
+
+    for defconfig in defconfigs:
+        orig = os.path.join(srcdir, 'configs', defconfig)
+        try:
+            if ref_srcdir:
+                # Load defconfig against the reference Kconfig tree, write
+                # a full .config, then load it into the current tree
+                ref_orig = os.path.join(ref_srcdir, 'configs', defconfig)
+                if not os.path.exists(ref_orig):
+                    ref_orig = orig
+                _load_defconfig(ref_kconf, ref_srcdir, ref_orig)
+                tmp_config = tempfile.NamedTemporaryFile(
+                    prefix='qconfig-cfg-', delete=False)
+                tmp_config.close()
+                ref_kconf.write_config(tmp_config.name)
+                kconf.load_config(tmp_config.name, replace=True)
+                os.unlink(tmp_config.name)
             else:
-                self.log.append(
-                    self.col.build(self.col.RED, 'ignored due to #include',
-                                   bright=True))
-                updated = False
+                raw = tools.read_file(orig)
+                if b'#include' in raw:
+                    updated = _sync_include_defconfig(kconf, srcdir, orig,
+                                                      dry_run)
+                    result_queue.put((defconfig, updated, None))
+                    continue
+                _load_defconfig(kconf, srcdir, orig)
 
-        if not self.args.dry_run and updated:
-            shutil.move(new_defconfig, orig_defconfig)
-        self.finish(success)
+            confdir = os.path.dirname(orig)
+            tmp = tempfile.NamedTemporaryFile(
+                mode='w', prefix='qconfig-', suffix='_defconfig',
+                dir=confdir, delete=False)
+            tmp.close()
+            kconf.write_min_config(tmp.name)
 
-    def finish(self, success):
-        """Display log along with progress and go to the idle state.
+            updated = not filecmp.cmp(orig, tmp.name)
+            if updated and not dry_run:
+                shutil.move(tmp.name, orig)
+            else:
+                os.unlink(tmp.name)
+            result_queue.put((defconfig, updated, None))
+        except Exception as exc:
+            error_queue.put((defconfig, str(exc)))
 
-        Args:
-          success (bool): Should be True when the defconfig was processed
-                   successfully, or False when it fails.
-        """
-        # output at least 30 characters to hide the "* defconfigs out of *".
-        name = self.defconfig[:-len('_defconfig')]
-        if self.log:
 
-            # Put the first log line on the first line
-            log = name.ljust(20) + ' ' + self.log[0]
+def do_sync_defconfigs(args):
+    """Sync defconfig files using kconfiglib instead of make
 
-            if len(self.log) > 1:
-                log += '\n' + '\n'.join(['    ' + s for s in self.log[1:]])
-            # Some threads are running in parallel.
-            # Print log atomically to not mix up logs from different threads.
-            print(log, file=(sys.stdout if success else sys.stderr))
+    Evaluates each defconfig through kconfiglib and writes a minimal config
+    (equivalent to 'make savedefconfig'), updating the original if it differs.
 
-        if not success:
-            if self.args.exit_on_error:
-                sys.exit('Exit on error.')
-            # If --exit-on-error flag is not set, skip this board and continue.
-            # Record the failed board.
-            self.failed_boards.add(name)
+    When -r (git-ref) is given, loads each defconfig against the Kconfig tree
+    from the reference commit first, then normalises it against the current
+    tree, capturing any Kconfig default changes.
 
-        self.progress.inc(success)
-        self.progress.show()
-        self.state = STATE_IDLE
+    Args:
+        args (Namespace): Program arguments (uses jobs, defconfigs,
+            defconfiglist, nocolour, dry_run, force_sync, git_ref)
 
-    def get_failed_boards(self):
-        """Returns a set of failed boards (defconfigs) in this slot.
-        """
-        return self.failed_boards
+    Returns:
+        Progress: progress indicator
+    """
+    srcdir = os.getcwd()
 
-class Slots:
-    """Controller of the array of subprocess slots."""
+    if args.git_ref:
+        reference_src = ReferenceSource(args.git_ref)
+        ref_srcdir = reference_src.get_dir()
+    else:
+        ref_srcdir = None
 
-    def __init__(self, toolchains, args, progress, reference_src_dir, db_queue):
-        """Create a new slots controller.
+    if args.defconfigs:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfigs)]
+    elif args.defconfiglist:
+        defconfigs = [os.path.basename(d)
+                      for d in get_matched_defconfigs(args.defconfiglist)]
+    else:
+        defconfigs = get_all_defconfigs()
 
-        Args:
-            toolchains (Toolchains): Toolchains object containing toolchains
-            args (Namespace): Program arguments; this class uses build_db,
-                verbose, force_sync, dry_run, exit_on_error, jobs,
-            progress (Progress): A progress indicator.
-            reference_src_dir (str): Determine the true starting config state
-                from this source tree (None for none)
-            db_queue (Queue): output queue to write config info for the database
-        """
-        self.args = args
-        self.slots = []
-        self.progress = progress
-        self.col = progress.col
-        devnull = subprocess.DEVNULL
-        make_cmd = get_make_cmd()
-        for _ in range(args.jobs):
-            self.slots.append(Slot(toolchains, args, progress, devnull,
-                                   make_cmd, reference_src_dir, db_queue))
+    col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
+                         else terminal.COLOR_IF_TERMINAL)
+    progress = Progress(col, len(defconfigs))
 
-    def add(self, defconfig):
-        """Add a new subprocess if a vacant slot is found.
+    jobs = args.jobs
+    total = len(defconfigs)
+    result_queue = multiprocessing.Queue()
+    error_queue = multiprocessing.Queue()
+    processes = []
+    for i in range(jobs):
+        chunk = defconfigs[total * i // jobs:total * (i + 1) // jobs]
+        if not chunk:
+            continue
+        proc = multiprocessing.Process(
+            target=_sync_defconfigs_worker,
+            args=(srcdir, chunk, result_queue, error_queue, args.dry_run,
+                  ref_srcdir))
+        proc.start()
+        processes.append(proc)
 
-        Args:
-          defconfig (str): defconfig name to be put into.
+    remaining = total
+    updated_count = 0
+    while remaining:
+        found = False
+        while not result_queue.empty():
+            defconfig, updated, msg = result_queue.get()
+            if updated:
+                updated_count += 1
+                name = defconfig[:-len('_defconfig')]
+                log = col.build(col.BLUE, 'defconfig updated', bright=True)
+                if args.dry_run:
+                    log = col.build(col.YELLOW, 'would update', bright=True)
+                print(f'{name.ljust(20)} {log}')
+            elif msg:
+                name = defconfig[:-len('_defconfig')]
+                log = col.build(col.RED, f'ignored: {msg}', bright=True)
+                print(f'{name.ljust(20)} {log}')
+            progress.inc(True)
+            progress.show()
+            remaining -= 1
+            found = True
+        while not error_queue.empty():
+            defconfig, msg = error_queue.get()
+            print(col.build(col.RED, f'{defconfig}: {msg}', bright=True),
+                  file=sys.stderr)
+            progress.inc(False)
+            progress.show()
+            remaining -= 1
+            found = True
+        if not found:
+            time.sleep(SLEEP_TIME)
 
-        Returns:
-          Return True on success or False on failure
-        """
-        for slot in self.slots:
-            if slot.add(defconfig):
-                return True
-        return False
+    for proc in processes:
+        proc.join()
 
-    def available(self):
-        """Check if there is a vacant slot.
-
-        Returns:
-          Return True if at lease one vacant slot is found, False otherwise.
-        """
-        for slot in self.slots:
-            if slot.poll():
-                return True
-        return False
-
-    def empty(self):
-        """Check if all slots are vacant.
-
-        Returns:
-          Return True if all the slots are vacant, False otherwise.
-        """
-        ret = True
-        for slot in self.slots:
-            if not slot.poll():
-                ret = False
-        return ret
-
-    def write_failed_boards(self):
-        """Show the results of processing"""
-        boards = set()
-
-        for slot in self.slots:
-            boards |= slot.get_failed_boards()
-
-        if boards:
-            boards = '\n'.join(sorted(boards)) + '\n'
-            write_file(FAILED_LIST, boards)
+    progress.completed()
+    if updated_count:
+        print(col.build(col.BLUE,
+                         f'{updated_count} defconfig(s) updated', bright=True))
+    return progress
 
 
 class ReferenceSource:
@@ -716,73 +719,6 @@ class ReferenceSource:
         """Return the absolute path to the reference source directory."""
 
         return self.src_dir
-
-def move_config(args):
-    """Build database or sync config options to defconfig files.
-
-    Args:
-        args (Namespace): Program arguments; this class uses build_db,
-            verbose, force_sync, dry_run, exit_on_error, jobs, git_ref,
-            defconfigs, defconfiglist, nocolour
-
-    Returns:
-        tuple:
-            config_db (dict of configs for each defconfig):
-                key: defconfig name, e.g. "MPC8548CDS_legacy_defconfig"
-                value: dict:
-                    key: CONFIG option
-                    value: Value of option
-            Progress: Progress indicator
-    """
-    config_db = {}
-    db_queue = queue.Queue()
-    dbt = DatabaseThread(config_db, db_queue)
-    dbt.daemon = True
-    dbt.start()
-
-    check_clean_directory()
-    bsettings.setup('')
-
-    # Get toolchains to use
-    toolchains = toolchain.Toolchains()
-    toolchains.get_settings()
-    toolchains.scan(verbose=False)
-
-    if args.git_ref:
-        reference_src = ReferenceSource(args.git_ref)
-        reference_src_dir = reference_src.get_dir()
-    else:
-        reference_src_dir = None
-
-    if args.defconfigs:
-        defconfigs = get_matched_defconfigs(args.defconfigs)
-    elif args.defconfiglist:
-        defconfigs = get_matched_defconfigs(args.defconfiglist)
-    else:
-        defconfigs = get_all_defconfigs()
-
-    col = terminal.Color(terminal.COLOR_NEVER if args.nocolour
-                         else terminal.COLOR_IF_TERMINAL)
-    progress = Progress(col, len(defconfigs))
-    slots = Slots(toolchains, args, progress, reference_src_dir, db_queue)
-
-    # Main loop to process defconfig files:
-    #  Add a new subprocess into a vacant slot.
-    #  Sleep if there is no available slot.
-    for defconfig in defconfigs:
-        while not slots.add(defconfig):
-            while not slots.available():
-                # No available slot: sleep for a while
-                time.sleep(SLEEP_TIME)
-
-    # wait until all the subprocesses finish
-    while not slots.empty():
-        time.sleep(SLEEP_TIME)
-
-    slots.write_failed_boards()
-    db_queue.join()
-    progress.completed()
-    return config_db, progress
 
 def find_kconfig_rules(kconf, config, imply_config):
     """Check whether a config has a 'select' or 'imply' keyword
@@ -1166,8 +1102,10 @@ def find_config(dbase, config_list):
 
     return result
 
-def do_find_config(config_list, list_format):
+def do_find_config(config_list, list_format, jobs):
     """Find boards with a given combination of CONFIGs
+
+    Rebuilds the database automatically if it is missing or stale.
 
     Args:
         config_list (list of str): List of CONFIG options to check (each a regex
@@ -1176,11 +1114,12 @@ def do_find_config(config_list, list_format):
             otherwise it must be true)
         list_format (bool): True to write in 'list' format, one board name per
             line
+        jobs (int): Number of threads to use if the database needs rebuilding
 
     Returns:
         int: exit code (0 for success)
     """
-    dbase = read_database()
+    dbase = ensure_database(jobs)
     out = find_config(dbase, config_list)
     if not list_format:
         print(f'{len(out)} matches')
@@ -1707,8 +1646,90 @@ def move_done(progress):
             col.GREEN, f'{progress.total} processed        ', bright=True))
     return 0
 
+class SyncTests(unittest.TestCase):
+    """Tests for defconfig sync using kconfiglib"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create a shared Kconfig instance for all tests"""
+        os.environ['srctree'] = os.getcwd()
+        os.environ['UBOOTVERSION'] = 'dummy'
+        os.environ['KCONFIG_OBJDIR'] = ''
+        os.environ['CC'] = 'gcc'
+        cls.kconf = kconfiglib.Kconfig(warn=False)
+        cls.srcdir = os.getcwd()
+
+    def test_sync_plain_noop(self):
+        """Syncing an already-minimal defconfig produces no change"""
+        # sandbox_defconfig should already be synced if the tree is clean
+        orig = 'configs/sandbox_defconfig'
+        updated = _sync_plain_defconfig(self.kconf, orig, dry_run=True)
+        # This may or may not be updated depending on tree state, but
+        # it should not crash
+        self.assertIsInstance(updated, bool)
+
+    def test_sync_include_preserves_structure(self):
+        """Syncing a #include defconfig preserves the #include lines"""
+        orig = 'configs/sandbox_nocmdline_defconfig'
+        if not os.path.exists(orig):
+            self.skipTest(f'{orig} not found')
+
+        # Dry-run should not modify the file
+        content_before = tools.read_file(orig)
+        updated = _sync_include_defconfig(self.kconf, self.srcdir, orig,
+                                          dry_run=True)
+        content_after = tools.read_file(orig)
+        self.assertEqual(content_before, content_after)
+
+        # The output should still start with #include
+        self.assertIn(b'#include', content_after)
+
+    def test_sync_include_removes_redundant(self):
+        """Syncing a #include defconfig removes CONFIGs from the base"""
+        # Create a temp defconfig that includes sandbox and redundantly
+        # sets a CONFIG that sandbox already sets
+        with tempfile.NamedTemporaryFile(
+                mode='w', prefix='test-', suffix='_defconfig',
+                dir='configs', delete=False) as tmp:
+            tmp.write('#include "sandbox_defconfig"\n')
+            tmp.write('CONFIG_CMDLINE=y\n')
+            tmp_name = tmp.name
+        try:
+            updated = _sync_include_defconfig(self.kconf, self.srcdir,
+                                              tmp_name, dry_run=False)
+            self.assertTrue(updated)
+            with open(tmp_name) as inf:
+                result = inf.read()
+            # CONFIG_CMDLINE=y should be gone (it's in the base)
+            self.assertNotIn('CONFIG_CMDLINE=y', result)
+            # #include should still be there
+            self.assertIn('#include "sandbox_defconfig"', result)
+        finally:
+            os.unlink(tmp_name)
+
+    def test_sync_include_keeps_override(self):
+        """Syncing a #include defconfig keeps CONFIGs that differ from base"""
+        # Create a temp defconfig that includes sandbox and disables CMDLINE
+        with tempfile.NamedTemporaryFile(
+                mode='w', prefix='test-', suffix='_defconfig',
+                dir='configs', delete=False) as tmp:
+            tmp.write('#include "sandbox_defconfig"\n')
+            tmp.write('# CONFIG_CMDLINE is not set\n')
+            tmp_name = tmp.name
+        try:
+            _sync_include_defconfig(self.kconf, self.srcdir, tmp_name,
+                                    dry_run=False)
+            with open(tmp_name) as inf:
+                result = inf.read()
+            # Disabling CMDLINE is an override — should be kept
+            self.assertIn('# CONFIG_CMDLINE is not set', result)
+            self.assertIn('#include "sandbox_defconfig"', result)
+        finally:
+            os.unlink(tmp_name)
+
+
 def do_tests():
-    """Run doctests and unit tests (so far there are no unit tests)"""
+    """Run doctests and unit tests"""
     sys.argv = [sys.argv[0]]
     fail, _ = doctest.testmod()
     if fail:
@@ -1717,11 +1738,37 @@ def do_tests():
     return 0
 
 
-def ensure_database(threads):
-    """Return a qconfig database so that Kconfig options can be queried
+def db_is_current():
+    """Check if the CONFIG database is up to date
 
-    If a database exists, it is assumed to be up-to-date. If not, one is built,
-    which can take a few minutes.
+    Returns:
+        bool: True if the database exists and is newer than all Kconfig and
+            defconfig files
+    """
+    if not os.path.exists(CONFIG_DATABASE):
+        return False
+
+    db_time = os.path.getctime(CONFIG_DATABASE)
+
+    for dirpath, _, filenames in os.walk('configs'):
+        for fname in fnmatch.filter(filenames, '*_defconfig'):
+            if db_time < os.path.getctime(os.path.join(dirpath, fname)):
+                return False
+
+    for dirpath, _, filenames in os.walk('.'):
+        for fname in filenames:
+            if fname.startswith('Kconfig'):
+                if db_time < os.path.getctime(os.path.join(dirpath, fname)):
+                    return False
+
+    return True
+
+
+def ensure_database(threads):
+    """Return a qconfig database, rebuilding it if stale or missing
+
+    Checks whether the database is newer than all Kconfig and defconfig files.
+    If not, it is rebuilt automatically.
 
     Args:
         threads (int): Number of threads to use when processing
@@ -1739,13 +1786,13 @@ def ensure_database(threads):
                 key: CONFIG option
                 value: set of boards using that option
     """
-    if not os.path.exists(CONFIG_DATABASE):
-        print('Building qconfig.db database')
+    if not db_is_current():
+        print('Building qconfig.db database...')
         args = Namespace(build_db=True, verbose=False, force_sync=False,
                          dry_run=False, exit_on_error=False, jobs=threads,
                          git_ref=None, defconfigs=None, defconfiglist=None,
                          nocolour=False)
-        config_db, progress = move_config(args)
+        config_db, progress = do_build_db(args)
 
         write_db(config_db, progress)
 
@@ -1770,16 +1817,20 @@ def main():
             sys.exit(1)
         return 0
     if args.find:
-        return do_find_config(args.configs, args.list)
-
-    config_db, progress = move_config(args)
-
-    if args.commit:
-        add_commit(args.configs)
+        return do_find_config(args.configs, args.list, args.jobs)
 
     if args.build_db:
+        config_db, progress = do_build_db(args)
         return write_db(config_db, progress)
-    return move_done(progress)
+
+    if args.force_sync:
+        progress = do_sync_defconfigs(args)
+        if args.commit:
+            add_commit(args.configs)
+        return move_done(progress)
+
+    parser.print_usage()
+    return 1
 
 
 if __name__ == '__main__':

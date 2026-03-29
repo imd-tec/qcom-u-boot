@@ -24,31 +24,47 @@ You may need to install 'python3-asteval' for the 'asteval' module.
 How does it work?
 -----------------
 
-When building a database (`-b`), this tool runs configuration and builds
-include/autoconf.mk for every defconfig.  The config options defined in Kconfig
-appear in the .config file (unless they are hidden because of unmet dependency.)
-On the other hand, the config options defined by board headers are seen
-in include/autoconf.mk.
+Building a database
+~~~~~~~~~~~~~~~~~~~
 
-When resyncing defconfigs (`-s`) the .config is synced by "make savedefconfig"
-and the defconfig is updated with it.
+When building a database (`-b`), this tool evaluates the Kconfig tree directly
+using kconfiglib (a pure-Python Kconfig implementation). For each defconfig, it
+loads the file with ``kconf.load_config()``, resolves all symbol dependencies,
+and collects the resulting CONFIG values. This is the same approach used by
+``buildman`` when scanning board parameters.
 
-For faster processing, this tool is multi-threaded.  It creates
-separate build directories where the out-of-tree build is run.  The
-temporary build directories are automatically created and deleted as
-needed.  The number of threads are chosen based on the number of the CPU
-cores of your system although you can change it via -j (--jobs) option.
+Multiple worker processes run in parallel (one per CPU core by default,
+adjustable with ``-j``), each parsing the Kconfig tree once and then processing
+its share of defconfigs. This completes in a few seconds for all ~1500 boards,
+since no ``make`` subprocesses or cross-compiler toolchains are needed.
 
-Note that `*.config` fragments are not supported.
+Defconfig files containing ``#include`` directives are preprocessed with the
+C preprocessor before loading, matching the behaviour of the build system.
+
+Resyncing defconfigs
+~~~~~~~~~~~~~~~~~~~~
+
+When resyncing defconfigs (`-s`), the tool also uses kconfiglib.  It loads
+each defconfig with ``load_config()`` and writes a minimal config with
+``write_min_config()`` (equivalent to ``make savedefconfig``).  Defconfigs
+that use ``#include`` directives are handled by computing the delta between
+the full expanded config and the base provided by the included files, so the
+include structure is preserved.
+
+The ``-r`` (git-ref) option also uses kconfiglib: it clones the reference
+commit, creates a Kconfig instance from that tree, loads each defconfig
+against it, then normalises the result against the current tree's Kconfig.
+No toolchains are needed.
 
 Toolchains
 ----------
 
-Appropriate toolchains are necessary to generate include/autoconf.mk
-for all the architectures supported by U-Boot.  Most of them are available
-at the kernel.org site. This tool uses the same tools as
-:doc:`../build/buildman`, so you can use `buildman --fetch-arch` to fetch
-toolchains.
+Toolchains are **not** needed for any qconfig operation. The only
+difference from using a real toolchain is that ``CONFIG_GCC_VERSION``
+reflects the host compiler rather than each board's cross-compiler.
+This does not affect database queries, imply analysis, or defconfig
+sync, since ``CONFIG_GCC_VERSION`` is a build-time value that never
+appears in defconfig files or influences Kconfig defaults.
 
 
 Examples
@@ -236,12 +252,12 @@ Available options
    the number of threads is the same as the number of CPU cores.
 
  -r, --git-ref
-   Specify the git ref to clone for building the autoconf.mk. If unspecified
-   use the CWD. This is useful for when changes to the Kconfig affect the
-   default values and you want to capture the state of the defconfig from
+   Specify the git ref to clone for evaluating the Kconfig tree. If
+   unspecified, use the CWD. This is useful when changes to Kconfig affect
+   default values and you want to capture the state of defconfigs from
    before that change was in effect. If in doubt, specify a ref pre-Kconfig
-   changes (use HEAD if Kconfig changes are not committed). Worst case it will
-   take a bit longer to run, but will always do the right thing.
+   changes (use HEAD if Kconfig changes are not committed). Worst case it
+   will take a bit longer to run, but will always do the right thing.
 
  -v, --verbose
    Show any build errors as boards are built
