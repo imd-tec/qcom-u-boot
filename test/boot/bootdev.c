@@ -401,7 +401,6 @@ static int bootdev_test_hunter(struct unit_test_state *uts)
 	ut_assert_nextline("Prio  Used  Uclass           Hunter");
 	ut_assert_nextlinen("----");
 	ut_assert_nextline("   6        ethernet         eth_bootdev");
-	ut_assert_nextline("   1        simple_bus       (none)");
 	ut_assert_nextline("   3        fs               fs_bootdev");
 	ut_assert_nextline("   5        ide              ide_bootdev");
 	ut_assert_nextline("   2        mmc              mmc_bootdev");
@@ -455,10 +454,6 @@ static int bootdev_test_cmd_hunt(struct unit_test_state *uts)
 	test_set_skip_delays(true);
 	ut_assertok(run_command("bootdev hunt", 0));
 	ut_assert_nextline("Hunting with: ethernet");
-
-	/* This is the extension feature which has no uclass at present */
-	ut_assert_nextline("Hunting with: simple_bus");
-	ut_assert_nextline("Found 2 extension board(s).");
 	ut_assert_nextline("Hunting with: fs");
 	ut_assert_nextline("Hunting with: ide");
 
@@ -479,7 +474,6 @@ static int bootdev_test_cmd_hunt(struct unit_test_state *uts)
 	ut_assert_nextlinen("Prio");
 	ut_assert_nextlinen("----");
 	ut_assert_nextline("   6     *  ethernet         eth_bootdev");
-	ut_assert_nextline("   1     *  simple_bus       (none)");
 	ut_assert_nextline("   3     *  fs               fs_bootdev");
 	ut_assert_nextline("   5     *  ide              ide_bootdev");
 	ut_assert_nextline("   2     *  mmc              mmc_bootdev");
@@ -513,8 +507,8 @@ static int bootdev_test_hunt_scan(struct unit_test_state *uts)
 	ut_assertok(bootflow_scan_first(NULL, NULL, &iter,
 					BOOTFLOWIF_SHOW | BOOTFLOWIF_HUNT |
 					BOOTFLOWIF_SKIP_GLOBAL, &bflow));
-	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_SIMPLE_BUS) |
-		    BIT(HUNTER_VIRTIO), std->hunters_used);
+	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_VIRTIO),
+		    std->hunters_used);
 
 	return 0;
 }
@@ -748,14 +742,11 @@ static int bootdev_test_next_prio(struct unit_test_state *uts)
 
 	ut_assertok(bootdev_next_prio(&iter, &dev));
 	ut_asserteq_str("mmc2.bootdev", dev->name);
-	ut_assert_nextline("Hunting with: simple_bus");
-	ut_assert_nextline("Found 2 extension board(s).");
 	ut_assert_nextline("Hunting with: mmc");
 	ut_assert_nextline("Hunting with: virtio");
 	ut_assert_console_end();
 
-	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_SIMPLE_BUS) |
-		    BIT(HUNTER_VIRTIO), std->hunters_used);
+	ut_asserteq(BIT(HUNTER_MMC) | BIT(HUNTER_VIRTIO), std->hunters_used);
 
 	ut_assertok(bootdev_next_prio(&iter, &dev));
 	ut_asserteq_str("mmc1.bootdev", dev->name);
