@@ -11,7 +11,25 @@ import enum
 
 class Wtype(str, enum.Enum):
     """Types of workflow entry"""
+    SENT = 'sent'
     TODO = 'todo'
+
+
+def sent(cser, series_id):
+    """Record that a series was sent and create a follow-up todo
+
+    Args:
+        cser (CseriesHelper): Series helper with open database
+        series_id (int): ID of the series that was sent
+    """
+    ts = cser.get_now().strftime('%Y-%m-%d %H:%M:%S')
+    cser.db.workflow_archive(Wtype.SENT, series_id)
+    cser.db.workflow_add(Wtype.SENT, series_id, ts)
+    when = cser.get_now() + timedelta(days=7)
+    todo_ts = when.strftime('%Y-%m-%d %H:%M:%S')
+    cser.db.workflow_archive(Wtype.TODO, series_id)
+    cser.db.workflow_add(Wtype.TODO, series_id, todo_ts)
+    cser.commit()
 
 
 def todo(cser, series, days):

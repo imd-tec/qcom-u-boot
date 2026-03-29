@@ -4293,3 +4293,33 @@ Date:   .*
         with terminal.capture() as (out, _):
             self.run_args('wf', 'todo-list')
         self.assertIn('No todos due', out.getvalue())
+
+    def test_workflow_sent(self):
+        """Test that sending a series creates SENT and TODO entries"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        cser.fake_now = datetime(2025, 3, 1, 12, 0, 0)
+        ser = cser.get_series_by_name('first')
+
+        # Record a send
+        wf.sent(cser, ser.idnum)
+
+        # Should have a SENT entry with current time
+        ts = cser.db.workflow_get('sent', ser.idnum)
+        self.assertEqual('2025-03-01 12:00:00', ts)
+
+        # Should have a TODO entry 7 days out
+        ts = cser.db.workflow_get('todo', ser.idnum)
+        self.assertEqual('2025-03-08 12:00:00', ts)
+
+        # Sending again should archive old entries and create new ones
+        cser.fake_now = datetime(2025, 3, 5, 12, 0, 0)
+        wf.sent(cser, ser.idnum)
+
+        ts = cser.db.workflow_get('sent', ser.idnum)
+        self.assertEqual('2025-03-05 12:00:00', ts)
+
+        ts = cser.db.workflow_get('todo', ser.idnum)
+        self.assertEqual('2025-03-12 12:00:00', ts)
