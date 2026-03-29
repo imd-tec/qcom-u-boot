@@ -3,6 +3,7 @@
  * Copyright (c) 2013 Google, Inc
  */
 
+#include <bloblist.h>
 #include <clk.h>
 #include <dm.h>
 #include <dt-structs.h>
@@ -50,8 +51,38 @@ static uint rockchip_dwmmc_get_mmc_clk(struct dwmci_host *host, uint freq)
 
 	ret = clk_set_rate(&priv->clk, freq);
 	if (ret < 0) {
+		/*
+		 * If CLK is not available (e.g. VPL), use the rate saved
+		 * by the previous phase via bloblist. The CRU is still
+		 * configured from that phase, so the DW MMC core can
+		 * calculate the correct clock divider.
+		 */
+		if (!CONFIG_IS_ENABLED(CLK) &&
+		    IS_ENABLED(CONFIG_MMC_DW_ROCKCHIP_CLK_HANDOFF)) {
+			u32 *ratep;
+
+			ratep = bloblist_find(BLOBLISTT_U_BOOT_MMC_CLK,
+					      sizeof(*ratep));
+			if (ratep)
+				return *ratep;
+		}
 		debug("%s: err=%d\n", __func__, ret);
-		return 0;
+		return freq;
+	}
+
+	/* Save the source clock rate for the next phase */
+	if (IS_ENABLED(CONFIG_XPL_BUILD) &&
+	    IS_ENABLED(CONFIG_MMC_DW_ROCKCHIP_CLK_HANDOFF)) {
+		u32 *ratep;
+
+		ratep = bloblist_ensure(BLOBLISTT_U_BOOT_MMC_CLK,
+					sizeof(*ratep));
+		if (ratep) {
+			ulong rate = clk_get_rate(&priv->clk);
+
+			if (!IS_ERR_VALUE(rate))
+				*ratep = rate;
+		}
 	}
 
 	return freq;

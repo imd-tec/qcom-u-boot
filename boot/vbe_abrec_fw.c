@@ -249,7 +249,7 @@ static int abrec_load_from_image(struct spl_image_info *image,
 			return log_msg_ret("vdv", ret);
 		ret = blk_get_from_parent(media, &blk);
 		if (ret)
-			return log_msg_ret("med", ret);
+			return log_msg_ret("blk", ret);
 
 		if (xpl_phase() == PHASE_TPL) {
 			ulong offset, size;
