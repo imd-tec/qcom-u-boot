@@ -483,7 +483,9 @@ def email_patches(series, cover_fname, args, dry_run, warn_on_error, cc_fname,
         cwd (str): Path to use for patch files (None to use current dir)
 
     Returns:
-        Git command that was/would be run
+        tuple:
+            str: Git command that was/would be run
+            int: Number of patches successfully sent (0 for dry run)
 
     # For the duration of this doctest pretend that we ran patman with ./patman
     >>> _old_argv0 = sys.argv[0]
@@ -501,22 +503,22 @@ def email_patches(series, cover_fname, args, dry_run, warn_on_error, cc_fname,
     >>> series['cc'] = ['mary']
     >>> email_patches(series, 'cover', ['p1', 'p2'], True, True, 'cc-fname', \
             False, alias)
-    'git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
-"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" cover p1 p2'
+    ('git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
+"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" cover p1 p2', 0)
     >>> email_patches(series, None, ['p1'], True, True, 'cc-fname', False, \
             alias)
-    'git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
-"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" p1'
+    ('git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
+"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" p1', 0)
     >>> series['cc'] = ['all']
     >>> email_patches(series, 'cover', ['p1', 'p2'], True, True, 'cc-fname', \
             True, alias)
-    'git send-email --annotate --to "this-is-me@me.com" --cc-cmd "./patman \
-send --cc-cmd cc-fname" cover p1 p2'
+    ('git send-email --annotate --to "this-is-me@me.com" --cc-cmd "./patman \
+send --cc-cmd cc-fname" cover p1 p2', 0)
     >>> email_patches(series, 'cover', ['p1', 'p2'], True, True, 'cc-fname', \
             False, alias)
-    'git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
+    ('git send-email --annotate --to "f.bloggs@napier.co.nz" --cc \
 "f.bloggs@napier.co.nz" --cc "j.bloggs@napier.co.nz" --cc \
-"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" cover p1 p2'
+"m.poppins@cloud.net" --cc-cmd "./patman send --cc-cmd cc-fname" cover p1 p2', 0)
 
     # Restore argv[0] since we clobbered it.
     >>> sys.argv[0] = _old_argv0
@@ -530,7 +532,7 @@ send --cc-cmd cc-fname" cover p1 p2'
                   "Series-to: Fred Bloggs <f.blogs@napier.co.nz>\n"
                   "Or do something like this\n"
                   "git config sendemail.to u-boot@lists.denx.de")
-            return None
+            return None, 0
     cc = build_email_list(list(set(series.get('cc')) - set(series.get('to'))),
                           alias, '--cc', warn_on_error)
     if self_only:
@@ -553,10 +555,19 @@ send --cc-cmd cc-fname" cover p1 p2'
     if cover_fname:
         cmd.append(cover_fname)
     cmd += args
+    num_sent = 0
     if not dry_run:
-        command.run(*cmd, capture=False, capture_stderr=False, cwd=cwd)
-    return' '.join([f'"{x}"' if ' ' in x and '"' not in x else x
-                    for x in cmd])
+        def echo_output(_stream, data):
+            os.write(sys.stdout.fileno(), data)
+            return False
+
+        result = command.run_pipe(
+            [cmd], capture=True, output_func=echo_output,
+            raise_on_error=False, cwd=cwd)
+        num_sent = result.stdout.count('Result: ')
+    cmd_str = ' '.join([f'"{x}"' if ' ' in x and '"' not in x else x
+                        for x in cmd])
+    return cmd_str, num_sent
 
 
 def lookup_email(lookup_name, alias, warn_on_error=True, level=0):
