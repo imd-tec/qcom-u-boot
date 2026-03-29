@@ -19,7 +19,7 @@ from u_boot_pylib import tout
 from patman.series import Series
 
 # Schema version (version 0 means there is no database yet)
-LATEST = 5
+LATEST = 6
 
 # Information about a series/version record
 SerVer = namedtuple(
@@ -198,6 +198,21 @@ class Database:  # pylint:disable=R0904
         self.cur.execute('ALTER TABLE upstream ADD COLUMN no_tags BIT')
         self.cur.execute('ALTER TABLE ser_ver ADD COLUMN desc')
 
+    def _migrate_to_v6(self):
+        """Add workflow table for tracking todos and other workflow items
+
+        Fields:
+            id: Auto-increment primary key
+            type: Workflow-entry type, e.g. 'todo' or 'sent'
+            series_id: Foreign key referencing series.id
+            timestamp: Due/event time as 'YYYY-MM-DD HH:MM:SS'
+            archived: 0 for active entries, 1 for archived (soft-delete)
+        """
+        self.cur.execute(
+            'CREATE TABLE workflow (id INTEGER PRIMARY KEY AUTOINCREMENT,'
+            'type, series_id INTEGER, timestamp, archived BIT,'
+            'FOREIGN KEY (series_id) REFERENCES series (id))')
+
     def migrate_to(self, dest_version):
         """Migrate the database to the selected version
 
@@ -226,6 +241,8 @@ class Database:  # pylint:disable=R0904
                 self._migrate_to_v4()
             elif version == 5:
                 self._migrate_to_v5()
+            elif version == 6:
+                self._migrate_to_v6()
 
             # Save the new version if we have a schema_version table
             if version > 1:
@@ -1041,3 +1058,75 @@ class Database:  # pylint:disable=R0904
         if not recs:
             return None
         return recs[0]
+
+    # workflow functions
+
+    def workflow_add(self, wtype, series_id, timestamp):
+        """Add a workflow entry
+
+        Args:
+            wtype (str): Workflow type, e.g. 'todo'
+            series_id (int): ID of the series
+            timestamp (str): Timestamp string, e.g. '2025-01-15 10:30:00'
+        """
+        self.execute(
+            'INSERT INTO workflow (type, series_id, timestamp, archived) '
+            'VALUES (?, ?, ?, 0)', (wtype, series_id, timestamp))
+
+    def workflow_archive(self, wtype, series_id):
+        """Archive active workflow entries for a given type and series
+
+        Args:
+            wtype (str): Workflow type, e.g. 'todo'
+            series_id (int): ID of the series
+        """
+        self.execute(
+            'UPDATE workflow SET archived = 1 '
+            'WHERE type = ? AND series_id = ? AND archived = 0',
+            (wtype, series_id))
+
+    def workflow_get(self, wtype, series_id):
+        """Get the active workflow entry for a given type and series
+
+        Args:
+            wtype (str): Workflow type, e.g. 'todo'
+            series_id (int): ID of the series
+
+        Return:
+            str or None: Timestamp string if found, else None
+        """
+        res = self.execute(
+            'SELECT timestamp FROM workflow '
+            'WHERE type = ? AND series_id = ? AND archived = 0',
+            (wtype, series_id))
+        rec = res.fetchone()
+        if rec:
+            return rec[0]
+        return None
+
+    def workflow_get_by_type(self, wtype, before=None):
+        """Get active workflow entries for a given type, joined with series
+
+        Args:
+            wtype (str): Workflow type, e.g. 'todo'
+            before (str or None): If set, only return entries where
+                timestamp <= this value
+
+        Return:
+            list of tuple:
+                int: series ID
+                str: series name
+                str: series description
+                str: timestamp
+        """
+        query = ('SELECT s.id, s.name, s.desc, w.timestamp '
+                 'FROM workflow w '
+                 'JOIN series s ON w.series_id = s.id '
+                 'WHERE w.type = ? AND w.archived = 0 AND s.archived = 0')
+        params = [wtype]
+        if before is not None:
+            query += ' AND w.timestamp <= ?'
+            params.append(before)
+        query += ' ORDER BY w.timestamp'
+        res = self.execute(query, params)
+        return res.fetchall()

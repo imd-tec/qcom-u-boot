@@ -26,6 +26,7 @@ from patman import database
 from patman import patchstream
 from patman.patchwork import Patchwork
 from patman.test_common import TestCommon
+from patman import workflow as wf
 
 HASH_RE = r'[0-9a-f]+'
 #pylint: disable=protected-access
@@ -3556,7 +3557,7 @@ Date:   .*
             self.assertEqual(f'Update database to v{version}',
                              out.getvalue().strip())
             self.assertEqual(version, db.get_schema_version())
-        self.assertEqual(5, database.LATEST)
+        self.assertEqual(6, database.LATEST)
 
     def test_migrate_future_version(self):
         """Test that a database newer than patman is rejected"""
@@ -4130,3 +4131,48 @@ Date:   .*
             self.run_args('series', '-s', 'first', 'version-change',
                           '--new-version', '3', pwork=True)
         method.assert_called_once_with('first', None, 3, dry_run=False)
+
+    def test_workflow_db_methods(self):
+        """Test workflow database methods"""
+        cser = self.get_cser()
+        with terminal.capture():
+            cser.add('first', 'my description', allow_unmarked=True)
+
+        ser = cser.get_series_by_name('first')
+
+        # Initially there is no workflow entry
+        self.assertIsNone(cser.db.workflow_get('todo', ser.idnum))
+
+        # Add a todo entry
+        cser.db.workflow_add('todo', ser.idnum, '2025-03-15 10:00:00')
+        cser.commit()
+
+        # Should be able to read it back
+        ts = cser.db.workflow_get('todo', ser.idnum)
+        self.assertEqual('2025-03-15 10:00:00', ts)
+
+        # Get by type should return it
+        entries = cser.db.workflow_get_by_type('todo')
+        self.assertEqual(1, len(entries))
+        entry = entries[0]
+        self.assertEqual(ser.idnum, entry[0])
+        self.assertEqual('first', entry[1])
+        self.assertEqual('my description', entry[2])
+        self.assertEqual('2025-03-15 10:00:00', entry[3])
+
+        # Get by type with before filter
+        entries = cser.db.workflow_get_by_type(
+            'todo', before='2025-03-14 00:00:00')
+        self.assertEqual(0, len(entries))
+        entries = cser.db.workflow_get_by_type(
+            'todo', before='2025-03-16 00:00:00')
+        self.assertEqual(1, len(entries))
+
+        # Archive it - should no longer be active, but still in the table
+        cser.db.workflow_archive('todo', ser.idnum)
+        cser.commit()
+        self.assertIsNone(cser.db.workflow_get('todo', ser.idnum))
+        res = cser.db.execute(
+            'SELECT archived FROM workflow WHERE series_id = ?',
+            (ser.idnum,))
+        self.assertEqual(1, res.fetchone()[0])
