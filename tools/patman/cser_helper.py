@@ -435,7 +435,8 @@ class CseriesHelper:
             str or None: Upstream name, or None if not found
         """
         if not name:
-            name = gitutil.get_branch()
+            name = gitutil.get_branch(self.gitdir)
+        name, _ = patchstream.split_name_version(name)
         ser = self.get_series_by_name(name)
         if ser:
             return ser.upstream
