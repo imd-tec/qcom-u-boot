@@ -691,11 +691,11 @@ static int label_run_boot(struct pxe_context *ctx, struct pxe_label *label,
 			BOOTM_STATE_PRE_LOAD | BOOTM_STATE_FINDOTHER |
 			BOOTM_STATE_LOADOS);
 	/* Try booting an AArch64 Linux kernel image */
-	} else if (IS_ENABLED(CONFIG_CMD_BOOTI) && fmt == IMAGE_FORMAT_BOOTI) {
+	} else if (CONFIG_IS_ENABLED(LIB_BOOTI) && fmt == IMAGE_FORMAT_BOOTI) {
 		log_debug("using booti\n");
 		ret = booti_run(&bmi);
 	/* Try booting a Image */
-	} else if (IS_ENABLED(CONFIG_CMD_BOOTZ)) {
+	} else if (CONFIG_IS_ENABLED(LIB_BOOTZ)) {
 		log_debug("using bootz\n");
 		ret = bootz_run(&bmi);
 	/* Try booting an x86_64 Linux kernel image */
