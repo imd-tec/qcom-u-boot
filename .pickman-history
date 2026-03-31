@@ -51756,3 +51756,97 @@ Now let me force push to update the MR:
 
 ---
 
+## 2026-03-31: us/next
+
+Branch: cherry-eb8074f5cc2
+
+Commits:
+- eb8074f5cc2 configs: tegra: remove ATAGS support
+- 4f7057962dc watchdog: Add support for Tegra watchdog timer
+- e50f80d137b timer: tegra: Bind watchdog to timer node
+- 9ce9f66b76c crypto: tegra: Tighten TEGRA_AES driver dependency
+- f77584b53ac video: tegra: Remove unreachable code
+- 1530cfe09a2 video: tegra: Incorrect operator used
+- 200549b0961 gpio: tegra_gpio: convert to use set_flags
+- b4c3869292e Merge branch 'staging' of https://source.denx.de/u-boot/custodians/u-boot-tegra
+
+### Conversation log
+The repository state is clean (untracked files are fine). Now let me create and checkout the new branch based on ci/master.
+
+Now let me cherry-pick the first commit:
+
+Let me verify the delta and run the build test:
+
+The deltas match (18 files changed, 54 deletions). Now let me run the build test:
+
+Build passed. Now let me cherry-pick the second commit:
+
+Deltas match. Now build test:
+
+Build passed. Cherry-pick the third commit:
+
+Deltas match. Build test:
+
+Build passed. Cherry-pick the fourth commit:
+
+Deltas match. Build test:
+
+Build passed. Cherry-pick the fifth commit:
+
+Deltas match. Build test:
+
+Build passed. Cherry-pick the sixth commit:
+
+Deltas match. Build test:
+
+Build passed. Cherry-pick the seventh commit:
+
+Deltas match. Build test:
+
+Build passed. Now for the eighth commit - this is a merge commit. First, let me check if it might already be applied as ce345971b06:
+
+These are different merges - ce345971b06 appears to be a GitLab merge request that merged the same content but is a different merge commit. Let me check if it contains the same actual changes:
+
+The merge commits are different - they merge different content. Let me check if all the commits we're cherry-picking are already in ci/master:
+
+These first few commits are not in ci/master, so they are new. Let me proceed with cherry-picking the merge commit. Since it's a merge commit, I'll use -m 1 --allow-empty:
+
+The merge commit is empty because we've already applied the individual commits. Let me commit it with --allow-empty to preserve the merge history:
+
+Now let me verify all 8 commits are present:
+
+All 8 commits are present. Now let me run the final build test:
+
+All builds passed. Here's the final summary:
+
+## Cherry-pick Summary
+
+### Branch: `cherry-eb8074f5cc2`
+
+**Build Result:** ✅ OK (all builds passed)
+
+**Commits cherry-picked successfully (8/8):**
+
+| # | Original Hash | New Hash | Subject | Delta |
+|---|---------------|----------|---------|-------|
+| 1 | eb8074f5cc2 | b62b1b9d53a | configs: tegra: remove ATAGS support | ✅ Match (18 files, 54 deletions) |
+| 2 | 4f7057962dc | ce0ad5877a0 | watchdog: Add support for Tegra watchdog timer | ✅ Match (3 files, 125 insertions) |
+| 3 | e50f80d137b | 023fb9b5f05 | timer: tegra: Bind watchdog to timer node | ✅ Match (1 file, 10 insertions) |
+| 4 | 9ce9f66b76c | 0ceac145e25 | crypto: tegra: Tighten TEGRA_AES driver dependency | ✅ Match (1 file, 1+/1-) |
+| 5 | f77584b53ac | a17133d93b5 | video: tegra: Remove unreachable code | ✅ Match (1 file, 2 deletions) |
+| 6 | 1530cfe09a2 | bea50c63ce8 | video: tegra: Incorrect operator used | ✅ Match (1 file, 1+/1-) |
+| 7 | 200549b0961 | 0684aa03738 | gpio: tegra_gpio: convert to use set_flags | ✅ Match (1 file, 22+/18-) |
+| 8 | b4c3869292e | 4b53f47a13d | Merge branch 'staging'... (merge commit) | ✅ Empty commit (expected - commits already applied individually) |
+
+**Fix-ups made:** None
+
+**Commits with concerning deltas:** None
+
+**Notes:**
+- The merge commit (b4c3869292e) resulted in an empty commit, which is expected since the individual commits were already cherry-picked before it. The commit was preserved with `--allow-empty` to maintain the history tracking.
+- The commit ce345971b06 mentioned as "maybe already applied" is a different merge commit (a GitLab MR merge) and was not a duplicate of b4c3869292e.
+
+The branch `cherry-eb8074f5cc2` is ready for pushing.
+
+---
+
