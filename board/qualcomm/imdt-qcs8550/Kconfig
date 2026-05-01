@@ -12,4 +12,13 @@ config SYS_SOC
 config SYS_LDSCRIPT
 	default "arch/arm/lib/elf_aarch64_efi.lds"
 
+config IMDT_QCS8550_OVERLAYS
+	string "Default DT overlay list"
+	default ""
+	help
+	  Space-separated list of DT overlay filenames (relative to /dtb on
+	  the EFI boot partition) applied to the base DTB at boot. The list
+	  becomes the default value of the 'overlays' environment variable
+	  and can be overridden at runtime with setenv.
+
 endif
