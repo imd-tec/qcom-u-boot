@@ -5,6 +5,7 @@ CONFIG_TARGET_IMDT_QCS8550=y
 CONFIG_VIDEO=n
 CONFIG_CHID=n
 CONFIG_RUST_EXAMPLES=n
+CONFIG_CONSOLE_PAGER=n
 # Prevent serial terminals pausing the boot process due to unexpected input
 CONFIG_AUTOBOOT_KEYED=y
 CONFIG_AUTOBOOT_DELAY_STR="d"
