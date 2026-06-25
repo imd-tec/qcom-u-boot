@@ -14,6 +14,8 @@ CONFIG_DEFAULT_FDT_FILE="qcs8550-imdt-sbc.dtb"
 CONFIG_IMDT_QCS8550_OVERLAYS="qcs8550-imdt-sbc-display.dtbo qcs8550-imdt-sbc-ar1335-csi0.dtbo"
 CONFIG_CMD_FDT=y
 CONFIG_OF_LIBFDT_OVERLAY=y
+# Do not rewrite the kernel /memory node, otherwise it ends up as 512MB
+# CONFIG_ARCH_FIXUP_FDT_MEMORY is not set
 CONFIG_ENV_IS_IN_FAT=y
 CONFIG_ENV_FAT_INTERFACE="efi"
 CONFIG_ENV_FAT_DEVICE_AND_PART="4:46"
