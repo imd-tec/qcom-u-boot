@@ -12,6 +12,7 @@
 #include <fdt_support.h>
 #include <init.h>
 #include <hexdump.h>
+#include <malloc.h>
 #include <linux/libfdt.h>
 #include <log.h>
 
@@ -119,11 +120,195 @@ static const char * const *detect_cpu_type(void *fdt, int cpus_off)
 	return NULL;
 }
 
+/*
+ * The DRAM is populated on the SoM, but as a UEFI app we only get our own
+ * pool (CONFIG_EFI_RAM_SIZE, 512MB) reflected in gd->ram_size - so we must
+ * not let the generic memory fixup rewrite the kernel /memory node. Instead
+ * we detect the installed DRAM size from the EFI memory map and apply the
+ * matching bank layout, which mirrors the previous bootloader's usable-RAM
+ * partition table for each SoM variant.
+ *
+ * Entries are ordered highest threshold first.
+ */
+struct imdt_mem_layout {
+	const char *name;
+	phys_size_t threshold;	/* minimum total DRAM to select this layout */
+	int count;
+	u64 start[8];
+	u64 size[8];
+};
+
+static const struct imdt_mem_layout imdt_mem_layouts[] = {
+	{
+		.name = "12GB", .threshold = 9ULL << 30, .count = 3,
+		.start = {
+			0xbab00000ULL,	/* 210 MiB, < 4 GiB (DMA) */
+			0x880000000ULL,	/* 922 MiB */
+			0x8c0000000ULL,	/* 9 GiB (kernel load region) */
+		},
+		.size = {
+			0x0d1b8000ULL,
+			0x39a00000ULL,
+			0x240000000ULL,
+		},
+	},
+	{
+		.name = "8GB", .threshold = 0, .count = 3,
+		.start = {
+			0xbab00000ULL,	/* 210 MiB, < 4 GiB (DMA) */
+			0x880000000ULL,	/* 922 MiB */
+			0x8c0000000ULL,	/* 5 GiB (kernel load region) */
+		},
+		.size = {
+			0x0d1b8000ULL,
+			0x39a00000ULL,
+			0x140000000ULL,
+		},
+	},
+};
+
+/* Total installed DRAM as reported by the EFI memory map. */
+static phys_size_t imdt_total_dram(void)
+{
+	struct efi_mem_desc *map, *desc, *end;
+	phys_size_t total = 0;
+	int size, desc_size, ret;
+	uint version, key;
+
+	ret = efi_get_mmap(&map, &size, &key, &desc_size, &version);
+	if (ret) {
+		log_warning("Failed to read EFI memory map: %d\n", ret);
+		return 0;
+	}
+
+	end = (void *)map + size;
+	for (desc = map; desc < end;
+	     desc = efi_get_next_mem_desc(desc, desc_size)) {
+		if (desc->type == EFI_MMAP_IO ||
+		    desc->type == EFI_MMAP_IO_PORT)
+			continue;
+		total += desc->num_pages << EFI_PAGE_SHIFT;
+	}
+
+	free(map);
+	return total;
+}
+
+/*
+ * The Qualcomm kernel DT names its DRAM node "memory@a0000000" rather than
+ * the generic "/memory". The standard fixup helpers target "/memory" and so
+ * would create a second, conflicting node - we must update this one in place.
+ */
+#define IMDT_MEMORY_NODE	"/memory@a0000000"
+
+/* Pack (start, size) banks into a "reg" stream per the root address/size
+ * cells, mirroring fdt_pack_reg() which is private to fdt_support.c.
+ */
+static int imdt_pack_reg(const void *blob, fdt32_t *buf, const u64 *start,
+			 const u64 *size, int banks)
+{
+	int ac = fdt_address_cells(blob, 0);
+	int sc = fdt_size_cells(blob, 0);
+	fdt32_t *p = buf;
+	int i;
+
+	for (i = 0; i < banks; i++) {
+		if (ac == 2)
+			*p++ = cpu_to_fdt32(upper_32_bits(start[i]));
+		*p++ = cpu_to_fdt32(lower_32_bits(start[i]));
+		if (sc == 2)
+			*p++ = cpu_to_fdt32(upper_32_bits(size[i]));
+		*p++ = cpu_to_fdt32(lower_32_bits(size[i]));
+	}
+
+	return (p - buf) * sizeof(*buf);
+}
+
+/* Rewrite the kernel memory node to match the installed DRAM size. */
+static void imdt_fixup_memory(void *blob)
+{
+	const struct imdt_mem_layout *layout = NULL;
+	phys_size_t total = imdt_total_dram();
+	fdt32_t reg[8 * 4]; /* up to 8 banks, 2 address + 2 size cells each */
+	int i, off, len, err;
+
+	log_info("EFI memory map reports %llu MiB of DRAM\n",
+		 (unsigned long long)(total >> 20));
+
+	for (i = 0; i < ARRAY_SIZE(imdt_mem_layouts); i++) {
+		if (total >= imdt_mem_layouts[i].threshold) {
+			layout = &imdt_mem_layouts[i];
+			break;
+		}
+	}
+	if (!layout) {
+		log_err("No matching DRAM layout; leaving memory node as-is\n");
+		return;
+	}
+
+	off = fdt_path_offset(blob, IMDT_MEMORY_NODE);
+	if (off < 0) {
+		log_err("Memory node %s not found: %s\n", IMDT_MEMORY_NODE,
+			fdt_strerror(off));
+		return;
+	}
+
+	log_info("Applying %s layout to %s (%d banks)\n",
+		 layout->name, IMDT_MEMORY_NODE, layout->count);
+
+	len = imdt_pack_reg(blob, reg, layout->start, layout->size,
+			    layout->count);
+	err = fdt_setprop(blob, off, "reg", reg, len);
+	if (err)
+		log_err("Failed to update %s reg: %s\n", IMDT_MEMORY_NODE,
+			fdt_strerror(err));
+}
+
+/* Print every /memory node in the blob as it will be handed to the kernel. */
+static void imdt_print_memory(const void *blob)
+{
+	int ac = fdt_address_cells(blob, 0);
+	int sc = fdt_size_cells(blob, 0);
+	int off;
+
+	if (ac < 1 || sc < 1)
+		return;
+
+	for (off = fdt_next_node(blob, -1, NULL); off >= 0;
+	     off = fdt_next_node(blob, off, NULL)) {
+		const fdt32_t *reg;
+		const char *type;
+		int len, i;
+
+		type = fdt_getprop(blob, off, "device_type", NULL);
+		if (!type || strcmp(type, "memory"))
+			continue;
+
+		reg = fdt_getprop(blob, off, "reg", &len);
+		if (!reg)
+			continue;
+
+		printf("Memory node %s:\n", fdt_get_name(blob, off, NULL));
+		for (i = 0; i + ac + sc <= len / sizeof(*reg); i += ac + sc) {
+			u64 base = fdt_read_number(&reg[i], ac);
+			u64 size = fdt_read_number(&reg[i + ac], sc);
+
+			printf("  bank: 0x%010llx - 0x%010llx (%llu MiB)\n",
+			       (unsigned long long)base,
+			       (unsigned long long)(base + size),
+			       (unsigned long long)(size >> 20));
+		}
+	}
+}
+
 int ft_system_setup(void *blob, struct bd_info *bd)
 {
 	const char * const *cpu_map;
 	int cpus_off, i, ret;
 	u32 fuse_val;
+
+	imdt_fixup_memory(blob);
+	imdt_print_memory(blob);
 
 	ret = read_cpu_fuse_value(&fuse_val);
 	if (ret || !fuse_val)
