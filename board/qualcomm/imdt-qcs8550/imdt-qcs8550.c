@@ -140,29 +140,61 @@ struct imdt_mem_layout {
 
 static const struct imdt_mem_layout imdt_mem_layouts[] = {
 	{
-		.name = "12GB", .threshold = 9ULL << 30, .count = 3,
+		/*
+		 * Memory map dumped from a booted 12GB SoM running the
+		 * downstream kernel. The low region (banks 1-5) is identical
+		 * to the 8GB map; the high DRAM (banks 6-8) is larger, with
+		 * banks 7-8 contiguous up to 0xb00000000. Bank 4 is a
+		 * zero-size placeholder carried over verbatim from the dump.
+		 */
+		.name = "12GB", .threshold = 9ULL << 30, .count = 8,
 		.start = {
-			0xbab00000ULL,	/* 210 MiB, < 4 GiB (DMA) */
-			0x880000000ULL,	/* 922 MiB */
-			0x8c0000000ULL,	/* 9 GiB (kernel load region) */
+			0x80000000ULL,	/* low DRAM */
+			0x811d0000ULL,
+			0xd8140000ULL,
+			0xd8800000ULL,	/* zero-size placeholder */
+			0xe1bb0000ULL,	/* ends at 4 GiB */
+			0x880000000ULL,	/* high DRAM */
+			0x8c0000000ULL,	/* kernel load region */
+			0x980000000ULL,	/* contiguous with previous bank */
 		},
 		.size = {
-			0x0d1b8000ULL,
-			0x39a00000ULL,
-			0x240000000ULL,
+			0x00e00000ULL,	/* 14 MiB */
+			0x56e30000ULL,	/* 1390 MiB */
+			0x00020000ULL,	/* 128 KiB */
+			0x00000000ULL,	/* 0 */
+			0x1e450000ULL,	/* 484 MiB */
+			0x39a00000ULL,	/* 922 MiB */
+			0xc0000000ULL,	/* 3 GiB */
+			0x180000000ULL,	/* 6 GiB */
 		},
 	},
 	{
-		.name = "8GB", .threshold = 0, .count = 3,
+		/*
+		 * Memory map dumped from a booted 8GB SoM running the
+		 * downstream kernel. Banks 1-5 tile the low region up to
+		 * 4 GiB (with carveout gaps); banks 6-7 are the high DRAM
+		 * above the 32 GiB physical hole. Bank 4 is a zero-size
+		 * placeholder carried over verbatim from the dump.
+		 */
+		.name = "8GB", .threshold = 0, .count = 7,
 		.start = {
-			0xbab00000ULL,	/* 210 MiB, < 4 GiB (DMA) */
-			0x880000000ULL,	/* 922 MiB */
-			0x8c0000000ULL,	/* 5 GiB (kernel load region) */
+			0x80000000ULL,	/* low DRAM */
+			0x811d0000ULL,
+			0xd8140000ULL,
+			0xd8800000ULL,	/* zero-size placeholder */
+			0xe1bb0000ULL,	/* ends at 4 GiB */
+			0x880000000ULL,	/* high DRAM */
+			0x8c0000000ULL,	/* kernel load region */
 		},
 		.size = {
-			0x0d1b8000ULL,
-			0x39a00000ULL,
-			0x140000000ULL,
+			0x00e00000ULL,	/* 14 MiB */
+			0x56e30000ULL,	/* 1390 MiB */
+			0x00020000ULL,	/* 128 KiB */
+			0x00000000ULL,	/* 0 */
+			0x1e450000ULL,	/* 484 MiB */
+			0x3b000000ULL,	/* 944 MiB */
+			0x140000000ULL,	/* 5 GiB */
 		},
 	},
 };
